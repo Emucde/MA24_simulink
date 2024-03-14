@@ -1,0 +1,17 @@
+function tmpreturn = inverse_kinematik_down(x_e, param)
+  m = [0 0;];
+  t1 = x_e(2);
+  t2 = param.l__I - t1;
+  t3 = (t2 ^ 2);
+  t4 = (t1 ^ 2);
+  t5 = (t1 * param.l__I);
+  t6 = 2 * t5;
+  t7 = (param.l__I ^ 2);
+  t8 = x_e(1);
+  t19 = sqrt(-((-t4 + t6 - t7 + (param.l__1 + param.l__2 - t8) * (param.l__1 + param.l__2 + t8)) * (-t4 + t6 - t7 + (param.l__1 - param.l__2 - t8) * (param.l__1 - param.l__2 + t8)) * t3));
+  t21 = param.l__1 ^ 2;
+  t22 = param.l__2 ^ 2;
+  t23 = t8 ^ 2;
+  m(1,1) = atan2(0.1e1 / t2 / (t7 - t6 + t23 + t4) * (t19 * t8 - ((t21 - t22 + t7 - t6 + t23 + t4) * t3)), 0.1e1 / (t23 + t3) * (t19 + (t23 * t8) + (t8 * (t21 - t22 + t7 - t6 + t4))));
+  m(1,2) = atan2(-0.1e1 / t2 * t19 / 0.2e1, -t21 / 0.2e1 - t22 / 0.2e1 + t7 / 0.2e1 - t5 + t23 / 0.2e1 + t4 / 0.2e1);
+  tmpreturn = m';
