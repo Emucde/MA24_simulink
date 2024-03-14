@@ -84,8 +84,6 @@ else % hardcoded weights
     Q           = QQ          ;
     R_u         = RR_u        ;
     R_du        = RR_du       ;
-    R_dx        = RR_dx       ;
-    R_dx_km1    = RR_dx_km1   ;
     x_min       = xx_min      ;
     x_max       = xx_max      ;
     u_min       = uu_min      ;
@@ -121,16 +119,9 @@ ubw = [repmat(x_max, N_MPC + 1, 1); repmat(u_max, N_MPC, 1)];
 % constraints conditions cellarray g
 if(terminal_ineq_yref_N || terminal_soft_yref_N)
     g = cell(1, N_MPC+2);
-    %lbg = zeros(numel(x)+1, 1); % equation conditions should be exact!
-    %ubg = zeros(numel(x)+1, 1);
 else
     g = cell(1, N_MPC+1);
-    %lbg = zeros(numel(x), 1); % equation conditions should be exact!
-    %ubg = zeros(numel(x), 1);
 end
-
-%lbg = zeros(numel(x), 1); % equation conditions should be exact!
-%ubg = zeros(numel(x), 1);
 
 if(terminal_ineq_yref_N)
     lbg = SX(numel(x)+1, 1); % equation conditions should be exact!
@@ -157,21 +148,7 @@ for i=1:N_MPC
     y(:,i) = H_e(1:2,4);
 end
 
-if(terminal_ineq_yref_N)
-    %g(1, end) = {dot(y(:,end)-y_kp1_ref(:,end), mtimes(1*eye(2), y(:,end)-y_kp1_ref(:,end)))};
-    g(1, end) = {norm_2(y(:,end)-y_kp1_ref(:,end))};
-    %lbg = [lbg; 0];
-    %ubg = [ubg; yN_ineq_eps];
-    lbg(end) = 0;
-    ubg(end) = yN_ineq_eps;
-end
-
-if(terminal_soft_yref_N)
-    JyN = dot(y(:,end)-y_kp1_ref(:,end), mtimes(Q_yN_soft, y(:,end)-y_kp1_ref(:,end)));
-    %JyN = norm_2(y(:,end)-y_kp1_ref(:,end));
-else
-    JyN = 0;
-end
+JyN = dot(y(:,end)-y_kp1_ref(:,end), mtimes(Q_yN_soft, y(:,end)-y_kp1_ref(:,end)));
 
 % calculate cost function
 J_y = dot(y-y_kp1_ref, mtimes(Q, y-y_kp1_ref));
@@ -274,30 +251,21 @@ end
 sol_sym = solver('x0', w_MX, 'lbx', lbw_MX, 'ubx', ubw_MX,...
             'lbg', lbg_MX, 'ubg', ubg_MX, 'p', p_MX);
 
-
+% generate solver solutions variables
 u_opt = sol_sym.x(numel(x)+(1:n));
 x_full_opt = reshape(sol_sym.x(1:numel(x)), 2*n, N_MPC+1);
 u_full_opt = reshape(sol_sym.x(numel(x)+1:end), n, N_MPC);
 
-output_str = '{u_opt, x_full_opt, u_full_opt, J_MX, J_y_MX, J_u_MX, J_ukm1_MX, J_dx_MX, J_dkm1_MX, J_yN_MX}';
-vars_output_names = strsplit(output_str(2:end-1), ', ');
-vars_output_MX = eval(output_str);
-
-%{ys_ref, xs_0, us_km1, xs_k, us_k, Qs, Rs_u, Rs_du, Rs_dx, Rs_dx_km1, xs_min, xs_max, us_min, us_max},...
 if(weights_and_limits_as_parameter)
-    if(terminal_soft_yref_N)
-        f_opt = Function(casadi_func_name, ...
-            {vars_MX{:}},...
-            {vars_output_MX{:}});
-        vars_output_names = strsplit(output_str(2:end-1), ', ');
-        %eval(['[', strjoin(vars_output_names, ', '), '] = f_opt(y_ref_0, x_0_0, u_init_guess_0(:,1), x_init_guess_0, u_init_guess_0, QQ, RR_u, RR_du, RR_dx, RR_dx_km1, xx_min, xx_max, uu_min, uu_max, QQ_yN_soft);']);
-        [u_opt_sol, x_full_opt_sol, u_full_opt_sol, Jy_sol, Ju_sol, Jukm1_sol, Jdx_sol, Jdxkm1_sol] = f_opt(y_ref_0, x_0_0, u_init_guess_0(:,1), x_init_guess_0, u_init_guess_0, QQ, RR_u, RR_du, RR_dx, RR_dx_km1, xx_min, xx_max, uu_min, uu_max, QQ_yN_soft);
-    end
+    f_opt = Function(casadi_func_name, ...
+        {vars_MX{:}},...
+        {u_opt, x_full_opt, u_full_opt, J_MX, J_y_MX, J_u_MX, J_dx_MX, J_ukm1_MX, J_yN_MX});
+    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, Jy_sol, Ju_sol, Jukm1_sol, Jdx_sol, Jdxkm1_sol] = f_opt(y_ref_0, x_0_0, u_init_guess_0(:,1), x_init_guess_0, u_init_guess_0, QQ, RR_u, RR_du, RR_dx, RR_dx_km1, xx_min, xx_max, uu_min, uu_max, QQ_yN_soft);
 else
     % ohne extra parameter 30-60 % schneller!
     f_opt = Function(casadi_func_name, ...
         {vars_MX{:}},...
-        {vars_output_MX{:}});
+        {u_opt, x_full_opt, u_full_opt});
 
     [u_opt_sol, x_full_opt_sol, u_full_opt_sol] = f_opt(y_ref_0, x_0_0, u_init_guess_0(:,1), x_init_guess_0, u_init_guess_0);
 end

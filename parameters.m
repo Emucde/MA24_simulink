@@ -10,7 +10,7 @@
 % measure compile time: 
 %disp('Compile Time:')
 %tic;set_param('sim_discrete_planar', 'SimulationCommand', 'update');toc
-%rmpath('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/matlab/s_functions')
+%rmpath('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/s_functions')
 %close_all_slx;
 
 %restoredefaultpath
@@ -25,7 +25,7 @@ init_casadi;
 
 simulink_main_model_name = 'sim_discrete_planar';
 open_simulink_on_start = true;
-if(~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start)
+if(~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && sum(strfind([getenv().keys{:}], 'VSCODE')) == 0)
     tic
     fprintf(['open simulink model \"' simulink_main_model_name, '\" ...'])
     open_system([simulink_main_model_name '.slx'])
