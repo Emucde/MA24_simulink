@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%% MPC1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_weight_MPC1.QQ     = diag([1e3 1e3]); % x y weight
+param_weight_MPC1.QQ_y   = diag([1e3 1e3]); % x y weight
 param_weight_MPC1.QQ_yN  = diag([1e5 1e5]);
 param_weight_MPC1.RR_u   = diag([1e-3 1e-3]); % u abso
 param_weight_MPC1.xx_min = [ -inf; -inf; -inf; -inf ];
