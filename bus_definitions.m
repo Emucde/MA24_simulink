@@ -53,16 +53,18 @@ yy_debug_bus = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;
 
 %% robot model bus init
+n = param_robot.n_DOF;
+
 bus_temp_struct = struct;
-bus_temp_struct.q = zeros(2,1);
-bus_temp_struct.q_p = zeros(2,1);
-bus_temp_struct.q_pp = zeros(2,1);
+bus_temp_struct.q = zeros(n,1);
+bus_temp_struct.q_p = zeros(n,1);
+bus_temp_struct.q_pp = zeros(n,1);
 bus_temp_struct.H = zeros(4);
-bus_temp_struct.J = zeros(6, 2);
-bus_temp_struct.J_p = zeros(6, 2);
-bus_temp_struct.M = zeros(2);
-bus_temp_struct.C = zeros(2);
-bus_temp_struct.g = zeros(2,1);
+bus_temp_struct.J = zeros(6, n);
+bus_temp_struct.J_p = zeros(6, n);
+bus_temp_struct.M = zeros(n);
+bus_temp_struct.C = zeros(n);
+bus_temp_struct.g = zeros(n,1);
 init_bus_param.init_robot_model = bus_temp_struct;
 robot_model = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;

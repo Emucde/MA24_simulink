@@ -6,78 +6,34 @@ parameters; init_casadi; import casadi.*;
 % show plot functions
 print_init_guess_cost_functions = false;
 plot_init_guess                 = false; % plot init guess
-plot_null_simu                  = false; % plot system simulation for x0=0, u0 = ID(x0)
+plot_null_simu                  = false; % plot system simulation for x0          = 0, u0 = ID(x0)
 convert_maple_to_casadi         = false; % convert maple functions into casadi functions
 fullsimu                        = false; % make full mpc simulation and plot results
 weights_and_limits_as_parameter = true; % otherwise minimal set of inputs and parameter is used. Leads to faster run time and compile time.
 compile_sfunction               = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
 
-param_casadi_fun_name = struct();
-param_casadi_fun_name.MPC1.variant = 'opti';
-param_casadi_fun_name.MPC1.solver  = 'qrqp'; % (qrqp (sqp) | qpoases?)
-param_casadi_fun_name.MPC1.Ts      = 5e-3;
-param_casadi_fun_name.MPC1.rk_iter = 1;
-param_casadi_fun_name.MPC1.N_MPC   = 5;
-param_casadi_fun_name.MPC1.terminal_ineq_yref_N = false; % not implemented for opti
-param_casadi_fun_name.MPC1.terminal_soft_yref_N = false; % not implemented for opti
+%param_casadi_fun_name = struct();
+%param_casadi_fun_name.MPC2.variant = 'opti';
+%param_casadi_fun_name.MPC2.solver  = 'qrqp'; % (qrqp (sqp) | qpoases?)
+%param_casadi_fun_name.MPC2.Ts      = 5e-3;
+%param_casadi_fun_name.MPC2.rk_iter = 1;
+%param_casadi_fun_name.MPC2.N_MPC   = 5;
+%param_casadi_fun_name.MPC2.terminal_ineq_yref_N = false; % not implemented for opti
+%param_casadi_fun_name.MPC2.terminal_soft_yref_N = false; % not implemented for opti
 
-param_casadi_fun_name.MPC2.variant = 'opti';
-param_casadi_fun_name.MPC2.solver  = 'qrqp'; % (qrqp (sqp) | qpoases?)
-param_casadi_fun_name.MPC2.Ts      = 20e-3;
-param_casadi_fun_name.MPC2.rk_iter = 1;
-param_casadi_fun_name.MPC2.N_MPC   = 5;
-param_casadi_fun_name.MPC2.terminal_ineq_yref_N = false; % not implemented for opti
-param_casadi_fun_name.MPC2.terminal_soft_yref_N = false; % not implemented for opti
-
-param_casadi_fun_name.MPC3.variant = 'nlpsol';
-param_casadi_fun_name.MPC3.solver  = 'ipopt'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.MPC3.Ts      = 5e-3;
-param_casadi_fun_name.MPC3.rk_iter = 1;
-param_casadi_fun_name.MPC3.N_MPC   = 5;
-param_casadi_fun_name.MPC3.terminal_ineq_yref_N = false;
-param_casadi_fun_name.MPC3.terminal_soft_yref_N = false;
-
-param_casadi_fun_name.MPC4.variant = 'nlpsol';
-param_casadi_fun_name.MPC4.solver  = 'ipopt'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.MPC4.Ts      = 20e-3;
-param_casadi_fun_name.MPC4.rk_iter = 1;
-param_casadi_fun_name.MPC4.N_MPC   = 5;
-param_casadi_fun_name.MPC4.terminal_ineq_yref_N = false;
-param_casadi_fun_name.MPC4.terminal_soft_yref_N = false;
-
-param_casadi_fun_name.MPC5.variant = 'nlpsol';
-param_casadi_fun_name.MPC5.solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.MPC5.Ts      = 20e-3;
-param_casadi_fun_name.MPC5.rk_iter = 1;
-param_casadi_fun_name.MPC5.N_MPC   = 5;
-param_casadi_fun_name.MPC5.terminal_ineq_yref_N = false;
-param_casadi_fun_name.MPC5.terminal_soft_yref_N = false;
-
-param_casadi_fun_name.MPC6.variant = 'nlpsol';
-param_casadi_fun_name.MPC6.solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.MPC6.Ts      = 5e-3;
-param_casadi_fun_name.MPC6.rk_iter = 1;
-param_casadi_fun_name.MPC6.N_MPC   = 5;
-param_casadi_fun_name.MPC6.terminal_ineq_yref_N = true;
-param_casadi_fun_name.MPC6.terminal_soft_yref_N = false;
-
-param_casadi_fun_name.MPC7.variant = 'nlpsol';
-param_casadi_fun_name.MPC7.solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.MPC7.Ts      = 20e-3;
-param_casadi_fun_name.MPC7.rk_iter = 1;
-param_casadi_fun_name.MPC7.N_MPC   = 5;    
-param_casadi_fun_name.MPC7.terminal_ineq_yref_N = false;
-param_casadi_fun_name.MPC7.terminal_soft_yref_N = true;
-
-% set mpc names:
-for name = fieldnames(param_casadi_fun_name)'
-    MPC_name = [name{:}, '_', param_casadi_fun_name.(name{:}).solver, '_', param_casadi_fun_name.(name{:}).variant];
-    param_casadi_fun_name = setfield(param_casadi_fun_name, name{:}, 'name', MPC_name);
-end
+MPC='MPC1';
+param_casadi_fun_name.(MPC).name                 = MPC;
+param_casadi_fun_name.(MPC).variant              = 'nlpsol';
+param_casadi_fun_name.(MPC).solver               = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).Ts                   = 20e-3;
+param_casadi_fun_name.(MPC).rk_iter              = 1;
+param_casadi_fun_name.(MPC).N_MPC                = 5;    
+param_casadi_fun_name.(MPC).terminal_ineq_yref_N = false;
+param_casadi_fun_name.(MPC).terminal_soft_yref_N = true;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC7;
+param_casadi_fun_struct = param_casadi_fun_name.MPC1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -104,12 +60,12 @@ if(convert_maple_to_casadi)
 end
 
 %% path for init guess
-init_guess_path = './s_functions/initial_guess/';%todo: UP
-init_guess_struct_name = "param_"+casadi_func_name;
+init_guess_path         = './s_functions/initial_guess/';%todo:  UP
+init_guess_struct_name  = "param_"+casadi_func_name;
 param_MPC_old_data_file = "./s_functions/trajectory_data/param_" + casadi_func_name+"_old_data.mat";
 
 %% Create trajectory for y_initial_guess
-param_MPC_traj_data_name = "param_"+casadi_func_name+"_traj_data";
+param_MPC_traj_data_name     = "param_"+casadi_func_name+"_traj_data";
 param_MPC_traj_data_mat_file = "./s_functions/trajectory_data/" + param_MPC_traj_data_name + ".mat";
 
 try
@@ -121,7 +77,7 @@ catch
     traj_not_exist_flag = 1;
 end
 
-if(N_MPC_old ~= N_MPC || Ts_MPC_old ~= Ts_MPC || traj_not_exist_flag)
+if(traj_not_exist_flag || N_MPC_old ~= N_MPC || Ts_MPC_old ~= Ts_MPC)
     if(traj_not_exist_flag)
         disp('mpc_casadi_main.m: Trajectory does not exist: create new trajectory');
     else

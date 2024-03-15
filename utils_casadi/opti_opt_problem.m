@@ -279,19 +279,6 @@ sol = opti.solve();
 u_init_guess = full(sol.value(u));
 x_init_guess = full(sol.value(x));
 
-%{
-% TODO: DELETE
-QQ        = full(QQ);
-RR_u      = full(RR_u);
-RR_du     = full(RR_du);
-RR_dx     = full(RR_dx);
-RR_dx_km1 = full(RR_dx_km1);
-xx_min    = full(xx_min);
-xx_max    = full(xx_max);
-uu_min    = full(uu_min); 
-uu_max    = full(uu_max);
-%}
-
 if(print_init_guess_cost_functions)
     disp(['J = '      num2str(sol.value(J     ))]);
     disp(['Jy = '     num2str(sol.value(Jy    ))]);

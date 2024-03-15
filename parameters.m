@@ -11,7 +11,9 @@
 %disp('Compile Time:')
 %tic;set_param('sim_discrete_planar', 'SimulationCommand', 'update');toc
 %rmpath('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/s_functions')
-%close_all_slx;
+
+%closeAllSimulinkModels('./MPC_shared_subsystems')
+%closeAllSimulinkModels('.')
 
 %restoredefaultpath
 %cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/matlab
@@ -64,8 +66,8 @@ ct_ctrl_param.Kd1 = diag([1e3 1e3 0 0 0 0]);
 %ct_ctrl_param.Kp1 = diag([64 64 0 0 0 0]);
 ct_ctrl_param.Kp1 = ct_ctrl_param.Kd1^2/4;
 
-ct_ctrl_param.k = 1e-4; % Singular robust calulation of J_pinv = (J'*J + kI)^(-1)*J'
-ct_ctrl_param.eps = 1e-1;
+ct_ctrl_param.k    = 1e-4; % Singular robust calulation of J_pinv = (J'*J + kI)^(-1)*J'
+ct_ctrl_param.eps  = 1e-1;
 ct_ctrl_param.mode = 2;
 % 0: no sing robust
 % 1: use k for  J_pinv = (J'*J + kI)^(-1)*J'
@@ -78,10 +80,10 @@ param_ct_traj_filter;
 param_traj_poly.T = T_sim/2-3; % in s
 
 %% Param sinus poly trajectory
-param_traj_sin_poly.T = 1; % in s
-T_period = 2; % in s
+param_traj_sin_poly.T     = 1; % in s
+T_period                  = 2; % in s
 param_traj_sin_poly.omega = 2*pi*1/(T_period); % in rad
-param_traj_sin_poly.phi = 0; % in rad
+param_traj_sin_poly.phi   = 0; % in rad
 
 %% Calculate target positions
 
@@ -122,13 +124,13 @@ end
 % https://github.com/mathworks/simulinkDroneReferenceApp/blob/master/data/slrt_plant_configset.m
 
 files = dir('./s_functions/initial_guess/*.mat');
-cellfun(@load, {files.name});
+cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
 
 for name={files.name}
-    name_mat_file = name{1};
-    param_MPC_name = name_mat_file(1:end-4);
-    param_MPC_old_data_file = "./s_functions/trajectory_data/" + param_MPC_name+"_old_data.mat"; % TODO: dynamic path
-    param_MPC_traj_data_name = param_MPC_name+"_traj_data";
+    name_mat_file                = name{1};
+    param_MPC_name               = name_mat_file(1:end-4);
+    param_MPC_old_data_file      = "./s_functions/trajectory_data/" + param_MPC_name+"_old_data.mat"; % TODO: dynamic path
+    param_MPC_traj_data_name     = param_MPC_name+"_traj_data";
     param_MPC_traj_data_mat_file = "./s_functions/trajectory_data/" + param_MPC_traj_data_name + ".mat";
 
     load(param_MPC_old_data_file);
@@ -138,14 +140,14 @@ for name={files.name}
     T_traj_sin_poly     = param_traj_sin_poly.T;
     omega_traj_sin_poly = param_traj_sin_poly.omega;
     phi_traj_sin_poly   = param_traj_sin_poly.phi;
-    T_switch = param_traj_allg.T_switch;
+    T_switch            = param_traj_allg.T_switch;
 
-    param_MPC_struct = eval(param_MPC_name);
+    param_MPC_struct           = eval(param_MPC_name);
     param_MPC_traj_data_struct = eval(param_MPC_traj_data_name);
 
     casadi_func_name = param_MPC_struct.name;
-    MPC_variant = param_MPC_struct.variant;
-    MPC_solver = param_MPC_struct.solver;
+    MPC_variant      = param_MPC_struct.variant;
+    MPC_solver       = param_MPC_struct.solver;
     Ts_MPC           = param_MPC_struct.Ts     ;
     rk_iter          = param_MPC_struct.rk_iter;
     N_MPC            = param_MPC_struct.N  ;
@@ -171,12 +173,13 @@ for name={files.name}
         param_trajectory = generateTrajectory_from_slx(mdl, q_0, H_0_init, traj_select_fin, T_sim, T_horizon_MPC, param_global);
         eval(param_MPC_traj_data_name+"=param_trajectory;"); % set new struct name
         
-        compile_sfunction = false;
+        compile_sfunction               = false;
         weights_and_limits_as_parameter = true;
-        plot_null_simu = false;
+        plot_null_simu                  = false;
         print_init_guess_cost_functions = false;
-        terminal_ineq_yref_N = param_MPC_struct.terminal_ineq_yref_N;
-        terminal_soft_yref_N = param_MPC_struct.terminal_soft_yref_N;
+        terminal_ineq_yref_N            = param_MPC_struct.terminal_ineq_yref_N;
+        terminal_soft_yref_N            = param_MPC_struct.terminal_soft_yref_N;
+        
         opts = struct; % should be empty
         if(strcmp(MPC_variant, 'opti'))
             opti_opt_problem;
