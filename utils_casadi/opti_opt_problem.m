@@ -1,5 +1,19 @@
 import casadi.*
 
+%%%%%%%%%%%%%%%%%%%%%%%%% ACHTUNG
+%%%%%%%%%%%%%%%%%%%%%%%%%
+% Das Optimierungsproblem ist mit MX Variablen definiert. Daher vermute
+% ich, dass das der Grund ist, warum es so langsam läuft. Ich denke wenn
+% man es mit SX Variablen definiert, wird es so schnell wie wenn man bei
+% nlpsol das Optimierungsproblem mit SX Variablen definiert und dann den
+% solver mit MX Variablen mappt. Wenn man das bei nlpsol tut, wird das
+% Optimierungsproblem erheblich schneller, (12s statt 25s-40s?). Dabei verwendet man
+% aber die S-function aus dem Part 2 Tutorial von Casadi. Wenn man aber für
+% das so in nlpsol definierte Optimierungsproblem dieses mit einer
+% modifizierten Variable siehe "casadi_fun_to_mex.m" mit der S-function
+% von opti kompiliert, sinkt die Laufzeit plötzlich auf (3s) für exakt das
+% gleiche Ergebnis. Die Kompilierzeit ist aber mit (10s statt 2.5s) deutlich höher.  
+
 %% Integrator (achtung in MX Datentyp!! - daher in nlpsol_opt_problem_SX anders.
 n = param_robot.n_DOF;
 
@@ -304,7 +318,7 @@ else
                       {'u_opt', 'x_opt', 'u_full_opt', 'Jy', 'Ju', 'Jukm1', 'Jdx', 'Jdxkm1'});
 end
 
-if(compile_sfunction)
+if(compile_sfun)
     opts = struct('main', true, ...
         'mex', true);
     f_opt.generate(casadi_fun_c_header_str, opts);

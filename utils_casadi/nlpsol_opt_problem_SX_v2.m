@@ -47,7 +47,7 @@ x_init_guess_0       = [x_0_0 full(x_init_guess_kp1_res)];
 y_ref_0              = param_trajectory.p_d(1:2, 1+N_step_MPC : N_step_MPC : 1+N_MPC*N_step_MPC);
 
 % get weights from "init_MPC_weight.m"
-QQ     = eval("param_weight_"+casadi_func_name+".QQ;");
+QQ_y   = eval("param_weight_"+casadi_func_name+".QQ_y;");
 QQ_yN  = eval("param_weight_"+casadi_func_name+".QQ_yN;");
 RR_u   = eval("param_weight_"+casadi_func_name+".RR_u;");
 xx_min = eval("param_weight_"+casadi_func_name+".xx_min;");
@@ -57,7 +57,7 @@ uu_max = eval("param_weight_"+casadi_func_name+".uu_max;");
 
 % weights as parameter (~inputs)
 if(weights_and_limits_as_parameter)
-    Q     = SX.sym('Q', 2,2); % x y weight
+    Q_y   = SX.sym('Q_y', 2,2); % x y weight
     Q_yN  = SX.sym('Q_yN', 2,2);
     R_u   = SX.sym('R_u', 2,2); % u absolut
     x_min = SX.sym('x_min', 4,1);
@@ -65,13 +65,13 @@ if(weights_and_limits_as_parameter)
     u_min = SX.sym('u_min', 2,1);
     u_max = SX.sym('u_max', 2,1);
 else % hardcoded weights
-    Q           = QQ          ;
-    R_u         = RR_u        ;
-    x_min       = xx_min      ;
-    x_max       = xx_max      ;
-    u_min       = uu_min      ;
-    u_max       = uu_max      ;
-    Q_yN        = QQ_yN  ;
+    Q_y   = QQ_y  ;
+    R_u   = RR_u  ;
+    x_min = xx_min;
+    x_max = xx_max;
+    u_min = uu_min;
+    u_max = uu_max;
+    Q_yN  = QQ_yN ;
 end
 
 %% Start with an empty NLP
@@ -109,7 +109,7 @@ for i=1:N_MPC
 end
 
 % calculate cost function
-J_y = dot(y-y_kp1_ref, mtimes(Q, y-y_kp1_ref));
+J_y = dot(y-y_kp1_ref, mtimes(Q_y, y-y_kp1_ref));
 J_yN = dot(y(:,end)-y_kp1_ref(:,end), mtimes(Q_yN, y(:,end)-y_kp1_ref(:,end)));
 
 J_u = dot(u, mtimes(R_u, u));
@@ -119,14 +119,14 @@ J = J_y + J_u + J_yN;
 
 p = [x_k; y_kp1_ref(:)];
 if(weights_and_limits_as_parameter)
-    p = [p; Q(:); Q_yN(:); R_u(:); ...
+    p = [p; Q_y(:); Q_yN(:); R_u(:); ...
             x_min(:); x_max(:); u_min(:); u_max(:)];
 end
 
 input_vars_SX  = {y_kp1_ref, x_k, x, u};
 output_vars_SX = {J, vertcat(w{:}), vertcat(g{:}), vertcat(p{:})};
 if(weights_and_limits_as_parameter)
-    input_vars_SX  = {input_vars_SX{:}, Q, Q_yN, R_u, x_min, x_max, u_min, u_max};
+    input_vars_SX  = {input_vars_SX{:}, Q_y, Q_yN, R_u, x_min, x_max, u_min, u_max};
     output_vars_SX = {output_vars_SX{:}, J_y, J_u, J_yN, lbw, ubw, lbg, ubg};
 end
 get_props = Function('prop_fun', input_vars_SX, output_vars_SX);
@@ -232,7 +232,7 @@ if(weights_and_limits_as_parameter)
     f_opt = Function(casadi_func_name, ...
         {input_vars_MX{:}},...
         {output_vars_MX{:}});
-    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, J_y_sol, J_yN_sol, J_u_sol] = f_opt(y_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, QQ, QQ_yN, RR_u, xx_min, xx_max, uu_min, uu_max);
+    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, J_y_sol, J_yN_sol, J_u_sol] = f_opt(y_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, QQ_y, QQ_yN, RR_u, xx_min, xx_max, uu_min, uu_max);
 else
     % ohne extra parameter 30-60 % schneller!
     f_opt = Function(casadi_func_name, ...
@@ -253,21 +253,41 @@ if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
 end
 
 %% COMPILE (nlpsol)
-if(compile_sfunction)
-    
-    copyfile(strcat(s_fun_path, 's_function_nlpsol.c'), s_fun_c_file_path, 'f');
-    replace_strings_in_casadi_file(s_fun_c_file_path, casadi_func_name);
-    f_opt.save([s_fun_path casadi_func_name, '.casadi']);
-    
-    lib_path = GlobalOptions.getCasadiPath();
-    inc_path = GlobalOptions.getCasadiIncludePath();
-    
-    tic;
-    %mex('-v',['-I' inc_path],['-L' lib_path],'-lcasadi', s_fun_c_file_path); % verbose mode (show compiler infos)
-    disp("Compiling Simulink " + s_func_name + " (nlpsol, solver="+MPC_solver+") ");
-    mex(['-I' inc_path],['-L' lib_path],'-lcasadi', s_fun_c_file_path, '-output', s_fun_c_file_path);
+if(compile_sfun)
+    if(compile_mode == 1)
+        %{
+        copyfile(strcat(s_fun_path, 's_function_nlpsol.c'), s_fun_c_file_path, 'f');
+        replace_strings_in_casadi_file(s_fun_c_file_path, casadi_func_name);
+        f_opt.save([s_fun_path casadi_func_name, '.casadi']);
+        
+        lib_path = GlobalOptions.getCasadiPath();
+        inc_path = GlobalOptions.getCasadiIncludePath();
+        
+        tic;
+        %mex('-v',['-I' inc_path],['-L' lib_path],'-lcasadi', s_fun_c_file_path); % verbose mode (show compiler infos)
+        disp("Compiling Simulink " + s_func_name + " (nlpsol, solver="+MPC_solver+") ");
+        mex(['-I' inc_path],['-L' lib_path],'-lcasadi', s_fun_c_file_path, '-output', s_fun_c_file_path);
+        disp(['Compile time for casadi s-function (nlpsol): ', num2str(toc), ' s']);
+        %s_func_name = strcat('s_function_', casadi_func_name, '.c'); % final name for Simulink s-function
+        
+        file_name = 'f_opt.casadi';
+        %}
+        tic;
+        s_fun_name = 's_function_nlpsol.c';
+        compile_casadi_sfunction(f_opt, s_fun_name, output_dir, MPC_solver, '', compile_mode); % default nlpsol s-function
     disp(['Compile time for casadi s-function (nlpsol): ', num2str(toc), ' s']);
-    %s_func_name = strcat('s_function_', casadi_func_name, '.c'); % final name for Simulink s-function
-    
-    file_name = 'f_opt.casadi';
+    elseif(compile_mode == 2)
+        tic;
+        s_fun_name = 's_function.c';
+        compile_casadi_sfunction(f_opt, s_fun_name, output_dir, MPC_solver, '-O2', compile_mode); % default nlpsol s-function
+        disp(['Compile time for casadi s-function (opti for nlpsol): ', num2str(toc), ' s']);
+    end
 end
+
+%% s-function in Simulink: Name of s-function: MPC1
+% 1) Insert S-Function Block in Matlab
+% 2) add 
+%        's_functions/MPC1.casadi', 'MPC1' 
+%    to S-function parameters
+% 2) add 's_function_MPC1' to S-function name
+% 3) set S-function modules to ''

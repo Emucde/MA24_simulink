@@ -1,4 +1,5 @@
 %% Init scripts
+tic
 parameters; init_casadi; import casadi.*;
 
 %% GLOBAL SETTINGS FOR MPC
@@ -10,7 +11,8 @@ plot_null_simu                  = false; % plot system simulation for x0        
 convert_maple_to_casadi         = false; % convert maple functions into casadi functions
 fullsimu                        = false; % make full mpc simulation and plot results
 weights_and_limits_as_parameter = true; % otherwise minimal set of inputs and parameter is used. Leads to faster run time and compile time.
-compile_sfunction               = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
+compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
+compile_mode                    = 2; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
 compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
 
 %param_casadi_fun_name = struct();
@@ -72,7 +74,7 @@ try
     load(param_MPC_traj_data_mat_file);
     load(param_MPC_old_data_file)
     traj_not_exist_flag = 0;
-    param_trajectory = eval("param_"+casadi_func_name+"_traj_data");
+    param_trajectory    = eval("param_"+casadi_func_name+"_traj_data");
 catch  
     traj_not_exist_flag = 1;
 end
@@ -89,16 +91,22 @@ if(traj_not_exist_flag || N_MPC_old ~= N_MPC || Ts_MPC_old ~= Ts_MPC)
 end
 %% OPT PROBLEM
 %[TODO: oben init]
-s_fun_path = './s_functions/'; % backslash on end necessary! [TODO: up]
-casadi_fun_c_header_str = [casadi_func_name, '.c'];
-casadi_fun_h_header_str = [casadi_func_name, '.h'];
-s_func_name = ['s_function_', casadi_fun_c_header_str]; % final name for Simulink s-function
-s_fun_c_file_path = [s_fun_path, s_func_name];
+s_fun_path               = './s_functions/'; % backslash on end necessary! [TODO: remove]
+output_dir = './s_functions/';
+casadi_fun_c_header_str  = [casadi_func_name, '.c'];
+casadi_fun_h_header_str  = [casadi_func_name, '.h'];
+s_func_name              = ['s_function_', casadi_fun_c_header_str]; % final name for Simulink s-function
+s_fun_c_file_path        = [s_fun_path, s_func_name];
 casadi_fun_h_header_path = [s_fun_path, casadi_func_name, '.h'];
 casadi_fun_c_header_path = [s_fun_path, casadi_func_name, '.c'];
+substr = '_matlab';
+MPC_matlab_name = [casadi_func_name, substr];
+%MPC_matlab_name_c_header_path = [s_fun_path, MPC_matlab_name, '.c'];
+MPC_matlab_name = [casadi_func_name, substr];
 
 %% DEFINE OPTIMIZATION PROBLEM
 if(strcmp(MPC_variant, 'opti'))
+    error('Error: opti stack version currently not working!');
     opti_opt_problem;
 elseif(strcmp(MPC_variant, 'nlpsol'))
     %nlpsol_opt_problem;
@@ -135,21 +143,25 @@ end
 %% Pre Simulation
 % TODO: S-funktion slx file und inputs und outputs angeben. Wird aber nicht
 % viel schneller als die eigentliche Simulation sein.
-
+disp(['Bevor "if(fullsimu)" Rechenzeit: ', sprintf('%f', toc), ' s']);
 if(fullsimu)
-    matlab_sfun = str2func(casadi_func_name);
+    if(exist(MPC_matlab_name, 'file') == 3)
+        matlab_sfun = str2func(MPC_matlab_name);
+    else
+        error(['Error: no matlab s-fun ', MPC_matlab_name,' exists!'])
+    end
     
     %load("./s_functions/trajectory_data/"+"param_"+casadi_func_name+"_traj_data.mat")
     %param_trajectory = eval("param_"+casadi_func_name+"_traj_data");
     %load('traj_data.mat');
 
-    N_traj = length(param_trajectory.t);
+    N_traj          = length(param_trajectory.t);
     N_traj_original = N_traj - N_MPC*N_step_MPC;
-    p_e_act_arr = zeros(2, N_traj_original);
-    u_k_new_arr = zeros(n, N_traj_original);
-    x_k_new_arr = zeros(2*n, N_traj_original);
-    x_k_new = x_0_0;
-    u_k_act = u_k_0;
+    p_e_act_arr     = zeros(2, N_traj_original);
+    u_k_new_arr     = zeros(n, N_traj_original);
+    x_k_new_arr     = zeros(2*n, N_traj_original);
+    x_k_new         = x_0_0;
+    u_k_act         = u_k_0;
 
     % set additional needed N samples as last sample of trajectory
     % already done (see "parameter.m"):
@@ -159,35 +171,22 @@ if(fullsimu)
     u_init_guess_prev = u_init_guess;
     tic
     for i=1:1:N_traj_original
-        y_ref_init = param_trajectory.p_d(i+N_step_MPC:N_step_MPC:i+N_MPC*N_step_MPC,1:2)';
+        y_kp1_ref_new = param_trajectory.p_d(1:2, i+N_step_MPC:N_step_MPC:i+N_MPC*N_step_MPC);
         
-        % Slow version
-        %{
-        opti.set_value(y_ref,y_ref_init); % e.g stay at same point
-        opti.set_value(u_km1, u_init_guess_test(:,1)); % nicht ganz korrekt
-        opti.set_value(x_k,x_k_new); % p,x0
-    
-        sol = opti.solve();
-        
-        u_init_guess = full(sol.value(u));
-        x_init_guess = full(sol.value(x));
-        %}
-
-        % did not work:
-        %sys = s_function_qrqp_N_5(0, x_k_new, {y_ref_init, x_k_new, u_k_act, x_init_guess, u_init_guess, QQ, RR_u, RR_du, RR_dx, RR_dx_km1, xx_min, xx_max, uu_min, uu_max}, 0);
         try
-            [u_opt, x_init_guess, u_init_guess, Jy_act, Ju_act, Jukm1_act, Jdx_act, Jdxkm1_act] = matlab_sfun(y_ref_init, x_k_new, u_k_act, x_init_guess, u_init_guess, QQ, RR_u, RR_du, RR_dx, RR_dx_km1, xx_min, xx_max, uu_min, uu_max);
+            [u_opt, x_init_guess, u_init_guess, J_y_act, J_yN_act, J_u_act] = matlab_sfun(y_kp1_ref_new, x_k_new, x_init_guess, u_init_guess, QQ_y, QQ_yN, RR_u, xx_min, xx_max, uu_min, uu_max);
         catch ME
-            disp("error at " + (i-1)*Ts_MPC + " s ( i="+i+")")
+            disp("error at " + (i-1)*param_global.Ta + " s ( i="+i+")")
+            disp(ME.message);
         end
 
-        u_k_new = u_init_guess(:,1);
+        u_k_new     = u_init_guess(:,1);
         x_k_new_sim = full(sim(x_init_guess(:,1), u_k_new));
-        x_k_new = x_k_new_sim(:,1);
+        x_k_new     = x_k_new_sim(:,1);
         %x_k_new = x_init_guess(:,2); % ist nicht gleich wie obere zeile???? Fehler 10^-6
     
         HH_e_act = hom_transform_endeffector(x_init_guess(:,1), param_robot);
-        p_e_act = HH_e_act(1:2,4);
+        p_e_act  = HH_e_act(1:2,4);
         p_e_act_arr(:, i) = p_e_act;
         u_k_new_arr(:, i) = u_k_new;
         x_k_new_arr(:, i) = x_k_new;
@@ -198,54 +197,54 @@ if(fullsimu)
 
     figure;
     subplot(3,1,1);
-    plot(Ts_MPC*(1:1:N_traj_original), u_k_new_arr);
+    plot(Ts_MPC*(1:N_traj_original), u_k_new_arr);
     title('u');
     subplot(3,1,2);
-    plot(Ts_MPC*(1:1:N_traj_original), x_k_new_arr);
+    plot(Ts_MPC*(1:N_traj_original), x_k_new_arr);
     title('x');
     subplot(3,1,3);
-    plot(Ts_MPC*(1:1:N_traj_original), p_e_act_arr);
+    plot(Ts_MPC*(1:N_traj_original), p_e_act_arr);
     title('p_e');
     
 end
 %% TODO: Save data (besser gleich in parameter speichern)
 
 param_MPC = struct( ...
-  'x_init_guess', x_init_guess, ...
-  'u_init_guess', u_init_guess, ...
-  'y_init_guess', y_ref_0, ...
-  'N', N_MPC, ...
-  'N_step', N_step_MPC, ...
-  'Ts', Ts_MPC, ...
-  'T_horizon', T_horizon_MPC, ...
-  'rk_iter', rk_iter, ...
-  'variant', param_casadi_fun_struct.variant, ...
-  'solver', param_casadi_fun_struct.solver, ...
-  'name', param_casadi_fun_struct.name, ...
+  'x_init_guess',         x_init_guess, ...
+  'u_init_guess',         u_init_guess, ...
+  'y_init_guess',         y_ref_0, ...
+  'N',                    N_MPC, ...
+  'N_step',               N_step_MPC, ...
+  'Ts',                   Ts_MPC, ...
+  'T_horizon',            T_horizon_MPC, ...
+  'rk_iter',              rk_iter, ...
+  'variant',              param_casadi_fun_struct.variant, ...
+  'solver',               param_casadi_fun_struct.solver, ...
+  'name',                 param_casadi_fun_struct.name, ...
   'terminal_ineq_yref_N', param_casadi_fun_struct.terminal_ineq_yref_N, ...
   'terminal_soft_yref_N', param_casadi_fun_struct.terminal_soft_yref_N ...
 );
 
 eval(init_guess_struct_name+"=param_MPC;"); % set new struct name
 save(""+init_guess_path+init_guess_struct_name+'.mat', init_guess_struct_name);
-%T_traj_poly_old = 
+
 % save old data
-q_0_old = q_0;
-q_0_p_old = q_0_p;
-xe0_old = xe0;
-xeT_old = xeT;
-T_sim_old = T_sim;
-Ta_old = param_global.Ta;
-traj_select_fin_old = traj_select_fin;
-lamda_xyz_old = lamda_xyz;
-lamda_alpha_old = lamda_alpha;
-N_MPC_old = N_MPC;
-Ts_MPC_old = Ts_MPC;
-T_traj_poly_old         = param_traj_poly.T        ;
-T_traj_sin_poly_old     = param_traj_sin_poly.T    ;
+q_0_old                 = q_0;
+q_0_p_old               = q_0_p;
+xe0_old                 = xe0;
+xeT_old                 = xeT;
+T_sim_old               = T_sim;
+Ta_old                  = param_global.Ta;
+traj_select_fin_old     = traj_select_fin;
+lamda_xyz_old           = lamda_xyz;
+lamda_alpha_old         = lamda_alpha;
+N_MPC_old               = N_MPC;
+Ts_MPC_old              = Ts_MPC;
+T_traj_poly_old         = param_traj_poly.T;
+T_traj_sin_poly_old     = param_traj_sin_poly.T;
 omega_traj_sin_poly_old = param_traj_sin_poly.omega;
-phi_traj_sin_poly_old   = param_traj_sin_poly.phi  ;
-T_switch_old = param_traj_allg.T_switch;
+phi_traj_sin_poly_old   = param_traj_sin_poly.phi;
+T_switch_old            = param_traj_allg.T_switch;
 
 save(param_MPC_old_data_file, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
      'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', 'traj_select_fin_old', ...
@@ -253,11 +252,12 @@ save(param_MPC_old_data_file, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
      'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
      'T_switch_old');
 
-%% COMPILE matlab s_function
-
+%% COMPILE matlab s_function (can be used as normal function in matlab)
 if(compile_matlab_sfunction)
-    tic;
+    % re-define same casadi function with new name
+    f_opt = Function(MPC_matlab_name, ...
+        {input_vars_MX{:}},...
+        {output_vars_MX{:}});
     casadi_fun_to_mex(f_opt, 's_functions', '-O2');
     disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
-    delete(casadi_fun_c_header_path);
 end
