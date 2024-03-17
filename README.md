@@ -87,7 +87,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>Group: general_AlpaqaInterface</summary>
+<details>
+  <summary>Group: general_AlpaqaInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -171,7 +172,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>class casadi::AmplInterface</summary>
+<details>
+  <summary>class casadi::AmplInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -255,14 +257,16 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>Group: plugin_Nlpsol_AmplInterface</summary>
+<details>
+  <summary>Group: plugin_Nlpsol_AmplInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
 <tr><td>solver</td><td>OT_STRING</td><td>AMPL solver binary</td></tr>
 </table></details>
 
-<h1>Group: general_AmplInterface</summary>
+<details>
+  <summary>Group: general_AmplInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -346,7 +350,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>class casadi::BSplineInterpolant</summary>
+<details>
+  <summary>class casadi::BSplineInterpolant</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -409,7 +414,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Interpolant_bspline</summary>
+<details>
+  <summary>Group: plugin_Interpolant_bspline</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -420,7 +426,8 @@
 <tr><td>smooth_linear_frac</td><td>OT_DOUBLE</td><td>When 'smooth_linear' algorithm is active, determines sharpness between 0 (sharp, as linear interpolation) and 0.5 (smooth).Default value is 0.1.</td></tr>
 </table></details>
 
-<h1>Group: general_BSplineInterpolant</summary>
+<details>
+  <summary>Group: general_BSplineInterpolant</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -483,7 +490,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::Blocksqp</summary>
+<details>
+  <summary>class casadi::Blocksqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -622,7 +630,8 @@
 <tr><td>zeta</td><td>OT_DOUBLE</td><td>Feasibility restoration phase parameter</td><td>casadi::Blocksqp</td></tr>
 </table></details>
 
-<h1>Group: plugin_Nlpsol_blocksqp</summary>
+<details>
+  <summary>Group: plugin_Nlpsol_blocksqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -684,7 +693,8 @@
 <tr><td>zeta</td><td>OT_DOUBLE</td><td>Feasibility restoration phase parameter</td></tr>
 </table></details>
 
-<h1>Group: general_Blocksqp</summary>
+<details>
+  <summary>Group: general_Blocksqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -823,7 +833,8 @@
 <tr><td>zeta</td><td>OT_DOUBLE</td><td>Feasibility restoration phase parameter</td><td>casadi::Blocksqp</td></tr>
 </table></details>
 
-<h1>class casadi::BonminInterface</summary>
+<details>
+  <summary>class casadi::BonminInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -924,7 +935,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>Group: plugin_Nlpsol_bonmin</summary>
+<details>
+  <summary>Group: plugin_Nlpsol_bonmin</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -948,7 +960,8 @@
 <tr><td>var_string_md</td><td>OT_DICT</td><td>String metadata (a dictionary with lists of strings) about variables to be passed to BONMIN</td></tr>
 </table></details>
 
-<h1>Group: general_BonminInterface</summary>
+<details>
+  <summary>Group: general_BonminInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1049,7 +1062,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>class casadi::CbcInterface</summary>
+<details>
+  <summary>class casadi::CbcInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1111,7 +1125,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_cbc</summary>
+<details>
+  <summary>Group: plugin_Conic_cbc</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -1122,7 +1137,8 @@
 <tr><td>sos_weights</td><td>OT_DOUBLEVECTORVECTOR</td><td>Weights corresponding to SOS entries.</td></tr>
 </table></details>
 
-<h1>Group: general_CbcInterface</summary>
+<details>
+  <summary>Group: general_CbcInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1184,7 +1200,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::ClangCompiler</summary>
+<details>
+  <summary>class casadi::ClangCompiler</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1193,7 +1210,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ImporterInternal</td></tr>
 </table></details>
 
-<h1>Group: plugin_Importer_clang</summary>
+<details>
+  <summary>Group: plugin_Importer_clang</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -1201,7 +1219,8 @@
 <tr><td>include_path</td><td>OT_STRING</td><td>Include paths for the JIT compiler. The include directory shipped with CasADi will be automatically appended.</td></tr>
 </table></details>
 
-<h1>Group: general_ClangCompiler</summary>
+<details>
+  <summary>Group: general_ClangCompiler</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1210,7 +1229,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ImporterInternal</td></tr>
 </table></details>
 
-<h1>class casadi::ClpInterface</summary>
+<details>
+  <summary>class casadi::ClpInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1268,14 +1288,16 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_clp</summary>
+<details>
+  <summary>Group: plugin_Conic_clp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
 <tr><td>clp</td><td>OT_DICT</td><td>Options to be passed to CLP. A first set of options can be found in ClpParameters.hpp. eg. 'PrimalTolerance'. There are other options in additions. 'AutomaticScaling' (bool) is recognised. 'initial_solve' (default off) activates the use of Clp's initialSolve. 'initial_solve_options' takes a dictionary with following keys (see ClpSolve.hpp):  SolveType (string), PresolveType (string),  NumberPasses, SpecialOptions (intvectorvector), IndependentOptions (intvectorvector).</td></tr>
 </table></details>
 
-<h1>Group: general_ClpInterface</summary>
+<details>
+  <summary>Group: general_ClpInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1333,7 +1355,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::Collocation</summary>
+<details>
+  <summary>class casadi::Collocation</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1408,7 +1431,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Integrator_collocation</summary>
+<details>
+  <summary>Group: plugin_Integrator_collocation</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -1421,7 +1445,8 @@
 <tr><td>simplify_options</td><td>OT_DICT</td><td>Any options to pass to simplified form Function constructor</td></tr>
 </table></details>
 
-<h1>Group: general_Collocation</summary>
+<details>
+  <summary>Group: general_Collocation</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1496,7 +1521,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::Conic</summary>
+<details>
+  <summary>class casadi::Conic</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1553,7 +1579,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: general_Conic</summary>
+<details>
+  <summary>Group: general_Conic</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1610,7 +1637,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::CplexInterface</summary>
+<details>
+  <summary>class casadi::CplexInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1679,7 +1707,8 @@
 <tr><td>warm_start</td><td>OT_BOOL</td><td>Use warm start with simplex methods (affects only the simplex methods).</td><td>casadi::CplexInterface</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_cplex</summary>
+<details>
+  <summary>Group: plugin_Conic_cplex</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -1697,7 +1726,8 @@
 <tr><td>warm_start</td><td>OT_BOOL</td><td>Use warm start with simplex methods (affects only the simplex methods).</td></tr>
 </table></details>
 
-<h1>Group: general_CplexInterface</summary>
+<details>
+  <summary>Group: general_CplexInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1766,7 +1796,8 @@
 <tr><td>warm_start</td><td>OT_BOOL</td><td>Use warm start with simplex methods (affects only the simplex methods).</td><td>casadi::CplexInterface</td></tr>
 </table></details>
 
-<h1>class casadi::CvodesInterface</summary>
+<details>
+  <summary>class casadi::CvodesInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1866,7 +1897,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Integrator_cvodes</summary>
+<details>
+  <summary>Group: plugin_Integrator_cvodes</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -1899,7 +1931,8 @@
 <tr><td>use_preconditioner</td><td>OT_BOOL</td><td>Precondition the iterative solver [default: true]</td></tr>
 </table></details>
 
-<h1>Group: general_CvodesInterface</summary>
+<details>
+  <summary>Group: general_CvodesInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -1999,7 +2032,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::Dple</summary>
+<details>
+  <summary>class casadi::Dple</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -2058,7 +2092,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: general_Dple</summary>
+<details>
+  <summary>Group: general_Dple</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -2117,7 +2152,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::Expm</summary>
+<details>
+  <summary>class casadi::Expm</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -2173,7 +2209,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: general_Expm</summary>
+<details>
+  <summary>Group: general_Expm</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -2229,7 +2266,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::FastNewton</summary>
+<details>
+  <summary>class casadi::FastNewton</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -2298,7 +2336,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Rootfinder_fast_newton</summary>
+<details>
+  <summary>Group: plugin_Rootfinder_fast_newton</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -2307,7 +2346,8 @@
 <tr><td>max_iter</td><td>OT_INT</td><td>Maximum number of Newton iterations to perform before returning.</td></tr>
 </table></details>
 
-<h1>Group: general_FastNewton</summary>
+<details>
+  <summary>Group: general_FastNewton</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -2376,7 +2416,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::FatropConicInterface</summary>
+<details>
+  <summary>class casadi::FatropConicInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -2438,7 +2479,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_fatrop</summary>
+<details>
+  <summary>Group: plugin_Conic_fatrop</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -2449,7 +2491,8 @@
 <tr><td>nx</td><td>OT_INTVECTOR</td><td>Number of states, length N+1</td></tr>
 </table></details>
 
-<h1>Group: general_FatropConicInterface</summary>
+<details>
+  <summary>Group: general_FatropConicInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -2511,7 +2554,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::Feasiblesqpmethod</summary>
+<details>
+  <summary>class casadi::Feasiblesqpmethod</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -2633,7 +2677,8 @@
 <tr><td>watchdog</td><td>OT_INT</td><td>Number of watchdog iterations in feasibility iterations. After this amount of iterations, it is checked with the contraction acceptance value, if iterations are converging.</td><td>casadi::Feasiblesqpmethod</td></tr>
 </table></details>
 
-<h1>Group: plugin_Nlpsol_feasiblesqpmethod</summary>
+<details>
+  <summary>Group: plugin_Nlpsol_feasiblesqpmethod</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -2678,7 +2723,8 @@
 <tr><td>watchdog</td><td>OT_INT</td><td>Number of watchdog iterations in feasibility iterations. After this amount of iterations, it is checked with the contraction acceptance value, if iterations are converging.</td></tr>
 </table></details>
 
-<h1>Group: general_Feasiblesqpmethod</summary>
+<details>
+  <summary>Group: general_Feasiblesqpmethod</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -2800,7 +2846,8 @@
 <tr><td>watchdog</td><td>OT_INT</td><td>Number of watchdog iterations in feasibility iterations. After this amount of iterations, it is checked with the contraction acceptance value, if iterations are converging.</td><td>casadi::Feasiblesqpmethod</td></tr>
 </table></details>
 
-<h1>class casadi::FiniteDiff</summary>
+<details>
+  <summary>class casadi::FiniteDiff</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -2863,7 +2910,8 @@
 <tr><td>user_data</td><td>OT_VOIDPTR</td><td>A user-defined field that can be used to identify the function or pass additional information</td><td>casadi::FunctionInternal</td></tr>
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
-<h1>class casadi::FixedStepIntegrator</summary>
+<details>
+  <summary>class casadi::FixedStepIntegrator</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -2936,7 +2984,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: general_FixedStepIntegrator</summary>
+<details>
+  <summary>Group: general_FixedStepIntegrator</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3009,7 +3058,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::FmuFunction</summary>
+<details>
+  <summary>class casadi::FmuFunction</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3080,7 +3130,8 @@
 <tr><td>validate_ad_file</td><td>OT_STRING</td><td>Redirect results of Hessian validation to a file instead of generating a warning</td><td>casadi::FmuFunction</td></tr>
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
-<h1>class casadi::FunctionInternal</summary>
+<details>
+  <summary>class casadi::FunctionInternal</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3135,7 +3186,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::Function</summary>
+<details>
+  <summary>class casadi::Function</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3190,7 +3242,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::GurobiInterface</summary>
+<details>
+  <summary>class casadi::GurobiInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3252,7 +3305,8 @@
 <tr><td>vtype</td><td>OT_STRINGVECTOR</td><td>Type of variables: [CONTINUOUS|binary|integer|semicont|semiint]</td><td>casadi::GurobiInterface</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_gurobi</summary>
+<details>
+  <summary>Group: plugin_Conic_gurobi</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -3263,7 +3317,8 @@
 <tr><td>vtype</td><td>OT_STRINGVECTOR</td><td>Type of variables: [CONTINUOUS|binary|integer|semicont|semiint]</td></tr>
 </table></details>
 
-<h1>Group: general_GurobiInterface</summary>
+<details>
+  <summary>Group: general_GurobiInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3325,7 +3380,8 @@
 <tr><td>vtype</td><td>OT_STRINGVECTOR</td><td>Type of variables: [CONTINUOUS|binary|integer|semicont|semiint]</td><td>casadi::GurobiInterface</td></tr>
 </table></details>
 
-<h1>class casadi::HighsInterface</summary>
+<details>
+  <summary>class casadi::HighsInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3383,14 +3439,16 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_highs</summary>
+<details>
+  <summary>Group: plugin_Conic_highs</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
 <tr><td>highs</td><td>OT_DICT</td><td>Options to be passed to HiGHS.</td></tr>
 </table></details>
 
-<h1>Group: general_HighsInterface</summary>
+<details>
+  <summary>Group: general_HighsInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3448,7 +3506,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::HpipmInterface</summary>
+<details>
+  <summary>class casadi::HpipmInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3511,7 +3570,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_hpipm</summary>
+<details>
+  <summary>Group: plugin_Conic_hpipm</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -3523,7 +3583,8 @@
 <tr><td>nx</td><td>OT_INTVECTOR</td><td>Number of states, length N+1</td></tr>
 </table></details>
 
-<h1>Group: general_HpipmInterface</summary>
+<details>
+  <summary>Group: general_HpipmInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3586,7 +3647,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::HpmpcInterface</summary>
+<details>
+  <summary>class casadi::HpmpcInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3655,7 +3717,8 @@
 <tr><td>warm_start</td><td>OT_BOOL</td><td>Use warm-starting</td><td>casadi::HpmpcInterface</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_hpmpc</summary>
+<details>
+  <summary>Group: plugin_Conic_hpmpc</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -3673,7 +3736,8 @@
 <tr><td>warm_start</td><td>OT_BOOL</td><td>Use warm-starting</td></tr>
 </table></details>
 
-<h1>Group: general_HpmpcInterface</summary>
+<details>
+  <summary>Group: general_HpmpcInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3742,7 +3806,8 @@
 <tr><td>warm_start</td><td>OT_BOOL</td><td>Use warm-starting</td><td>casadi::HpmpcInterface</td></tr>
 </table></details>
 
-<h1>class casadi::IdasInterface</summary>
+<details>
+  <summary>class casadi::IdasInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3845,7 +3910,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Integrator_idas</summary>
+<details>
+  <summary>Group: plugin_Integrator_idas</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -3881,7 +3947,8 @@
 <tr><td>use_preconditioner</td><td>OT_BOOL</td><td>Precondition the iterative solver [default: true]</td></tr>
 </table></details>
 
-<h1>Group: general_IdasInterface</summary>
+<details>
+  <summary>Group: general_IdasInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -3984,7 +4051,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::ImplicitFixedStepIntegrator</summary>
+<details>
+  <summary>class casadi::ImplicitFixedStepIntegrator</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4057,7 +4125,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: general_ImplicitFixedStepIntegrator</summary>
+<details>
+  <summary>Group: general_ImplicitFixedStepIntegrator</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4130,7 +4199,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::ImplicitToNlp</summary>
+<details>
+  <summary>class casadi::ImplicitToNlp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4198,7 +4268,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Rootfinder_nlp</summary>
+<details>
+  <summary>Group: plugin_Rootfinder_nlp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -4206,7 +4277,8 @@
 <tr><td>nlpsol_options</td><td>OT_DICT</td><td>Options to be passed to solver.</td></tr>
 </table></details>
 
-<h1>Group: general_ImplicitToNlp</summary>
+<details>
+  <summary>Group: general_ImplicitToNlp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4274,21 +4346,24 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::ImporterInternal</summary>
+<details>
+  <summary>class casadi::ImporterInternal</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ImporterInternal</td></tr>
 </table></details>
 
-<h1>Group: general_ImporterInternal</summary>
+<details>
+  <summary>Group: general_ImporterInternal</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ImporterInternal</td></tr>
 </table></details>
 
-<h1>class casadi::Integrator</summary>
+<details>
+  <summary>class casadi::Integrator</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4361,7 +4436,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: general_Integrator</summary>
+<details>
+  <summary>Group: general_Integrator</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4434,7 +4510,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::Interpolant</summary>
+<details>
+  <summary>class casadi::Interpolant</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4492,7 +4569,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: general_Interpolant</summary>
+<details>
+  <summary>Group: general_Interpolant</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4550,7 +4628,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::IpoptInterface</summary>
+<details>
+  <summary>class casadi::IpoptInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4650,7 +4729,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>Group: plugin_Nlpsol_ipopt</summary>
+<details>
+  <summary>Group: plugin_Nlpsol_ipopt</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -4673,7 +4753,8 @@
 <tr><td>var_string_md</td><td>OT_DICT</td><td>String metadata (a dictionary with lists of strings) about variables to be passed to IPOPT</td></tr>
 </table></details>
 
-<h1>Group: general_IpoptInterface</summary>
+<details>
+  <summary>Group: general_IpoptInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4773,7 +4854,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>class casadi::Ipqp</summary>
+<details>
+  <summary>class casadi::Ipqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4839,7 +4921,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_ipqp</summary>
+<details>
+  <summary>Group: plugin_Conic_ipqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -4854,7 +4937,8 @@
 <tr><td>print_iter</td><td>OT_BOOL</td><td>Print iterations [true].</td></tr>
 </table></details>
 
-<h1>Group: general_Ipqp</summary>
+<details>
+  <summary>Group: general_Ipqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4920,7 +5004,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::JitFunction</summary>
+<details>
+  <summary>class casadi::JitFunction</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -4977,7 +5062,8 @@
 <tr><td>user_data</td><td>OT_VOIDPTR</td><td>A user-defined field that can be used to identify the function or pass additional information</td><td>casadi::FunctionInternal</td></tr>
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
-<h1>class casadi::KinsolInterface</summary>
+<details>
+  <summary>class casadi::KinsolInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5058,7 +5144,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Rootfinder_kinsol</summary>
+<details>
+  <summary>Group: plugin_Rootfinder_kinsol</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -5079,7 +5166,8 @@
 <tr><td>use_preconditioner</td><td>OT_BOOL</td><td>Precondition an iterative solver</td></tr>
 </table></details>
 
-<h1>Group: general_KinsolInterface</summary>
+<details>
+  <summary>Group: general_KinsolInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5160,7 +5248,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::KnitroInterface</summary>
+<details>
+  <summary>class casadi::KnitroInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5248,7 +5337,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>Group: plugin_Nlpsol_knitro</summary>
+<details>
+  <summary>Group: plugin_Nlpsol_knitro</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -5259,7 +5349,8 @@
 <tr><td>options_file</td><td>OT_STRING</td><td>Read options from file (solver specific)</td></tr>
 </table></details>
 
-<h1>Group: general_KnitroInterface</summary>
+<details>
+  <summary>Group: general_KnitroInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5347,7 +5438,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>class casadi::LapackLu</summary>
+<details>
+  <summary>class casadi::LapackLu</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5404,7 +5496,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Linsol_lapacklu</summary>
+<details>
+  <summary>Group: plugin_Linsol_lapacklu</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -5412,7 +5505,8 @@
 <tr><td>equilibration</td><td>OT_BOOL</td><td>Equilibrate the matrix</td></tr>
 </table></details>
 
-<h1>Group: general_LapackLu</summary>
+<details>
+  <summary>Group: general_LapackLu</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5469,7 +5563,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::LapackQr</summary>
+<details>
+  <summary>class casadi::LapackQr</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5525,14 +5620,16 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Linsol_lapackqr</summary>
+<details>
+  <summary>Group: plugin_Linsol_lapackqr</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
 <tr><td>max_nrhs</td><td>OT_INT</td><td>Maximum number of right-hand-sides that get processed in a single pass [default:10].</td></tr>
 </table></details>
 
-<h1>Group: general_LapackQr</summary>
+<details>
+  <summary>Group: general_LapackQr</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5588,7 +5685,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::LinearInterpolant</summary>
+<details>
+  <summary>class casadi::LinearInterpolant</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5646,14 +5744,16 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Interpolant_linear</summary>
+<details>
+  <summary>Group: plugin_Interpolant_linear</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
 <tr><td>lookup_mode</td><td>OT_STRINGVECTOR</td><td>Sets, for each grid dimenion, the lookup algorithm used to find the correct index. 'linear' uses a for-loop + break; 'exact' uses floored division (only for uniform grids).</td></tr>
 </table></details>
 
-<h1>Group: general_LinearInterpolant</summary>
+<details>
+  <summary>Group: general_LinearInterpolant</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5711,7 +5811,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::LinsolLdl</summary>
+<details>
+  <summary>class casadi::LinsolLdl</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5724,7 +5825,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_LinsolInternal_ldl</summary>
+<details>
+  <summary>Group: plugin_LinsolInternal_ldl</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -5732,7 +5834,8 @@
 <tr><td>preordering</td><td>OT_BOOL</td><td>Approximate minimal degree (AMD) preordering</td></tr>
 </table></details>
 
-<h1>Group: general_LinsolLdl</summary>
+<details>
+  <summary>Group: general_LinsolLdl</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5745,7 +5848,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::LinsolQr</summary>
+<details>
+  <summary>class casadi::LinsolQr</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5753,7 +5857,8 @@
 <tr><td>eps</td><td>OT_DOUBLE</td><td>Minimum R entry before singularity is declared [1e-12]</td><td>casadi::LinsolQr</td></tr>
 </table></details>
 
-<h1>Group: plugin_LinsolInternal_qr</summary>
+<details>
+  <summary>Group: plugin_LinsolInternal_qr</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -5761,7 +5866,8 @@
 <tr><td>eps</td><td>OT_DOUBLE</td><td>Minimum R entry before singularity is declared [1e-12]</td></tr>
 </table></details>
 
-<h1>Group: general_LinsolQr</summary>
+<details>
+  <summary>Group: general_LinsolQr</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5769,7 +5875,8 @@
 <tr><td>eps</td><td>OT_DOUBLE</td><td>Minimum R entry before singularity is declared [1e-12]</td><td>casadi::LinsolQr</td></tr>
 </table></details>
 
-<h1>class casadi::MXFunction</summary>
+<details>
+  <summary>class casadi::MXFunction</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5829,7 +5936,8 @@
 <tr><td>user_data</td><td>OT_VOIDPTR</td><td>A user-defined field that can be used to identify the function or pass additional information</td><td>casadi::FunctionInternal</td></tr>
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
-<h1>class casadi::MumpsInterface</summary>
+<details>
+  <summary>class casadi::MumpsInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5842,7 +5950,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Linsol_mumps</summary>
+<details>
+  <summary>Group: plugin_Linsol_mumps</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -5850,7 +5959,8 @@
 <tr><td>symmetric</td><td>OT_BOOL</td><td>Symmetric matrix</td></tr>
 </table></details>
 
-<h1>Group: general_MumpsInterface</summary>
+<details>
+  <summary>Group: general_MumpsInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5863,7 +5973,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::Newton</summary>
+<details>
+  <summary>class casadi::Newton</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -5934,7 +6045,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Rootfinder_newton</summary>
+<details>
+  <summary>Group: plugin_Rootfinder_newton</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -5945,7 +6057,8 @@
 <tr><td>print_iteration</td><td>OT_BOOL</td><td>Print information about each iteration</td></tr>
 </table></details>
 
-<h1>Group: general_Newton</summary>
+<details>
+  <summary>Group: general_Newton</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6016,7 +6129,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::Nlpsol</summary>
+<details>
+  <summary>class casadi::Nlpsol</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6099,7 +6213,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>Group: general_Nlpsol</summary>
+<details>
+  <summary>Group: general_Nlpsol</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6182,7 +6297,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>class casadi::OoqpInterface</summary>
+<details>
+  <summary>class casadi::OoqpInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6242,7 +6358,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_ooqp</summary>
+<details>
+  <summary>Group: plugin_Conic_ooqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -6251,7 +6368,8 @@
 <tr><td>print_level</td><td>OT_INT</td><td>Print level. OOQP listens to print_level 0, 10 and 100</td></tr>
 </table></details>
 
-<h1>Group: general_OoqpInterface</summary>
+<details>
+  <summary>Group: general_OoqpInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6311,7 +6429,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::OracleFunction</summary>
+<details>
+  <summary>class casadi::OracleFunction</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6370,7 +6489,8 @@
 <tr><td>user_data</td><td>OT_VOIDPTR</td><td>A user-defined field that can be used to identify the function or pass additional information</td><td>casadi::FunctionInternal</td></tr>
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
-<h1>class casadi::OsqpInterface</summary>
+<details>
+  <summary>class casadi::OsqpInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6430,7 +6550,8 @@
 <tr><td>warm_start_primal</td><td>OT_BOOL</td><td>Use x0 input to warmstart [Default: true].</td><td>casadi::OsqpInterface</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_osqp</summary>
+<details>
+  <summary>Group: plugin_Conic_osqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -6439,7 +6560,8 @@
 <tr><td>warm_start_primal</td><td>OT_BOOL</td><td>Use x0 input to warmstart [Default: true].</td></tr>
 </table></details>
 
-<h1>Group: general_OsqpInterface</summary>
+<details>
+  <summary>Group: general_OsqpInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6499,7 +6621,8 @@
 <tr><td>warm_start_primal</td><td>OT_BOOL</td><td>Use x0 input to warmstart [Default: true].</td><td>casadi::OsqpInterface</td></tr>
 </table></details>
 
-<h1>class casadi::ProtoFunction</summary>
+<details>
+  <summary>class casadi::ProtoFunction</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6509,7 +6632,8 @@
 <tr><td>regularity_check</td><td>OT_BOOL</td><td>Throw exceptions when NaN or Inf appears during evaluation</td><td>casadi::ProtoFunction</td></tr>
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
-<h1>class casadi::ProxqpInterface</summary>
+<details>
+  <summary>class casadi::ProxqpInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6569,7 +6693,8 @@
 <tr><td>warm_start_primal</td><td>OT_BOOL</td><td>Use x input to warmstart [Default: true].</td><td>casadi::ProxqpInterface</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_proxqp</summary>
+<details>
+  <summary>Group: plugin_Conic_proxqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -6578,7 +6703,8 @@
 <tr><td>warm_start_primal</td><td>OT_BOOL</td><td>Use x input to warmstart [Default: true].</td></tr>
 </table></details>
 
-<h1>Group: general_ProxqpInterface</summary>
+<details>
+  <summary>Group: general_ProxqpInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6638,7 +6764,8 @@
 <tr><td>warm_start_primal</td><td>OT_BOOL</td><td>Use x input to warmstart [Default: true].</td><td>casadi::ProxqpInterface</td></tr>
 </table></details>
 
-<h1>class casadi::QpToNlp</summary>
+<details>
+  <summary>class casadi::QpToNlp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6697,7 +6824,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_nlpsol</summary>
+<details>
+  <summary>Group: plugin_Conic_nlpsol</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -6705,7 +6833,8 @@
 <tr><td>nlpsol_options</td><td>OT_DICT</td><td>Options to be passed to solver.</td></tr>
 </table></details>
 
-<h1>Group: general_QpToNlp</summary>
+<details>
+  <summary>Group: general_QpToNlp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6764,7 +6893,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::QpoasesInterface</summary>
+<details>
+  <summary>class casadi::QpoasesInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6858,7 +6988,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_qpoases</summary>
+<details>
+  <summary>Group: plugin_Conic_qpoases</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -6901,7 +7032,8 @@
 <tr><td>terminationTolerance</td><td>OT_DOUBLE</td><td>Relative termination tolerance to stop homotopy.</td></tr>
 </table></details>
 
-<h1>Group: general_QpoasesInterface</summary>
+<details>
+  <summary>Group: general_QpoasesInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -6995,7 +7127,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::Qrqp</summary>
+<details>
+  <summary>class casadi::Qrqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -7060,7 +7193,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_qrqp</summary>
+<details>
+  <summary>Group: plugin_Conic_qrqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -7074,7 +7208,8 @@
 <tr><td>print_lincomb</td><td>OT_BOOL</td><td>Print dependant linear combinations of constraints [false]. Printed numbers are 0-based indices into the vector of [simple bounds;linear bounds]</td></tr>
 </table></details>
 
-<h1>Group: general_Qrqp</summary>
+<details>
+  <summary>Group: general_Qrqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -7139,7 +7274,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::Qrsqp</summary>
+<details>
+  <summary>class casadi::Qrsqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -7238,7 +7374,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>Group: plugin_Nlpsol_sqsqp</summary>
+<details>
+  <summary>Group: plugin_Nlpsol_sqsqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -7260,7 +7397,8 @@
 <tr><td>tol_pr</td><td>OT_DOUBLE</td><td>Stopping criterion for primal infeasibility</td></tr>
 </table></details>
 
-<h1>Group: general_Qrsqp</summary>
+<details>
+  <summary>Group: general_Qrsqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -7359,7 +7497,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>class casadi::Rootfinder</summary>
+<details>
+  <summary>class casadi::Rootfinder</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -7425,7 +7564,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: general_Rootfinder</summary>
+<details>
+  <summary>Group: general_Rootfinder</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -7491,7 +7631,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::SLEQPInterface</summary>
+<details>
+  <summary>class casadi::SLEQPInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -7578,7 +7719,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>Group: general_SLEQPInterface</summary>
+<details>
+  <summary>Group: general_SLEQPInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -7665,7 +7807,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>class casadi::SXFunction</summary>
+<details>
+  <summary>class casadi::SXFunction</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -7726,7 +7869,8 @@
 <tr><td>user_data</td><td>OT_VOIDPTR</td><td>A user-defined field that can be used to identify the function or pass additional information</td><td>casadi::FunctionInternal</td></tr>
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
-<h1>class casadi::Scpgen</summary>
+<details>
+  <summary>class casadi::Scpgen</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -7829,7 +7973,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>Group: plugin_Nlpsol_scpgen</summary>
+<details>
+  <summary>Group: plugin_Nlpsol_scpgen</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -7855,7 +8000,8 @@
 <tr><td>tol_reg</td><td>OT_DOUBLE</td><td>Stopping criterion for regularization</td></tr>
 </table></details>
 
-<h1>Group: general_Scpgen</summary>
+<details>
+  <summary>Group: general_Scpgen</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -7958,7 +8104,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>class casadi::ShellCompiler</summary>
+<details>
+  <summary>class casadi::ShellCompiler</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -7979,7 +8126,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ImporterInternal</td></tr>
 </table></details>
 
-<h1>Group: plugin_Importer_shell</summary>
+<details>
+  <summary>Group: plugin_Importer_shell</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -7999,7 +8147,8 @@
 <tr><td>temp_suffix</td><td>OT_BOOL</td><td>Use a temporary (seemingly random) filename suffix for file names. This is desired for thread-safety. This behaviour may defeat caching compiler wrappers. Default: true</td></tr>
 </table></details>
 
-<h1>Group: general_ShellCompiler</summary>
+<details>
+  <summary>Group: general_ShellCompiler</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -8020,7 +8169,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ImporterInternal</td></tr>
 </table></details>
 
-<h1>class casadi::SlicotDple</summary>
+<details>
+  <summary>class casadi::SlicotDple</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -8082,7 +8232,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Dple_slicot</summary>
+<details>
+  <summary>Group: plugin_Dple_slicot</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -8091,7 +8242,8 @@
 <tr><td>psd_num_zero</td><td>OT_DOUBLE</td><td>Numerical zero used in Periodic Schur decomposition with slicot.This option is needed when your systems has Floquet multiplierszero or close to zero</td></tr>
 </table></details>
 
-<h1>Group: general_SlicotDple</summary>
+<details>
+  <summary>Group: general_SlicotDple</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -8153,7 +8305,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::SnoptInterface</summary>
+<details>
+  <summary>class casadi::SnoptInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -8238,7 +8391,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>Group: plugin_Nlpsol_snopt</summary>
+<details>
+  <summary>Group: plugin_Nlpsol_snopt</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -8246,7 +8400,8 @@
 <tr><td>start</td><td>OT_STRING</td><td>Warm-start options for Worhp: cold|warm|hot</td></tr>
 </table></details>
 
-<h1>Group: general_SnoptInterface</summary>
+<details>
+  <summary>Group: general_SnoptInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -8331,7 +8486,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>class casadi::Sqpmethod</summary>
+<details>
+  <summary>class casadi::Sqpmethod</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -8441,7 +8597,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>Group: plugin_Nlpsol_sqpmethod</summary>
+<details>
+  <summary>Group: plugin_Nlpsol_sqpmethod</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
@@ -8474,7 +8631,8 @@
 <tr><td>tol_pr</td><td>OT_DOUBLE</td><td>Stopping criterion for primal infeasibility</td></tr>
 </table></details>
 
-<h1>Group: general_Sqpmethod</summary>
+<details>
+  <summary>Group: general_Sqpmethod</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -8584,7 +8742,8 @@
 <tr><td>warn_initial_bounds</td><td>OT_BOOL</td><td>Warn if the initial guess does not satisfy LBX and UBX</td><td>casadi::Nlpsol</td></tr>
 </table></details>
 
-<h1>class casadi::SundialsInterface</summary>
+<details>
+  <summary>class casadi::SundialsInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -8679,7 +8838,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: general_SundialsInterface</summary>
+<details>
+  <summary>Group: general_SundialsInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -8774,7 +8934,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::SuperscsInterface</summary>
+<details>
+  <summary>class casadi::SuperscsInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -8832,14 +8993,16 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Conic_superscs</summary>
+<details>
+  <summary>Group: plugin_Conic_superscs</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
 <tr><td>superscs</td><td>OT_DICT</td><td>Options to be passed to superscs.</td></tr>
 </table></details>
 
-<h1>Group: general_SuperscsInterface</summary>
+<details>
+  <summary>Group: general_SuperscsInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -8897,7 +9060,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::SymbolicQr</summary>
+<details>
+  <summary>class casadi::SymbolicQr</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -8953,14 +9117,16 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>Group: plugin_Linsol_symbolicqr</summary>
+<details>
+  <summary>Group: plugin_Linsol_symbolicqr</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
 <tr><td>fopts</td><td>OT_DICT</td><td>Options to be passed to generated function objects</td></tr>
 </table></details>
 
-<h1>Group: general_SymbolicQr</summary>
+<details>
+  <summary>Group: general_SymbolicQr</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -9016,7 +9182,8 @@
 <tr><td>verbose</td><td>OT_BOOL</td><td>Verbose evaluation -- for debugging</td><td>casadi::ProtoFunction</td></tr>
 </table></details>
 
-<h1>class casadi::WorhpInterface</summary>
+<details>
+  <summary>class casadi::WorhpInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
@@ -9100,14 +9267,16 @@
 <tr><td>worhp</td><td>OT_DICT</td><td>Options to be passed to WORHP</td><td>casadi::WorhpInterface</td></tr>
 </table></details>
 
-<h1>Group: plugin_Nlpsol_worhp</summary>
+<details>
+  <summary>Group: plugin_Nlpsol_worhp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th></tr>
 <tr><td>worhp</td><td>OT_DICT</td><td>Options to be passed to WORHP</td></tr>
 </table></details>
 
-<h1>Group: general_WorhpInterface</summary>
+<details>
+  <summary>Group: general_WorhpInterface</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
 <tr><th>Id</th><th>Type</th><th>Description</th><th>Used in</th></tr>
