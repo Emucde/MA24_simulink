@@ -2,15 +2,12 @@
 % https://de.mathworks.com/matlabcentral/answers/29638-rename-bus
 
 % to check try 'typeeditor'
-
+n = param_robot.n_DOF;
 
 %% debug data bus
-bus_temp_struct.x = 0;
-bus_temp_struct.x_d = 0;
-bus_temp_struct.y =  0;
-bus_temp_struct.y_d = 0;
-bus_temp_struct.z =  0;
-bus_temp_struct.z_d = 0;
+bus_temp_struct.p = zeros(n,1);
+bus_temp_struct.p_p = zeros(n,1);
+bus_temp_struct.p_pp = zeros(n,1);
 bus_temp_struct.rot_x_err = 0;
 bus_temp_struct.rot_y_err = 0;
 bus_temp_struct.rot_z_err = 0;
@@ -53,7 +50,6 @@ yy_debug_bus = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;
 
 %% robot model bus init
-n = param_robot.n_DOF;
 
 bus_temp_struct = struct;
 bus_temp_struct.q = zeros(n,1);
