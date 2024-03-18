@@ -1,6 +1,4 @@
 # MA24_simulink
-
-# MA24_simulink
 <details>
   <summary>class casadi::Qrqp</summary>
 <a name='options'></a><table>
