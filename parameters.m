@@ -58,7 +58,7 @@ traj_select.differential_filter = 2;
 traj_select.polynomial = 3;
 traj_select.sinus = 4;
 
-traj_select_fin = 4;
+traj_select_fin = 3;
 
 param_traj_allg.T_switch = 2;%T_sim/2; % ab dem zeitpunkt schält xe0 in xeT um und umgekehrt (only for differential filter)
 %% Param CT Controller
