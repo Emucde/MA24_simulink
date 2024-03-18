@@ -36,7 +36,7 @@ end
 
 %% debug parameter
 start_in_singularity = false;
-trajectory_out_of_workspace = true;
+trajectory_out_of_workspace = ~true;
 x_traj_out_of_workspace_value = 0.1;
 
 plot_trajectory = ~true;
@@ -67,7 +67,7 @@ ct_ctrl_param.Kd1 = diag([1e3 1e3 0 0 0 0]);
 ct_ctrl_param.Kp1 = ct_ctrl_param.Kd1^2/4;
 
 ct_ctrl_param.k    = 1e-4; % Singular robust calulation of J_pinv = (J'*J + kI)^(-1)*J'
-ct_ctrl_param.eps  = 1e-1;
+ct_ctrl_param.eps  = 1e1;
 ct_ctrl_param.mode = 2;
 % 0: no sing robust
 % 1: use k for  J_pinv = (J'*J + kI)^(-1)*J'
@@ -173,7 +173,7 @@ for name={files.name}
         param_trajectory = generateTrajectory_from_slx(mdl, q_0, H_0_init, traj_select_fin, T_sim, T_horizon_MPC, param_global);
         eval(param_MPC_traj_data_name+"=param_trajectory;"); % set new struct name
         
-        compile_sfunction               = false;
+        compile_sfun                    = false;
         weights_and_limits_as_parameter = true;
         plot_null_simu                  = false;
         print_init_guess_cost_functions = false;
