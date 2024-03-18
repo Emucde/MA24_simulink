@@ -1,4 +1,4 @@
-function tmpreturn = hom_transform_endeffector_casadi(q, param)
+function tmpreturn = hom_transform_endeffector_casadi_SX(q, param)
   m = casadi.SX(4,4);
   t1 = q(1);
   t2 = cos(t1);

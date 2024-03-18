@@ -1,7 +1,7 @@
 %% Init scripts
 tic
 parameters; init_casadi; import casadi.*;
-
+%dbstop if error
 %% GLOBAL SETTINGS FOR MPC
 
 % show plot functions
@@ -30,7 +30,7 @@ param_casadi_fun_name.(MPC).variant              = 'nlpsol';
 param_casadi_fun_name.(MPC).solver               = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).Ts                   = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter              = 1;
-param_casadi_fun_name.(MPC).N_MPC                = 5;    
+param_casadi_fun_name.(MPC).N_MPC                = 5;
 param_casadi_fun_name.(MPC).terminal_ineq_yref_N = false;
 param_casadi_fun_name.(MPC).terminal_soft_yref_N = true;
 
@@ -58,7 +58,7 @@ if mod(Ts_MPC, param_global.Ta) ~= 0
 end
 %% Convert Maple Functions to casadi functions
 if(convert_maple_to_casadi)
-    create_casadi_functions; %  script for matlab to casadi conversion
+    create_casadi_functions('SX'); %  script for matlab to casadi conversion
 end
 
 %% path for init guess
@@ -101,8 +101,6 @@ casadi_fun_h_header_path = [s_fun_path, casadi_func_name, '.h'];
 casadi_fun_c_header_path = [s_fun_path, casadi_func_name, '.c'];
 substr = '_matlab';
 MPC_matlab_name = [casadi_func_name, substr];
-%MPC_matlab_name_c_header_path = [s_fun_path, MPC_matlab_name, '.c'];
-MPC_matlab_name = [casadi_func_name, substr];
 
 %% DEFINE OPTIMIZATION PROBLEM
 if(strcmp(MPC_variant, 'opti'))
@@ -119,11 +117,11 @@ end
 
 %% Test MPC (fast)
 
-HH_e_test = arrayfun(@(u) hom_transform_endeffector(x_init_guess(1:n,u), param_robot), 1:N_MPC+1, UniformOutput=false);
-HH_e_test_arr = cell2mat(HH_e_test);
-p_e_test_arr = HH_e_test_arr(1:2,4:4:(N_MPC+1)*4)';
-
 if(plot_init_guess)
+    HH_e_test = arrayfun(@(u) hom_transform_endeffector(x_init_guess(1:n,u), param_robot), 1:N_MPC+1, UniformOutput=false);
+    HH_e_test_arr = cell2mat(HH_e_test);
+    p_e_test_arr = HH_e_test_arr(1:2,4:4:(N_MPC+1)*4)';
+
     subplot(3,1,1)
     plot((0:N_MPC-1)*Ts_MPC, u_init_guess)
     xlabel('time (s)');
@@ -228,7 +226,7 @@ param_MPC = struct( ...
 eval(init_guess_struct_name+"=param_MPC;"); % set new struct name
 save(""+init_guess_path+init_guess_struct_name+'.mat', init_guess_struct_name);
 
-% save old data
+% save old data %TODO: Struct speichern
 q_0_old                 = q_0;
 q_0_p_old               = q_0_p;
 xe0_old                 = xe0;
