@@ -221,21 +221,73 @@ for name={files.name}
 end
 
 if(plot_trajectory)
-    param_trajectory_test = param_MPC1_qrqp_opti_traj_data;
-    subplot(2,1,1);
-    plot(param_trajectory_test.t, param_trajectory_test.p_d);
-    title('polynomial 5th order')
-    ylabel('p(t) (m)');
-    xlabel('t (s)');
-    subplot(2,1,2);
-    plot(param_trajectory_test.t(1:end-1), diff(param_trajectory_test.p_d'));
-    ylabel('d/dt p(t) (m/s)');
-    xlabel('t (s)');
+        %{
+        param_trajectory_test = param_MPC1_qrqp_opti_traj_data;
+        subplot(2,1,1);
+        plot(param_trajectory_test.t, param_trajectory_test.p_d);
+        title('polynomial 5th order')
+        ylabel('p(t) (m)');
+        xlabel('t (s)');
+        subplot(2,1,2);
+        plot(param_trajectory_test.t(1:end-1), diff(param_trajectory_test.p_d'));
+        ylabel('d/dt p(t) (m/s)');
+        xlabel('t (s)');
+        %}
+
+        figure;
+        title('polynomial 5th order')
+
+        subplot(3,2,1);
+        plot(param_MPC1_traj_data.t, param_MPC1_traj_data.p_d(1,:));
+        ylabel('p^d_x(t) (m)');
+        xlabel('t (s)');
+        xlim([0 10])
+        grid on;
+        %plot(param_MPC1_traj_data.t(1:end-1), (1/param_global.Ta)*diff(param_MPC1_traj_data.p_d(1,:)'));
+        %ylabel('p_y(t) (m)');
+        %xlabel('t (s)')
+
+        subplot(3,2,2);
+        plot(param_MPC1_traj_data.t, param_MPC1_traj_data.p_d(2,:));
+        ylabel('p^d_y(t) (m)');
+        xlabel('t (s)');
+        xlim([0 10])
+        grid on;
+
+        subplot(3,2,3);
+        plot(param_MPC1_traj_data.t, param_MPC1_traj_data.p_d_p(1,:));
+        ylabel('d/dt p^d_x(t) (m/s)');
+        xlabel('t (s)');
+        xlim([0 10])
+        grid on;
+
+        subplot(3,2,4);
+        plot(param_MPC1_traj_data.t, param_MPC1_traj_data.p_d_p(2,:));
+        ylabel('d/dt p^d_y(t) (m/s)');
+        xlabel('t (s)');
+        xlim([0 10])
+        grid on;
+
+        subplot(3,2,5);
+        plot(param_MPC1_traj_data.t, param_MPC1_traj_data.p_d_pp(1,:));
+        ylabel('d^2/dt^2 p^d_x(t) (m/s)');
+        xlabel('t (s)');
+        xlim([0 10])
+        grid on;
+
+        subplot(3,2,6);
+        plot(param_MPC1_traj_data.t, param_MPC1_traj_data.p_d_pp(2,:));
+        ylabel('d^2/dt^2 p^d_y(t) (m/s)');
+        xlabel('t (s)');
+        xlim([0 10])
+        grid on;
+        %%
+        plot(param_MPC1_traj_data.t(1:end-2), (1/param_global.Ta^2)*diff(param_MPC1_traj_data.p_d(1,:)',2));
+        ylabel('d/dt p(t) (m/s)');
+        xlabel('t (s)');hold on;plot(param_MPC1_traj_data.t, param_MPC1_traj_data.p_d_pp(1,:));
 end
 
-%%
-
-%parameter_force_create_new_initial_guess = false;
+%parameter_force_create_new_initial_guess = false; % TODO: delete
 
 
 %% DEBUG
