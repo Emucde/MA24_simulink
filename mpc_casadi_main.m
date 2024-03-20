@@ -34,8 +34,18 @@ param_casadi_fun_name.(MPC).N_MPC                = 5;
 param_casadi_fun_name.(MPC).terminal_ineq_yref_N = false;
 param_casadi_fun_name.(MPC).terminal_soft_yref_N = true;
 
+MPC='MPC2';
+param_casadi_fun_name.(MPC).name                 = MPC;
+param_casadi_fun_name.(MPC).variant              = 'nlpsol';
+param_casadi_fun_name.(MPC).solver               = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).Ts                   = 20e-3;
+param_casadi_fun_name.(MPC).rk_iter              = 1;
+param_casadi_fun_name.(MPC).N_MPC                = 5;
+param_casadi_fun_name.(MPC).terminal_ineq_yref_N = false;
+param_casadi_fun_name.(MPC).terminal_soft_yref_N = true;
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC1;
+param_casadi_fun_struct = param_casadi_fun_name.MPC2;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -253,6 +263,9 @@ save(param_MPC_old_data_file, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
 %% COMPILE matlab s_function (can be used as normal function in matlab)
 if(compile_matlab_sfunction)
     % re-define same casadi function with new name
+    % Da der Name von f_opt der matlab name ist und im Objekt gespeichert ist verwendet 
+    % die Funktion casadi_fun_to_mex ebenfalls diesen Namen und er muss daher nicht
+    % übergeben werden.
     f_opt = Function(MPC_matlab_name, ...
         {input_vars_MX{:}},...
         {output_vars_MX{:}});
