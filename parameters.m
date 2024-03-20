@@ -66,12 +66,17 @@ ct_ctrl_param.Kd1 = diag([1e3 1e3 0 0 0 0]);
 %ct_ctrl_param.Kp1 = diag([64 64 0 0 0 0]);
 ct_ctrl_param.Kp1 = ct_ctrl_param.Kd1^2/4;
 
-ct_ctrl_param.k    = 1e-4; % Singular robust calulation of J_pinv = (J'*J + kI)^(-1)*J'
-ct_ctrl_param.eps  = 1e1;
-ct_ctrl_param.mode = 2;
+ct_ctrl_param.mode = 1;
 % 0: no sing robust
-% 1: use k for  J_pinv = (J'*J + kI)^(-1)*J'
+% 1: use Sugihara singular robust method: J_pinv = (J'*W_E*J + W_N)^(-1)*J' = (J'*W_E*J + W_N)\J'
 % 2: set sing values sigma_i < eps to sign(sigma_i)/q_i_max
+
+% 1:
+ct_ctrl_param.w_bar_N = 1e-3*[param_robot.l__1^2; param_robot.l__2^2];;
+ct_ctrl_param.w_E = 1e-1; %ct_ctrl_param.w_bar_N;
+
+% 2:
+ct_ctrl_param.eps  = 1e1;
 
 %% Param Trajektory differential filter 5th order
 param_ct_traj_filter;
