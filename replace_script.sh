@@ -16,7 +16,7 @@ fi
 variant=$1
 solver=$2
 endindex=$3
-output="MPC${endindex}_${variant}_${solver}.slx"
+output="MPC${endindex}_${variant}.slx"
 #output="${input//.slx/\_MCP$endindex\_$variant\_$solver.slx}"
 
 # Überprüfen, ob die Eingabedatei existiert
@@ -61,22 +61,25 @@ fi
 
 # Kopieren der Datei mit dem entsprechenden Dateinamen
 if [[ $variant == "opti" ]]; then
-   input="./templates/template_offline_MCP_variant_opti_shared_subsystem.slx"
+   input="./templates/template_offline_MCP_s_fun_opti_shared_subsystem.slx"
    MPC_string="MPC2"
    solver_string="qrqp"
+   idx_val=3
 else
-   input="./templates/template_offline_MCP_variant_nlpsol_shared_subsystem.slx"
-   MPC_string="MPC4"
+   input="./templates/template_offline_MCP_s_fun_nlpsol_shared_subsystem.slx"
+   MPC_string="MPC1"
    solver_string="ipopt"
+   idx_val=2
 fi
 tmp_dir="tmp_slx"
 mkdir $tmp_dir
 unzip $input -d $tmp_dir > /dev/null
+#exit 12312321
 #cp "$input" "tmp_slx.slx"
 
 # Suchen und Ersetzen des Strings in der kopierten Datei
-
-find  tmp_slx/ -type f -name "*.xml" -exec sed -i "s/$solver_string/$solver/g; s/$MPC_string/MPC$endindex/g" {} +
+grep -irn 
+find  tmp_slx/ -type f -name "*.xml" -exec sed -i "s/<P Name=\"Value\">$idx_val<\/P>/<P Name=\"Value\">$((endindex+1))<\/P>/g; s/$MPC_string/MPC$endindex/g" {} +
 
 pushd $tmp_dir > /dev/null # shell cd $tmp_dir
 zip -r ../$output * > /dev/null
@@ -91,18 +94,18 @@ echo "use \"close_system('$output')\" in Matlab to reload the model."
 echo ""
 echo "add the following lines to \"init_MPC_weights.m\":"
 echo ""
-weight_data="%%%%%%%%%%%%%%%%%%%%%%%%%% MPC4 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+weight_data="%%%%%%%%%%%%%%%%%%%%%%%%%% MPC1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-param_weight_MPC4_ipopt_nlpsol.QQ        = diag([1e5 1e5]); % x y weight
-param_weight_MPC4_ipopt_nlpsol.RR_u      = diag([1e-3 1e-3]); % u abso
-param_weight_MPC4_ipopt_nlpsol.RR_du     = diag([0 0]); % un-un-1
-param_weight_MPC4_ipopt_nlpsol.RR_dx     = diag([1e-2 1e-2 1e-3 1e-3]);
-param_weight_MPC4_ipopt_nlpsol.RR_dx_km1 = diag([0 0 0 0]);
-param_weight_MPC4_ipopt_nlpsol.xx_min    = [ -inf; -inf; -inf; -inf ];
-param_weight_MPC4_ipopt_nlpsol.xx_max    = [ inf; inf; inf; inf];
-param_weight_MPC4_ipopt_nlpsol.uu_min    = [ -inf; -inf ];
-param_weight_MPC4_ipopt_nlpsol.uu_max    = [ inf; inf ];"
-weight_data=$(echo "$weight_data" | sed "s/$solver_string/$solver/g; s/$MPC_string/MPC$endindex/g")
+param_weight_MPC1.QQ        = diag([1e5 1e5]); % x y weight
+param_weight_MPC1.RR_u      = diag([1e-3 1e-3]); % u abso
+param_weight_MPC1.RR_du     = diag([0 0]); % un-un-1
+param_weight_MPC1.RR_dx     = diag([1e-2 1e-2 1e-3 1e-3]);
+param_weight_MPC1.RR_dx_km1 = diag([0 0 0 0]);
+param_weight_MPC1.xx_min    = [ -inf; -inf; -inf; -inf ];
+param_weight_MPC1.xx_max    = [ inf; inf; inf; inf];
+param_weight_MPC1.uu_min    = [ -inf; -inf ];
+param_weight_MPC1.uu_max    = [ inf; inf ];"
+weight_data=$(echo "$weight_data" | sed "s/$MPC_string/MPC$endindex/g")
 echo "$weight_data"
 
 
