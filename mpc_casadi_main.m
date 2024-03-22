@@ -27,12 +27,10 @@ compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, file
 MPC='MPC1';
 param_casadi_fun_name.(MPC).name                 = MPC;
 param_casadi_fun_name.(MPC).variant              = 'nlpsol';
-param_casadi_fun_name.(MPC).solver               = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).solver               = 'ipopt'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).Ts                   = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter              = 1;
 param_casadi_fun_name.(MPC).N_MPC                = 5;
-param_casadi_fun_name.(MPC).terminal_ineq_yref_N = false;
-param_casadi_fun_name.(MPC).terminal_soft_yref_N = true;
 
 MPC='MPC2';
 param_casadi_fun_name.(MPC).name                 = MPC;
@@ -41,8 +39,6 @@ param_casadi_fun_name.(MPC).solver               = 'qrqp'; % (qrqp (sqp) | qpoas
 param_casadi_fun_name.(MPC).Ts                   = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter              = 1;
 param_casadi_fun_name.(MPC).N_MPC                = 5;
-param_casadi_fun_name.(MPC).terminal_ineq_yref_N = false;
-param_casadi_fun_name.(MPC).terminal_soft_yref_N = true;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 param_casadi_fun_struct = param_casadi_fun_name.MPC2;
