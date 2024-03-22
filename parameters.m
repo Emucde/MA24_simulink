@@ -36,7 +36,7 @@ end
 
 %% debug parameter
 start_in_singularity = false;
-trajectory_out_of_workspace = ~true;
+trajectory_out_of_workspace = ~true; % TODO: einfach offset 0 setzten
 x_traj_out_of_workspace_value = 0.1;
 
 plot_trajectory = ~true;
@@ -62,17 +62,20 @@ traj_select_fin = 3;
 
 param_traj_allg.T_switch = 2;%T_sim/2; % ab dem zeitpunkt schält xe0 in xeT um und umgekehrt (only for differential filter)
 %% Param CT Controller
-ct_ctrl_param.Kd1 = diag([1e3 1e3 0 0 0 0]);
-%ct_ctrl_param.Kp1 = diag([64 64 0 0 0 0]);
-ct_ctrl_param.Kp1 = ct_ctrl_param.Kd1^2/4;
+%ct_ctrl_param.Kd1 = diag([1e3 1e3]);
+%ct_ctrl_param.Kp1 = diag([64 64]);
+%ct_ctrl_param.Kp1 = ct_ctrl_param.Kd1^2/4;
 
-ct_ctrl_param.mode = 1;
+%ct_ctrl_param.Kp1 = diag(ones(1,2)*64);
+%ct_ctrl_param.Kd1 = diag(ones(1,2)*80);
+
+ct_ctrl_param.mode = 0;
 % 0: no sing robust
 % 1: use Sugihara singular robust method: J_pinv = (J'*W_E*J + W_N)^(-1)*J' = (J'*W_E*J + W_N)\J'
 % 2: set sing values sigma_i < eps to sign(sigma_i)/q_i_max
 
 % 1:
-ct_ctrl_param.w_bar_N = 1e-3*[param_robot.l__1^2; param_robot.l__2^2];;
+ct_ctrl_param.w_bar_N = 1e-3*[param_robot.l__1^2; param_robot.l__2^2];
 ct_ctrl_param.w_E = 1e-1; %ct_ctrl_param.w_bar_N;
 
 % 2:
