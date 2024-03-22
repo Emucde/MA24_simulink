@@ -119,11 +119,13 @@ for i=1:N_MPC
 end
         
 for i=1:N_MPC-1
-    % calculate joint velocities
-    q_p  =  x(n+1:2*n, 1 + (i));
+    % calculate joint angles and velocities
+    q    =  x(1:n, 1 + (i));
+    %q_p  =  x(n+1:2*n, 1 + (i));
 
-    dx  = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
-    q_pp = dx(n+1:2*n, 1);
+    dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
+    q_p  =  dx(1:n    , 1);
+    q_pp =  dx(n+1:2*n, 1);
 
     J = geo_jacobian_endeffector_casadi_SX(q, param_robot);
     y_p(:, 1 + (i-1)) = J(1:2, 1:2)*q_p;
