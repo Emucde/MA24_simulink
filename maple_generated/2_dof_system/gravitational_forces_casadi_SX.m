@@ -1,4 +1,4 @@
-function tmpreturn = gravitational_forces_casadi(q, param)
+function tmpreturn = gravitational_forces_casadi_SX(q, param)
   m = casadi.SX(1,2);
   t1 = q(2);
   t2 = cos(t1);

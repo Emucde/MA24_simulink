@@ -1,4 +1,4 @@
-function tmpreturn = coriolis_matrix_casadi(q, q_p, param)
+function tmpreturn = coriolis_matrix_casadi_SX(q, q_p, param)
   m = casadi.SX(2,2);
   t1 = param.l__1 * param.m2;
   t3 = sin(q(2));

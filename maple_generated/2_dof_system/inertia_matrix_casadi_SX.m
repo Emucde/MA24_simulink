@@ -1,4 +1,4 @@
-function tmpreturn = inertia_matrix_casadi(q, param)
+function tmpreturn = inertia_matrix_casadi_SX(q, param)
   m = casadi.SX(2,2);
   t1 = param.l__s1 ^ 2;
   t5 = cos(q(2));
