@@ -25,23 +25,31 @@ compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, file
 %param_casadi_fun_name.MPC2.terminal_soft_yref_N = false; % not implemented for opti
 
 MPC='MPC1';
-param_casadi_fun_name.(MPC).name                 = MPC;
-param_casadi_fun_name.(MPC).variant              = 'nlpsol';
-param_casadi_fun_name.(MPC).solver               = 'ipopt'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).Ts                   = 20e-3;
-param_casadi_fun_name.(MPC).rk_iter              = 1;
-param_casadi_fun_name.(MPC).N_MPC                = 5;
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'ipopt'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).Ts      = 20e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 5;
 
 MPC='MPC2';
-param_casadi_fun_name.(MPC).name                 = MPC;
-param_casadi_fun_name.(MPC).variant              = 'nlpsol';
-param_casadi_fun_name.(MPC).solver               = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).Ts                   = 20e-3;
-param_casadi_fun_name.(MPC).rk_iter              = 1;
-param_casadi_fun_name.(MPC).N_MPC                = 5;
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).Ts      = 20e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 5;
+
+MPC='MPC3';
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).Ts      = 50e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 5;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC2;
+param_casadi_fun_struct = param_casadi_fun_name.MPC3;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -54,9 +62,6 @@ T_horizon_MPC    = Ts_MPC*N_MPC;                    % Time horizon
 N_step_MPC       = round(Ts_MPC/param_global.Ta);   % sampling steps for trajectory
 MPC_variant      = param_casadi_fun_struct.variant;
 MPC_solver       = param_casadi_fun_struct.solver;
-
-terminal_ineq_yref_N = param_casadi_fun_struct.terminal_ineq_yref_N;
-terminal_soft_yref_N = param_casadi_fun_struct.terminal_soft_yref_N;
 
 % checks
 if mod(Ts_MPC, param_global.Ta) ~= 0
@@ -224,9 +229,7 @@ param_MPC = struct( ...
   'rk_iter',              rk_iter, ...
   'variant',              param_casadi_fun_struct.variant, ...
   'solver',               param_casadi_fun_struct.solver, ...
-  'name',                 param_casadi_fun_struct.name, ...
-  'terminal_ineq_yref_N', param_casadi_fun_struct.terminal_ineq_yref_N, ...
-  'terminal_soft_yref_N', param_casadi_fun_struct.terminal_soft_yref_N ...
+  'name',                 param_casadi_fun_struct.name ...
 );
 
 eval(init_guess_struct_name+"=param_MPC;"); % set new struct name

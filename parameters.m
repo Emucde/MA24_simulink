@@ -57,29 +57,36 @@ traj_select.equilibrium_traj = 1;
 traj_select.differential_filter = 2;
 traj_select.polynomial = 3;
 traj_select.sinus = 4;
-
+%%%%%%%%%
 traj_select_fin = 3;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 param_traj_allg.T_switch = 2;%T_sim/2; % ab dem zeitpunkt schält xe0 in xeT um und umgekehrt (only for differential filter)
 %% Param CT Controller
-%ct_ctrl_param.Kd1 = diag([1e3 1e3]);
-%ct_ctrl_param.Kp1 = diag([64 64]);
-%ct_ctrl_param.Kp1 = ct_ctrl_param.Kd1^2/4;
+ct_ctrl_param.Kd1 = diag([1e3 1e3]);
+ct_ctrl_param.Kp1 = ct_ctrl_param.Kd1^2/4;
 
-%ct_ctrl_param.Kp1 = diag(ones(1,2)*64);
+%ct_ctrl_param.Kd1 = diag(ones(1,2)*500);
+%ct_ctrl_param.Kp1 = diag(ones(1,2)*1000);
+
 %ct_ctrl_param.Kd1 = diag(ones(1,2)*80);
+%ct_ctrl_param.Kp1 = diag(ones(1,2)*64);
 
-ct_ctrl_param.mode = 0;
+ct_ctrl_param.mode = 2;
 % 0: no sing robust
-% 1: use Sugihara singular robust method: J_pinv = (J'*W_E*J + W_N)^(-1)*J' = (J'*W_E*J + W_N)\J'
-% 2: set sing values sigma_i < eps to sign(sigma_i)/q_i_max
+% 1: simpliy use J_pinv = (J'*J + k*E)^(-1)*J' = (J'*J + k*E)\J'
+% 2: use Sugihara singular robust method: J_pinv = (J'*W_E*J + W_N)^(-1)*J' = (J'*W_E*J + W_N)\J'
+% 3: set sing values sigma_i < eps to sign(sigma_i)/q_i_max
 
 % 1:
-ct_ctrl_param.w_bar_N = 1e-3*[param_robot.l__1^2; param_robot.l__2^2];
-ct_ctrl_param.w_E = 1e-1; %ct_ctrl_param.w_bar_N;
+ct_ctrl_param.k = 1e-2;
 
 % 2:
-ct_ctrl_param.eps  = 1e1;
+ct_ctrl_param.w_bar_N = 1e-3*[param_robot.l__1^2; param_robot.l__2^2];
+ct_ctrl_param.w_E = 1e0; %ct_ctrl_param.w_bar_N;
+
+% 3:
+ct_ctrl_param.eps  = 1e-1;
 
 %% Param Trajektory differential filter 5th order
 param_ct_traj_filter;
@@ -185,8 +192,6 @@ for name={files.name}
         weights_and_limits_as_parameter = true;
         plot_null_simu                  = false;
         print_init_guess_cost_functions = false;
-        terminal_ineq_yref_N            = param_MPC_struct.terminal_ineq_yref_N;
-        terminal_soft_yref_N            = param_MPC_struct.terminal_soft_yref_N;
         
         opts = struct; % should be empty
         if(strcmp(MPC_variant, 'opti'))

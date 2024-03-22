@@ -6,7 +6,7 @@ if [ "$#" -ne 3 ]; then
   echo ""
   echo "Beispiel 1: ./replace_script.sh opti qrqp 1"
   echo "Beispiel 2: ./replace_script.sh nlpsol ipopt 1"
-  echo "Beispiel 3: ./replace_script.sh nlpsol qpsol 1"
+  echo "Beispiel 3: ./replace_script.sh nlpsol qrqp 1"
   echo ""
   echo "Achtung: Bisher ist nur offline MPC implementiert. Sollte aber auch für online MPC klappen,"
   echo "dazu muss noch ein passendes shared subsystem erstellt werden."
@@ -96,11 +96,10 @@ echo "add the following lines to \"init_MPC_weights.m\":"
 echo ""
 weight_data="%%%%%%%%%%%%%%%%%%%%%%%%%% MPC1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-param_weight_MPC1.QQ        = diag([1e5 1e5]); % x y weight
-param_weight_MPC1.RR_u      = diag([1e-3 1e-3]); % u abso
-param_weight_MPC1.RR_du     = diag([0 0]); % un-un-1
-param_weight_MPC1.RR_dx     = diag([1e-2 1e-2 1e-3 1e-3]);
-param_weight_MPC1.RR_dx_km1 = diag([0 0 0 0]);
+param_weight_MPC1.QQ_y      = diag([1 1]);
+param_weight_MPC1.QQ_y_p    = diag([1 1]);
+param_weight_MPC1.QQ_y_pp   = diag([1 1]);
+param_weight_MPC1.QQ_yN     = diag([1 1]);
 param_weight_MPC1.xx_min    = [ -inf; -inf; -inf; -inf ];
 param_weight_MPC1.xx_max    = [ inf; inf; inf; inf];
 param_weight_MPC1.uu_min    = [ -inf; -inf ];

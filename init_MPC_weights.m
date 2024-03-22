@@ -1,12 +1,12 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%% MPC1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_weight_MPC1.QQ_y    = 1e4*diag([1 1]); % x y weight
-param_weight_MPC1.QQ_y_p  = 1e-2*diag([1 1]); % x_p y_p weight
-param_weight_MPC1.QQ_y_pp = 1e-3*diag([1 1]); % x_pp y_pp weight
+%%%%%%%%%%%%%%%%%%%%%%%%%% MPC1 & MPC2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+param_weight_MPC1.QQ_y    = 1e5*diag([1 1]);
+param_weight_MPC1.QQ_y_p  = 1e-3*diag([1 1]);
+param_weight_MPC1.QQ_y_pp = 1e-3*diag([1 1]);
 param_weight_MPC1.QQ_yN   = 1e5*diag([1 1]);
-param_weight_MPC1.xx_min  = [ -inf; -inf; -inf; -inf ];
-param_weight_MPC1.xx_max  = [ inf; inf; inf; inf];
-param_weight_MPC1.uu_min  = [ -inf; -inf ];
-param_weight_MPC1.uu_max  = [ inf; inf ];
+param_weight_MPC1.xx_min  = inf*[ -1; -1; -1; -1 ];
+param_weight_MPC1.xx_max  = inf*[ 1; 1; 1; 1];
+param_weight_MPC1.uu_min  = inf*[ -10; -10 ];
+param_weight_MPC1.uu_max  = inf*[ 10; 10 ];
 
 param_weight_MPC2.QQ_y    = param_weight_MPC1.QQ_y   ;
 param_weight_MPC2.QQ_y_p  = param_weight_MPC1.QQ_y_p ;
@@ -17,11 +17,21 @@ param_weight_MPC2.xx_max  = param_weight_MPC1.xx_max ;
 param_weight_MPC2.uu_min  = param_weight_MPC1.uu_min ;
 param_weight_MPC2.uu_max  = param_weight_MPC1.uu_max ;
 
+%%%%%%%%%%%%%%%%%%%%%%%%%% MPC3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+param_weight_MPC3.QQ_y      = 1e5*diag([1 1]);
+param_weight_MPC3.QQ_y_p    = 1e-3*diag([1 1]);
+param_weight_MPC3.QQ_y_pp   = 1e-3*diag([1 1]);
+param_weight_MPC3.QQ_yN     = 1e5*diag([1 1]);
+param_weight_MPC3.xx_min    = [ -inf; -inf; -inf; -inf ];
+param_weight_MPC3.xx_max    = [ inf; inf; inf; inf];
+param_weight_MPC3.uu_min    = [ -inf; -inf ];
+param_weight_MPC3.uu_max    = [ inf; inf ];
+
 %{
 % Old mpc with bug
-param_weight_MPC1.QQ_y    = 1e4*diag([1 1]); % x y weight
-param_weight_MPC1.QQ_y_p  = 1e-2*diag([1 1]); % x_p y_p weight
-param_weight_MPC1.QQ_y_pp = 1e-3*diag([1 1]); % x_pp y_pp weight
+param_weight_MPC1.QQ_y    = 1e4*diag([1 1]);
+param_weight_MPC1.QQ_y_p  = 1e-2*diag([1 1]);
+param_weight_MPC1.QQ_y_pp = 1e-3*diag([1 1]);
 param_weight_MPC1.QQ_yN   = 1e5*diag([1 1]);
 param_weight_MPC1.xx_min  = [ -inf; -inf; -inf; -inf ];
 param_weight_MPC1.xx_max  = [ inf; inf; inf; inf];
@@ -29,9 +39,9 @@ param_weight_MPC1.uu_min  = [ -inf; -inf ];
 param_weight_MPC1.uu_max  = [ inf; inf ];
 %}
 
-%param_weight_MPC1.QQ_y    = 1e4*diag([1 1e1]); % x y weight
-%param_weight_MPC1.QQ_y_p  = 1e-1*diag([1 1]); % x_p y_p weight
-%param_weight_MPC1.QQ_y_pp = 1e-4*diag([1 1]); % x_pp y_pp weight
+%param_weight_MPC1.QQ_y    = 1e4*diag([1 1e1]);
+%param_weight_MPC1.QQ_y_p  = 1e-1*diag([1 1]);
+%param_weight_MPC1.QQ_y_pp = 1e-4*diag([1 1]);
 %param_weight_MPC1.QQ_yN   = 1e4*diag([1 1]);
 %param_weight_MPC1.xx_min  = [ -inf; -inf; -inf; -inf ];
 %param_weight_MPC1.xx_max  = [ inf; inf; inf; inf];
@@ -40,9 +50,9 @@ param_weight_MPC1.uu_max  = [ inf; inf ];
 
 %{
 % STart in sing
-param_weight_MPC1.QQ_y    = 1e4*diag([1 1]); % x y weight
-param_weight_MPC1.QQ_y_p  = 1e-1*diag([1 1]); % x_p y_p weight
-param_weight_MPC1.QQ_y_pp = 1e-3*diag([1 1]); % x_pp y_pp weight
+param_weight_MPC1.QQ_y    = 1e4*diag([1 1]);
+param_weight_MPC1.QQ_y_p  = 1e-1*diag([1 1]);
+param_weight_MPC1.QQ_y_pp = 1e-3*diag([1 1]);
 param_weight_MPC1.QQ_yN   = 1e4*diag([1 1]);
 param_weight_MPC1.xx_min  = [ -inf; -inf; -inf; -inf ];
 param_weight_MPC1.xx_max  = [ inf; inf; inf; inf];
