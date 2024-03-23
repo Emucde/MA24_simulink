@@ -50,9 +50,9 @@ y_pp_ref_0         = param_trajectory.p_d_pp(1:2, 1+N_step_MPC : N_step_MPC : 1+
 
 % get weights from "init_MPC_weight.m"
 QQ_y    = eval( "param_weight_"+casadi_func_name+".QQ_y;"    );
-QQ_yN   = eval( "param_weight_"+casadi_func_name+".QQ_yN;"   );
 QQ_y_p  = eval( "param_weight_"+casadi_func_name+".QQ_y_p;"  );
 QQ_y_pp = eval( "param_weight_"+casadi_func_name+".QQ_y_pp;" );
+QQ_yN   = eval( "param_weight_"+casadi_func_name+".QQ_yN;"   );
 xx_min  = eval( "param_weight_"+casadi_func_name+".xx_min;"  );
 xx_max  = eval( "param_weight_"+casadi_func_name+".xx_max;"  );
 uu_min  = eval( "param_weight_"+casadi_func_name+".uu_min;"  );
@@ -69,10 +69,10 @@ if(weights_and_limits_as_parameter)
     u_min  = SX.sym('u_min',  2,1);
     u_max  = SX.sym('u_max',  2,1);
 else % hardcoded weights
-    Q_y    = QQ_y;      
-    Q_yN   = QQ_yN;    
+    Q_y    = QQ_y;        
     Q_y_p  = QQ_y_p;  
     Q_y_pp = QQ_y_pp;
+    Q_yN   = QQ_yN;  
     x_min  = xx_min;   
     x_max  = xx_max;   
     u_min  = uu_min;   
@@ -307,7 +307,7 @@ if(weights_and_limits_as_parameter)
         {output_vars_MX{:}});
 
     [u_opt_sol, x_full_opt_sol, u_full_opt_sol, J_y_sol, J_y_p_sol, J_y_pp_sol, J_yN_sol] = ...
-        f_opt(y_ref_0, y_p_ref_0, y_pp_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, QQ_y, QQ_yN, QQ_y_p, QQ_y_pp, xx_min, xx_max, uu_min, uu_max);
+        f_opt(y_ref_0, y_p_ref_0, y_pp_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, QQ_y, QQ_y_p, QQ_y_pp, QQ_yN, xx_min, xx_max, uu_min, uu_max);
 else
     % ohne extra parameter 30-60 % schneller!
     f_opt = Function(casadi_func_name, ...
@@ -322,9 +322,11 @@ x_init_guess = full(x_full_opt_sol);
 u_init_guess = full(u_full_opt_sol);
 
 if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
-    disp(['J = '      num2str(num2str(full(sum([J_y_sol, Ju_sol, ]))))]);
-    disp(['Jy = '     num2str(full(J_y_sol     ))]);
-    disp(['Ju = '     num2str(full(J_u_sol     ))]);
+    disp(['J = '      num2str(num2str(full(sum([J_y_sol, J_y_p_sol, J_y_pp_sol, J_yN_sol]))))]);
+    disp(['J_y = '    num2str(full(J_y_sol))]);
+    disp(['J_y_p = '  num2str(full(J_y_p_sol))]);
+    disp(['J_y_pp = ' num2str(full(J_y_pp_sol))]);
+    disp(['J_yN = '   num2str(full(J_yN_sol))]);
 end
 
 %% COMPILE (nlpsol)
