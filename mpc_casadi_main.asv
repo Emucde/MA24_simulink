@@ -1,7 +1,7 @@
 %% Init scripts
 tic
 parameters; init_casadi; import casadi.*;
-
+%dbstop if error
 %% GLOBAL SETTINGS FOR MPC
 
 % show plot functions
@@ -10,29 +10,35 @@ plot_init_guess                 = false; % plot init guess
 plot_null_simu                  = false; % plot system simulation for x0          = 0, u0 = ID(x0)
 convert_maple_to_casadi         = false; % convert maple functions into casadi functions
 fullsimu                        = false; % make full mpc simulation and plot results
-weights_and_limits_as_parameter = ~true; % otherwise minimal set of inputs and parameter is used. Leads to faster run time and compile time.
-compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
-compile_mode                    = 2; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
-compile_matlab_sfunction        = true; % only needed for matlab MPC simu, filename: "casadi_func_name
-
-%param_casadi_fun_name = struct();
-%param_casadi_fun_name.MPC2.variant = 'opti';
-%param_casadi_fun_name.MPC2.solver  = 'qrqp'; % (qrqp (sqp) | qpoases?)
-%param_casadi_fun_name.MPC2.Ts      = 5e-3;
-%param_casadi_fun_name.MPC2.rk_iter = 1;
-%param_casadi_fun_name.MPC2.N_MPC   = 5;
-%param_casadi_fun_name.MPC2.terminal_ineq_yref_N = false; % not implemented for opti
-%param_casadi_fun_name.MPC2.terminal_soft_yref_N = false; % not implemented for opti
+weights_and_limits_as_parameter = true; % otherwise minimal set of inputs and parameter is used. Leads to faster run time and compile time.
+compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
+compile_mode                    = 1; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
+compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
 
 MPC='MPC1';
-param_casadi_fun_name.(MPC).name                 = MPC;
-param_casadi_fun_name.(MPC).variant              = 'nlpsol';
-param_casadi_fun_name.(MPC).solver               = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).Ts                   = 20e-3;
-param_casadi_fun_name.(MPC).rk_iter              = 1;
-param_casadi_fun_name.(MPC).N_MPC                = 5;    
-param_casadi_fun_name.(MPC).terminal_ineq_yref_N = false;
-param_casadi_fun_name.(MPC).terminal_soft_yref_N = true;
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'ipopt'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).Ts      = 20e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 5;
+
+MPC='MPC2';
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).Ts      = 20e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 5;
+
+MPC='MPC3';
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).Ts      = 50e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 5;
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 param_casadi_fun_struct = param_casadi_fun_name.MPC1;
@@ -49,16 +55,13 @@ N_step_MPC       = round(Ts_MPC/param_global.Ta);   % sampling steps for traject
 MPC_variant      = param_casadi_fun_struct.variant;
 MPC_solver       = param_casadi_fun_struct.solver;
 
-terminal_ineq_yref_N = param_casadi_fun_struct.terminal_ineq_yref_N;
-terminal_soft_yref_N = param_casadi_fun_struct.terminal_soft_yref_N;
-
 % checks
 if mod(Ts_MPC, param_global.Ta) ~= 0
     error('Error: Result is not an integer.');
 end
 %% Convert Maple Functions to casadi functions
 if(convert_maple_to_casadi)
-    create_casadi_functions; %  script for matlab to casadi conversion
+    create_casadi_functions('SX'); %  script for matlab to casadi conversion
 end
 
 %% path for init guess
@@ -101,7 +104,6 @@ casadi_fun_h_header_path = [s_fun_path, casadi_func_name, '.h'];
 casadi_fun_c_header_path = [s_fun_path, casadi_func_name, '.c'];
 substr = '_matlab';
 MPC_matlab_name = [casadi_func_name, substr];
-%MPC_matlab_name_c_header_path = [s_fun_path, MPC_matlab_name, '.c'];
 
 %% DEFINE OPTIMIZATION PROBLEM
 if(strcmp(MPC_variant, 'opti'))
@@ -118,11 +120,11 @@ end
 
 %% Test MPC (fast)
 
-HH_e_test = arrayfun(@(u) hom_transform_endeffector(x_init_guess(1:n,u), param_robot), 1:N_MPC+1, UniformOutput=false);
-HH_e_test_arr = cell2mat(HH_e_test);
-p_e_test_arr = HH_e_test_arr(1:2,4:4:(N_MPC+1)*4)';
-
 if(plot_init_guess)
+    HH_e_test = arrayfun(@(u) hom_transform_endeffector(x_init_guess(1:n,u), param_robot), 1:N_MPC+1, UniformOutput=false);
+    HH_e_test_arr = cell2mat(HH_e_test);
+    p_e_test_arr = HH_e_test_arr(1:2,4:4:(N_MPC+1)*4)';
+
     subplot(3,1,1)
     plot((0:N_MPC-1)*Ts_MPC, u_init_guess)
     xlabel('time (s)');
@@ -146,9 +148,8 @@ disp(['Bevor "if(fullsimu)" Rechenzeit: ', sprintf('%f', toc), ' s']);
 if(fullsimu)
     if(exist(MPC_matlab_name, 'file') == 3)
         matlab_sfun = str2func(MPC_matlab_name);
-    %elseif(exist(['s_function_',casadi_func_name], 'file') == 3)
     else
-        error('Error: no matlab s-fun exist')
+        error(['Error: no matlab s-fun ', MPC_matlab_name,' exists!'])
     end
     
     %load("./s_functions/trajectory_data/"+"param_"+casadi_func_name+"_traj_data.mat")
@@ -220,15 +221,13 @@ param_MPC = struct( ...
   'rk_iter',              rk_iter, ...
   'variant',              param_casadi_fun_struct.variant, ...
   'solver',               param_casadi_fun_struct.solver, ...
-  'name',                 param_casadi_fun_struct.name, ...
-  'terminal_ineq_yref_N', param_casadi_fun_struct.terminal_ineq_yref_N, ...
-  'terminal_soft_yref_N', param_casadi_fun_struct.terminal_soft_yref_N ...
+  'name',                 param_casadi_fun_struct.name ...
 );
 
 eval(init_guess_struct_name+"=param_MPC;"); % set new struct name
 save(""+init_guess_path+init_guess_struct_name+'.mat', init_guess_struct_name);
 
-% save old data
+% save old data %TODO: Struct speichern
 q_0_old                 = q_0;
 q_0_p_old               = q_0_p;
 xe0_old                 = xe0;
@@ -255,6 +254,9 @@ save(param_MPC_old_data_file, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
 %% COMPILE matlab s_function (can be used as normal function in matlab)
 if(compile_matlab_sfunction)
     % re-define same casadi function with new name
+    % Da der Name von f_opt der matlab name ist und im Objekt gespeichert ist verwendet 
+    % die Funktion casadi_fun_to_mex ebenfalls diesen Namen und er muss daher nicht
+    % übergeben werden.
     f_opt = Function(MPC_matlab_name, ...
         {input_vars_MX{:}},...
         {output_vars_MX{:}});
