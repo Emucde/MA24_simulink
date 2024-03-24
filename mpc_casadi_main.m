@@ -15,15 +15,6 @@ compile_sfun                    = true; % needed for simulink s-function, filena
 compile_mode                    = 2; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
 compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
 
-%param_casadi_fun_name = struct();
-%param_casadi_fun_name.MPC2.variant = 'opti';
-%param_casadi_fun_name.MPC2.solver  = 'qrqp'; % (qrqp (sqp) | qpoases?)
-%param_casadi_fun_name.MPC2.Ts      = 5e-3;
-%param_casadi_fun_name.MPC2.rk_iter = 1;
-%param_casadi_fun_name.MPC2.N_MPC   = 5;
-%param_casadi_fun_name.MPC2.terminal_ineq_yref_N = false; % not implemented for opti
-%param_casadi_fun_name.MPC2.terminal_soft_yref_N = false; % not implemented for opti
-
 MPC='MPC1';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
@@ -48,8 +39,16 @@ param_casadi_fun_name.(MPC).Ts      = 50e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 
+MPC='MPC4';
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).Ts      = 1e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 5;
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC3;
+param_casadi_fun_struct = param_casadi_fun_name.MPC4;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
