@@ -44,39 +44,30 @@ u_init_guess_0 = ones(2,N_MPC).*u_k_0;
 sim                = F.mapaccum(N_MPC);
 x_init_guess_kp1_0 = sim(x_0_0, u_init_guess_0);
 x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
-y_ref_0            = param_trajectory.p_d(   1:2, 1+N_step_MPC : N_step_MPC : 1+N_MPC* N_step_MPC   );
-y_p_ref_0          = param_trajectory.p_d_p( 1:2, 1+N_step_MPC : N_step_MPC : 1+N_MPC*(N_step_MPC-1));
-y_pp_ref_0         = param_trajectory.p_d_pp(1:2, 1+N_step_MPC : N_step_MPC : 1+N_MPC*(N_step_MPC-1));
+y_ref_0            = param_trajectory.p_d(    1:2, 1 + N_step_MPC : N_step_MPC : 1 + (N_MPC  ) * N_step_MPC ); % (y_1 ... y_N)
+y_p_ref_0          = param_trajectory.p_d_p(  1:2, 1 + N_step_MPC : N_step_MPC : 1 + (N_MPC  ) * N_step_MPC ); % (y_p_1 ... y_p_N)
+y_pp_ref_0         = param_trajectory.p_d_pp( 1:2, 1              : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_pp_0 ... y_N-1)
 
 % get weights from "init_MPC_weight.m"
-QQ_y    = eval( "param_weight_"+casadi_func_name+".QQ_y;"    );
-QQ_y_p  = eval( "param_weight_"+casadi_func_name+".QQ_y_p;"  );
-QQ_y_pp = eval( "param_weight_"+casadi_func_name+".QQ_y_pp;" );
-QQ_yN   = eval( "param_weight_"+casadi_func_name+".QQ_yN;"   );
-xx_min  = eval( "param_weight_"+casadi_func_name+".xx_min;"  );
-xx_max  = eval( "param_weight_"+casadi_func_name+".xx_max;"  );
-uu_min  = eval( "param_weight_"+casadi_func_name+".uu_min;"  );
-uu_max  = eval( "param_weight_"+casadi_func_name+".uu_max;"  );
+% TODO: DELETE
+
+param_weight_init = param_weight.(casadi_func_name);
+
+% unnedig?
+QQ_y    = param_weight_init.Q_y;
+QQ_y_p  = param_weight_init.Q_y_p;
+QQ_y_pp = param_weight_init.Q_y_pp;
+QQ_yN   = param_weight_init.Q_yN;
+xx_min  = param_weight_init.x_min;
+xx_max  = param_weight_init.x_max;
+uu_min  = param_weight_init.u_min;
+uu_max  = param_weight_init.u_max;
 
 % weights as parameter (~inputs)
 if(weights_and_limits_as_parameter)
-    Q_y    = SX.sym('Q_y',    2,2); % x y weight
-    Q_yN   = SX.sym('Q_yN',   2,2);
-    Q_y_p  = SX.sym('Q_y_p',  2,2); % x y weight
-    Q_y_pp = SX.sym('Q_y_pp', 2,2); % x y weight
-    x_min  = SX.sym('x_min',  4,1);
-    x_max  = SX.sym('x_max',  4,1);
-    u_min  = SX.sym('u_min',  2,1);
-    u_max  = SX.sym('u_max',  2,1);
+    pp = convert_doublestruct_to_casadi(param_weight_init);
 else % hardcoded weights
-    Q_y    = QQ_y;        
-    Q_y_p  = QQ_y_p;  
-    Q_y_pp = QQ_y_pp;
-    Q_yN   = QQ_yN;  
-    x_min  = xx_min;   
-    x_max  = xx_max;   
-    u_min  = uu_min;   
-    u_max  = uu_max;   
+    pp = param_weight_init;
 end
 
 %% Start with an empty NLP
@@ -85,40 +76,59 @@ end
 x = SX.sym( 'x', 2*n, N_MPC+1 );
 u = SX.sym( 'u',   n, N_MPC   );
 
-% parameter
-x_k          = SX.sym( 'x_k',      2*n, 1       );
-y_kp1_ref    = SX.sym( 'y_ref',    2,   N_MPC   ); % with y_N
-y_p_kp1_ref  = SX.sym( 'y_p_ref',  2,   N_MPC-1 );
-y_pp_kp1_ref = SX.sym( 'y_pp_ref', 2,   N_MPC-1 );
+% input parameter
+x_k      = SX.sym( 'x_k',      2*n, 1       );
+y_ref    = SX.sym( 'y_ref',    2,   N_MPC   ); % with y_N
+y_p_ref  = SX.sym( 'y_p_ref',  2,   N_MPC   );
+y_pp_ref = SX.sym( 'y_pp_ref', 2,   N_MPC   );
+
+%% set input parameter cellaray p
+p = [x_k; y_ref(:); y_p_ref(:); y_pp_ref(:)];
+if(weights_and_limits_as_parameter) % debug input parameter
+    p = [p; struct_to_row_vector(pp)'];
+end
 
 % optimization variables cellarray w
 w = [x(:); u(:)];
-lbw = [repmat(x_min, N_MPC + 1, 1); repmat(u_min, N_MPC, 1)];
-ubw = [repmat(x_max, N_MPC + 1, 1); repmat(u_max, N_MPC, 1)];
+lbw = [repmat(pp.x_min, N_MPC + 1, 1); repmat(pp.u_min, N_MPC, 1)];
+ubw = [repmat(pp.x_max, N_MPC + 1, 1); repmat(pp.u_max, N_MPC, 1)];
 
 % constraints conditions cellarray g
 g = cell(1, N_MPC+1);
 lbg = zeros(numel(x), 1);
 ubg = zeros(numel(x), 1);
 
-y    = SX( 2, N_MPC   ); % forward kinematics (TCP position) (with y_N)
-y_p  = SX( 2, N_MPC-1 ); % TCP velocity
-y_pp = SX( 2, N_MPC-1 ); % TCP acceleration
+y    = SX( 2, N_MPC ); % TCP position:     (y_1 ... y_N)
+y_p  = SX( 2, N_MPC ); % TCP velocity:     (y_p_1 ... y_p_N)
+y_pp = SX( 2, N_MPC ); % TCP acceleration: (y_pp_0 ... y_N-1)
 
+% Caclulate state trajectory: Given: x_0: (x_1 ... xN)
 g(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 for i=0:N_MPC-1
     % Set the state dynamics constraints
     g(1, 1 + (i+1)) = {F(x(:, 1 + (i)), u(:, 1 + (i))) - x(:, 1 + (i+1))}; % system equation
 end
 
+% calculate trajectory values (y_1 ... y_N)
 for i=1:N_MPC
-     % calculate trajectory values (y_1 ... y_N)
      q    =  x(1:n, 1 + (i));
      H_e = hom_transform_endeffector_casadi_SX(q, param_robot);
      y(:, 1 + (i-1)) = H_e(1:2, 4); % index 0 is y_1
 end
-        
-for i=1:N_MPC-1
+
+% calculate trajectory values (y_p_1 ... y_p_N)
+for i=1:N_MPC
+    q    =  x(1:n    , 1 + (i));
+    q_p  =  x(n+1:2*n, 1 + (i));
+
+    J = geo_jacobian_endeffector_casadi_SX(q, param_robot);
+    y_p(:, 0 + (i)) = J(1:2, 1:2)*q_p;
+    % or y(:, 0) = {H_e(x_k) or (y(:, i+1) - y(:, i))/param_global.Ta} for i=1
+    % and y_p(:, i) = (y(:, i-1) - y(:, i))/param_global.Ta for i>1 and
+end
+
+% calculate trajectory values (y_pp_0 ... y_N-1)
+for i=0:N_MPC-1
     % calculate joint angles and velocities
     q    =  x(1:n, 1 + (i));
     %q_p  =  x(n+1:2*n, 1 + (i));
@@ -128,10 +138,6 @@ for i=1:N_MPC-1
     q_pp =  dx(n+1:2*n, 1);
 
     J = geo_jacobian_endeffector_casadi_SX(q, param_robot);
-    y_p(:, 1 + (i-1)) = J(1:2, 1:2)*q_p;
-    % or y(:, 0) = {H_e(x_k) or (y(:, i+1) - y(:, i))/param_global.Ta} for i=1
-    % and y_p(:, i) = (y(:, i-1) - y(:, i))/param_global.Ta for i>1 and
-
     J_p = geo_jacobian_endeffector_p_casadi_SX(q, q_p, param_robot);
     y_pp(:, 1 + (i-1)) = J(1:2, 1:2)*q_pp + J_p(1:2, 1:2)*q_p;
     % or y_pp(:, i) = (y(:, i+2) - 2*y(:, i+1) + y(:, i))/param_global.Ta^2 for i=1
@@ -140,47 +146,50 @@ end
 
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
+% Achtung: % index 0 von y und y_p is y_1 bzw. y1_p, Index 0 von y_pp ist y0_pp
+D_0    = Q_norm_square( y_pp( :, 1 + (0)         ) - y_pp_ref( :, 1 + (0)        ), pp.Q_y0_pp );
+
+D_1    = Q_norm_square( y(    :, 0 + (1)         ) - y_ref(    :, 0 + (1)        ), pp.Q_y1    ) + ...
+         Q_norm_square( y_p(  :, 0 + (1)         ) - y_p_ref(  :, 0 + (1)        ), pp.Q_y1_p  ) + ...
+         Q_norm_square( y_pp( :, 1 + (1)         ) - y_pp_ref( :, 1 + (1)        ), pp.Q_y1_pp );
+
+D_N    = Q_norm_square( y(    :, 0 + (N_MPC)     ) - y_ref(    :, 0 + (N_MPC)    ), pp.Q_yN    ) + ...
+         Q_norm_square( y_p(  :, 0 + (N_MPC)     ) - y_p_ref(  :, 0 + (N_MPC)    ), pp.Q_yN_p  );
+
+J_y    = Q_norm_square( y(    :, 0 + (2:N_MPC-1) ) - y_ref(    :, 0 + (2:N_MPC-1)), pp.Q_y     );
+J_y_p  = Q_norm_square( y_p(  :, 0 + (2:N_MPC-1) ) - y_p_ref(  :, 0 + (2:N_MPC-1)), pp.Q_y_p   );
+J_y_pp = Q_norm_square( y_pp( :, 1 + (2:N_MPC-1) ) - y_pp_ref( :, 1 + (2:N_MPC-1)), pp.Q_y_pp  );
+
+cost_vars_names = '{J_y, J_y_p, J_y_pp, D_0, D_1, D_N}';
+cost_vars_SX = eval(cost_vars_names);
+cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
+
 % calculate cost function
-J_y    = Q_norm_square(y(:, 1:end-1) - y_kp1_ref(:, 1:end-1), Q_y);
-J_y_p  = Q_norm_square(y_p           - y_p_kp1_ref,           Q_y_p);
-J_y_pp = Q_norm_square(y_pp          - y_pp_kp1_ref,          Q_y_pp);
-J_yN   = Q_norm_square(y(:,end)      - y_kp1_ref(:,end),      Q_yN);
+J = sum([cost_vars_SX{:}]);
 
-J = J_y + J_y_p + J_y_pp + J_yN;
-%% set of parameter cellaray p
+% Redundant: Z184, Z191, Z195, Z212
 
-p = [x_k; y_kp1_ref(:); y_p_kp1_ref(:); y_pp_kp1_ref(:)];
+input_vars_SX  = {y_ref, y_p_ref, y_pp_ref, x_k, x, u};
+output_values_SX = {J, vertcat(w{:}), vertcat(g{:}), vertcat(p{:})};
+
 if(weights_and_limits_as_parameter)
-    p = [p; Q_y(:);   Q_yN(:);  Q_y_p(:); Q_y_pp(:); ...
-            x_min(:); x_max(:); u_min(:); u_max(:)];
+    %input_vars_SX  = {input_vars_SX{:},  Q_y, Q_y_p, Q_y_pp, Q_yN, x_min, x_max, u_min, u_max};
+    input_vars_SX = horzcat(input_vars_SX, struct2cell(pp)');
+    get_costs_MX = Function('get_costs_MX', input_vars_SX, cost_vars_SX);
+    get_limits_MX = Function('get_limits_MX', input_vars_SX, {lbw,   ubw,   lbg,   ubg});
 end
 
-input_vars_SX  = {y_kp1_ref, y_p_kp1_ref, y_pp_kp1_ref, x_k, x, u};
-output_vars_SX = {J, vertcat(w{:}), vertcat(g{:}), vertcat(p{:})};
-if(weights_and_limits_as_parameter)
-    input_vars_SX  = {input_vars_SX{:},  Q_y, Q_y_p, Q_y_pp, Q_yN, x_min, x_max, u_min, u_max};
-    output_vars_SX = {output_vars_SX{:}, J_y, J_y_p, J_y_pp, J_yN, lbw,   ubw,   lbg,   ubg};
-end
-get_props = Function('get_props', input_vars_SX, output_vars_SX);
+get_outputs_MX = Function('get_outputs_MX', input_vars_SX, output_values_SX);
+
 
 % get SX prop struct (SX is much faster than MX!)
-if(weights_and_limits_as_parameter)
-    [J, W, G, P, ~, ~, ~, ~, ~, ~, ~] = get_props(input_vars_SX{:}); % ist nicht anders als J, w, g, p oben
-else
-    [J, W, G, P] = get_props(input_vars_SX{:});
-end
+[J, W, G, P] = get_outputs_MX(input_vars_SX{:});
 prob = struct('f', J, 'x', W, 'g', G, 'p', P);
 
 % convert SX variables to MX (nlpsolve can only use MX variables)
 input_vars_MX       = cellfun(@(x) sx_to_mx(x, 'get_MX_sym_cell' ), input_vars_SX, 'UniformOutput', false);
 %input_vars_MX_names = cellfun(@(x) sx_to_mx(x, 'get_MX_name_cell'), input_vars_SX, 'UniformOutput', false);
 
-if(weights_and_limits_as_parameter)
-    [J_MX, w_MX, ~, p_MX,  J_y_MX, J_y_p_MX, J_y_pp_MX, J_yN_MX, lbw_MX, ubw_MX, lbg_MX, ubg_MX] = get_props(input_vars_MX{:});
-    output_vars_MX_ext = { J_y_MX, J_y_p_MX, J_y_pp_MX, J_yN_MX };
-else
-    [J_MX, w_MX, ~, p_MX] = get_props(input_vars_MX{:});
-end
 %% Create an NLP solver
 
 %|-------------------|
@@ -272,7 +281,12 @@ end
 %| NLPSOL_LAM_G0 | lam_g0 | Lagrange multipliers for bounds on G, initial guess (ng x 1)|
 %|--------------------------------------------------------------------------------------|
 
+% [J_MX, w_MX, g_MX, p_MX,  J_y_MX, J_y_p_MX, J_y_pp_MX, D_0_MX, D_1_MX, D_N_MX, lbw_MX, ubw_MX, lbg_MX, ubg_MX] = get_outputs_MX(input_vars_MX{:}); % früher
+[J_MX, w_MX, ~, p_MX] = get_outputs_MX(input_vars_MX{:});
+
 if(weights_and_limits_as_parameter)
+    [lbw_MX, ubw_MX, lbg_MX, ubg_MX] = get_limits_MX(input_vars_MX{:});
+
     sol_sym = solver('x0', w_MX, 'lbx', lbw_MX, 'ubx', ubw_MX,...
         'lbg', lbg_MX, 'ubg', ubg_MX, 'p', p_MX);
 else
@@ -298,6 +312,7 @@ u_full_opt = reshape( sol_sym.x(   numel(x)+1:end ) ,   n, N_MPC   );
 
 output_vars_MX = {u_opt, x_full_opt, u_full_opt};
 if(weights_and_limits_as_parameter)
+    [output_vars_MX_ext{1:length(cost_vars_SX)}] = get_costs_MX(input_vars_MX{:});
     output_vars_MX = {output_vars_MX{:}, output_vars_MX_ext{:}};
 end
 
@@ -306,8 +321,10 @@ if(weights_and_limits_as_parameter)
         {input_vars_MX{:}},...
         {output_vars_MX{:}});
 
-    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, J_y_sol, J_y_p_sol, J_y_pp_sol, J_yN_sol] = ...
-        f_opt(y_ref_0, y_p_ref_0, y_pp_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, QQ_y, QQ_y_p, QQ_y_pp, QQ_yN, xx_min, xx_max, uu_min, uu_max);
+    %[u_opt_sol, x_full_opt_sol, u_full_opt_sol, J_y_sol, J_y_p_sol, J_y_pp_sol, D_N_sol] = ...
+    %    f_opt(y_ref_0, y_p_ref_0, y_pp_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, QQ_y, QQ_y_p, QQ_y_pp, QQ_yN, xx_min, xx_max, uu_min, uu_max);
+    param_weight_init_cell = struct2cell(param_weight_init)';
+    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(y_ref_0, y_p_ref_0, y_pp_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, param_weight_init_cell{:});
 else
     % ohne extra parameter 30-60 % schneller!
     f_opt = Function(casadi_func_name, ...
@@ -322,11 +339,10 @@ x_init_guess = full(x_full_opt_sol);
 u_init_guess = full(u_full_opt_sol);
 
 if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
-    disp(['J = '      num2str(num2str(full(sum([J_y_sol, J_y_p_sol, J_y_pp_sol, J_yN_sol]))))]);
-    disp(['J_y = '    num2str(full(J_y_sol))]);
-    disp(['J_y_p = '  num2str(full(J_y_p_sol))]);
-    disp(['J_y_pp = ' num2str(full(J_y_pp_sol))]);
-    disp(['J_yN = '   num2str(full(J_yN_sol))]);
+    disp(['J = '      num2str(full( sum([ cost_values_sol{:} ]) )) ]);
+    for i=1:length(cost_vars_names_cell)
+        disp([cost_vars_names_cell{i}, '= ', num2str(full( cost_values_sol{i} ))])
+    end
 end
 
 %% COMPILE (nlpsol)
