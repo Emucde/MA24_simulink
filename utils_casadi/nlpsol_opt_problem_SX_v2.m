@@ -44,6 +44,10 @@ u_init_guess_0 = ones(2,N_MPC).*u_k_0;
 sim                = F.mapaccum(N_MPC);
 x_init_guess_kp1_0 = sim(x_0_0, u_init_guess_0);
 x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
+
+lam_x_init_guess_0 = zeros(numel([x_init_guess_0(:); u_init_guess_0(:)]), 1);
+lam_g_init_guess_0 = zeros(numel([x_init_guess_0(:)]), 1);
+
 y_ref_0            = param_trajectory.p_d(    1:2, 1 + N_step_MPC : N_step_MPC : 1 + (N_MPC  ) * N_step_MPC ); % (y_1 ... y_N)
 y_p_ref_0          = param_trajectory.p_d_p(  1:2, 1 + N_step_MPC : N_step_MPC : 1 + (N_MPC  ) * N_step_MPC ); % (y_p_1 ... y_p_N)
 y_pp_ref_0         = param_trajectory.p_d_pp( 1:2, 1              : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_pp_0 ... y_N-1)
@@ -52,16 +56,6 @@ y_pp_ref_0         = param_trajectory.p_d_pp( 1:2, 1              : N_step_MPC :
 % TODO: DELETE
 
 param_weight_init = param_weight.(casadi_func_name);
-
-% unnedig?
-QQ_y    = param_weight_init.Q_y;
-QQ_y_p  = param_weight_init.Q_y_p;
-QQ_y_pp = param_weight_init.Q_y_pp;
-QQ_yN   = param_weight_init.Q_yN;
-xx_min  = param_weight_init.x_min;
-xx_max  = param_weight_init.x_max;
-uu_min  = param_weight_init.u_min;
-uu_max  = param_weight_init.u_max;
 
 % weights as parameter (~inputs)
 if(weights_and_limits_as_parameter)
@@ -98,6 +92,11 @@ g = cell(1, N_MPC+1);
 lbg = zeros(numel(x), 1);
 ubg = zeros(numel(x), 1);
 
+% lambda_x0, lambda_g0 initial guess
+lambda_x0 = SX.sym('lambda_x0', size(w));
+lambda_g0 = SX.sym('lambda_g0', size(lbg));
+
+% Actual TCP data
 y    = SX( 2, N_MPC ); % TCP position:     (y_1 ... y_N)
 y_p  = SX( 2, N_MPC ); % TCP velocity:     (y_p_1 ... y_p_N)
 y_pp = SX( 2, N_MPC ); % TCP acceleration: (y_pp_0 ... y_N-1)
@@ -168,9 +167,8 @@ cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 J = sum([cost_vars_SX{:}]);
 
 % Redundant: Z184, Z191, Z195, Z212
-
-input_vars_SX  = {y_ref, y_p_ref, y_pp_ref, x_k, x, u};
-output_values_SX = {J, vertcat(w{:}), vertcat(g{:}), vertcat(p{:})};
+input_vars_SX  = {y_ref, y_p_ref, y_pp_ref, x_k, x, u, lambda_x0, lambda_g0};
+output_values_SX = {J, vertcat(w{:}), vertcat(g{:}), vertcat(p{:}), lambda_x0, lambda_g0};
 
 if(weights_and_limits_as_parameter)
     %input_vars_SX  = {input_vars_SX{:},  Q_y, Q_y_p, Q_y_pp, Q_yN, x_min, x_max, u_min, u_max};
@@ -183,7 +181,7 @@ get_outputs_MX = Function('get_outputs_MX', input_vars_SX, output_values_SX);
 
 
 % get SX prop struct (SX is much faster than MX!)
-[J, W, G, P] = get_outputs_MX(input_vars_SX{:});
+[J, W, G, P, ~, ~] = get_outputs_MX(input_vars_SX{:});
 prob = struct('f', J, 'x', W, 'g', G, 'p', P);
 
 % convert SX variables to MX (nlpsolve can only use MX variables)
@@ -282,16 +280,16 @@ end
 %|--------------------------------------------------------------------------------------|
 
 % [J_MX, w_MX, g_MX, p_MX,  J_y_MX, J_y_p_MX, J_y_pp_MX, D_0_MX, D_1_MX, D_N_MX, lbw_MX, ubw_MX, lbg_MX, ubg_MX] = get_outputs_MX(input_vars_MX{:}); % früher
-[J_MX, w_MX, ~, p_MX] = get_outputs_MX(input_vars_MX{:});
+[J_MX, w_MX, ~, p_MX, lambda_x0_MX, lambda_g0_MX] = get_outputs_MX(input_vars_MX{:});
 
 if(weights_and_limits_as_parameter)
     [lbw_MX, ubw_MX, lbg_MX, ubg_MX] = get_limits_MX(input_vars_MX{:});
 
-    sol_sym = solver('x0', w_MX, 'lbx', lbw_MX, 'ubx', ubw_MX,...
-        'lbg', lbg_MX, 'ubg', ubg_MX, 'p', p_MX);
+    sol_sym = solver('x0', w_MX, 'p', p_MX, 'lbx', lbw_MX, 'ubx', ubw_MX,...
+        'lbg', lbg_MX, 'ubg', ubg_MX, 'lam_x0', lambda_x0_MX, 'lam_g0', lambda_g0_MX);
 else
-    sol_sym = solver('x0', w_MX, 'lbx', lbw, 'ubx', ubw,...
-        'lbg', lbg, 'ubg', ubg, 'p', p_MX);
+    sol_sym = solver('x0', 'p', p_MX, w_MX, 'lbx', lbw, 'ubx', ubw,...
+        'lbg', lbg, 'ubg', ubg, 'lam_x0', lambda_x0_MX, 'lam_g0', lambda_g0_MX);
 end
 
 %--------------------------------------------------------------------------------------|
@@ -306,11 +304,13 @@ end
 %--------------------------------------------------------------------------------------|
 
 % generate solver solutions variables
-u_opt      =        ( sol_sym.x(   numel(x)+(1:n) )                );
-x_full_opt = reshape( sol_sym.x( 1:numel(x)       ) , 2*n, N_MPC+1 );
-u_full_opt = reshape( sol_sym.x(   numel(x)+1:end ) ,   n, N_MPC   );
+u_opt         =        ( sol_sym.x(   numel(x)+(1:n) )                );
+x_full_opt    = reshape( sol_sym.x( 1:numel(x)       ) , 2*n, N_MPC+1 );
+u_full_opt    = reshape( sol_sym.x(   numel(x)+1:end ) ,   n, N_MPC   );
+lambda_x0_opt = sol_sym.lam_x;
+lambda_g0_opt = sol_sym.lam_g;
 
-output_vars_MX = {u_opt, x_full_opt, u_full_opt};
+output_vars_MX = {u_opt, x_full_opt, u_full_opt, lambda_x0_opt, lambda_g0_opt};
 if(weights_and_limits_as_parameter)
     [output_vars_MX_ext{1:length(cost_vars_SX)}] = get_costs_MX(input_vars_MX{:});
     output_vars_MX = {output_vars_MX{:}, output_vars_MX_ext{:}};
@@ -324,19 +324,21 @@ if(weights_and_limits_as_parameter)
     %[u_opt_sol, x_full_opt_sol, u_full_opt_sol, J_y_sol, J_y_p_sol, J_y_pp_sol, D_N_sol] = ...
     %    f_opt(y_ref_0, y_p_ref_0, y_pp_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, QQ_y, QQ_y_p, QQ_y_pp, QQ_yN, xx_min, xx_max, uu_min, uu_max);
     param_weight_init_cell = struct2cell(param_weight_init)';
-    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(y_ref_0, y_p_ref_0, y_pp_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, param_weight_init_cell{:});
+    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, lambda_x0_opt_sol, lambda_g0_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(y_ref_0, y_p_ref_0, y_pp_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0, param_weight_init_cell{:});
 else
     % ohne extra parameter 30-60 % schneller!
     f_opt = Function(casadi_func_name, ...
         {input_vars_MX{:}},...
         {output_vars_MX{:}});
 
-    [u_opt_sol, x_full_opt_sol, u_full_opt_sol] = f_opt(y_ref_0, x_0_0, x_init_guess_0, u_init_guess_0);
+    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, lambda_x0_opt_sol, lambda_g0_opt_sol] = f_opt(y_ref_0, x_0_0, x_init_guess_0, u_init_guess_0);
 end
 
 % set init guess
 x_init_guess = full(x_full_opt_sol);
 u_init_guess = full(u_full_opt_sol);
+lam_x_init_guess = full(lambda_x0_opt_sol);
+lam_g_init_guess = full(lambda_g0_opt_sol);
 
 if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
     disp(['J = '      num2str(full( sum([ cost_values_sol{:} ]) )) ]);

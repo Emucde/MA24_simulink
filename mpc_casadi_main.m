@@ -7,7 +7,7 @@ parameters; init_casadi; import casadi.*;
 % show plot functions
 print_init_guess_cost_functions = false;
 plot_init_guess                 = false; % plot init guess
-plot_null_simu                  = false; % plot system simulation for x0          = 0, u0 = ID(x0)
+plot_null_simu                  = false; % plot system simulation for x0 = 0, u0 = ID(x0)
 convert_maple_to_casadi         = false; % convert maple functions into casadi functions
 fullsimu                        = false; % make full mpc simulation and plot results
 weights_and_limits_as_parameter = true; % otherwise minimal set of inputs and parameter is used. Leads to faster run time and compile time.
@@ -48,7 +48,7 @@ param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC4;
+param_casadi_fun_struct = param_casadi_fun_name.MPC3;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -153,6 +153,7 @@ end
 % viel schneller als die eigentliche Simulation sein.
 disp(['Bevor "if(fullsimu)" Rechenzeit: ', sprintf('%f', toc), ' s']);
 if(fullsimu)
+    error('Not implemented: UPDATE!')
     if(exist(MPC_matlab_name, 'file') == 3)
         matlab_sfun = str2func(MPC_matlab_name);
     else
@@ -220,6 +221,8 @@ end
 param_MPC = struct( ...
   'x_init_guess',         x_init_guess, ...
   'u_init_guess',         u_init_guess, ...
+  'lam_x_init_guess',     lam_x_init_guess, ...
+  'lam_g_init_guess',     lam_g_init_guess, ...
   'y_init_guess',         y_ref_0, ...
   'N',                    N_MPC, ...
   'N_step',               N_step_MPC, ...
