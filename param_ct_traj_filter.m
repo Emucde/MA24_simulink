@@ -61,6 +61,10 @@ selector_index1 = [1 7 13 19];
 selector_index2 = selector_index1+1;
 selector_index3 = selector_index1+2;
 
+param_traj_filter.p_d_index    = selector_index1;
+param_traj_filter.p_d_p_index  = selector_index2;
+param_traj_filter.p_d_pp_index = selector_index3;
+
 lamda_alpha = lambda;
 %{
 %% Filter für xyz:

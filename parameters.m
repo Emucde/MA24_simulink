@@ -133,6 +133,19 @@ if(trajectory_out_of_workspace)
     H_0_init(1, 4) = H_0_init(1, 4) + x_traj_out_of_workspace_value;
 end
 
+R_init = H_0_init(1:3, 1:3);
+
+%R_target = eval_path_r(theta,1,path_param);
+R_target = eye(3);
+RR = R_init'*R_target;
+rot_quat = rotation2quaternion(RR);
+rot_rho = rot_quat(1);
+rot_alpha_scale = 2*acos(rot_rho);
+rot_ax = rot_quat(2:4)/sin(rot_alpha_scale/2);
+
+rot_alpha_scale_init = rot_alpha_scale;
+rot_ax_init = rot_ax;
+
 %% GENERATE OFFLINE TRAJECTORY
 % verwendet scheinbar per default param_global.Ta
 % show possible values: simConfig = simset('Solver', 'ode4', 'FixedStep', '0.001')
