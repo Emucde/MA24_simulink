@@ -3,3 +3,4 @@ slprj
 .fuse_hidden*
 *.asv
 *.slxc
+*.autosave
