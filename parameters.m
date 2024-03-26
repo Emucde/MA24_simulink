@@ -57,6 +57,7 @@ traj_select.equilibrium_traj = 1;
 traj_select.differential_filter = 2;
 traj_select.polynomial = 3;
 traj_select.sinus = 4;
+traj_select.traj_amount = 4; % anzahl der trajektorien
 %%%%%%%%%
 traj_select_fin = 4;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -147,110 +148,168 @@ rot_alpha_scale_init = rot_alpha_scale;
 rot_ax_init = rot_ax;
 
 %% GENERATE OFFLINE TRAJECTORY
-% verwendet scheinbar per default param_global.Ta
-% show possible values: simConfig = simset('Solver', 'ode4', 'FixedStep', '0.001')
-% https://github.com/mathworks/simulinkDroneReferenceApp/blob/master/data/slrt_plant_configset.m
 
-files = dir('./s_functions/initial_guess/*.mat');
+files = dir('./s_functions/mpc_settings/*.mat');
 cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
 
+% 1. get maximum horizont length of all mpcs:
+T_horizon_max = 0;
 for name={files.name}
-    name_mat_file                = name{1};
-    param_MPC_name               = name_mat_file(1:end-4);
-    param_MPC_old_data_file      = "./s_functions/trajectory_data/" + param_MPC_name+"_old_data.mat"; % TODO: dynamic path
-    param_MPC_traj_data_name     = param_MPC_name+"_traj_data";
-    param_MPC_traj_data_mat_file = "./s_functions/trajectory_data/" + param_MPC_traj_data_name + ".mat";
+    name_mat_file    = name{1};
+    param_MPC_name   = name_mat_file(1:end-4);
+    param_MPC_struct = eval(param_MPC_name);
 
-    load(param_MPC_old_data_file);
-    load(param_MPC_name+"_traj_data");
+    T_horizon = param_MPC_struct.T_horizon;
 
-    T_traj_poly         = param_traj_poly.T;
-    T_traj_sin_poly     = param_traj_sin_poly.T;
-    omega_traj_sin_poly = param_traj_sin_poly.omega;
-    phi_traj_sin_poly   = param_traj_sin_poly.phi;
-    T_switch            = param_traj_allg.T_switch;
+    if(T_horizon > T_horizon_max)
+        T_horizon_max = T_horizon;
+    end
+end
 
-    param_MPC_struct           = eval(param_MPC_name);
-    param_MPC_traj_data_struct = eval(param_MPC_traj_data_name);
+param_MPC_traj_data_mat_file = "./s_functions/trajectory_data/param_traj_data.mat";
+param_traj_data_old = './s_functions/trajectory_data/param_traj_data_old.mat';
+load(param_traj_data_old);
 
-    casadi_func_name = param_MPC_struct.name;
-    MPC_variant      = param_MPC_struct.variant;
-    MPC_solver       = param_MPC_struct.solver;
-    Ts_MPC           = param_MPC_struct.Ts     ;
-    rk_iter          = param_MPC_struct.rk_iter;
-    N_MPC            = param_MPC_struct.N  ;
-    T_horizon_MPC    = Ts_MPC*N_MPC;                   
-    N_step_MPC       = round(Ts_MPC/param_global.Ta);  
+T_traj_poly         = param_traj_poly.T;
+T_traj_sin_poly     = param_traj_sin_poly.T;
+omega_traj_sin_poly = param_traj_sin_poly.omega;
+phi_traj_sin_poly   = param_traj_sin_poly.phi;
+T_switch            = param_traj_allg.T_switch;
 
-    N_traj_new = 1+(T_sim+T_horizon_MPC)/param_global.Ta;
-    N_traj_old = length(param_MPC_traj_data_struct.t');
+T_start = param_vis.T/2;
+t = 0 : param_global.Ta : T_sim + T_horizon_max;
 
-    % TODO: WRITE INTO STRUCT!!!
-    if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
+if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         any(xe0 ~= xe0_old) || any(xeT ~= xeT_old) || ...
-        (traj_select_fin == traj_select.differential_filter) && ...
-        (lamda_alpha ~= lamda_alpha_old || lamda_xyz ~= lamda_xyz_old) || ...
-        T_sim ~= T_sim_old || traj_select_fin ~= traj_select_fin_old || ...
+        lamda_alpha ~= lamda_alpha_old || lamda_xyz ~= lamda_xyz_old || ...
+        T_sim ~= T_sim_old || ...
         param_global.Ta ~= Ta_old || overwrite_offline_traj || ...
-        N_MPC_old ~= N_MPC || Ts_MPC_old ~= Ts_MPC || ...
-        N_traj_new ~= N_traj_old || T_traj_poly_old ~= T_traj_poly || ...
+        T_horizon_max ~= T_horizon_max_old || ...
+        T_traj_poly_old ~= T_traj_poly || ...
         T_traj_sin_poly_old ~= T_traj_sin_poly || ...
         omega_traj_sin_poly_old ~= omega_traj_sin_poly || ...
-        phi_traj_sin_poly_old ~= phi_traj_sin_poly || T_switch_old ~= T_switch )
+        phi_traj_sin_poly_old ~= phi_traj_sin_poly || ... 
+        T_switch_old ~= T_switch )
     
-        % create trajectory
-        %param_trajectory = generateTrajectory_from_slx(mdl, q_0, H_0_init, traj_select_fin, T_sim, T_horizon_MPC, param_global);
-        
+    % 2. calculate all trajectories for max horizon length
+    N_traj = 1+(T_sim + T_horizon_max)/param_global.Ta;
+    param_traj_data.t         = zeros(N_traj, 1);
+    param_traj_data.p_d       = zeros(3, N_traj, traj_select.traj_amount);
+    param_traj_data.p_d_p     = zeros(3, N_traj, traj_select.traj_amount);
+    param_traj_data.p_d_pp    = zeros(3, N_traj, traj_select.traj_amount);
+    param_traj_data.q_d       = zeros(4, N_traj, traj_select.traj_amount);
+    param_traj_data.omega_d   = zeros(3, N_traj, traj_select.traj_amount);
+    param_traj_data.omega_d_p = zeros(3, N_traj, traj_select.traj_amount);
+    
+    for i=1:traj_select.traj_amount
         tic;
-        T_start = param_vis.T/2;
-        t = 0 : param_global.Ta : T_sim + T_horizon_MPC;
-        param_trajectory = generate_trajectory(t, traj_select_fin, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
-        eval(param_MPC_traj_data_name+"=param_trajectory;"); % set new struct name
-        disp(['generateTrajectory_from_slx.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
-
-        compile_sfun                    = false;
-        weights_and_limits_as_parameter = true;
-        plot_null_simu                  = false;
-        print_init_guess_cost_functions = false;
         
-        opts = struct; % should be empty
-        if(strcmp(MPC_variant, 'opti'))
-            opti_opt_problem;
-        elseif(strcmp(MPC_variant, 'nlpsol'))
-            %nlpsol_opt_problem;
-            %nlpsol_opt_problem_SX;
-            nlpsol_opt_problem_SX_v2;
-        else
-            error(['Error: Variant = ', MPC_variant, ' is not valid. Should be (opti | nlpsol)']);
-        end
-        save(param_MPC_traj_data_mat_file, param_MPC_traj_data_name); % save struct
-
-        % save old data
-        q_0_old = q_0;
-        q_0_p_old = q_0_p;
-        xe0_old = xe0;
-        xeT_old = xeT;
-        T_sim_old = T_sim;
-        Ta_old = param_global.Ta;
-        traj_select_fin_old = traj_select_fin;
-        lamda_xyz_old = lamda_xyz;
-        lamda_alpha_old = lamda_alpha;
-        N_MPC_old = N_MPC;
-        Ts_MPC_old = Ts_MPC;
-        T_traj_poly_old         = T_traj_poly        ;
-        T_traj_sin_poly_old     = T_traj_sin_poly    ;
-        omega_traj_sin_poly_old = omega_traj_sin_poly;
-        phi_traj_sin_poly_old   = phi_traj_sin_poly  ;
-        T_switch_old = T_switch;
-        
-        save(param_MPC_old_data_file, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
-             'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', 'traj_select_fin_old', ...
-             'Ta_old', 'N_MPC_old', 'Ts_MPC_old', 'T_traj_poly_old', ...
-             'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
-             'T_switch_old');
-    %else
-    %    load(param_MPC_name+"_traj_data");
+        param_trajectory = generate_trajectory(t, i, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
+        disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
+    
+        param_traj_data.t(       :, :   ) = param_trajectory.t;
+        param_traj_data.p_d(     :, :, i) = param_trajectory.p_d;
+        param_traj_data.p_d_p(   :, :, i) = param_trajectory.p_d_p;
+        param_traj_data.p_d_pp(  :, :, i) = param_trajectory.p_d_pp;
+        param_traj_data.q_d(     :, :, i) = param_trajectory.q_d;
+        param_traj_data.omega_d( :, :, i) = param_trajectory.omega_d;
+        param_traj_data.omega_d_p(:, :, i) = param_trajectory.omega_d_p;
     end
+    
+    save(param_MPC_traj_data_mat_file, 'param_traj_data'); % save struct
+    
+    % 3. calculate initial guess for alle trajectories and mpcs
+    
+    compile_sfun                    = false;
+    weights_and_limits_as_parameter = true;
+    plot_null_simu                  = false;
+    print_init_guess_cost_functions = false;
+    
+    tic
+    for name={files.name}
+        name_mat_file    = name{1};
+        param_MPC_name   = name_mat_file(1:end-4);
+        param_MPC_struct = eval(param_MPC_name);
+    
+        param_MPC_init_guess_name = param_MPC_name+"_init_guess";
+        param_MPC_init_guess_mat_file = "./s_functions/initial_guess/" + param_MPC_init_guess_name + ".mat";
+    
+        casadi_func_name = param_MPC_struct.name;
+        MPC_variant      = param_MPC_struct.variant;
+        MPC_solver       = param_MPC_struct.solver;
+        Ts_MPC           = param_MPC_struct.Ts     ;
+        rk_iter          = param_MPC_struct.rk_iter;
+        N_MPC            = param_MPC_struct.N  ;
+        T_horizon_MPC    = param_MPC_struct.T_horizon;                   
+        N_step_MPC       = param_MPC_struct.N_step;
+    
+        x_init_guess_arr     = zeros(2*n, N_MPC+1 , traj_select.traj_amount);
+        u_init_guess_arr     = zeros(  n, N_MPC   , traj_select.traj_amount);
+        lam_x_init_guess_arr = zeros(3*n*N_MPC+2*n, 1, traj_select.traj_amount); % lenght of u and x
+        lam_g_init_guess_arr = zeros(2*n*(N_MPC+1), 1, traj_select.traj_amount);
+            
+        for ii=1:traj_select.traj_amount
+            param_trajectory = struct;
+            param_trajectory.p_d = param_traj_data.p_d(:,:,ii);
+            param_trajectory.p_d_p = param_traj_data.p_d_p(:,:,ii);
+            param_trajectory.p_d_pp = param_traj_data.p_d_pp(:,:,ii);
+    
+            opts = struct; % should be empty
+            if(strcmp(MPC_variant, 'opti'))
+                opti_opt_problem;
+            elseif(strcmp(MPC_variant, 'nlpsol'))
+                %nlpsol_opt_problem;
+                %nlpsol_opt_problem_SX;
+                nlpsol_opt_problem_SX_v2;
+            else
+                error(['Error: Variant = ', MPC_variant, ' is not valid. Should be (opti | nlpsol)']);
+            end
+    
+            x_init_guess_arr(    :,:, ii) = x_init_guess;
+            u_init_guess_arr(    :,:, ii) = u_init_guess;
+            lam_x_init_guess_arr(:,:, ii) = lam_x_init_guess;
+            lam_g_init_guess_arr(:,:, ii) = lam_g_init_guess;
+        end
+    
+        param_MPC = struct( ...
+          'x_init_guess',         x_init_guess_arr, ...
+          'u_init_guess',         u_init_guess_arr, ...
+          'lam_x_init_guess',     lam_x_init_guess_arr, ...
+          'lam_g_init_guess',     lam_g_init_guess_arr ...
+        );
+        
+        eval(param_MPC_init_guess_name+ ' = param_MPC;');
+        save(param_MPC_init_guess_mat_file, param_MPC_init_guess_name);
+    end
+    disp(['parameter.m: Execution Time for Init guess Calculation: ', sprintf('%f', toc), 's']);
+
+    % save old data
+    q_0_old = q_0;
+    q_0_p_old = q_0_p;
+    xe0_old = xe0;
+    xeT_old = xeT;
+    T_sim_old = T_sim;
+    Ta_old = param_global.Ta;
+    lamda_xyz_old = lamda_xyz;
+    lamda_alpha_old = lamda_alpha;
+    T_traj_poly_old         = T_traj_poly        ;
+    T_traj_sin_poly_old     = T_traj_sin_poly    ;
+    omega_traj_sin_poly_old = omega_traj_sin_poly;
+    phi_traj_sin_poly_old   = phi_traj_sin_poly  ;
+    T_switch_old = T_switch;
+    T_horizon_max_old = T_horizon_max;
+
+    save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
+         'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
+         'Ta_old', 'T_traj_poly_old', ...
+         'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
+         'T_switch_old', 'T_horizon_max_old');
+
+else
+    files = dir('./s_functions/initial_guess/*.mat');
+    cellfun(@load, {files.name});
+
+    load(param_MPC_traj_data_mat_file);
 end
 
 if(plot_trajectory)
