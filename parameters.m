@@ -58,7 +58,7 @@ traj_select.differential_filter = 2;
 traj_select.polynomial = 3;
 traj_select.sinus = 4;
 %%%%%%%%%
-traj_select_fin = 3;
+traj_select_fin = 4;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 param_traj_allg.T_switch = 2;%T_sim/2; % ab dem zeitpunkt schält xe0 in xeT um und umgekehrt (only for differential filter)
@@ -185,6 +185,7 @@ for name={files.name}
     N_traj_new = 1+(T_sim+T_horizon_MPC)/param_global.Ta;
     N_traj_old = length(param_MPC_traj_data_struct.t');
 
+    % TODO: WRITE INTO STRUCT!!!
     if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         any(xe0 ~= xe0_old) || any(xeT ~= xeT_old) || ...
         (traj_select_fin == traj_select.differential_filter) && ...
@@ -198,9 +199,15 @@ for name={files.name}
         phi_traj_sin_poly_old ~= phi_traj_sin_poly || T_switch_old ~= T_switch )
     
         % create trajectory
-        param_trajectory = generateTrajectory_from_slx(mdl, q_0, H_0_init, traj_select_fin, T_sim, T_horizon_MPC, param_global);
-        eval(param_MPC_traj_data_name+"=param_trajectory;"); % set new struct name
+        %param_trajectory = generateTrajectory_from_slx(mdl, q_0, H_0_init, traj_select_fin, T_sim, T_horizon_MPC, param_global);
         
+        tic;
+        T_start = param_vis.T/2;
+        t = 0 : param_global.Ta : T_sim + T_horizon_MPC;
+        param_trajectory = generate_trajectory(t, traj_select_fin, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
+        eval(param_MPC_traj_data_name+"=param_trajectory;"); % set new struct name
+        disp(['generateTrajectory_from_slx.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
+
         compile_sfun                    = false;
         weights_and_limits_as_parameter = true;
         plot_null_simu                  = false;

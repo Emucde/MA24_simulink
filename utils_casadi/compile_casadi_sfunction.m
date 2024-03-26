@@ -63,7 +63,7 @@ function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver
         fprintf('\n');
         disp(['S-function name:', s_fun_name(1:end-2), '_', casadi_fun_name]);
         disp("S-function parameters:'" + pathname + "/" + casadi_fun_name + ".casadi', '" + casadi_fun_name + "'");
-        disp("S-function modules:" + "''");
+        disp("S-function modules:" + "'" + casadi_fun_name + "'");
         fprintf('\n');
     elseif(mode == 2) % modified combination of [2] and [3]
         s_func_name_origin = [output_dir, s_fun_name];
