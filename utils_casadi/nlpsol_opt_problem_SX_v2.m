@@ -331,7 +331,7 @@ else
         {input_vars_MX{:}},...
         {output_vars_MX{:}});
 
-    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, lambda_x0_opt_sol, lambda_g0_opt_sol] = f_opt(y_ref_0, x_0_0, x_init_guess_0, u_init_guess_0);
+    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, lambda_x0_opt_sol, lambda_g0_opt_sol] = f_opt(y_ref_0, y_p_ref_0, y_pp_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0);
 end
 
 % set init guess
