@@ -1,138 +1,123 @@
-%{
-%% old
-QQ = (diag([1e3 1e3])); % x y weight
-RR_u = (diag([1e-12 1e-12])); % u absolut
-RR_du = (diag([1e-9 1e-9])); % un-un-1
-RR_dx = (diag([1e-6 1e-6 1e-6 1e-6]));
-RR_dx_km1 = (diag([0 0 0 0]));
+%%%%%%%%%%%%%%%%%%%%%%%%%% (MPC) & (MPC) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+MPC='MPC1';
+param_weight.(MPC).Q_y      = 1e5*diag([1 1]);  % d_kpn
+param_weight.(MPC).Q_y_p    = 1e-5*diag([1 1]); % d_kpn
+param_weight.(MPC).Q_y_pp   = 1e-5*diag([1 1]); % d_kpn
+param_weight.(MPC).Q_y0_pp  = 1e-5*diag([1 1]); % D_0
+param_weight.(MPC).Q_y1     = 1e5*diag([1 1]);  % D_1
+param_weight.(MPC).Q_y1_p   = 1e-5*diag([1 1]); % D_1
+param_weight.(MPC).Q_y1_pp  = 1e-5*diag([1 1]); % D_1
+param_weight.(MPC).Q_yN     = 1e1*diag([1 1]);  % D_N
+param_weight.(MPC).Q_yN_p   = 1e-5*diag([1 1]); % D_N
 
-xx_min = [ 0; -pi; -10; -10 ];
-xx_max = [ pi; pi; 10; 10];
-uu_min = 0.1*[ -10; -10 ];
-uu_max = 0.1*[ 10; 10 ];
-%}
+param_weight.(MPC).Q_q_p    = 0*diag([1 1]);  % c_kpn
+param_weight.(MPC).Q_q_pp   = 0*diag([1 1]);  % c_kpn
+param_weight.(MPC).Q_q0_pp  = 0*diag([1 1]);  % C_0
+param_weight.(MPC).Q_qN     = 0*diag([1 1]);  % C_N
+param_weight.(MPC).Q_qN_p   = 0*diag([1 1]);  % C_N
 
-%{
-% default
-QQ = (diag([1e5 1e5])); % x y weight
-RR_u = (diag([1e-6 1e-6])); % u absolut
-RR_du = (diag([0 0])); % un-un-1
-RR_dx = (diag([0 0 0 0]));
-RR_dx_km1 = (diag([0 0 0 0]));
-%}
+param_weight.(MPC).x_min    = inf*[ -1; -1; -1; -1 ];
+param_weight.(MPC).x_max    = inf*[ 1; 1; 1; 1];
+param_weight.(MPC).u_min    = inf*[ -10; -10 ];
+param_weight.(MPC).u_max    = inf*[ 10; 10 ];
 
-%{
-% best for not start in sing
-QQ = (diag([1e5 1e5])); % x y weight
-RR_u = (diag([1e-6 1e-6])); % u absolut
-RR_du = (diag([0 0])); % un-un-1
-RR_dx = (diag([0 0 1e-6 1e-6]));
-RR_dx_km1 = (diag([0 0 0 0]));
-%}
+MPC='MPC2';
+param_weight.(MPC).Q_y     = param_weight.(MPC).Q_y;
+param_weight.(MPC).Q_y_p   = param_weight.(MPC).Q_y_p;
+param_weight.(MPC).Q_y_pp  = param_weight.(MPC).Q_y_pp;
+param_weight.(MPC).Q_y0_pp = param_weight.(MPC).Q_y0_pp;
+param_weight.(MPC).Q_y1    = param_weight.(MPC).Q_y1;
+param_weight.(MPC).Q_y1_p  = param_weight.(MPC).Q_y1_p;
+param_weight.(MPC).Q_y1_pp = param_weight.(MPC).Q_y1_pp;
+param_weight.(MPC).Q_yN    = param_weight.(MPC).Q_yN;
+param_weight.(MPC).Q_yN_p  = param_weight.(MPC).Q_yN_p;
 
-QQ = (diag([1e5 1e5])); % x y weight
-RR_u = (diag([1e-4 1e-4])); % u absolut
-RR_du = (diag([0 0])); % un-un-1
-RR_dx = (diag([1e-2 1e-2 1e0 1e0]));
-RR_dx_km1 = (diag([0 0 0 0]));
-%}
+param_weight.(MPC).Q_q_p    = param_weight.(MPC).Q_q_p;
+param_weight.(MPC).Q_q_pp   = param_weight.(MPC).Q_q_pp;
+param_weight.(MPC).Q_q0_pp  = param_weight.(MPC).Q_q0_pp;
+param_weight.(MPC).Q_qN     = param_weight.(MPC).Q_qN;
+param_weight.(MPC).Q_qN_p   = param_weight.(MPC).Q_qN_p;
 
-xx_min = [ -inf; -inf; -inf; -inf ];
-xx_max = [ inf; inf; inf; inf];
-uu_min = [ -inf; -inf ];
-uu_max = [ inf; inf ];
+param_weight.(MPC).x_min   = param_weight.(MPC).x_min;
+param_weight.(MPC).x_max   = param_weight.(MPC).x_max;
+param_weight.(MPC).u_min   = param_weight.(MPC).u_min;
+param_weight.(MPC).u_max   = param_weight.(MPC).u_max;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%% MPC1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% works for start in singularity (...)
-param_weight_MPC1_qrqp_opti.QQ        = diag([1e5 1e5]); % x y weight
-param_weight_MPC1_qrqp_opti.RR_u      = diag([1e-4 1e-4]); % u abso
-param_weight_MPC1_qrqp_opti.RR_du     = diag([0 0]); % un-un-1
-param_weight_MPC1_qrqp_opti.RR_dx     = diag([1e-2 1e-2 1e0 1e0]);
-param_weight_MPC1_qrqp_opti.RR_dx_km1 = diag([0 0 0 0]);
-param_weight_MPC1_qrqp_opti.xx_min    = [ -inf; -inf; -inf; -inf ];
-param_weight_MPC1_qrqp_opti.xx_max    = [ inf; inf; inf; inf];
-param_weight_MPC1_qrqp_opti.uu_min    = [ -inf; -inf ];
-param_weight_MPC1_qrqp_opti.uu_max    = [ inf; inf ];
+%%%%%%%%%%%%%%%%%%%%%%%%%% (MPC) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+MPC='MPC3';
+param_weight.(MPC).Q_y      = 1e5*diag([1 1]);  % d_kpn
+param_weight.(MPC).Q_y_p    = 1e-3*diag([1 1]); % d_kpn
+param_weight.(MPC).Q_y_pp   = 1e-3*diag([1 1]); % d_kpn
+param_weight.(MPC).Q_y0_pp  = 1e-3*diag([1 1]);  % D_0
+param_weight.(MPC).Q_y1     = 1e3*diag([1 1]);  % D_1
+param_weight.(MPC).Q_y1_p   = 1e-3*diag([1 1]);  % D_1
+param_weight.(MPC).Q_y1_pp  = 1e-3*diag([1 1]);  % D_1
+param_weight.(MPC).Q_yN     = 1e5*diag([1 1]);  % D_N
+param_weight.(MPC).Q_yN_p   = 1e-3*diag([1 1]);  % D_N
+param_weight.(MPC).x_min    = [ -inf; -inf; -inf; -inf ];
+param_weight.(MPC).x_max    = [ inf; inf; inf; inf];
+param_weight.(MPC).u_min    = [ -inf; -inf ];
+param_weight.(MPC).u_max    = [ inf; inf ];
 
-%%%%%%%%%%%%%%%%%%%%%%%%%% MPC2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%% (MPC) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-param_weight_MPC2_qrqp_opti.QQ        = diag([1e5 1e5]); % x y weight
-param_weight_MPC2_qrqp_opti.RR_u      = diag([1e-3 1e-3]); % u abso
-param_weight_MPC2_qrqp_opti.RR_du     = diag([0 0]); % un-un-1
-param_weight_MPC2_qrqp_opti.RR_dx     = diag([1e-2 1e-2 1e-3 1e-3]);
-param_weight_MPC2_qrqp_opti.RR_dx_km1 = diag([0 0 0 0]);
-param_weight_MPC2_qrqp_opti.xx_min    = [ -inf; -inf; -inf; -inf ];
-param_weight_MPC2_qrqp_opti.xx_max    = [ inf; inf; inf; inf];
-param_weight_MPC2_qrqp_opti.uu_min    = [ -inf; -inf ];
-param_weight_MPC2_qrqp_opti.uu_max    = [ inf; inf ];
+param_weight.(MPC).Q_y      = 1e5*diag([1 1]);  % d_kpn
+param_weight.(MPC).Q_y_p    = 1e-5*diag([1 1]); % d_kpn
+param_weight.(MPC).Q_y_pp   = 1e-5*diag([1 1]); % d_kpn
+param_weight.(MPC).Q_y0_pp  = 1e-1*diag([1 1]);  % D_0
+param_weight.(MPC).Q_y1     = 1e2*diag([1 1]);  % D_1
+param_weight.(MPC).Q_y1_p   = 1e-5*diag([1 1]);  % D_1
+param_weight.(MPC).Q_y1_pp  = 1e-5*diag([1 1]);  % D_1
+param_weight.(MPC).Q_yN     = 1e5*diag([1 1]);  % D_N
+param_weight.(MPC).Q_yN_p   = 1e-5*diag([1 1]);  % D_N
 
-%%%%%%%%%%%%%%%%%%%%%%%%%% MPC3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+param_weight.(MPC).Q_q_p    = 0*diag([1 1]);  % c_kpn
+param_weight.(MPC).Q_q_pp   = 0*diag([1 1]);  % c_kpn
+param_weight.(MPC).Q_q0_pp  = 0*diag([1 1]);  % C_0
+param_weight.(MPC).Q_qN     = 0*diag([1 1]);  % C_N
+param_weight.(MPC).Q_qN_p   = 0*diag([1 1]);  % C_N
 
-param_weight_MPC3_ipopt_nlpsol.QQ        = diag([1e5 1e5]); % x y weight
-param_weight_MPC3_ipopt_nlpsol.RR_u      = diag([1e-4 1e-4]); % u abso
-param_weight_MPC3_ipopt_nlpsol.RR_du     = diag([0 0]); % un-un-1
-param_weight_MPC3_ipopt_nlpsol.RR_dx     = diag([1e-2 1e-2 1e0 1e0]);
-param_weight_MPC3_ipopt_nlpsol.RR_dx_km1 = diag([0 0 0 0]);
-param_weight_MPC3_ipopt_nlpsol.xx_min    = [ -inf; -inf; -inf; -inf ];
-param_weight_MPC3_ipopt_nlpsol.xx_max    = [ inf; inf; inf; inf];
-param_weight_MPC3_ipopt_nlpsol.uu_min    = [ -inf; -inf ];
-param_weight_MPC3_ipopt_nlpsol.uu_max    = [ inf; inf ];
+param_weight.(MPC).x_min    = 20*[ -pi; -pi; -1; -1 ];
+param_weight.(MPC).x_max    = 20*[ pi; pi; 1; 1];
+param_weight.(MPC).u_min    = 1*[ -10; -10 ];
+param_weight.(MPC).u_max    = 1*[ 10; 10 ];
 
-%%%%%%%%%%%%%%%%%%%%%%%%%% MPC4 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-param_weight_MPC4_ipopt_nlpsol.QQ        = diag([1e5 1e5]); % x y weight
-param_weight_MPC4_ipopt_nlpsol.RR_u      = diag([1e-3 1e-3]); % u abso
-param_weight_MPC4_ipopt_nlpsol.RR_du     = diag([0 0]); % un-un-1
-param_weight_MPC4_ipopt_nlpsol.RR_dx     = diag([1e-2 1e-2 1e-3 1e-3]);
-param_weight_MPC4_ipopt_nlpsol.RR_dx_km1 = diag([0 0 0 0]);
-param_weight_MPC4_ipopt_nlpsol.xx_min    = [ -inf; -inf; -inf; -inf ];
-param_weight_MPC4_ipopt_nlpsol.xx_max    = [ inf; inf; inf; inf];
-param_weight_MPC4_ipopt_nlpsol.uu_min    = [ -inf; -inf ];
-param_weight_MPC4_ipopt_nlpsol.uu_max    = [ inf; inf ];
-rparam_weight_MPC4_ipopt_nlpsol.QQ = diag([1e5 1e5]); % x y weight param_weight_MPC4_ipopt_nlpsol.RR_u = diag([1e-3 1e-3]); % u abso param_weight_MPC4_ipopt_nlpsol.RR_du = diag([0 0]); % un-un-1 param_weight_MPC4_ipopt_nlpsol.RR_dx = diag([1e-2 1e-2 1e-3 1e-3]); param_weight_MPC4_ipopt_nlpsol.RR_dx_km1 = diag([0 0 0 0]); param_weight_MPC4_ipopt_nlpsol.xx_min = [ -inf; -inf; -inf; -inf ]; param_weight_MPC4_ipopt_nlpsol.xx_max = [ inf; inf; inf; inf]; param_weight_MPC4_ipopt_nlpsol.uu_min = [ -inf; -inf ]; param_weight_MPC4_ipopt_nlpsol.uu_max = [ inf; inf ]; \n
 
 %{
-QQ = DM(diag([1e6 1e6])); % x y weight
-RR_u = DM(diag([1e-6 1e-6])); % u absolut
-RR_du = DM(diag([0 0])); % un-un-1
-RR_dx = DM(diag([0 0 0 0]));
-RR_dx_km1 = DM(diag([0 0 0 0]));
+% Old mpc with bug
+param_weight_MPC1.QQ_y    = 1e4*diag([1 1]);
+param_weight_MPC1.QQ_y_p  = 1e-2*diag([1 1]);
+param_weight_MPC1.QQ_y_pp = 1e-3*diag([1 1]);
+param_weight_MPC1.QQ_yN   = 1e5*diag([1 1]);
+param_weight_MPC1.xx_min  = [ -inf; -inf; -inf; -inf ];
+param_weight_MPC1.xx_max  = [ inf; inf; inf; inf];
+param_weight_MPC1.uu_min  = [ -inf; -inf ];
+param_weight_MPC1.uu_max  = [ inf; inf ];
 %}
 
-%{
-% good for N=1
-QQ = DM(diag([1e3 1e3])); % x y weight
-RR_u = DM(diag([1e-12 1e-12])); % u absolut
-RR_du = DM(diag([1e-9 1e-9])); % un-un-1
-RR_dx = DM(diag([1e-6 1e-6 1e-5 0.5e-3]));
-RR_dx_km1 = DM(diag([0 0 0 0]));
-%}
+%param_weight_MPC1.QQ_y    = 1e4*diag([1 1e1]);
+%param_weight_MPC1.QQ_y_p  = 1e-1*diag([1 1]);
+%param_weight_MPC1.QQ_y_pp = 1e-4*diag([1 1]);
+%param_weight_MPC1.QQ_yN   = 1e4*diag([1 1]);
+%param_weight_MPC1.xx_min  = [ -inf; -inf; -inf; -inf ];
+%param_weight_MPC1.xx_max  = [ inf; inf; inf; inf];
+%param_weight_MPC1.uu_min  = [ -inf; -inf ];
+%param_weight_MPC1.uu_max  = [ inf; inf ];
 
 %{
-QQ = DM(diag([1e6 1e6])); % x y weight
-RR_u = DM(diag([1e-12 1e-12])); % u absolut
-RR_du = DM(diag([1e-9 1e-9])); % un-un-1
-RR_dx = DM(diag([1e-6 1e-6 1e-3 1e-1]));
-RR_dx_km1 = DM(diag([0 0 0 0]));
-%}
-
-%{
-    QQ = (diag([1e5 1e5])); % x y weight
-    RR_u = (diag([1e-4 1e-4])); % u absolut
-    RR_du = (diag([0 0])); % un-un-1
-    RR_dx = (diag([1e-2 1e-2 1e0 1e0]));
-    RR_dx_km1 = (diag([0 0 0 0]));
+% STart in sing
+param_weight_MPC1.QQ_y    = 1e4*diag([1 1]);
+param_weight_MPC1.QQ_y_p  = 1e-1*diag([1 1]);
+param_weight_MPC1.QQ_y_pp = 1e-3*diag([1 1]);
+param_weight_MPC1.QQ_yN   = 1e4*diag([1 1]);
+param_weight_MPC1.xx_min  = [ -inf; -inf; -inf; -inf ];
+param_weight_MPC1.xx_max  = [ inf; inf; inf; inf];
+param_weight_MPC1.uu_min  = [ -5; -5 ];
+param_weight_MPC1.uu_max  = [ 5; 5 ];
 %}
 
 %{
-% BEST for y as last v2, N = 5
-QQ = DM(diag([1e2 1e1])); % x y weight
-RR_u = DM(diag([1e-12 1e-12])); % u absolut
-RR_du = DM(diag([0 0])); % un-un-1
-RR_dx = DM(diag([1e-4 1e-4 1e-4 1e-4]));
-RR_dx_km1 = DM(diag([0 0 0 0]));
-%}
-
+% TODO: FOR WITH ALL STRUCTS
 % Fehlerprüfung
 % Prüfe, ob alle Parameter gesetzt sind
 if ~exist('QQ', 'var') || ~exist('RR_u', 'var') || ...
@@ -155,3 +140,5 @@ end
 if any(xx_min >= xx_max) || any(uu_min >= uu_max)
     error('Es ist ein Fehler aufgetreten: Die Grenzen für x oder u sind ungültig.');
 end
+
+%}

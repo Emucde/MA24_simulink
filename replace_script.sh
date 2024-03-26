@@ -95,20 +95,26 @@ echo ""
 echo "add the following lines to \"init_MPC_weights.m\":"
 echo ""
 weight_data="%%%%%%%%%%%%%%%%%%%%%%%%%% MPC1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+MPC='MPC1';
+param_weight.(MPC).Q_y      = 1e5*diag([1 1]);   % d_kpn
+param_weight.(MPC).Q_y_p    = 1e-5*diag([1 1]); % d_kpn
+param_weight.(MPC).Q_y_pp   = 1e-5*diag([1 1]); % d_kpn
+param_weight.(MPC).Q_y0_pp  = 1e-5*diag([1 1]); % D_0
+param_weight.(MPC).Q_y1     = 1e5*diag([1 1]);   % D_1
+param_weight.(MPC).Q_y1_p   = 1e-5*diag([1 1]); % D_1
+param_weight.(MPC).Q_y1_pp  = 1e-5*diag([1 1]); % D_1
+param_weight.(MPC).Q_yN     = 1e5*diag([1 1]);   % D_N
+param_weight.(MPC).Q_yN_p   = 1e-5*diag([1 1]); % D_N
 
-param_weight.MPC1.Q_y      = 1e5*diag([1 1]);  % d_kpn
-param_weight.MPC1.Q_y_p    = 1e-5*diag([1 1]); % d_kpn
-param_weight.MPC1.Q_y_pp   = 1e-5*diag([1 1]); % d_kpn
-param_weight.MPC1.Q_y0_pp  = 1e-5*diag([1 1]);  % D_0
-param_weight.MPC1.Q_y1     = 1e5*diag([1 1]);  % D_1
-param_weight.MPC1.Q_y1_p   = 1e-5*diag([1 1]);  % D_1
-param_weight.MPC1.Q_y1_pp  = 1e-5*diag([1 1]);  % D_1
-param_weight.MPC1.Q_yN     = 1e1*diag([1 1]);  % D_N
-param_weight.MPC1.Q_yN_p   = 1e-5*diag([1 1]);  % D_N
-param_weight.MPC1.x_min    = inf*[ -1; -1; -1; -1 ];
-param_weight.MPC1.x_max    = inf*[ 1; 1; 1; 1];
-param_weight.MPC1.u_min    = inf*[ -10; -10 ];
-param_weight.MPC1.u_max    = inf*[ 10; 10 ];"
+param_weight.(MPC).Q_q_p    = 0*diag([1 1]);  % c_kpn
+param_weight.(MPC).Q_q_pp   = 0*diag([1 1]);  % c_kpn
+param_weight.(MPC).Q_q0_pp  = 0*diag([1 1]);  % C_0
+param_weight.(MPC).Q_qN_p   = 0*diag([1 1]);  % C_N
+
+param_weight.(MPC).x_min    = inf*[ -1; -1; -1; -1 ];
+param_weight.(MPC).x_max    = inf*[ 1; 1; 1; 1];
+param_weight.(MPC).u_min    = inf*[ -10; -10 ];
+param_weight.(MPC).u_max    = inf*[ 10; 10 ];"
 weight_data=$(echo "$weight_data" | sed "s/MPC1/MPC$endindex/g")
 echo "$weight_data"
 

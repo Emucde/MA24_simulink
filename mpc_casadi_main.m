@@ -9,11 +9,11 @@ print_init_guess_cost_functions = false;
 plot_init_guess                 = false; % plot init guess
 plot_null_simu                  = false; % plot system simulation for x0 = 0, u0 = ID(x0)
 convert_maple_to_casadi         = false; % convert maple functions into casadi functions
-fullsimu                        = ~false; % make full mpc simulation and plot results
+fullsimu                        = false; % make full mpc simulation and plot results
 traj_select_mpc                 = 3; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
 weights_and_limits_as_parameter = true; % otherwise minimal set of inputs and parameter is used. Leads to faster run time and compile time.
 compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
-compile_mode                    = 2; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
+compile_mode                    = 1; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
 compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
 
 MPC='MPC1';
@@ -49,7 +49,7 @@ param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC3;
+param_casadi_fun_struct = param_casadi_fun_name.MPC1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
