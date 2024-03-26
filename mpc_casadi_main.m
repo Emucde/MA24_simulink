@@ -9,9 +9,10 @@ print_init_guess_cost_functions = false;
 plot_init_guess                 = false; % plot init guess
 plot_null_simu                  = false; % plot system simulation for x0 = 0, u0 = ID(x0)
 convert_maple_to_casadi         = false; % convert maple functions into casadi functions
-fullsimu                        = false; % make full mpc simulation and plot results
+fullsimu                        = ~false; % make full mpc simulation and plot results
+traj_select_mpc                 = 3; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
 weights_and_limits_as_parameter = true; % otherwise minimal set of inputs and parameter is used. Leads to faster run time and compile time.
-compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
+compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_mode                    = 2; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
 compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
 
@@ -72,33 +73,52 @@ if(convert_maple_to_casadi)
 end
 
 %% path for init guess
-init_guess_path         = './s_functions/initial_guess/';%todo:  UP
-init_guess_struct_name  = "param_"+casadi_func_name;
-param_MPC_old_data_file = "./s_functions/trajectory_data/param_" + casadi_func_name+"_old_data.mat";
+mpc_settings_path                = './s_functions/mpc_settings/';%todo:  UP
+mpc_settings_struct_name         = "param_"+casadi_func_name;
+param_MPC_traj_data_old_mat_file = "./s_functions/trajectory_data/param_traj_data_old.mat";
 
 %% Create trajectory for y_initial_guess
-param_MPC_traj_data_name     = "param_"+casadi_func_name+"_traj_data";
-param_MPC_traj_data_mat_file = "./s_functions/trajectory_data/" + param_MPC_traj_data_name + ".mat";
+param_MPC_traj_data_mat_file = "./s_functions/trajectory_data/param_traj_data.mat";
 
 try
     load(param_MPC_traj_data_mat_file);
-    load(param_MPC_old_data_file)
+    load(param_MPC_traj_data_old_mat_file)
     traj_not_exist_flag = 0;
-    param_trajectory    = eval("param_"+casadi_func_name+"_traj_data");
 catch  
     traj_not_exist_flag = 1;
 end
 
-if(traj_not_exist_flag || N_MPC_old ~= N_MPC || Ts_MPC_old ~= Ts_MPC)
+if(traj_not_exist_flag || T_horizon_MPC > T_horizon_max_old)
     if(traj_not_exist_flag)
         disp('mpc_casadi_main.m: Trajectory does not exist: create new trajectory');
     else
-        disp('mpc_casadi_main.m: N_MPC or TS_MPC changed: create new trajectory');
+        disp('mpc_casadi_main.m: T_horizon_MPC > T_horizon_max_old: create new trajectory');
     end
-    param_trajectory = generateTrajectory_from_slx(mdl, q_0, H_0_init, traj_select_fin, T_sim, T_horizon_MPC, param_global);
-    eval(param_MPC_traj_data_name+"=param_trajectory;");
-    save(param_MPC_traj_data_mat_file, param_MPC_traj_data_name);
+    
+    for i=1:traj_select.traj_amount
+        tic;
+        
+        param_trajectory = generate_trajectory(t, i, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
+        disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
+    
+        param_traj_data.t(       :, :   ) = param_trajectory.t;
+        param_traj_data.p_d(     :, :, i) = param_trajectory.p_d;
+        param_traj_data.p_d_p(   :, :, i) = param_trajectory.p_d_p;
+        param_traj_data.p_d_pp(  :, :, i) = param_trajectory.p_d_pp;
+        param_traj_data.q_d(     :, :, i) = param_trajectory.q_d;
+        param_traj_data.omega_d( :, :, i) = param_trajectory.omega_d;
+        param_traj_data.omega_d_p(:, :, i) = param_trajectory.omega_d_p;
+    end
+    
+    save(param_MPC_traj_data_mat_file, 'param_traj_data'); % save struct
 end
+
+param_trajectory = struct;
+param_trajectory.t      = param_traj_data.t;
+param_trajectory.p_d    = param_traj_data.p_d(:,:,traj_select_mpc);
+param_trajectory.p_d_p  = param_traj_data.p_d_p(:,:,traj_select_mpc);
+param_trajectory.p_d_pp = param_traj_data.p_d_pp(:,:,traj_select_mpc);
+
 %% OPT PROBLEM
 %[TODO: oben init]
 s_fun_path               = './s_functions/'; % backslash on end necessary! [TODO: remove]
@@ -153,7 +173,7 @@ end
 % viel schneller als die eigentliche Simulation sein.
 disp(['Bevor "if(fullsimu)" Rechenzeit: ', sprintf('%f', toc), ' s']);
 if(fullsimu)
-    error('Not implemented: UPDATE!')
+
     if(exist(MPC_matlab_name, 'file') == 3)
         matlab_sfun = str2func(MPC_matlab_name);
     else
@@ -176,33 +196,36 @@ if(fullsimu)
     % already done (see "parameter.m"):
     % traj_data = [param_trajectory.p_d; repmat(param_trajectory.p_d(end,:), N,1)];
     
-    x_init_guess_prev = x_init_guess;
-    u_init_guess_prev = u_init_guess;
     tic
     for i=1:1:N_traj_original
-        y_kp1_ref_new = param_trajectory.p_d(1:2, i+N_step_MPC:N_step_MPC:i+N_MPC*N_step_MPC);
+        p_d_traj    = param_trajectory.p_d(   1:3, i : N_step_MPC : i + (N_MPC  )*N_step_MPC);
+        p_d_p_traj  = param_trajectory.p_d_p( 1:3, i : N_step_MPC : i + (N_MPC  )*N_step_MPC);
+        p_d_pp_traj = param_trajectory.p_d_pp(1:3, i : N_step_MPC : i + (N_MPC-1)*N_step_MPC);
+
+        y_ref    = p_d_traj(   1:2, 2:N_MPC+1); %       y1,   y2,   ... yN
+        y_ref_p  = p_d_p_traj( 1:2, 2:N_MPC+1); %       y1p,  y2p,  ... yNp
+        y_ref_pp = p_d_pp_traj(1:2, 1:N_MPC);   % y0pp, y1pp, y2pp, ... yN-1pp
         
         try
-            [u_opt, x_init_guess, u_init_guess, J_y_act, J_yN_act, J_u_act] = matlab_sfun(y_kp1_ref_new, x_k_new, x_init_guess, u_init_guess, QQ_y, QQ_yN, RR_u, xx_min, xx_max, uu_min, uu_max);
+            [u_opt, x_init_guess, u_init_guess, lam_x_init_guess, lam_g_init_guess, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(y_ref, y_ref_p, y_ref_pp, x_k_new, x_init_guess, u_init_guess, lam_x_init_guess, lam_g_init_guess, param_weight_init_cell{:});
         catch ME
             disp("error at " + (i-1)*param_global.Ta + " s ( i="+i+")")
             disp(ME.message);
         end
+    
+        HH_e_act = hom_transform_endeffector(x_k_new, param_robot);
+        p_e_act  = HH_e_act(1:2,4);
 
-        u_k_new     = u_init_guess(:,1);
+        u_k_new     = full(u_opt);
         x_k_new_sim = full(sim(x_init_guess(:,1), u_k_new));
         x_k_new     = x_k_new_sim(:,1);
         %x_k_new = x_init_guess(:,2); % ist nicht gleich wie obere zeile???? Fehler 10^-6
-    
-        HH_e_act = hom_transform_endeffector(x_init_guess(:,1), param_robot);
-        p_e_act  = HH_e_act(1:2,4);
+
         p_e_act_arr(:, i) = p_e_act;
         u_k_new_arr(:, i) = u_k_new;
         x_k_new_arr(:, i) = x_k_new;
     end
     disp(['full simu execution time: ', num2str(toc), ' s'])
-    x_init_guess = x_init_guess_prev;
-    u_init_guess = u_init_guess_prev;
 
     figure;
     subplot(3,1,1);
@@ -219,11 +242,6 @@ end
 %% TODO: Save data (besser gleich in parameter speichern)
 
 param_MPC = struct( ...
-  'x_init_guess',         x_init_guess, ...
-  'u_init_guess',         u_init_guess, ...
-  'lam_x_init_guess',     lam_x_init_guess, ...
-  'lam_g_init_guess',     lam_g_init_guess, ...
-  'y_init_guess',         y_ref_0, ...
   'N',                    N_MPC, ...
   'N_step',               N_step_MPC, ...
   'Ts',                   Ts_MPC, ...
@@ -234,32 +252,30 @@ param_MPC = struct( ...
   'name',                 param_casadi_fun_struct.name ...
 );
 
-eval(init_guess_struct_name+"=param_MPC;"); % set new struct name
-save(""+init_guess_path+init_guess_struct_name+'.mat', init_guess_struct_name);
+eval(mpc_settings_struct_name+"=param_MPC;"); % set new struct name
+save(""+mpc_settings_path+mpc_settings_struct_name+'.mat', mpc_settings_struct_name);
 
 % save old data %TODO: Struct speichern
-q_0_old                 = q_0;
-q_0_p_old               = q_0_p;
-xe0_old                 = xe0;
-xeT_old                 = xeT;
-T_sim_old               = T_sim;
-Ta_old                  = param_global.Ta;
-traj_select_fin_old     = traj_select_fin;
-lamda_xyz_old           = lamda_xyz;
-lamda_alpha_old         = lamda_alpha;
-N_MPC_old               = N_MPC;
-Ts_MPC_old              = Ts_MPC;
-T_traj_poly_old         = param_traj_poly.T;
-T_traj_sin_poly_old     = param_traj_sin_poly.T;
-omega_traj_sin_poly_old = param_traj_sin_poly.omega;
-phi_traj_sin_poly_old   = param_traj_sin_poly.phi;
-T_switch_old            = param_traj_allg.T_switch;
+q_0_old = q_0;
+q_0_p_old = q_0_p;
+xe0_old = xe0;
+xeT_old = xeT;
+T_sim_old = T_sim;
+Ta_old = param_global.Ta;
+lamda_xyz_old = lamda_xyz;
+lamda_alpha_old = lamda_alpha;
+T_traj_poly_old         = T_traj_poly        ;
+T_traj_sin_poly_old     = T_traj_sin_poly    ;
+omega_traj_sin_poly_old = omega_traj_sin_poly;
+phi_traj_sin_poly_old   = phi_traj_sin_poly  ;
+T_switch_old = T_switch;
+T_horizon_max_old = T_horizon_max;
 
-save(param_MPC_old_data_file, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
-     'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', 'traj_select_fin_old', ...
-     'Ta_old', 'N_MPC_old', 'Ts_MPC_old', 'T_traj_poly_old', ...
+save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
+     'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
+     'Ta_old', 'T_traj_poly_old', ...
      'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
-     'T_switch_old');
+     'T_switch_old', 'T_horizon_max_old');
 
 %% COMPILE matlab s_function (can be used as normal function in matlab)
 if(compile_matlab_sfunction)
