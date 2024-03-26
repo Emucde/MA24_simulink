@@ -50,7 +50,7 @@ lam_g_init_guess_0 = zeros(numel([x_init_guess_0(:)]), 1);
 
 y_ref_0            = param_trajectory.p_d(    1:2, 1 + N_step_MPC : N_step_MPC : 1 + (N_MPC  ) * N_step_MPC ); % (y_1 ... y_N)
 y_p_ref_0          = param_trajectory.p_d_p(  1:2, 1 + N_step_MPC : N_step_MPC : 1 + (N_MPC  ) * N_step_MPC ); % (y_p_1 ... y_p_N)
-y_pp_ref_0         = param_trajectory.p_d_pp( 1:2, 1              : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_pp_0 ... y_N-1)
+y_pp_ref_0         = param_trajectory.p_d_pp( 1:2, 1              : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_pp_0 ... y_pp_N-1)
 
 % get weights from "init_MPC_weight.m"
 % TODO: DELETE
@@ -72,9 +72,9 @@ u = SX.sym( 'u',   n, N_MPC   );
 
 % input parameter
 x_k      = SX.sym( 'x_k',      2*n, 1       );
-y_ref    = SX.sym( 'y_ref',    2,   N_MPC   ); % with y_N
-y_p_ref  = SX.sym( 'y_p_ref',  2,   N_MPC   );
-y_pp_ref = SX.sym( 'y_pp_ref', 2,   N_MPC   );
+y_ref    = SX.sym( 'y_ref',    2,   N_MPC   ); % (y_ref_1 ... y_ref_N)
+y_p_ref  = SX.sym( 'y_p_ref',  2,   N_MPC   ); % (y_p_ref_1 ... y_p_ref_N)
+y_pp_ref = SX.sym( 'y_pp_ref', 2,   N_MPC   ); % (y_pp_ref_0 ... y_pp_ref_N-1)
 
 %% set input parameter cellaray p
 p = [x_k; y_ref(:); y_p_ref(:); y_pp_ref(:)];
@@ -96,51 +96,46 @@ ubg = zeros(numel(x), 1);
 lambda_x0 = SX.sym('lambda_x0', size(w));
 lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
-% Actual TCP data
-y    = SX( 2, N_MPC ); % TCP position:     (y_1 ... y_N)
-y_p  = SX( 2, N_MPC ); % TCP velocity:     (y_p_1 ... y_p_N)
-y_pp = SX( 2, N_MPC ); % TCP acceleration: (y_pp_0 ... y_N-1)
+% Actual TCP data: y_0 und y_p_0 werden nicht verwendet
+y    = SX( 2, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
+y_p  = SX( 2, N_MPC+1 ); % TCP velocity:      (y_p_0 ... y_p_N)
+y_pp = SX( 2, N_MPC   ); % TCP acceleration:  (y_pp_0 ... y_pp_N-1)
 
-% Caclulate state trajectory: Given: x_0: (x_1 ... xN)
+q    = SX( n, N_MPC+1 ); % joint velocity:     (q_0 ... q_N)
+q_p  = SX( n, N_MPC+1 ); % joint velocity:     (q_p_0 ... q_p_N)
+q_pp = SX( n, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1)
+
 g(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
-for i=0:N_MPC-1
-    % Set the state dynamics constraints
-    g(1, 1 + (i+1)) = {F(x(:, 1 + (i)), u(:, 1 + (i))) - x(:, 1 + (i+1))}; % system equation
-end
+for i=0:N_MPC
+    % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
+    q(:,   1+ (i)) = x(1:n,     1 + (i));
+    q_p(:, 1+ (i)) = x(n+1:2*n, 1 + (i));
 
-% calculate trajectory values (y_1 ... y_N)
-for i=1:N_MPC
-     q    =  x(1:n, 1 + (i));
-     H_e = hom_transform_endeffector_casadi_SX(q, param_robot);
-     y(:, 1 + (i-1)) = H_e(1:2, 4); % index 0 is y_1
-end
+    % calculate trajectory values (y_0 ... y_N)
+    %for i=0:N_MPC
+    H_e = hom_transform_endeffector_casadi_SX(q(:, 1 + (i)), param_robot);
+    y(:, 1 + (i)) = H_e(1:2, 4); %y_0 wird nicht verwendet
 
-% calculate trajectory values (y_p_1 ... y_p_N)
-for i=1:N_MPC
-    q    =  x(1:n    , 1 + (i));
-    q_p  =  x(n+1:2*n, 1 + (i));
-
-    J = geo_jacobian_endeffector_casadi_SX(q, param_robot);
-    y_p(:, 0 + (i)) = J(1:2, 1:2)*q_p;
+    % calculate trajectory values (y_p_0 ... y_p_N)
+    J = geo_jacobian_endeffector_casadi_SX(   q(:, 1 + (i)), param_robot);
+    y_p(:, 1 + (i)) = J(1:2, 1:2) *         q_p(:, 1 + (i)); %y_p_0 wird nicht verwendet
     % or y(:, 0) = {H_e(x_k) or (y(:, i+1) - y(:, i))/param_global.Ta} for i=1
     % and y_p(:, i) = (y(:, i-1) - y(:, i))/param_global.Ta for i>1 and
-end
 
-% calculate trajectory values (y_pp_0 ... y_N-1)
-for i=0:N_MPC-1
-    % calculate joint angles and velocities
-    q    =  x(1:n, 1 + (i));
-    %q_p  =  x(n+1:2*n, 1 + (i));
+    if(i < N_MPC)
+        % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
+        g(1,    1 + (i+1)) = {F(x(:, 1 + (i)), u(:, 1 + (i))) - x(:, 1 + (i+1))}; % Set the state dynamics constraints
 
-    dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
-    q_p  =  dx(1:n    , 1);
-    q_pp =  dx(n+1:2*n, 1);
+        % calculate q_pp values (q_pp_0 ... q_pp_N-1)
+        dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
+        q_pp(:, 1 + (i  )) = dx(n+1:2*n, 1);
 
-    J = geo_jacobian_endeffector_casadi_SX(q, param_robot);
-    J_p = geo_jacobian_endeffector_p_casadi_SX(q, q_p, param_robot);
-    y_pp(:, 1 + (i-1)) = J(1:2, 1:2)*q_pp + J_p(1:2, 1:2)*q_p;
-    % or y_pp(:, i) = (y(:, i+2) - 2*y(:, i+1) + y(:, i))/param_global.Ta^2 for i=1
-    % and y_pp(:, i) = (y(:, i-2) - 2*y(:, i-1) + y(:, i))/param_global.Ta^2 for i>1
+        % calculate trajectory values (y_pp_0 ... y_N-1)
+        J_p = geo_jacobian_endeffector_p_casadi_SX(q(:, 1 + (i)), q_p(:, 1 + (i)), param_robot);
+        y_pp(:, 1 + (i  )) = J(1:2, 1:2)*q_pp(:, 1 + (i)) + J_p(1:2, 1:2)*q_p(:, 1 + (i));
+        % or y_pp(:, i) = (y(:, i+2) - 2*y(:, i+1) + y(:, i))/param_global.Ta^2 for i=1
+        % and y_pp(:, i) = (y(:, i-2) - 2*y(:, i-1) + y(:, i))/param_global.Ta^2 for i>1
+    end
 end
 
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
@@ -148,18 +143,25 @@ Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 % Achtung: % index 0 von y und y_p is y_1 bzw. y1_p, Index 0 von y_pp ist y0_pp
 D_0    = Q_norm_square( y_pp( :, 1 + (0)         ) - y_pp_ref( :, 1 + (0)        ), pp.Q_y0_pp );
 
-D_1    = Q_norm_square( y(    :, 0 + (1)         ) - y_ref(    :, 0 + (1)        ), pp.Q_y1    ) + ...
-         Q_norm_square( y_p(  :, 0 + (1)         ) - y_p_ref(  :, 0 + (1)        ), pp.Q_y1_p  ) + ...
+D_1    = Q_norm_square( y(    :, 1 + (1)         ) - y_ref(    :, 0 + (1)        ), pp.Q_y1    ) + ...
+         Q_norm_square( y_p(  :, 1 + (1)         ) - y_p_ref(  :, 0 + (1)        ), pp.Q_y1_p  ) + ...
          Q_norm_square( y_pp( :, 1 + (1)         ) - y_pp_ref( :, 1 + (1)        ), pp.Q_y1_pp );
 
-D_N    = Q_norm_square( y(    :, 0 + (N_MPC)     ) - y_ref(    :, 0 + (N_MPC)    ), pp.Q_yN    ) + ...
-         Q_norm_square( y_p(  :, 0 + (N_MPC)     ) - y_p_ref(  :, 0 + (N_MPC)    ), pp.Q_yN_p  );
+D_N    = Q_norm_square( y(    :, 1 + (N_MPC)     ) - y_ref(    :, 0 + (N_MPC)    ), pp.Q_yN    ) + ...
+         Q_norm_square( y_p(  :, 1 + (N_MPC)     ) - y_p_ref(  :, 0 + (N_MPC)    ), pp.Q_yN_p  );
 
-J_y    = Q_norm_square( y(    :, 0 + (2:N_MPC-1) ) - y_ref(    :, 0 + (2:N_MPC-1)), pp.Q_y     );
-J_y_p  = Q_norm_square( y_p(  :, 0 + (2:N_MPC-1) ) - y_p_ref(  :, 0 + (2:N_MPC-1)), pp.Q_y_p   );
+J_y    = Q_norm_square( y(    :, 1 + (2:N_MPC-1) ) - y_ref(    :, 0 + (2:N_MPC-1)), pp.Q_y     );
+J_y_p  = Q_norm_square( y_p(  :, 1 + (2:N_MPC-1) ) - y_p_ref(  :, 0 + (2:N_MPC-1)), pp.Q_y_p   );
 J_y_pp = Q_norm_square( y_pp( :, 1 + (2:N_MPC-1) ) - y_pp_ref( :, 1 + (2:N_MPC-1)), pp.Q_y_pp  );
 
-cost_vars_names = '{J_y, J_y_p, J_y_pp, D_0, D_1, D_N}';
+C_0    = Q_norm_square( q_pp( :, 1 + (0)                                         ), pp.Q_q0_pp );
+
+C_N    = Q_norm_square( q_p(  :, 1 + (N_MPC)                                     ), pp.Q_qN_p  );
+
+J_q_p  = Q_norm_square( q_p(  :, 1 + (1:N_MPC-1)                                 ), pp.Q_q_p   );
+J_q_pp = Q_norm_square( q_pp( :, 1 + (1:N_MPC-1)                                 ), pp.Q_q_pp  );
+
+cost_vars_names = '{J_y, J_y_p, J_y_pp, D_0, D_1, D_N, J_q_p, J_q_pp, C_0, C_N}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 
@@ -255,9 +257,14 @@ elseif(strcmp(MPC_solver, 'qpoases'))
     % solver.print_options();
 elseif(strcmp(MPC_solver, 'ipopt'))
     % DOKU: https://casadi.sourceforge.net/v2.0.0/api/html/d6/d07/classcasadi_1_1NlpSolver.html#plugin_NlpSolver_ipopt
+    opts = struct;
     opts.show_eval_warnings = false;
     opts.error_on_fail = false;
     opts.print_time = 0;
+    %opts.jit = true;
+    %opts.compiler = 'shell';
+    %opts.jit_options.flags = {'-O3'};
+    %opts.jit_options.verbose = true;
     all_ipopt_options;
     solver = nlpsol('solver', 'ipopt', prob, opts);
     %solver.print_options();
