@@ -1,182 +1,25 @@
 import casadi.*
 
-%%
-n = param_robot.n_DOF;
 
-% Declare model variables
-x = SX.sym('x', 2*n);
-u = SX.sym('u', n);
 
-% Model equations
-xdot = sys_fun_SX(x, u, param_robot);
-f = Function('f', {x, u}, {xdot});
-
-% Formulate discrete time dynamics
-% Fixed step Runge-Kutta 4 integrator
-M = rk_iter; % RK4 steps per interval
-DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
-
-X0 = SX.sym('X0', 2*n);
-U = SX.sym('U', n);
-X = X0;
-for j=1:M
-    % Runge-Kutta 4th order method
-    k1 = f(X, U);
-    k2 = f(X + DT/2 * k1, U);
-    k3 = f(X + DT/2 * k2, U);
-    k4 = f(X + DT * k3, U);
-    X=X+DT/6*(k1 +2*k2 +2*k3 +k4);
+if(strcmp(MPC_version, "v1"))
+    opt_problem_y_u_MPC_v1;
+elseif(strcmp(MPC_version, "v2"))
+    opt_problem_alldeviations_MPC_v2;
+else
+    error('Only MPC version ( v1 | v2 ) implemented!');
 end
 
-F = Function('F', {X0, U}, {X});
 
-%% Calculate Initial Guess
-x_0_0  = [q_0; 0;0];%q1, q2, d/dt q1, d/dt q2
-q_0    = x_0_0(1:n); % useless line...
-dq_0   = x_0_0(n+1:2*n);
-ddq_0  = [0;0];
-xe_k_0 = xe0(1:2); % x pos, y pos
-u_k_0  = compute_tau(q_0, dq_0, ddq_0, param_robot); % tau1, tau2
 
-u_init_guess_0 = ones(2,N_MPC).*u_k_0;
-
-% für die S-funktion ist der Initial Guess wesentlich!
-sim                = F.mapaccum(N_MPC);
-x_init_guess_kp1_0 = sim(x_0_0, u_init_guess_0);
-x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
-
-lam_x_init_guess_0 = zeros(numel([x_init_guess_0(:); u_init_guess_0(:)]), 1);
-lam_g_init_guess_0 = zeros(numel([x_init_guess_0(:)]), 1);
-
-y_ref_0            = param_trajectory.p_d(    1:2, 1 + N_step_MPC : N_step_MPC : 1 + (N_MPC  ) * N_step_MPC ); % (y_1 ... y_N)
-y_p_ref_0          = param_trajectory.p_d_p(  1:2, 1 + N_step_MPC : N_step_MPC : 1 + (N_MPC  ) * N_step_MPC ); % (y_p_1 ... y_p_N)
-y_pp_ref_0         = param_trajectory.p_d_pp( 1:2, 1              : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_pp_0 ... y_pp_N-1)
-
-% get weights from "init_MPC_weight.m"
-% TODO: DELETE
-
-param_weight_init = param_weight.(casadi_func_name);
-
-% weights as parameter (~inputs)
-if(weights_and_limits_as_parameter)
-    pp = convert_doublestruct_to_casadi(param_weight_init);
-else % hardcoded weights
-    pp = param_weight_init;
-end
-
-%% Start with an empty NLP
-
-% Optimization Variables:
-x = SX.sym( 'x', 2*n, N_MPC+1 );
-u = SX.sym( 'u',   n, N_MPC   );
-
-% input parameter
-x_k      = SX.sym( 'x_k',      2*n, 1       );
-y_ref    = SX.sym( 'y_ref',    2,   N_MPC   ); % (y_ref_1 ... y_ref_N)
-y_p_ref  = SX.sym( 'y_p_ref',  2,   N_MPC   ); % (y_p_ref_1 ... y_p_ref_N)
-y_pp_ref = SX.sym( 'y_pp_ref', 2,   N_MPC   ); % (y_pp_ref_0 ... y_pp_ref_N-1)
-
-%% set input parameter cellaray p
-p = [x_k; y_ref(:); y_p_ref(:); y_pp_ref(:)];
-if(weights_and_limits_as_parameter) % debug input parameter
-    p = [p; struct_to_row_vector(pp)'];
-end
-
-% optimization variables cellarray w
-w = [x(:); u(:)];
-lbw = [repmat(pp.x_min, N_MPC + 1, 1); repmat(pp.u_min, N_MPC, 1)];
-ubw = [repmat(pp.x_max, N_MPC + 1, 1); repmat(pp.u_max, N_MPC, 1)];
-
-% constraints conditions cellarray g
-g = cell(1, N_MPC+1);
-lbg = zeros(numel(x), 1);
-ubg = zeros(numel(x), 1);
-
-% lambda_x0, lambda_g0 initial guess
-lambda_x0 = SX.sym('lambda_x0', size(w));
-lambda_g0 = SX.sym('lambda_g0', size(lbg));
-
-% Actual TCP data: y_0 und y_p_0 werden nicht verwendet
-y    = SX( 2, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
-y_p  = SX( 2, N_MPC+1 ); % TCP velocity:      (y_p_0 ... y_p_N)
-y_pp = SX( 2, N_MPC   ); % TCP acceleration:  (y_pp_0 ... y_pp_N-1)
-
-q    = SX( n, N_MPC+1 ); % joint velocity:     (q_0 ... q_N)
-q_p  = SX( n, N_MPC+1 ); % joint velocity:     (q_p_0 ... q_p_N)
-q_pp = SX( n, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1)
-
-g(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
-for i=0:N_MPC
-    % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
-    q(:,   1+ (i)) = x(1:n,     1 + (i));
-    q_p(:, 1+ (i)) = x(n+1:2*n, 1 + (i));
-
-    % calculate trajectory values (y_0 ... y_N)
-    %for i=0:N_MPC
-    H_e = hom_transform_endeffector_casadi_SX(q(:, 1 + (i)), param_robot);
-    y(:, 1 + (i)) = H_e(1:2, 4); %y_0 wird nicht verwendet
-
-    % calculate trajectory values (y_p_0 ... y_p_N)
-    J = geo_jacobian_endeffector_casadi_SX(   q(:, 1 + (i)), param_robot);
-    y_p(:, 1 + (i)) = J(1:2, 1:2) *         q_p(:, 1 + (i)); %y_p_0 wird nicht verwendet
-    % or y(:, 0) = {H_e(x_k) or (y(:, i+1) - y(:, i))/param_global.Ta} for i=1
-    % and y_p(:, i) = (y(:, i-1) - y(:, i))/param_global.Ta for i>1 and
-
-    if(i < N_MPC)
-        % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        g(1,    1 + (i+1)) = {F(x(:, 1 + (i)), u(:, 1 + (i))) - x(:, 1 + (i+1))}; % Set the state dynamics constraints
-
-        % calculate q_pp values (q_pp_0 ... q_pp_N-1)
-        dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
-        q_pp(:, 1 + (i  )) = dx(n+1:2*n, 1);
-
-        % calculate trajectory values (y_pp_0 ... y_N-1)
-        J_p = geo_jacobian_endeffector_p_casadi_SX(q(:, 1 + (i)), q_p(:, 1 + (i)), param_robot);
-        y_pp(:, 1 + (i  )) = J(1:2, 1:2)*q_pp(:, 1 + (i)) + J_p(1:2, 1:2)*q_p(:, 1 + (i));
-        % or y_pp(:, i) = (y(:, i+2) - 2*y(:, i+1) + y(:, i))/param_global.Ta^2 for i=1
-        % and y_pp(:, i) = (y(:, i-2) - 2*y(:, i-1) + y(:, i))/param_global.Ta^2 for i>1
-    end
-end
-
-Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
-
-% Achtung: % index 0 von y und y_p is y_1 bzw. y1_p, Index 0 von y_pp ist y0_pp
-D_0    = Q_norm_square( y_pp( :, 1 + (0)         ) - y_pp_ref( :, 1 + (0)        ), pp.Q_y0_pp );
-
-D_1    = Q_norm_square( y(    :, 1 + (1)         ) - y_ref(    :, 0 + (1)        ), pp.Q_y1    ) + ...
-         Q_norm_square( y_p(  :, 1 + (1)         ) - y_p_ref(  :, 0 + (1)        ), pp.Q_y1_p  ) + ...
-         Q_norm_square( y_pp( :, 1 + (1)         ) - y_pp_ref( :, 1 + (1)        ), pp.Q_y1_pp );
-
-D_N    = Q_norm_square( y(    :, 1 + (N_MPC)     ) - y_ref(    :, 0 + (N_MPC)    ), pp.Q_yN    ) + ...
-         Q_norm_square( y_p(  :, 1 + (N_MPC)     ) - y_p_ref(  :, 0 + (N_MPC)    ), pp.Q_yN_p  );
-
-J_y    = Q_norm_square( y(    :, 1 + (2:N_MPC-1) ) - y_ref(    :, 0 + (2:N_MPC-1)), pp.Q_y     );
-J_y_p  = Q_norm_square( y_p(  :, 1 + (2:N_MPC-1) ) - y_p_ref(  :, 0 + (2:N_MPC-1)), pp.Q_y_p   );
-J_y_pp = Q_norm_square( y_pp( :, 1 + (2:N_MPC-1) ) - y_pp_ref( :, 1 + (2:N_MPC-1)), pp.Q_y_pp  );
-
-C_0    = Q_norm_square( q_pp( :, 1 + (0)                                         ), pp.Q_q0_pp );
-
-C_N    = Q_norm_square( q_p(  :, 1 + (N_MPC)                                     ), pp.Q_qN_p  );
-
-J_q_p  = Q_norm_square( q_p(  :, 1 + (1:N_MPC-1)                                 ), pp.Q_q_p   );
-J_q_pp = Q_norm_square( q_pp( :, 1 + (1:N_MPC-1)                                 ), pp.Q_q_pp  );
-
-cost_vars_names = '{J_y, J_y_p, J_y_pp, D_0, D_1, D_N, J_q_p, J_q_pp, C_0, C_N}';
-cost_vars_SX = eval(cost_vars_names);
-cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
-
-% calculate cost function
-J = sum([cost_vars_SX{:}]);
-
-% Redundant: Z184, Z191, Z195, Z212
-input_parameter_SX = {y_ref, y_p_ref, y_pp_ref, x_k};
+%% Define MPC Function
+input_parameter_SX = mpc_inputs;
 input_initial_guess_SX = {x, u, lambda_x0, lambda_g0};
 
 input_vars_SX  = horzcat(input_parameter_SX, input_initial_guess_SX);
 output_values_SX = {J, vertcat(w{:}), vertcat(g{:}), vertcat(p{:}), lambda_x0, lambda_g0};
 
 if(weights_and_limits_as_parameter)
-    %input_vars_SX  = {input_vars_SX{:},  Q_y, Q_y_p, Q_y_pp, Q_yN, x_min, x_max, u_min, u_max};
     input_min_len = length(input_vars_SX);
 
     input_vars_SX = horzcat(input_vars_SX, struct2cell(pp)');
@@ -325,9 +168,9 @@ lambda_g0_opt = sol_sym.lam_g;
 output_vars_MX = {u_opt, x_full_opt, u_full_opt, lambda_x0_opt, lambda_g0_opt};
 if(weights_and_limits_as_parameter)
     [output_vars_MX_ext{1:length(cost_vars_SX)}] = get_costs_MX(input_vars_MX{:});
-    output_vars_MX = {output_vars_MX{:}, output_vars_MX_ext{:}};
+    output_vars_MX = horzcat(output_vars_MX, output_vars_MX_ext);
 
-    % Damit alle Parameter nur über einen einzelnen Input übergeben werden können.
+    % So that all parameters can only be passed via a single input.
     input_vars_MX = horzcat({input_vars_MX{1:input_min_len}}, merge_cell_arrays({input_vars_MX{input_min_len+1:end}}));
 end
 
@@ -336,24 +179,13 @@ input_parameter_len = length(input_parameter_SX);
 input_vars_MX = horzcat(merge_cell_arrays({input_vars_MX{1:input_parameter_len}}), {input_vars_MX{input_parameter_len+1:end}});
 
 %% Define f_opt and calculate final initial guess values
+f_opt = Function(casadi_func_name, input_vars_MX, output_vars_MX);
 
 if(weights_and_limits_as_parameter)
-    f_opt = Function(casadi_func_name, ...
-        {input_vars_MX{:}},...
-        {output_vars_MX{:}});
-
-    %[u_opt_sol, x_full_opt_sol, u_full_opt_sol, J_y_sol, J_y_p_sol, J_y_pp_sol, D_N_sol] = ...
-    %    f_opt(y_ref_0, y_p_ref_0, y_pp_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, QQ_y, QQ_y_p, QQ_y_pp, QQ_yN, xx_min, xx_max, uu_min, uu_max);
-    param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init)');
-    input_reference_values = [y_ref_0(:); y_p_ref_0(:); y_pp_ref_0(:); x_0_0(:)];
-    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, lambda_x0_opt_sol, lambda_g0_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(input_reference_values, x_init_guess_0, u_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0, param_weight_init_cell{1});
-else
-    % ohne extra parameter 30-60 % schneller!
-    f_opt = Function(casadi_func_name, ...
-        {input_vars_MX{:}},...
-        {output_vars_MX{:}});
-
-    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, lambda_x0_opt_sol, lambda_g0_opt_sol] = f_opt(input_reference_values, x_init_guess_0, u_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0);
+    param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init), 'vector');
+    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, lambda_x0_opt_sol, lambda_g0_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(mpc_init_reference_values, x_init_guess_0, u_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0, param_weight_init_cell);
+else  % ohne extra parameter 30-60 % schneller!
+    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, lambda_x0_opt_sol, lambda_g0_opt_sol] = f_opt(mpc_init_reference_values, x_init_guess_0, u_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0);
 end
 
 % set init guess

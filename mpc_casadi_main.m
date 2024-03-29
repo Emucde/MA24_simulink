@@ -13,13 +13,14 @@ fullsimu                        = false; % make full mpc simulation and plot res
 traj_select_mpc                 = 3; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
 weights_and_limits_as_parameter = true; % otherwise minimal set of inputs and parameter is used. Leads to faster run time and compile time.
 compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
-compile_mode                    = 1; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
+compile_mode                    = 2; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
 compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
 
 MPC='MPC1';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'ipopt'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).version  = 'v2'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp))
 param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -28,6 +29,7 @@ MPC='MPC2';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).version  = 'v2'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp))
 param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -36,6 +38,7 @@ MPC='MPC3';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).version  = 'v2'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp))
 param_casadi_fun_name.(MPC).Ts      = 50e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -44,12 +47,13 @@ MPC='MPC4';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).version  = 'v1'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp))
 param_casadi_fun_name.(MPC).Ts      = 1e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC1;
+param_casadi_fun_struct = param_casadi_fun_name.MPC4;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -62,6 +66,7 @@ T_horizon_MPC    = Ts_MPC*N_MPC;                    % Time horizon
 N_step_MPC       = round(Ts_MPC/param_global.Ta);   % sampling steps for trajectory
 MPC_variant      = param_casadi_fun_struct.variant;
 MPC_solver       = param_casadi_fun_struct.solver;
+MPC_version      = param_casadi_fun_struct.version;
 
 % checks
 if mod(Ts_MPC, param_global.Ta) ~= 0
