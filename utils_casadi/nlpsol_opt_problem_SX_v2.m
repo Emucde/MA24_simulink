@@ -169,11 +169,16 @@ cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 J = sum([cost_vars_SX{:}]);
 
 % Redundant: Z184, Z191, Z195, Z212
-input_vars_SX  = {y_ref, y_p_ref, y_pp_ref, x_k, x, u, lambda_x0, lambda_g0};
+input_parameter_SX = {y_ref, y_p_ref, y_pp_ref, x_k};
+input_initial_guess_SX = {x, u, lambda_x0, lambda_g0};
+
+input_vars_SX  = horzcat(input_parameter_SX, input_initial_guess_SX);
 output_values_SX = {J, vertcat(w{:}), vertcat(g{:}), vertcat(p{:}), lambda_x0, lambda_g0};
 
 if(weights_and_limits_as_parameter)
     %input_vars_SX  = {input_vars_SX{:},  Q_y, Q_y_p, Q_y_pp, Q_yN, x_min, x_max, u_min, u_max};
+    input_min_len = length(input_vars_SX);
+
     input_vars_SX = horzcat(input_vars_SX, struct2cell(pp)');
     get_costs_MX = Function('get_costs_MX', input_vars_SX, cost_vars_SX);
     get_limits_MX = Function('get_limits_MX', input_vars_SX, {lbw,   ubw,   lbg,   ubg});
@@ -321,7 +326,16 @@ output_vars_MX = {u_opt, x_full_opt, u_full_opt, lambda_x0_opt, lambda_g0_opt};
 if(weights_and_limits_as_parameter)
     [output_vars_MX_ext{1:length(cost_vars_SX)}] = get_costs_MX(input_vars_MX{:});
     output_vars_MX = {output_vars_MX{:}, output_vars_MX_ext{:}};
+
+    % Damit alle Parameter nur über einen einzelnen Input übergeben werden können.
+    input_vars_MX = horzcat({input_vars_MX{1:input_min_len}}, merge_cell_arrays({input_vars_MX{input_min_len+1:end}}));
 end
+
+% Merge Input Parameter:
+input_parameter_len = length(input_parameter_SX);
+input_vars_MX = horzcat(merge_cell_arrays({input_vars_MX{1:input_parameter_len}}), {input_vars_MX{input_parameter_len+1:end}});
+
+%% Define f_opt and calculate final initial guess values
 
 if(weights_and_limits_as_parameter)
     f_opt = Function(casadi_func_name, ...
@@ -330,8 +344,9 @@ if(weights_and_limits_as_parameter)
 
     %[u_opt_sol, x_full_opt_sol, u_full_opt_sol, J_y_sol, J_y_p_sol, J_y_pp_sol, D_N_sol] = ...
     %    f_opt(y_ref_0, y_p_ref_0, y_pp_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, QQ_y, QQ_y_p, QQ_y_pp, QQ_yN, xx_min, xx_max, uu_min, uu_max);
-    param_weight_init_cell = struct2cell(param_weight_init)';
-    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, lambda_x0_opt_sol, lambda_g0_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(y_ref_0, y_p_ref_0, y_pp_ref_0, x_0_0, x_init_guess_0, u_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0, param_weight_init_cell{:});
+    param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init)');
+    input_reference_values = [y_ref_0(:); y_p_ref_0(:); y_pp_ref_0(:); x_0_0(:)];
+    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, lambda_x0_opt_sol, lambda_g0_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(input_reference_values, x_init_guess_0, u_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0, param_weight_init_cell{1});
 else
     % ohne extra parameter 30-60 % schneller!
     f_opt = Function(casadi_func_name, ...

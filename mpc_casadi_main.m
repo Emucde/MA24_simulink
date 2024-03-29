@@ -12,7 +12,7 @@ convert_maple_to_casadi         = false; % convert maple functions into casadi f
 fullsimu                        = false; % make full mpc simulation and plot results
 traj_select_mpc                 = 3; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
 weights_and_limits_as_parameter = true; % otherwise minimal set of inputs and parameter is used. Leads to faster run time and compile time.
-compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
+compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_mode                    = 1; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
 compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
 
