@@ -86,6 +86,14 @@ param_weight.(MPC).u_min    = 1*[ -10; -10 ];
 param_weight.(MPC).u_max    = 1*[ 10; 10 ];
 
 
+names = fieldnames(param_weight)';
+param_weight_init = struct;
+for name=names
+    mpc_name = name{1};
+    temp = merge_cell_arrays(struct2cell(param_weight.(mpc_name))');
+    param_weight_init.(mpc_name) = temp{1};
+end
+
 %{
 param_weight.(MPC).Q_y      = 1e5*diag([1 1]);  % d_kpn
 param_weight.(MPC).Q_y_p    = 1e-5*diag([1 1]); % d_kpn
