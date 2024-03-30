@@ -50,7 +50,7 @@ xdot = sys_fun_SX(x, u, param_robot);
 f = Function('f', {x, u}, {xdot});
 
 % Discrete system dynamics
-M = rk_iter*10; % RK4 steps per interval
+M = rk_iter; % RK4 steps per interval
 DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 
 X0 = SX.sym('X0', 2*n);
