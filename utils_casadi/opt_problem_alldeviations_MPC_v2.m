@@ -22,13 +22,21 @@
 % Control Law
 % Optimal control input sequence (u_n) minimizes the cost function
 
-% Constraints
-% - System dynamics enforced through state equation (F)
-% - Initial state set to current state (x_k)
-% - Output (y_n) calculated from state (q_n) using output function (h)
-% - Velocity (y_p,n) and acceleration (y_pp,n) calculated from state and control input
-%   - System dynamics (M, C, g, J_v, J_vp) used for calculation
-% - State and control input constrained to admissible sets (X, U)
+% Optimization Problem formulation (MPC)
+% min  - minimizes the cost function J_d,N(k, x_k, (u_n))
+% st   - subject to:
+%       x_(n+1) = F(x_n, u_n)                                        - System dynamics constraint
+%       x_0 = x_k                                                    - Initial state constraint
+%       [q_n; q_p,n] = x_n                                           - Separate state into position (q_n) and velocity (q_p,n)
+%       q_pp,n = M^-1(q_n) * (u_n - C(q_n, q_p,n) * q_p,n - g(q_n))  - Predicted acceleration dynamics
+%                                                                      - M: Inertia matrix (assumed invertible)
+%                                                                      - C: Coriolis and centripetal forces function
+%                                                                      - g: Gravitational forces function
+%       y_n = h(q_n)                                                 - Output calculation constraint
+%       y_p,n = J_v(q_n) * q_p,n                                     - Predicted velocity calculation (using velocity Jacobian J_v)
+%       y_pp,n = J_v(q_n) * q_pp,n + J_v,p(q_n, q_p,n) * q_p,n       - Predicted acceleration calculation (using J_v and J_v,p)
+%       x_n ∈ X                                                      - State constraint
+%       u_n ∈ U                                                      - Control input constraint
 
 % Note: Simplified notation used for clarity. Define matrices and functions explicitly in implementation.
 
@@ -81,6 +89,8 @@ x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
 lam_x_init_guess_0 = zeros(numel([x_init_guess_0(:); u_init_guess_0(:)]), 1);
 lam_g_init_guess_0 = zeros(numel([x_init_guess_0(:)]), 1);
 
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+
 y_ref_0            = param_trajectory.p_d(    1:2, 1 + N_step_MPC : N_step_MPC : 1 + (N_MPC  ) * N_step_MPC ); % (y_1 ... y_N)
 y_p_ref_0          = param_trajectory.p_d_p(  1:2, 1 + N_step_MPC : N_step_MPC : 1 + (N_MPC  ) * N_step_MPC ); % (y_p_1 ... y_p_N)
 y_pp_ref_0         = param_trajectory.p_d_pp( 1:2, 1              : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_pp_0 ... y_pp_N-1)
@@ -98,8 +108,15 @@ end
 %% Start with an empty NLP
 
 % Optimization Variables:
-x = SX.sym( 'x', 2*n, N_MPC+1 );
 u = SX.sym( 'u',   n, N_MPC   );
+x = SX.sym( 'x', 2*n, N_MPC+1 );
+
+mpc_opt_var_inputs = {u, x};
+
+% optimization variables cellarray w
+w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
+lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1)];
+ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1)];
 
 % input parameter
 x_k      = SX.sym( 'x_k',      2*n, 1       ); % current state
@@ -107,19 +124,14 @@ y_ref    = SX.sym( 'y_ref',    2,   N_MPC   ); % (y_ref_1 ... y_ref_N)
 y_p_ref  = SX.sym( 'y_p_ref',  2,   N_MPC   ); % (y_p_ref_1 ... y_p_ref_N)
 y_pp_ref = SX.sym( 'y_pp_ref', 2,   N_MPC   ); % (y_pp_ref_0 ... y_pp_ref_N-1)
 
-mpc_inputs = {x_k, y_ref, y_p_ref, y_pp_ref};
+mpc_parameter_inputs = {x_k, y_ref, y_p_ref, y_pp_ref};
 mpc_init_reference_values = [x_0_0(:); y_ref_0(:); y_p_ref_0(:); y_pp_ref_0(:)];
 
 %% set input parameter cellaray p
-p = merge_cell_arrays(mpc_inputs, 'vector')';
+p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
 if(weights_and_limits_as_parameter) % debug input parameter
     p = [p; struct_to_row_vector(pp)'];
 end
-
-% optimization variables cellarray w
-w = [x(:); u(:)];
-lbw = [repmat(pp.x_min, N_MPC + 1, 1); repmat(pp.u_min, N_MPC, 1)];
-ubw = [repmat(pp.x_max, N_MPC + 1, 1); repmat(pp.u_max, N_MPC, 1)];
 
 % constraints conditions cellarray g
 g = cell(1, N_MPC+1);

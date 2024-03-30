@@ -70,6 +70,8 @@ x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
 lam_x_init_guess_0 = zeros(numel([x_init_guess_0(:); u_init_guess_0(:)]), 1);
 lam_g_init_guess_0 = zeros(numel([x_init_guess_0(:)]), 1);
 
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+
 y_ref_0            = param_trajectory.p_d(    1:2, 1 + N_step_MPC : N_step_MPC : 1 + (N_MPC  ) * N_step_MPC ); % (y_1 ... y_N)
 
 % get weights from "init_MPC_weight.m"
@@ -88,6 +90,13 @@ end
 x = SX.sym( 'x', 2*n, N_MPC+1 );
 u = SX.sym( 'u',   n, N_MPC   );
 
+mpc_opt_var_inputs = {u, x};
+
+% optimization variables cellarray w
+w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
+lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1)];
+ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1)];
+
 % input parameter
 x_k      = SX.sym( 'x_k',      2*n, 1       ); % current state
 y_ref    = SX.sym( 'y_ref',    2,   N_MPC   ); % (y_ref_1 ... y_ref_N)
@@ -95,19 +104,14 @@ y_ref    = SX.sym( 'y_ref',    2,   N_MPC   ); % (y_ref_1 ... y_ref_N)
 
 u_prev_0 = u_init_guess_0;
 
-mpc_inputs = {x_k, y_ref};
+mpc_parameter_inputs = {x_k, y_ref};
 mpc_init_reference_values = [x_0_0(:); y_ref_0(:)];
 
 %% set input parameter cellaray p
-p = merge_cell_arrays(mpc_inputs, 'vector')';
+p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
 if(weights_and_limits_as_parameter) % debug input parameter
     p = [p; struct_to_row_vector(pp)'];
 end
-
-% optimization variables cellarray w
-w = [x(:); u(:)];
-lbw = [repmat(pp.x_min, N_MPC + 1, 1); repmat(pp.u_min, N_MPC, 1)];
-ubw = [repmat(pp.x_max, N_MPC + 1, 1); repmat(pp.u_max, N_MPC, 1)];
 
 % constraints conditions cellarray g
 g = cell(1, N_MPC+1);

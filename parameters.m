@@ -242,11 +242,9 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         N_MPC            = param_MPC_struct.N  ;
         T_horizon_MPC    = param_MPC_struct.T_horizon;                   
         N_step_MPC       = param_MPC_struct.N_step;
-    
-        x_init_guess_arr     = zeros(2*n, N_MPC+1 , traj_select.traj_amount);
-        u_init_guess_arr     = zeros(  n, N_MPC   , traj_select.traj_amount);
-        lam_x_init_guess_arr = zeros(3*n*N_MPC+2*n, 1, traj_select.traj_amount); % lenght of u and x
-        lam_g_init_guess_arr = zeros(2*n*(N_MPC+1), 1, traj_select.traj_amount);
+        MPC_version      = param_MPC_struct.version;
+
+        init_guess_cell = cell(1, traj_select.traj_amount);
             
         for ii=1:traj_select.traj_amount
             param_trajectory = struct;
@@ -264,19 +262,13 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
             else
                 error(['Error: Variant = ', MPC_variant, ' is not valid. Should be (opti | nlpsol)']);
             end
-    
-            x_init_guess_arr(    :,:, ii) = x_init_guess;
-            u_init_guess_arr(    :,:, ii) = u_init_guess;
-            lam_x_init_guess_arr(:,:, ii) = lam_x_init_guess;
-            lam_g_init_guess_arr(:,:, ii) = lam_g_init_guess;
+
+            init_guess_cell{ii} = init_guess;
         end
+
+        init_guess_arr = vertcat(init_guess_cell{:});
     
-        param_MPC = struct( ...
-          'x_init_guess',         x_init_guess_arr, ...
-          'u_init_guess',         u_init_guess_arr, ...
-          'lam_x_init_guess',     lam_x_init_guess_arr, ...
-          'lam_g_init_guess',     lam_g_init_guess_arr ...
-        );
+        param_MPC = struct('init_guess', init_guess_arr);
         
         eval(param_MPC_init_guess_name+ ' = param_MPC;');
         save(param_MPC_init_guess_mat_file, param_MPC_init_guess_name);
@@ -378,9 +370,6 @@ if(plot_trajectory)
         ylabel('d/dt p(t) (m/s)');
         xlabel('t (s)');hold on;plot(param_MPC1_traj_data.t, param_MPC1_traj_data.p_d_pp(1,:));
 end
-
-%parameter_force_create_new_initial_guess = false; % TODO: delete
-
 
 %% DEBUG
 

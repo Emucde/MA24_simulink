@@ -6,15 +6,18 @@ if(strcmp(MPC_version, "v1"))
     opt_problem_y_u_MPC_v1;
 elseif(strcmp(MPC_version, "v2"))
     opt_problem_alldeviations_MPC_v2;
+elseif(strcmp(MPC_version, "v3"))
+    opt_problem_ineq_feasible_traj_MPC_v3;
 else
-    error('Only MPC version ( v1 | v2 ) implemented!');
+    error('Only MPC version ( v1 | v2 | v3 ) implemented!');
 end
 
 
 
 %% Define MPC Function
-input_parameter_SX = mpc_inputs;
-input_initial_guess_SX = {x, u, lambda_x0, lambda_g0};
+input_parameter_SX = mpc_parameter_inputs;
+input_opt_var_SX = mpc_opt_var_inputs;
+input_initial_guess_SX = [input_opt_var_SX(:)', {lambda_x0}, {lambda_g0}];
 
 input_vars_SX  = horzcat(input_parameter_SX, input_initial_guess_SX);
 output_values_SX = {J, vertcat(w{:}), vertcat(g{:}), vertcat(p{:}), lambda_x0, lambda_g0};
@@ -143,7 +146,7 @@ if(weights_and_limits_as_parameter)
     sol_sym = solver('x0', w_MX, 'p', p_MX, 'lbx', lbw_MX, 'ubx', ubw_MX,...
         'lbg', lbg_MX, 'ubg', ubg_MX, 'lam_x0', lambda_x0_MX, 'lam_g0', lambda_g0_MX);
 else
-    sol_sym = solver('x0', 'p', p_MX, w_MX, 'lbx', lbw, 'ubx', ubw,...
+    sol_sym = solver('x0', w_MX, 'p', p_MX, 'lbx', lbw, 'ubx', ubw,...
         'lbg', lbg, 'ubg', ubg, 'lam_x0', lambda_x0_MX, 'lam_g0', lambda_g0_MX);
 end
 
@@ -159,15 +162,13 @@ end
 %--------------------------------------------------------------------------------------|
 
 % generate solver solutions variables
-u_opt         =        ( sol_sym.x(   numel(x)+(1:n) )                );
-x_full_opt    = reshape( sol_sym.x( 1:numel(x)       ) , 2*n, N_MPC+1 );
-u_full_opt    = reshape( sol_sym.x(   numel(x)+1:end ) ,   n, N_MPC   );
-lambda_x0_opt = sol_sym.lam_x;
-lambda_g0_opt = sol_sym.lam_g;
+u_opt = sol_sym.x(1:n);
 
-output_vars_MX = {u_opt, x_full_opt, u_full_opt, lambda_x0_opt, lambda_g0_opt};
+output_vars_MX = [{u_opt}, merge_cell_arrays({sol_sym.x, sol_sym.lam_x, sol_sym.lam_g})];
 if(weights_and_limits_as_parameter)
-    [output_vars_MX_ext{1:length(cost_vars_SX)}] = get_costs_MX(input_vars_MX{:});
+    cost_vars_len = length(cost_vars_SX);
+    output_vars_MX_ext = cell(1, cost_vars_len);
+    [output_vars_MX_ext{1:cost_vars_len}] = get_costs_MX(input_vars_MX{:});
     output_vars_MX = horzcat(output_vars_MX, output_vars_MX_ext);
 
     % So that all parameters can only be passed via a single input.
@@ -176,23 +177,23 @@ end
 
 % Merge Input Parameter:
 input_parameter_len = length(input_parameter_SX);
-input_vars_MX = horzcat(merge_cell_arrays({input_vars_MX{1:input_parameter_len}}), {input_vars_MX{input_parameter_len+1:end}});
+input_initial_guess_len = length(input_initial_guess_SX);
+input_vars_MX = horzcat(merge_cell_arrays({input_vars_MX{1:input_parameter_len}}), ... 
+                merge_cell_arrays({input_vars_MX{input_parameter_len+(1:input_initial_guess_len)}}), ...
+                {input_vars_MX{input_parameter_len+input_initial_guess_len+1 : end}});
 
 %% Define f_opt and calculate final initial guess values
 f_opt = Function(casadi_func_name, input_vars_MX, output_vars_MX);
 
 if(weights_and_limits_as_parameter)
     param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init), 'vector');
-    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, lambda_x0_opt_sol, lambda_g0_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(mpc_init_reference_values, x_init_guess_0, u_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0, param_weight_init_cell);
+    [u_opt_sol, xx_full_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
 else  % ohne extra parameter 30-60 % schneller!
-    [u_opt_sol, x_full_opt_sol, u_full_opt_sol, lambda_x0_opt_sol, lambda_g0_opt_sol] = f_opt(mpc_init_reference_values, x_init_guess_0, u_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0);
+    [u_opt_sol, xx_full_opt_sol] = f_opt(mpc_init_reference_values, u_init_guess_0, x_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0);
 end
 
 % set init guess
-x_init_guess = full(x_full_opt_sol);
-u_init_guess = full(u_full_opt_sol);
-lam_x_init_guess = full(lambda_x0_opt_sol);
-lam_g_init_guess = full(lambda_g0_opt_sol);
+init_guess = full(xx_full_opt_sol);
 
 if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
     disp(['J = '      num2str(full( sum([ cost_values_sol{:} ]) )) ]);
@@ -206,7 +207,7 @@ if(compile_sfun)
     if(compile_mode == 1)
         tic;
         s_fun_name = 's_function_nlpsol.c';
-        compile_casadi_sfunction(f_opt, s_fun_name, output_dir, MPC_solver, '', compile_mode); % default nlpsol s-function
+        compile_casadi_sfunction(f_opt, s_fun_name, output_dir, MPC_solver, '-O3', compile_mode); % default nlpsol s-function
     disp(['Compile time for casadi s-function (nlpsol): ', num2str(toc), ' s']);
     elseif(compile_mode == 2)
         tic;

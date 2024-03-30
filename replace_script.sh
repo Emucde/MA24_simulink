@@ -62,9 +62,9 @@ fi
 # Kopieren der Datei mit dem entsprechenden Dateinamen
 if [[ $variant == "opti" ]]; then
    input="./templates/template_offline_MCP_s_fun_opti_shared_subsystem.slx"
-   MPC_string="MPC3"
+   MPC_string="MPC2"
    solver_string="qrqp"
-   idx_val=4
+   idx_val=3
 else
    input="./templates/template_offline_MCP_s_fun_nlpsol_shared_subsystem.slx"
    MPC_string="MPC1"
