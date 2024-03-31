@@ -36,7 +36,7 @@ end
 
 %% debug parameter
 start_in_singularity = false;
-trajectory_out_of_workspace = ~true; % TODO: einfach offset 0 setzten
+trajectory_out_of_workspace = true; % TODO: einfach offset 0 setzten
 x_traj_out_of_workspace_value = 0.1;
 
 plot_trajectory = ~true;
@@ -154,12 +154,15 @@ cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
 
 % 1. get maximum horizont length of all mpcs:
 T_horizon_max = 0;
+
+N_sum = 0;
 for name={files.name}
     name_mat_file    = name{1};
     param_MPC_name   = name_mat_file(1:end-4);
     param_MPC_struct = eval(param_MPC_name);
 
     T_horizon = param_MPC_struct.T_horizon;
+    N_sum = N_sum + param_MPC_struct.N;
 
     if(T_horizon > T_horizon_max)
         T_horizon_max = T_horizon;
@@ -189,10 +192,10 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         T_traj_sin_poly_old ~= T_traj_sin_poly || ...
         omega_traj_sin_poly_old ~= omega_traj_sin_poly || ...
         phi_traj_sin_poly_old ~= phi_traj_sin_poly || ... 
-        T_switch_old ~= T_switch )
+        T_switch_old ~= T_switch || N_sum ~= N_sum_old )
     
     % 2. calculate all trajectories for max horizon length
-    N_traj = 1+(T_sim + T_horizon_max)/param_global.Ta;
+    N_traj = ceil(1+(T_sim + T_horizon_max)/param_global.Ta);
     param_traj_data.t         = zeros(N_traj, 1);
     param_traj_data.p_d       = zeros(3, N_traj, traj_select.traj_amount);
     param_traj_data.p_d_p     = zeros(3, N_traj, traj_select.traj_amount);
@@ -290,13 +293,15 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
     phi_traj_sin_poly_old   = phi_traj_sin_poly  ;
     T_switch_old = T_switch;
     T_horizon_max_old = T_horizon_max;
+    N_sum_old = N_sum;
 
     save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
          'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
          'Ta_old', 'T_traj_poly_old', ...
          'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
-         'T_switch_old', 'T_horizon_max_old');
+         'T_switch_old', 'T_horizon_max_old', 'N_sum_old');
 
+    init_MPC_weights; % why necessary?
 else
     files = dir('./s_functions/initial_guess/*.mat');
     cellfun(@load, {files.name});

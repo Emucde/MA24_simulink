@@ -13,17 +13,17 @@ fullsimu                        = false; % make full mpc simulation and plot res
 traj_select_mpc                 = 3; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
 weights_and_limits_as_parameter = true; % otherwise minimal set of inputs and parameter is used. Leads to faster run time and compile time.
 compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
-compile_mode                    = 1; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
 compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
 
 MPC='MPC1';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'ipopt'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v2'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible)
+param_casadi_fun_name.(MPC).version = 'v2'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible)
 param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).compile_mode = 1; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
 
 MPC='MPC2';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -33,15 +33,17 @@ param_casadi_fun_name.(MPC).version  = 'v2'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp)
 param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).compile_mode = 2; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
 
 MPC='MPC3';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v3'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible)
-param_casadi_fun_name.(MPC).Ts      = 20e-3;
+param_casadi_fun_name.(MPC).Ts      = 10e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).compile_mode = 1; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
 
 MPC='MPC4';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -51,6 +53,7 @@ param_casadi_fun_name.(MPC).version  = 'v1'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp)
 param_casadi_fun_name.(MPC).Ts      = 1e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).compile_mode = 2; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 param_casadi_fun_struct = param_casadi_fun_name.MPC3;
@@ -67,6 +70,7 @@ N_step_MPC       = round(Ts_MPC/param_global.Ta);   % sampling steps for traject
 MPC_variant      = param_casadi_fun_struct.variant;
 MPC_solver       = param_casadi_fun_struct.solver;
 MPC_version      = param_casadi_fun_struct.version;
+compile_mode     = param_casadi_fun_struct.compile_mode;
 
 % checks
 if mod(Ts_MPC, param_global.Ta) ~= 0
@@ -281,7 +285,7 @@ save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
      'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
      'Ta_old', 'T_traj_poly_old', ...
      'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
-     'T_switch_old', 'T_horizon_max_old');
+     'T_switch_old', 'T_horizon_max_old', 'N_sum_old');
 
 %% COMPILE matlab s_function (can be used as normal function in matlab)
 if(compile_matlab_sfunction)
