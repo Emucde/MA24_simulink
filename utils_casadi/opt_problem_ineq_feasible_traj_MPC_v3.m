@@ -70,8 +70,10 @@ F = Function('F', {X0, U}, {X});
 z     = SX.sym('z',     2*2);
 alpha = SX.sym('alpha',   2);
 
-h_ref = Function('h_ref', {z, alpha}, {[z(3:4, 1); alpha]});
+h_ref = Function('h_ref', {z, alpha}, {[z(3:4); alpha]});
 
+M = 1; % RK4 steps per interval
+DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 Z0    = SX.sym('Z0',    2*2);
 ALPHA = SX.sym('ALPHA',   2);
 Z     = Z0;
@@ -181,9 +183,10 @@ y_ref    = SX( 2, N_MPC+1 ); % TCP position:      (y_ref_0 ... y_ref_N)
 y_p_ref  = SX( 2, N_MPC+1 ); % TCP velocity:      (y_p_ref_0 ... y_p_ref_N)
 y_pp_ref = SX( 2, N_MPC+1 ); % TCP acceleration:  (y_pp_ref_0 ... y_pp_ref_N)
 
+q_pp = SX( n, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1)
+
 g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 g_z(1, 1 + (0)) = {z_0 - z(:, 1 + (0))}; % x0 = xk
-g_eps(1, 1) = {norm_2(y(:,end)-y_ref(:,end))}; % for pp.epsilon
 for i=0:N_MPC
     % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
     q = x(1:n, 1 + (i));
@@ -200,8 +203,12 @@ for i=0:N_MPC
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
         g_x(1, 1 + (i+1)) = {F(x(:, 1 + (i)), u(    :, 1 + (i))) - x(:, 1 + (i+1))}; % Set the state dynamics constraints
         g_z(1, 1 + (i+1)) = {H(z(:, 1 + (i)), alpha(:, 1 + (i))) - z(:, 1 + (i+1))}; % Set the state dynamics constraints
+
+        dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
+        q_pp(:, 1 + (i  )) = dx(n+1:2*n, 1);
     end
 end
+g_eps(1, 1) = {norm_2(y(:,end)-y_ref(:,end))}; % for pp.epsilon
 g = [g_x, g_z, g_eps];
 
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
@@ -217,8 +224,9 @@ e_p  = y_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  :, 1 + (0:N_MPC));
 e    = y_ref(    :, 1 + (0:N_MPC) ) - y_d(    :, 1 + (0:N_MPC));
 
 J_yy_ref = Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_y_ref, e), eye(2,2));
+J_q_pp = Q_norm_square(q_pp, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
 
-cost_vars_names = '{J_y, J_yy_ref}';
+cost_vars_names = '{J_y, J_yy_ref, J_q_pp}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 
