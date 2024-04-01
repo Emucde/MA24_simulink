@@ -78,12 +78,30 @@ if(strcmp(MPC_solver, 'qrqp'))
     % opts.elastic_mode = true;
     % opts.regularity_check = false;
     opts.show_eval_warnings = false;
-    % opts.max_iter = 10;
-    % opts.tol_du=1e-3;
-    % opts.tol_pr=1e-3;
+    % opts.max_iter = 1000;
+    opts.tol_du=1e-6;
+    opts.tol_pr=1e-6;
     solver = nlpsol('solver', 'sqpmethod', prob, opts);
     % solver.print_options();
+elseif(strcmp(MPC_solver, 'qrsqp'))
+    opts = struct; % Create a new structure
+    opts.qpsol = 'qrsqp'; % Set the QP solver to 'qrqp'
+    opts.qpsol_options.print_iter = false; % Disable printing of QP solver iterations
+    opts.qpsol_options.print_header = false; % Disable printing of QP solver header
+    opts.qpsol_options.print_info = false; % Disable printing of QP solver info
+    opts.qpsol_options.error_on_fail = false;
     
+    opts.print_header = false; % Disable printing of solver header
+    opts.print_iteration = false; % Disable printing of solver iterations
+    opts.print_time = false; % Disable printing of solver time
+    opts.print_status = false;
+    opts.error_on_fail = false;
+    opts.hessian_approximation = 'exact';
+    opts.show_eval_warnings = false;
+    opts.tol_du=1e-6;
+    opts.tol_pr=1e-6;
+    solver = nlpsol('solver', 'sqpmethod', prob, opts);
+    % solver.print_options();
 elseif(strcmp(MPC_solver, 'qpoases'))
     % DOKU: https://casadi.sourceforge.net/api/internal/d5/d43/classcasadi_1_1QpoasesInterface.html
     opts = struct; % Create a new structure

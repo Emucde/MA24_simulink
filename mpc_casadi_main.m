@@ -15,6 +15,10 @@ weights_and_limits_as_parameter = true; % otherwise minimal set of inputs and pa
 compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
 
+% Compile Mode:
+% compile_mode = 1 | nlpsol-sfun | fast compile time | very accurate,          | sometimes slower exec
+% compile_mode = 2 | opti-sfun   | slow compile time | sometimes less accurate | sometimes faster exec
+
 MPC='MPC1';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
@@ -23,7 +27,7 @@ param_casadi_fun_name.(MPC).version = 'v2'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) 
 param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
-param_casadi_fun_name.(MPC).compile_mode = 1; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
+param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 
 MPC='MPC2';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -33,7 +37,7 @@ param_casadi_fun_name.(MPC).version  = 'v2'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp)
 param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
-param_casadi_fun_name.(MPC).compile_mode = 2; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
+param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 
 MPC='MPC3';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -43,7 +47,7 @@ param_casadi_fun_name.(MPC).version  = 'v3'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp)
 param_casadi_fun_name.(MPC).Ts      = 10e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
-param_casadi_fun_name.(MPC).compile_mode = 1; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
+param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 
 MPC='MPC4';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -53,7 +57,7 @@ param_casadi_fun_name.(MPC).version  = 'v1'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp)
 param_casadi_fun_name.(MPC).Ts      = 1e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
-param_casadi_fun_name.(MPC).compile_mode = 2; % 1 = fast compile but slow exec, 2 = slow compile but fast exec.
+param_casadi_fun_name.(MPC).compile_mode = 2; %1: nlpsol-sfun, 2: opti-sfun
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 param_casadi_fun_struct = param_casadi_fun_name.MPC3;
