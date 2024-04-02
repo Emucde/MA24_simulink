@@ -139,6 +139,8 @@ alpha = SX.sym( 'alpha',   2, N_MPC+1 );
 
 mpc_opt_var_inputs = {u, x, z, alpha};
 
+u_opt_indices = 1:n;
+
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
 lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
