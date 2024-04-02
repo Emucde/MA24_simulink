@@ -147,6 +147,16 @@ rot_ax = rot_quat(2:4)/sin(rot_alpha_scale/2);
 rot_alpha_scale_init = rot_alpha_scale;
 rot_ax_init = rot_ax;
 
+param_init_pose = struct;
+param_init_pose.xe0 = xe0;
+param_init_pose.xeT = xeT;
+param_init_pose.q_0 = q_0;
+param_init_pose.q_0_p = q_0_p;
+param_init_pose.R_init = R_init;
+param_init_pose.rot_alpha_scale_init = rot_alpha_scale;
+param_init_pose.rot_ax_init = rot_ax;
+
+
 %% GENERATE OFFLINE TRAJECTORY
 
 files = dir('./s_functions/mpc_settings/*.mat');
@@ -154,8 +164,8 @@ cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
 
 % 1. get maximum horizont length of all mpcs:
 T_horizon_max = 0;
-
 N_sum = 0;
+Ts_sum = 0;
 for name={files.name}
     name_mat_file    = name{1};
     param_MPC_name   = name_mat_file(1:end-4);
@@ -163,6 +173,7 @@ for name={files.name}
 
     T_horizon = param_MPC_struct.T_horizon;
     N_sum = N_sum + param_MPC_struct.N;
+    Ts_sum = Ts_sum + param_MPC_struct.Ts;
 
     if(T_horizon > T_horizon_max)
         T_horizon_max = T_horizon;
@@ -192,7 +203,7 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         T_traj_sin_poly_old ~= T_traj_sin_poly || ...
         omega_traj_sin_poly_old ~= omega_traj_sin_poly || ...
         phi_traj_sin_poly_old ~= phi_traj_sin_poly || ... 
-        T_switch_old ~= T_switch || N_sum ~= N_sum_old )
+        T_switch_old ~= T_switch || N_sum ~= N_sum_old || Ts_sum ~= Ts_sum_old )
     
     % 2. calculate all trajectories for max horizon length
     N_traj = ceil(1+(T_sim + T_horizon_max)/param_global.Ta);
@@ -294,12 +305,13 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
     T_switch_old = T_switch;
     T_horizon_max_old = T_horizon_max;
     N_sum_old = N_sum;
+    Ts_sum_old = Ts_sum;
 
     save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
          'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
          'Ta_old', 'T_traj_poly_old', ...
          'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
-         'T_switch_old', 'T_horizon_max_old', 'N_sum_old');
+         'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old');
 
     init_MPC_weights; % why necessary?
 else
