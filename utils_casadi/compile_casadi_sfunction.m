@@ -61,7 +61,7 @@ function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver
         pathname = split(output_dir, '/');
         pathname = pathname{2};
         fprintf('\n');
-        disp(['S-function name:', s_fun_name(1:end-2), '_', casadi_fun_name]);
+        disp(['S-function name: ', s_fun_name(1:end-2), '_', casadi_fun_name]);
         disp("S-function parameters:'" + pathname + "/" + casadi_fun_name + ".casadi', '" + casadi_fun_name + "'");
         disp("S-function modules:" + "'" + casadi_fun_name + "'");
         fprintf('\n');
@@ -103,7 +103,7 @@ function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver
         
         % display s-function in simulink settings
         fprintf('\n');
-        disp(['S-function name:', s_fun_name(1:end-2), '_', casadi_fun_name]);
+        disp(['S-function name: ', s_fun_name(1:end-2), '_', casadi_fun_name]);
         disp("S-function parameters:");
         disp("S-function modules:" + "'" + casadi_fun_name + "'");
         fprintf('\n');
