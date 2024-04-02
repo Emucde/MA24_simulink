@@ -1,4 +1,4 @@
-%% Init scripts
+% Init scripts
 tic
 parameters; init_casadi; import casadi.*;
 %dbstop if error
@@ -59,8 +59,28 @@ param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 2; %1: nlpsol-sfun, 2: opti-sfun
 
+MPC='MPC5';
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).version  = 'v4'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible)
+param_casadi_fun_name.(MPC).Ts      = 50e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+
+MPC='FeasibleBlock';
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).version  = 'traj_feasible'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible | traj_feasible)
+param_casadi_fun_name.(MPC).Ts      = -1;
+param_casadi_fun_name.(MPC).rk_iter = -1;
+param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC3;
+param_casadi_fun_struct = param_casadi_fun_name.MPC5;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -284,12 +304,13 @@ omega_traj_sin_poly_old = omega_traj_sin_poly;
 phi_traj_sin_poly_old   = phi_traj_sin_poly  ;
 T_switch_old = T_switch;
 T_horizon_max_old = T_horizon_max;
+%N_sum_old = -1;
 
 save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
      'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
      'Ta_old', 'T_traj_poly_old', ...
      'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
-     'T_switch_old', 'T_horizon_max_old', 'N_sum_old');
+     'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old');
 
 %% COMPILE matlab s_function (can be used as normal function in matlab)
 if(compile_matlab_sfunction)

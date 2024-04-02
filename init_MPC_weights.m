@@ -42,7 +42,7 @@ param_weight.(MPC).x_max    = 1*[ pi; pi; 20; 20];
 param_weight.(MPC).u_min    = 1*[ -10; -10 ];
 param_weight.(MPC).u_max    = 1*[ 10; 10 ];
 
-%%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 4) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 3) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MPC='MPC3';
 param_weight.(MPC).Q_y        = 1e5*diag([1 1e1]);  % d_kpn
 
@@ -75,6 +75,23 @@ param_weight.(MPC).x_min    = inf*[ -pi; -pi; -20; -20 ];
 param_weight.(MPC).x_max    = inf*[ pi; pi; 20; 20];
 param_weight.(MPC).u_min    = inf*[ -10; -10 ];
 param_weight.(MPC).u_max    = inf*[ 10; 10 ];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 5) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+MPC='MPC5';
+param_weight.(MPC).Q_y        = 1e5*diag([1 1]);  % d_kpn
+param_weight.(MPC).R_q_pp     = 1e-1*diag([1 1]);  % d_kpn
+
+param_weight.(MPC).epsilon    = 1e-5;
+
+param_weight.(MPC).x_min    = 1*[ -pi; -pi; -20; -20 ];
+param_weight.(MPC).x_max    = 1*[ pi; pi; 20; 20];
+param_weight.(MPC).u_min    = 1*[ -10; -10 ];
+param_weight.(MPC).u_max    = 1*[ 10; 10 ];
+
+%%%%%%%%%%%%%%%%%%%%% FEASIBLE BLOCK %%%%%%%%%%%%%%%%%%%%%
+MPC='FeasibleBlock';
+param_weight.(MPC).q_min    = 1*[ -pi; -pi];
+param_weight.(MPC).q_max    = 1*[ pi; pi];
 
 names = fieldnames(param_weight)';
 param_weight_init = struct;

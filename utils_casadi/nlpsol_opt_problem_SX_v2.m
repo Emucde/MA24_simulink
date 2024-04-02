@@ -8,8 +8,12 @@ elseif(strcmp(MPC_version, "v2"))
     opt_problem_alldeviations_MPC_v2;
 elseif(strcmp(MPC_version, "v3"))
     opt_problem_ineq_feasible_traj_MPC_v3;
+elseif(strcmp(MPC_version, "v4"))
+    opt_problem_ineq_feasible_block_MPC_v4;
+elseif(strcmp(MPC_version, "traj_feasible"))
+    opt_problem_feasible_trajectory;
 else
-    error('Only MPC version ( v1 | v2 | v3 ) implemented!');
+    error('Only MPC version ( v1 | v2 | v3 | v4 | traj_feasible ) implemented!');
 end
 
 
@@ -83,9 +87,9 @@ if(strcmp(MPC_solver, 'qrqp'))
     opts.tol_pr=1e-6;
     solver = nlpsol('solver', 'sqpmethod', prob, opts);
     % solver.print_options();
-elseif(strcmp(MPC_solver, 'qrsqp'))
+elseif(strcmp(MPC_solver, 'feasiblesqpmethod'))
     opts = struct; % Create a new structure
-    opts.qpsol = 'qrsqp'; % Set the QP solver to 'qrqp'
+    opts.qpsol = 'qrqp'; % Set the QP solver to 'qrqp'
     opts.qpsol_options.print_iter = false; % Disable printing of QP solver iterations
     opts.qpsol_options.print_header = false; % Disable printing of QP solver header
     opts.qpsol_options.print_info = false; % Disable printing of QP solver info
@@ -97,10 +101,14 @@ elseif(strcmp(MPC_solver, 'qrsqp'))
     opts.print_status = false;
     opts.error_on_fail = false;
     opts.hessian_approximation = 'exact';
+    % opts.iteration_callback_ignore_errors = true;
+    % opts.elastic_mode = true;
+    % opts.regularity_check = false;
     opts.show_eval_warnings = false;
+    % opts.max_iter = 1000;
     opts.tol_du=1e-6;
     opts.tol_pr=1e-6;
-    solver = nlpsol('solver', 'sqpmethod', prob, opts);
+    solver = nlpsol('solver', 'feasiblesqpmethod', prob, opts);
     % solver.print_options();
 elseif(strcmp(MPC_solver, 'qpoases'))
     % DOKU: https://casadi.sourceforge.net/api/internal/d5/d43/classcasadi_1_1QpoasesInterface.html
@@ -180,7 +188,7 @@ end
 %--------------------------------------------------------------------------------------|
 
 % generate solver solutions variables
-u_opt = sol_sym.x(1:n);
+u_opt = sol_sym.x(u_opt_indices);
 
 output_vars_MX = [{u_opt}, merge_cell_arrays({sol_sym.x, sol_sym.lam_x, sol_sym.lam_g})];
 if(weights_and_limits_as_parameter)
