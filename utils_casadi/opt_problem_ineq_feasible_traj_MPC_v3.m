@@ -72,7 +72,7 @@ alpha = SX.sym('alpha',   2);
 
 h_ref = Function('h_ref', {z, alpha}, {[z(3:4); alpha]});
 
-M = 1; % RK4 steps per interval
+M = rk_iter; % RK4 steps per interval
 DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 Z0    = SX.sym('Z0',    2*2);
 ALPHA = SX.sym('ALPHA',   2);

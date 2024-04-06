@@ -149,6 +149,9 @@ y    = SX( 2, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
 y_p  = SX( 2, N_MPC+1 ); % TCP velocity:      (y_p_0 ... y_p_N)
 y_pp = SX( 2, N_MPC   ); % TCP acceleration:  (y_pp_0 ... y_pp_N-1)
 
+% Manipulability
+%mm   = SX( N_MPC+1, 1);
+
 q    = SX( n, N_MPC+1 ); % joint velocity:     (q_0 ... q_N)
 q_p  = SX( n, N_MPC+1 ); % joint velocity:     (q_p_0 ... q_p_N)
 q_pp = SX( n, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1)
@@ -168,6 +171,8 @@ for i=0:N_MPC
     y_p(:, 1 + (i)) = J(1:2, 1:2) *         q_p(:, 1 + (i)); %y_p_0 wird nicht verwendet
     % or y(:, 0) = {H_e(x_k) or (y(:, i+1) - y(:, i))/param_global.Ta} for i=1
     % and y_p(:, i) = (y(:, i-1) - y(:, i))/param_global.Ta for i>1 and
+
+    %mm(1 + (i)) = sqrt(det(J'*J)); 
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
@@ -199,7 +204,9 @@ D_N    = Q_norm_square( y(    :, 1 + (N_MPC)     ) - y_ref(    :, 0 + (N_MPC)   
 
 J_y    = Q_norm_square( y(    :, 1 + (2:N_MPC-1) ) - y_ref(    :, 0 + (2:N_MPC-1)), pp.Q_y     );
 J_y_p  = Q_norm_square( y_p(  :, 1 + (2:N_MPC-1) ) - y_p_ref(  :, 0 + (2:N_MPC-1)), pp.Q_y_p   );
+%J_y_p  = Q_norm_square( (y_p(        :, 1 + (1:N_MPC) ) - y_p_ref(    :, 0 + (1:N_MPC)))', 1e-5*diag(mm(2:end))  );
 J_y_pp = Q_norm_square( y_pp( :, 1 + (2:N_MPC-1) ) - y_pp_ref( :, 1 + (2:N_MPC-1)), pp.Q_y_pp  );
+%J_y_pp = Q_norm_square( (y_pp(        :, 1 + (1:N_MPC-1) ) - y_pp_ref(    :, 1 + (1:N_MPC-1)))', 1e-5*diag(mm(2:end-1))  );
 
 C_0    = Q_norm_square( q_pp( :, 1 + (0)                                         ), pp.Q_q0_pp );
 

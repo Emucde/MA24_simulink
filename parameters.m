@@ -193,6 +193,8 @@ T_switch            = param_traj_allg.T_switch;
 T_start = param_vis.T/2;
 t = 0 : param_global.Ta : T_sim + T_horizon_max;
 
+try
+
 if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         any(xe0 ~= xe0_old) || any(xeT ~= xeT_old) || ...
         lamda_alpha ~= lamda_alpha_old || lamda_xyz ~= lamda_xyz_old || ...
@@ -319,6 +321,10 @@ else
     cellfun(@load, {files.name});
 
     load(param_MPC_traj_data_mat_file);
+end
+
+catch
+    disp('Cannot create init guess, please compile new')
 end
 
 if(plot_trajectory)
