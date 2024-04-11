@@ -1,6 +1,6 @@
 <mujoco model="2dof_sys">
   <compiler angle="radian" meshdir="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/" autolimits="true"/>
-  <statistic meansize="0.37214" extent="0.744279" center="0.185917 0.0393953 -1.69438e-07"/>
+  <statistic meansize="0.1299" extent="0.597575" center="0.185917 0.0393953 -1.69438e-07"/>
   <asset>
     <mesh name="planar_manipulator-holder_fin" file="planar_manipulator-holder_fin.stl" scale="0.001 0.001 0.001"/>
     <mesh name="planar_manipulator-bulk1_fin" file="planar_manipulator-bulk1_fin.stl" scale="0.001 0.001 0.001"/>
@@ -8,19 +8,21 @@
   </asset>
   <worldbody>
     <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="planar_manipulator-holder_fin"/>
-    <body name="link1">
-      <inertial pos="0 0 0" quat="0.5 0.5 0.5 0.5" mass="0.132013" diaginertia="0.00075383 0.000753687 1.05956e-05"/>
-      <joint name="joint1" pos="0 0 0" axis="0 0 1" range="-3.14159 3.14159" damping="1"/>
-      <geom pos="0.115 0.0583789 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.97 0.7 0.17 1" mesh="planar_manipulator-bulk1_fin"/>
-      <body name="link2">
-        <inertial pos="0 0 0" quat="0.5 0.5 0.5 0.5" mass="0.185821" diaginertia="0.000906382 0.000899989 2.0154e-05"/>
-        <joint name="joint2" pos="0 0 0" axis="0 0 1" range="-3.14159 3.14159" damping="1"/>
-        <geom pos="0.353039 0.0583789 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.97 0.7 0.17 1" mesh="planar_manipulator-bulk2_fin"/>
+    <body name="link1" pos="0 0.0583789 0">
+      <inertial pos="0.115 0 0" quat="0.5 0.5 0.5 0.5" mass="0.132013" diaginertia="0.00075383 0.000753687 1.05956e-05"/>
+      <joint name="joint1" pos="0 0 0" axis="0 0 1" range="-3.14159 3.14159" frictionloss="1"/>
+      <geom pos="0.115 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.97 0.7 0.17 1" mesh="planar_manipulator-bulk1_fin"/>
+      <body name="link2" pos="0.23 0 0">
+        <inertial pos="0.123039 0 0" quat="0.5 0.5 0.5 0.5" mass="0.185821" diaginertia="0.000906382 0.000899989 2.0154e-05"/>
+        <joint name="joint2" pos="0 0 0" axis="0 0 1" range="-3.14159 3.14159" frictionloss="1"/>
+        <geom pos="0.123039 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.97 0.7 0.17 1" mesh="planar_manipulator-bulk2_fin"/>
       </body>
     </body>
   </worldbody>
-    <actuator>
-    <position name="j1" joint="joint1"/>
-    <position name="j2" joint="joint2"/>
-  </actuator>
+
+<actuator>
+    <position name="q1" joint="joint1" ctrlrange="-3.141 3.141"/>
+    <position name="q2" joint="joint2" ctrlrange="-3.141 3.141"/>
+</actuator>
+
 </mujoco>

@@ -4,7 +4,7 @@
   <inertial >
    <origin  xyz="0.0 0.0 0.0" />
    <mass  value="0.6728687610724418" />
-   <inertia  ixz="0"  iyz="0"  ixx="0.0007034844784"  iyy="0.0012553825394000001"  ixy="0"  izz="0.0012076389984" />
+   <inertia  ixz="0"  izz="0.0012076389984"  ixx="0.0007034844784"  ixy="0"  iyz="0"  iyy="0.0012553825394000001" />
   </inertial>
   <visual >
    <origin  xyz="0.0 0.0 0.0" />
@@ -16,41 +16,22 @@
    </material>
   </visual>
  </link>
- <joint  name="joint1"  type="revolute" >
+ <joint  type="revolute"  name="joint1" >
   <parent  link="world" />
   <child  link="link1" />
-  <origin  xyz="0.0 0.0 0.0" />
+  <origin  xyz="0.0 0.0583789 0.0" />
   <axis  xyz="0.0 0.0 1.0" />
-  <limit  velocity="100000000"  upper="3.141592653589793"  effort="100"  lower="-3.141592653589793" />
-  <safety_controller  k_position="0"  k_velocity="100000000"  soft_lower_limit="-3.141592653589793"  soft_upper_limit="3.141592653589793" />
-  <dynamics  damping="1" />
+  <limit  velocity="100000000"  effort="100"  lower="-3.141592653589793"  upper="3.141592653589793" />
+  <dynamics  damping="0"  friction="1" />
  </joint>
- <transmission  name="joint1_transmission" >
-  <type >
-   transmission_interface/SimpleTransmission
-  </type>
-  <joint  name="joint1" >
-   <hardwareinterface >
-    PositionJointInterface
-   </hardwareinterface>
-  </transjoint>
-  <actuator  name="joint1_actuator" >
-   <hardwareinterface >
-    PositionJointInterface
-   </hardwareinterface>
-   <mechanicalreduction >
-    1
-   </mechanicalreduction>
-  </actuator>
- </transmission>
  <link  name="link1" >
   <inertial >
-   <origin  xyz="0.0 0.0 0.0" />
+   <origin  xyz="0.115 0.0 0.0" />
    <mass  value="0.13201266572070933" />
-   <inertia  ixz="0"  iyz="0"  ixx="1.059561151e-05"  iyy="0.000753829759"  ixy="0"  izz="0.0007536867173" />
+   <inertia  ixz="0"  izz="0.0007536867173"  ixx="1.059561151e-05"  ixy="0"  iyz="0"  iyy="0.000753829759" />
   </inertial>
   <visual >
-   <origin  xyz="0.115 0.0583789 0.0" />
+   <origin  xyz="0.115 0.0 0.0" />
    <geometry >
     <mesh  filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/planar_manipulator-bulk1_fin.stl"  scale="0.001 0.001 0.001" />
    </geometry>
@@ -59,41 +40,22 @@
    </material>
   </visual>
  </link>
- <joint  name="joint2"  type="revolute" >
+ <joint  type="revolute"  name="joint2" >
   <parent  link="link1" />
   <child  link="link2" />
-  <origin  xyz="0.0 0.0 0.0" />
+  <origin  xyz="0.23 0.0 0.0" />
   <axis  xyz="0.0 0.0 1.0" />
-  <limit  velocity="100000000"  upper="3.141592653589793"  effort="100"  lower="-3.141592653589793" />
-  <safety_controller  k_position="0"  k_velocity="100000000"  soft_lower_limit="-3.141592653589793"  soft_upper_limit="3.141592653589793" />
-  <dynamics  damping="1" />
+  <limit  velocity="100000000"  effort="100"  lower="-3.141592653589793"  upper="3.141592653589793" />
+  <dynamics  damping="0"  friction="1" />
  </joint>
- <transmission  name="joint2_transmission" >
-  <type >
-   transmission_interface/SimpleTransmission
-  </type>
-  <joint  name="joint2" >
-   <hardwareinterface >
-    PositionJointInterface
-   </hardwareinterface>
-  </transjoint>
-  <actuator  name="joint2_actuator" >
-   <hardwareinterface >
-    PositionJointInterface
-   </hardwareinterface>
-   <mechanicalreduction >
-    1
-   </mechanicalreduction>
-  </actuator>
- </transmission>
  <link  name="link2" >
   <inertial >
-   <origin  xyz="0.0 0.0 0.0" />
+   <origin  xyz="0.123039 0.0 0.0" />
    <mass  value="0.18582081864859962" />
-   <inertia  ixz="0"  iyz="0"  ixx="2.0154008761000003e-05"  iyy="0.0009063823826"  ixy="0"  izz="0.0008999886885000001" />
+   <inertia  ixz="0"  izz="0.0008999886885000001"  ixx="2.0154008761000003e-05"  ixy="0"  iyz="0"  iyy="0.0009063823826" />
   </inertial>
   <visual >
-   <origin  xyz="0.353039 0.0583789 0.0" />
+   <origin  xyz="0.123039 0.0 0.0" />
    <geometry >
     <mesh  filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/planar_manipulator-bulk2_fin.stl"  scale="0.001 0.001 0.001" />
    </geometry>
@@ -102,6 +64,15 @@
    </material>
   </visual>
  </link>
+ <joint  type="fixed"  name="jointTCP" >
+  <parent  link="link2" />
+  <child  link="TCP" />
+  <origin  xyz="0.24000000000000002 0.0 0.0" />
+  <axis  xyz="0.0 0.0 1.0" />
+  <limit  velocity="100000000"  effort="100"  lower="0.0"  upper="0.0" />
+  <dynamics  damping="0"  friction="1" />
+ </joint>
+ <link  name="TCP" />
 
     <mujoco>
             <compiler 
