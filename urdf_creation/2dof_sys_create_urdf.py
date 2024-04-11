@@ -132,6 +132,8 @@ if run_mujoco:
     # run mujoco
     os.system('/media/daten/Anwendungen/mujoco-2.3.7/bin/simulate /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/urdf_creation/scene_2dof.xml')
 
+# based on https://gepettoweb.laas.fr/doc/stack-of-tasks/pinocchio/master/doxygen-html/md_doc_b-examples_display_b-meshcat-viewer.html
+
 plot_true=True
 if plot_true:
     # Load the URDF model.
