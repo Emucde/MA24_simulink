@@ -21,6 +21,7 @@ addpath(genpath('./utils'));
 addpath(genpath('./s_functions'));
 addpath(genpath('./maple_generated/2_dof_system'));
 addpath(genpath('./MPC_shared_subsystems'));
+addpath(genpath('./urdf_creation'))
 set(groot, 'DefaultFigurePosition', [350, -650, 800, 600])
 
 init_casadi;
