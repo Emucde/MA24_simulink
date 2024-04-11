@@ -37,9 +37,12 @@ param_robot.p_0 = [0 0 0];
 
 param_robot.holder.R_0 = eye(3);
 param_robot.holder.d_0 = [0 param_robot.l__I 0];
+param_robot.holder.R__joint = param_robot.holder.R_0;
+param_robot.holder.d__joint = param_robot.holder.d_0;
 param_robot.holder.R__inertiaOrigin = eye(3);
 param_robot.holder.d__inertiaOrigin = [0 0 0];
 param_robot.holder.d__inertiaMatrixDiag = param_robot.inertia_matrix_sI;
+param_robot.holder.m = param_robot.mI;
 
 param_robot.link1_offset = [param_robot.l__s1 0 0];
 
@@ -48,6 +51,7 @@ param_robot.link1.d__joint = [param_robot.l__1-param_robot.l__s1 0 0];
 param_robot.link1.R__inertiaOrigin = eye(3);
 param_robot.link1.d__inertiaOrigin = [0 0 0];
 param_robot.link1.d__inertiaMatrixDiag = param_robot.inertia_matrix_s1;
+param_robot.link1.m = param_robot.m1;
 
 param_robot.link2_offset = [param_robot.l__s2 0 0];
 
@@ -56,3 +60,4 @@ param_robot.link2.d__joint = [param_robot.l__2 - param_robot.l__s2 0 0];
 param_robot.link2.R__inertiaOrigin = eye(3);
 param_robot.link2.d__inertiaOrigin = [0 0 0];
 param_robot.link2.d__inertiaMatrixDiag = param_robot.inertia_matrix_s2;
+param_robot.link2.m = param_robot.m2;
