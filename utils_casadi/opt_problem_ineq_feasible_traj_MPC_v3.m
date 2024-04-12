@@ -66,6 +66,11 @@ for j=1:M
 end
 F = Function('F', {X0, U}, {X});
 
+% EULER (CA Doppelt so schnell wie RK4, aber problematisch bei 5th order poly mit out of workspace)
+%X  = X0;
+%X = X + f(X, U)*DT;
+%F = Function('F', {X0, U}, {X});
+
 % Discrete y_ref system
 z     = SX.sym('z',     2*2);
 alpha = SX.sym('alpha',   2);
