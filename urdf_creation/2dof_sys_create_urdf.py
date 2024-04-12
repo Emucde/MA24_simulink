@@ -134,8 +134,8 @@ if run_mujoco:
 
 # based on https://gepettoweb.laas.fr/doc/stack-of-tasks/pinocchio/master/doxygen-html/md_doc_b-examples_display_b-meshcat-viewer.html
 
-plot_true=True
-if plot_true:
+visible_true=True
+if visible_true:
     # Load the URDF model.
     # Conversion with str seems to be necessary when executing this file with ipython
     mesh_dir = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/'
@@ -164,40 +164,92 @@ if plot_true:
     viz.displayVisuals(True)
     viz.display(pin.randomConfiguration(model))
 
-    q1 = np.array([np.pi/2, np.pi/2])
-    q1 = q0
-    v0 = np.random.randn(model.nv) * 2 # Anfangsgeschwindigkeit
-    v0 = v0*0
-
+    # Use forwards kinematics
     data = viz.data
-    pin.forwardKinematics(model, data, q1, v0)
-
+    q_T = np.array([np.pi/2, np.pi/2])
+    q_p_0 = np.random.randn(model.nv) * 2 # Anfangsgeschwindigkeit
+    pin.forwardKinematics(model, data, q_T, q_p_0)
     frame_id = model.getFrameId('TCP')
     viz.display()
-
     viz.drawFrameVelocities(frame_id=frame_id)
 
-    model.gravity.linear[:] = [0, -9.81, 0]
-    dt = 0.001
+    def tic():
+        global start_time
+        start_time = time.time()
 
-    def sim_loop():
-        tau0 = np.zeros(model.nv)#-0.001 # input torque
-        qs = [q1]
-        vs = [v0]
-        nsteps = 10000
-        for i in range(nsteps):
-            q = qs[i]
-            v = vs[i]
-            a1 = pin.aba(model, data, q, v, tau0)
-            vnext = v + dt * a1
-            qnext = pin.integrate(model, q, dt * vnext)
-            qs.append(qnext)
-            vs.append(vnext)
-            viz.display(qnext)
-            viz.drawFrameVelocities(frame_id=frame_id)
-        return qs, vs
- 
-    qs, vs = sim_loop()
+    def toc():
+        if 'start_time' in globals():
+            elapsed_time = time.time() - start_time
+            print(f"Elapsed time: {elapsed_time} seconds")
+        else:
+            print("Call tic() before calling toc()")
+
+    def f(x, u):
+        q = x[0:model.nq]
+        q_p = x[model.nq:model.nq+model.nv]
+        q_pp = pin.aba(model, data, q, q_p, u)
+        return np.concatenate((q_p,q_pp))
+
+    def runge_kutta_4(f, x, u, Ta):
+        k1 = f(x, u)
+        k2 = f(x + Ta/2 * k1, u)
+        k3 = f(x + Ta/2 * k2, u)
+        k4 = f(x + Ta * k3, u)
+        x=x+Ta/6*(k1 +2*k2 +2*k3 +k4)
+        return x
+
+    # enable gravity (in -y direction)
+    model.gravity.linear[:] = [0, -9.81, 0]
+    
+    # Simulate Dynamics
+    q_0 = np.zeros(model.nq)
+    q_p_0 = np.zeros(model.nv)
+
+    Ta = 0.001
+    T_sim = 10
+
+    def sim_loop(T_sim, display_joint=False):
+        tau0 = np.zeros(model.nv) # input torque
+
+        N_samp = int(np.round(T_sim/Ta))
+        q_arr = np.zeros((N_samp+1, model.nq))
+        q_p_arr = np.zeros((N_samp+1, model.nv))
+        q_arr[0] = q_0
+        q_p_arr[0] = q_p_0
+        for i in range(N_samp):
+            q = q_arr[i]
+            q_p = q_p_arr[i]
+
+            # Build in Euler
+            q_pp = pin.aba(model, data, q, q_p, tau0)
+            q_p_next = q_p + Ta * q_pp # Euler method
+            q_next = pin.integrate(model, q, Ta * q_p_next)
+
+            #x = np.concatenate((q,q_p))
+            #u = tau0
+
+            # Custom RK 4
+            #x_next = runge_kutta_4(f, x, u, Ta)
+
+            # Custom EULER (Overhead)
+            #x_p = f(x, u)
+            #x_next = x + x_p*Ta
+
+            #q_next = x_next[0:model.nq]
+            #q_p_next = x_next[model.nq:model.nq+model.nv]
+
+            # Custom Euler (no Overhead)
+            #q_pp = pin.aba(model, data, q, q_p, tau0)
+            #q_next = q + q_p*Ta
+            #q_p_next = q_p + q_pp*Ta
+            
+            q_arr[i+1] = q_next
+            q_p_arr[i+1] = q_p_next
+
+            if display_joint:
+                viz.display(q_next)
+                viz.drawFrameVelocities(frame_id=frame_id)
+        return q_arr, q_p_arr
 
     def my_callback(i, *args):
         viz.drawFrameVelocities(frame_id)
@@ -206,29 +258,41 @@ if plot_true:
     #for name, function in model.__class__.__dict__.items():
     #    print(' **** %s: %s' % (name, function.__doc__))
 
-    plot_data = False
+    tic()
+    q_arr, q_p_arr = sim_loop(T_sim, False)
+    toc()
+
+    plot_data = True
     if plot_data:
-        qs_arr = np.array(qs)
-        ts = np.linspace(0, 10000*dt, 10000 + 1)
+        t = np.linspace(0, T_sim, len(q_arr))
 
         plt.style.use('dark_background')
-        plt.figure(figsize=(10, 5))
+        # Create Subplots
+        fig, axs = plt.subplots(2, 1, figsize=(10, 10))
 
-        # Plot the joint configurations qs over time ts
-        plt.plot(ts, qs_arr[:, 0], label='q1', color='y', linewidth=1)
-        plt.plot(ts, qs_arr[:, 1], label='q2', color='b', linewidth=1)
+        # First Subplot
+        axs[0].plot(t, q_arr[:, 0], label='q_1', color='y', linewidth=1)
+        axs[0].plot(t, q_arr[:, 1], label='q_2', color='b', linewidth=1)
+        axs[0].set_title('Joint Configurations q over Time t')
+        axs[0].set_xlabel('Time (s)')
+        axs[0].set_ylabel('Joint Configurations')
+        axs[0].legend()
+        axs[0].grid(visible=True, color='gray')
+        axs[0].set_xlim([0, T_sim])
 
-        # Set the title and labels
-        plt.title('Joint Configurations qs over Time ts')
-        plt.xlabel('Time (s)')
-        plt.ylabel('Joint Configurations')
+        # Second Subplot
+        axs[1].plot(t, q_p_arr[:, 0], label='q_p_1', color='y', linewidth=1)
+        axs[1].plot(t, q_p_arr[:, 1], label='q_p_2', color='b', linewidth=1)
+        axs[1].set_title('Joint Velocities q_p over Time t')
+        axs[1].set_xlabel('Time (s)')
+        axs[1].set_ylabel('Joint Velocities')
+        axs[1].legend()
+        axs[1].grid(visible=True, color='gray')
+        axs[1].set_xlim([0, T_sim])
 
-        # Show the legend
-        plt.legend()
-
-        # Show the plot
+        plt.tight_layout()  # Adjust subplots to prevent overlap
         plt.show()
 
     while True:
         time.sleep(1.0)
-        viz.play(qs, dt, callback=my_callback)
+        viz.play(q_arr, Ta, callback=my_callback)
