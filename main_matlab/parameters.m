@@ -21,7 +21,6 @@ addpath(genpath('../main_matlab'));
 addpath(genpath('../utils'));
 addpath(genpath('../s_functions'));
 addpath(genpath('../maple/maple_generated/2_dof_system'));
-addpath(genpath('../MPC_shared_subsystems'));
 addpath(genpath('../urdf_creation'))
 addpath(genpath('../main_simulink'))
 cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink
