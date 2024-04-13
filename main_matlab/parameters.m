@@ -9,6 +9,7 @@
 %set_param(gcs,'Profile','off');
 % measure compile time: 
 %disp('Compile Time:')
+
 %tic;set_param('sim_discrete_planar', 'SimulationCommand', 'update');toc
 %rmpath('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/s_functions')
 
