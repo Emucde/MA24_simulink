@@ -1,11 +1,16 @@
 import os
+import sys
 import numpy as np
 import crocoddyl as cro
 import pinocchio as pin
 import time
 import matplotlib.pyplot as plt
 import meshcat.geometry as g
+from scipy.spatial.transform import Rotation
 from scipy.optimize import minimize
+
+sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
+from utils_python.utils import *
 
 mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files')
 urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', '2dof_sys.urdf')
@@ -43,16 +48,50 @@ res = minimize(f_cost_forward, qq0, method='SLSQP', bounds=bounds, options={'fto
 
 # Create a multibody state from the pinocchio model.
 state = cro.StateMultibody(robot_model)
+# TODO: 1. Abstract State Model so dass es 1:1 funktioniert
+#       2. States erweitern.
+#       3. MPC aufbauen
+#state = ExtendedDynamicsModel(robot, 1)
+#state.lb[0:2] = -np.pi
+#state.ub[0:2] = np.pi
 
 q0 = res.x
 x0 = np.concatenate([q0, pin.utils.zero(state.nv)])
 
-N_traj = 1000
-traj_data = np.concatenate((np.linspace(xe0, xeT, N_traj//2), np.linspace(xeT, xe0, N_traj//2)))
+dt = 1e-3  # Time step
+
+# Generate Trajectory
+T_start = 0
+T_end = 10
+
+N_traj = int((T_end-T_start)/dt)
+N = N_traj  # Number of knots
+
+# t = 0 : param_global.Ta : T_sim + T_horizon_max;
+t = np.linspace(T_start, T_end, N_traj)
+
+# traj_data = np.concatenate((np.linspace(xe0, xeT, N_traj//2), np.linspace(xeT, xe0, N_traj//2)))
+
+R_init = np.eye(3)# H_0_init[0:3, 0:3]
+
+R_target = np.eye(3)
+RR = np.dot(R_init.T, R_target)
+rot_quat = np.roll(Rotation.from_matrix(RR).as_quat(), 1) # as_quat has xyzw format: after roll: wxyz
+rot_rho = rot_quat[0]
+rot_alpha_scale = 2 * np.arccos(rot_rho)
+if rot_alpha_scale == 0:
+    rot_ax = np.array([0,0,1]) # random axis because rotation angle is 0
+else:
+    rot_ax = rot_quat[1:4] / np.sin(rot_alpha_scale / 2)
+
+param_traj_poly = {}
+param_traj_poly['T'] = T_end/2-3
+
+param_trajectory = generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, T_end, param_traj_poly)
+
+traj_data = param_trajectory['p_d'].T
 
 # OPT Prob
-dt = 1e-3  # Time step
-N = N_traj  # Number of knots
 
 running_cost_models = list()
 terminate_cost_models = list()
@@ -105,7 +144,9 @@ ddp = cro.SolverDDP(problem)
 # IV. Callbacks
 ddp.setCallbacks([cro.CallbackVerbose()])
 
+tic()
 hasConverged = ddp.solve([], [], 300, False, 1e-5)
+toc()
 
 robot_data = robot_model.createData()
 xT = ddp.xs[-1]
@@ -141,8 +182,8 @@ if plot_sol:
 
     # Plotten der x-Komponenten
     for i in range(3):
-        axs[i].plot(y_opt[:,i], label=f'yopt[{i}]: {labels[i]} coordinate')
-        axs[i].plot(y_target[:, i], linestyle='--', label=f'yref[{i}]: {labels[i]} coordinate')
+        axs[i].plot(t, y_opt[:,i], label=f'yopt[{i}]: {labels[i]} coordinate')
+        axs[i].plot(t, y_target[:, i], linestyle='--', label=f'yref[{i}]: {labels[i]} coordinate')
         axs[i].set_xlabel('t (s)')
         axs[i].set_ylabel('TCP (Gripper) position (m)')
         axs[i].legend()
@@ -155,7 +196,7 @@ if visualize==True:
     # Meshcat Visualize
     robot_display = cro.MeshcatDisplay(robot, -1, 1, False)
 
-    for i, target in enumerate(traj_data):
+    for i, target in enumerate(traj_data[::int(N_traj/100)]):
         robot_display.robot.viewer["target_" + str(i)].set_object(g.Sphere(1e-3))
         Href = np.array(
             [
