@@ -146,7 +146,7 @@ RR = R_init'*R_target;
 rot_quat = rotation2quaternion(RR);
 rot_rho = rot_quat(1);
 rot_alpha_scale = 2*acos(rot_rho);
-rot_ax = rot_quat(2:4)/sin(rot_alpha_scale/2);
+rot_ax = rot_quat(2:4)/sin(rot_alpha_scale/2); % bug: in case of non rotation rot_ax is NAN!
 
 rot_alpha_scale_init = rot_alpha_scale;
 rot_ax_init = rot_ax;
