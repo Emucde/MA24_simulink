@@ -3,6 +3,9 @@ import numpy as np
 import crocoddyl as cro
 import pinocchio as pin
 import time
+import matplotlib.pyplot as plt
+import meshcat.geometry as g
+from scipy.optimize import minimize
 
 mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files')
 urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', '2dof_sys.urdf')
@@ -11,23 +14,185 @@ urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation',
 
 # Now load the model (using pinocchio)
 robot = pin.robot_wrapper.RobotWrapper.BuildFromURDF(str(urdf_model_path))
+robot_model = robot.model
 
 # Gravity should be in -y direction
-robot.model.gravity.linear[:] = [0, -9.81, 0]
+robot_model.gravity.linear[:] = [0, -9.81, 0]
 
 # The model loaded from urdf (via pinicchio)
 print(robot.model)
 
+# Calculate strechted position
+qT = np.array([0,0])
+robot_data = robot_model.createData()
+pin.forwardKinematics(robot_model, robot_data, qT)
+pin.updateFramePlacements(robot_model, robot_data)
+TCP_frame_id = robot_model.getFrameId('TCP')
+xeT = robot_data.oMf[TCP_frame_id].translation.T.copy()
+xe0 = np.array([0.1, xeT[1], 0])
+
+def f_cost_forward(q):
+    pin.forwardKinematics(robot_model, robot_data, q)
+    pin.updateFramePlacements(robot_model, robot_data)
+    xe = robot_data.oMf[TCP_frame_id].translation.T
+    return 1/2 * (xe - xe0) @ (xe - xe0)
+
+bounds = ((-np.pi, np.pi), (-np.pi, np.pi))
+qq0 = [1, 1] # Define the initial guess - avoid to start in singularity!!
+res = minimize(f_cost_forward, qq0, method='SLSQP', bounds=bounds, options={'ftol': 1e-20, 'disp': False})
+
 # Create a multibody state from the pinocchio model.
-state = cro.StateMultibody(robot.model)
+state = cro.StateMultibody(robot_model)
+
+q0 = res.x
+x0 = np.concatenate([q0, pin.utils.zero(state.nv)])
+
+N_traj = 1000
+traj_data = np.concatenate((np.linspace(xe0, xeT, N_traj//2), np.linspace(xeT, xe0, N_traj//2)))
 
 # OPT Prob
 dt = 1e-3  # Time step
-T = 1000  # Number of knots
+N = N_traj  # Number of knots
 
+running_cost_models = list()
+terminate_cost_models = list()
+
+actuationModel = cro.ActuationModelFull(state)
+
+# Summenkosten
+for i in range(N):
+    runningCostModel = cro.CostModelSum(state)
+
+    goalTrackingCost = cro.CostModelResidual(
+        state,
+        cro.ResidualModelFrameTranslation(
+            state, TCP_frame_id, traj_data[i]
+        ),
+    )
+    xRegCost = cro.CostModelResidual(state, cro.ResidualModelState(state))
+    uRegCost = cro.CostModelResidual(state, cro.ResidualModelControl(state))
+
+    if i < N-1:
+        runningCostModel.addCost("TCP_pose", goalTrackingCost, 1e5)
+        runningCostModel.addCost("stateReg", xRegCost, 1e-5)
+        runningCostModel.addCost("ctrlReg", uRegCost, 1e-2)
+        
+        running_cost_models.append(cro.IntegratedActionModelEuler(
+            cro.DifferentialActionModelFreeFwdDynamics(
+                state, actuationModel, runningCostModel
+            ),
+            dt,
+        ))
+    else: # i == N: # Endkostenterm
+        terminalCostModel = cro.CostModelSum(state)
+        terminalCostModel.addCost("TCP_pose", goalTrackingCost, 1e10)
+        #terminalCostModel.addCost("stateReg", xRegCost, 1e0)
+        #terminalCostModel.addCost("ctrlReg", uRegCost, 1e0)
+
+        terminate_cost_models.append(cro.IntegratedActionModelEuler(
+            cro.DifferentialActionModelFreeFwdDynamics(
+                state, actuationModel, terminalCostModel
+            )
+        ))
+
+# Create the shooting problem
+seq = running_cost_models
+problem = cro.ShootingProblem(x0, seq, terminate_cost_models[0])
+
+# Creating the DDP solver for this OC problem, defining a logger
+ddp = cro.SolverDDP(problem)
+
+# IV. Callbacks
+ddp.setCallbacks([cro.CallbackVerbose()])
+
+hasConverged = ddp.solve([], [], 300, False, 1e-5)
+
+robot_data = robot_model.createData()
+xT = ddp.xs[-1]
+pin.forwardKinematics(robot_model, robot_data, xT[: state.nq])
+pin.updateFramePlacements(robot_model, robot_data)
+print(
+    "\nFinally reached = ",
+    robot_data.oMf[TCP_frame_id].translation.T,
+)
+
+print("\nTotal cost:", ddp.cost)
+print("Feasibility:", ddp.isFeasible)
+print("Minimum Found:", hasConverged)
+
+plot_sol=True
+if plot_sol:
+    fig, axs = plt.subplots(3, 1, figsize=(10, 10))
+
+    robot_data = robot_model.createData()
+    xs = np.array(ddp.xs)
+    y_opt = np.zeros((len(xs), 3))
+
+    for i in range(len(xs)):
+        q = xs[i, :robot_model.nq]
+        #v = xs[i, robot_model.nq:robot_model.nq+robot_model.nv]
+        pin.forwardKinematics(robot_model, robot_data, q)
+        pin.updateFramePlacements(robot_model, robot_data)
+        y_opt[i] = robot_data.oMf[TCP_frame_id].translation.T
+
+    y_target = traj_data
+
+    labels = ['x', 'y', 'z']
+
+    # Plotten der x-Komponenten
+    for i in range(3):
+        axs[i].plot(y_opt[:,i], label=f'yopt[{i}]: {labels[i]} coordinate')
+        axs[i].plot(y_target[:, i], linestyle='--', label=f'yref[{i}]: {labels[i]} coordinate')
+        axs[i].set_xlabel('t (s)')
+        axs[i].set_ylabel('TCP (Gripper) position (m)')
+        axs[i].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+visualize=True
+if visualize==True:
+    # Meshcat Visualize
+    robot_display = cro.MeshcatDisplay(robot, -1, 1, False)
+
+    for i, target in enumerate(traj_data):
+        robot_display.robot.viewer["target_" + str(i)].set_object(g.Sphere(1e-3))
+        Href = np.array(
+            [
+                [1.0, 0.0, 0.0, target[0]],
+                [0.0, 1.0, 0.0, target[1]],
+                [0.0, 0.0, 1.0, target[2]],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        )
+        robot_display.robot.viewer["target_" + str(i)].set_transform(
+            np.array(
+                [
+                    [1.0, 0.0, 0.0, target[0]],
+                    [0.0, 1.0, 0.0, target[1]],
+                    [0.0, 0.0, 1.0, target[2]],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            )
+        )
+
+    i = 0
+    cnt=3# np.inf
+    while i < cnt:
+        time.sleep(1.0)
+        robot_display.displayFromSolver(ddp)
+        i = i +1
+    
+    create_video=False
+    if create_video:
+        with robot_display.robot.viz.create_video_ctx("test.mp4"):
+            robot_display.robot.viz.play(xs[:,:robot_model.nq], dt)
+'''
 # Cost models
-runningCostModel = cro.CostModelSum(state, nu=2)
+runningCostModel  = cro.CostModelSum(state, nu=2)
 terminalCostModel = cro.CostModelSum(state, nu=2)
+
+actuationModel = cro.ActuationModelFull(state)
 
 # Add a cost for the configuration positions and velocities
 xref = np.array([-np.pi/4, np.pi/2, 0, 0])  # Desired state
@@ -76,15 +241,13 @@ xs = problem.rollout(us)
 cro.plotOCSolution(xs, us, show=False, figIndex=99, figTitle="Test rollout")
 
 # Put a grid on the plots
-import matplotlib.pyplot as plt
-
 fig = plt.gcf()
 axs = fig.axes
 for ax in axs:
     ax.grid()
 
-#plt.tight_layout()  # Adjust subplots to prevent overlap
-#plt.show()
+plt.tight_layout()  # Adjust subplots to prevent overlap
+plt.show()
 
 
 # Now stabilize the acrobot using FDDP
@@ -97,21 +260,8 @@ callbacks.append(cro.CallbackVerbose())
 solver.setCallbacks(callbacks)
 solver.solve([], [], 300, False, 1e-5)
 
-# Display using meshcat
-robot_display = cro.MeshcatDisplay(robot, -1, 1, False)
-#robot_display.robot.viewer.jupyter_cell()
-robot_display.displayFromSolver(solver)
-
-# Display using gepetto-gui
-if False:
-    robot_display = cro.GepettoDisplay(robot, floor=False)
-    robot_display.displayFromSolver(solver)
-
-
 # Plotting the solution and the DDP convergence
 log = solver.getCallbacks()[0]
-
-import matplotlib.pyplot as plt
 
 cro.plotOCSolution(
     xs=log.xs, us=log.us, show=False, figIndex=1, figTitle="Solution"
@@ -121,24 +271,33 @@ axs = fig.axes
 for ax in axs:
     ax.grid(True)
 
-cro.plotConvergence(
-    log.costs,
-    log.pregs,
-    log.dregs,
-    log.grads,
-    log.stops,
-    log.steps,
-    show=False,
-    figIndex=2,
-)
-fig = plt.gcf()
-axs = fig.axes
-for ax in axs:
-    ax.grid(True)
+plot_convergence=False
+if plot_convergence:
+    cro.plotConvergence(
+        log.costs,
+        log.pregs,
+        log.dregs,
+        log.grads,
+        log.stops,
+        log.steps,
+        show=False,
+        figIndex=2,
+    )
+    fig = plt.gcf()
+    axs = fig.axes
+    for ax in axs:
+        ax.grid(True)
 
 plt.show()
 
-# vid endless loop
-while True:
-    time.sleep(1.0)
-    robot_display.displayFromSolver(solver)
+show_meshcat=False
+if show_meshcat:
+    # Display using meshcat
+    robot_display = cro.MeshcatDisplay(robot, -1, 1, False)
+    i = 0
+    cnt=3# np.inf
+    while i < cnt:
+        time.sleep(1.0)
+        robot_display.displayFromSolver(solver)
+        i = i +1
+'''
