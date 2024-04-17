@@ -48,6 +48,8 @@ res = minimize(f_cost_forward, qq0, method='SLSQP', bounds=bounds, options={'fto
 
 # Create a multibody state from the pinocchio model.
 state = cro.StateMultibody(robot_model)
+#state = CustomState(robot_model)
+#state = CustomState(urdf_model_path)
 # TODO: 1. Abstract State Model so dass es 1:1 funktioniert
 #       2. States erweitern.
 #       3. MPC aufbauen
@@ -55,8 +57,31 @@ state = cro.StateMultibody(robot_model)
 #state.lb[0:2] = -np.pi
 #state.ub[0:2] = np.pi
 
-q0 = res.x
-x0 = np.concatenate([q0, pin.utils.zero(state.nv)])
+def my_dynamics(state, input):
+    z1, z2 = state
+    v = input
+    return np.array([z2, v])
+
+'''model = pin.Model()
+model.dynamics = my_dynamics
+geom_model = pin.GeometryModel()
+joint_placement = pin.SE3.Identity()
+joint_name = "joint_spherical"
+parent_id = 0
+joint_id = model.addJoint(parent_id, pin.JointModelRevoluteUnaligned(), joint_placement, "joint_revolute1")
+parent_id = 1
+joint_id = model.addJoint(parent_id, pin.JointModelRevoluteUnaligned(), joint_placement, "joint_revolute1")
+
+data = model.createData()
+
+q_p = np.array([0,0])
+q = np.array([0,0])
+q_T = np.array([0,0])
+q_p_0 = np.array([0,0])
+tau0 = np.array([0,0])
+pin.forwardKinematics(model, data, q_T, q_p_0)
+pin.aba(model, data, q, q_p, tau0)
+'''
 
 dt = 1e-3  # Time step
 
@@ -91,6 +116,24 @@ param_trajectory = generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_sc
 
 traj_data = param_trajectory['p_d'].T
 
+
+yy_DAM = DifferentialActionModelPinocchio()
+yy_ND = crocoddyl.DifferentialActionModelNumDiff(yy_DAM, True)
+yy_NDIAM = crocoddyl.IntegratedActionModelEuler(yy_ND, dt)
+
+data = yy_NDIAM.createData()
+yy_NDIAM.calc(data, np.array([0,0,0, 0,0,0]), np.array([0,0,0, 0,0,0, 0,0,0, 0,0,0]))
+
+
+y_d    = param_trajectory['p_d'].T
+y_d_p  = param_trajectory['p_d_p'].T
+y_d_pp = param_trajectory['p_d_pp'].T
+
+q0 = res.x
+# x0 = np.concatenate([q0, pin.utils.zero(state.nv)])
+x0 = np.concatenate([q0, pin.utils.zero(state.nv), y_d[0], y_d_p[0]])
+
+
 # OPT Prob
 
 running_cost_models = list()
@@ -115,24 +158,38 @@ for i in range(N):
         runningCostModel.addCost("TCP_pose", goalTrackingCost, 1e5)
         runningCostModel.addCost("stateReg", xRegCost, 1e-5)
         runningCostModel.addCost("ctrlReg", uRegCost, 1e-2)
-        
-        running_cost_models.append(cro.IntegratedActionModelEuler(
+        #CombinedActionModel
+
+        running_cost_models.append(CombinedActionModel(yy_NDIAM, cro.IntegratedActionModelEuler(
             cro.DifferentialActionModelFreeFwdDynamics(
                 state, actuationModel, runningCostModel
             ),
             dt,
-        ))
+        )))
+
+        #running_cost_models.append(cro.IntegratedActionModelEuler(
+        #    cro.DifferentialActionModelFreeFwdDynamics(
+        #        state, actuationModel, runningCostModel
+        #    ),
+        #    dt,
+        #))
     else: # i == N: # Endkostenterm
         terminalCostModel = cro.CostModelSum(state)
         terminalCostModel.addCost("TCP_pose", goalTrackingCost, 1e10)
         #terminalCostModel.addCost("stateReg", xRegCost, 1e0)
         #terminalCostModel.addCost("ctrlReg", uRegCost, 1e0)
 
-        terminate_cost_models.append(cro.IntegratedActionModelEuler(
+        terminate_cost_models.append(CombinedActionModel(yy_NDIAM, cro.IntegratedActionModelEuler(
             cro.DifferentialActionModelFreeFwdDynamics(
                 state, actuationModel, terminalCostModel
             )
-        ))
+        )))
+
+        # terminate_cost_models.append(cro.IntegratedActionModelEuler(
+        #     cro.DifferentialActionModelFreeFwdDynamics(
+        #         state, actuationModel, terminalCostModel
+        #     )
+        # ))
 
 # Create the shooting problem
 seq = running_cost_models
