@@ -4,4 +4,4 @@ slprj
 *.asv
 *.slxc
 *.autosave
-*.pyc
+utils_python/__pycache__
