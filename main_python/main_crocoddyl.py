@@ -117,21 +117,43 @@ param_trajectory = generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_sc
 traj_data = param_trajectory['p_d'].T
 
 
-yy_DAM = DifferentialActionModelPinocchio()
-yy_ND = crocoddyl.DifferentialActionModelNumDiff(yy_DAM, True)
-yy_NDIAM = crocoddyl.IntegratedActionModelEuler(yy_ND, dt)
+# yy_DAM = DifferentialActionModelPinocchio()
+# yy_ND = crocoddyl.DifferentialActionModelNumDiff(yy_DAM, True)
+# yy_NDIAM = crocoddyl.IntegratedActionModelEuler(yy_ND, dt)
 
-data = yy_NDIAM.createData()
-yy_NDIAM.calc(data, np.array([0,0,0, 0,0,0]), np.array([0,0,0, 0,0,0, 0,0,0, 0,0,0]))
+# data = yy_NDIAM.createData()
+# yy_NDIAM.calc(data, np.array([0,0,0, 0,0,0]), np.array([0,0,0, 0,0,0, 0,0,0, 0,0,0]))
 
 
-y_d    = param_trajectory['p_d'].T
-y_d_p  = param_trajectory['p_d_p'].T
-y_d_pp = param_trajectory['p_d_pp'].T
+y_d_data    = param_trajectory['p_d'].T
+y_d_p_data  = param_trajectory['p_d_p'].T
+y_d_pp_data = param_trajectory['p_d_pp'].T
+
+plot_traj=False
+if plot_traj:
+    plt.figure(figsize=(10, 6))  # Adjust figure size as needed
+
+    plt.plot(y_d_data, label='y_d')
+    plt.plot(y_d_p_data, label='y_d_p')
+    plt.plot(y_d_pp_data, label='y_d_pp')
+
+    # Add labels and title
+    plt.xlabel('Time Step (Assuming data represents time series)')
+    plt.ylabel('Data Value')
+    plt.title('Plot of y_d, y_d_p, and y_d_pp Data')
+
+    # Add legend
+    plt.legend()
+
+    # Show the plot
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
 q0 = res.x
-# x0 = np.concatenate([q0, pin.utils.zero(state.nv)])
-x0 = np.concatenate([q0, pin.utils.zero(state.nv), y_d[0], y_d_p[0]])
+#x0 = np.concatenate([q0, pin.utils.zero(state.nv)])
+# x0 = np.concatenate([q0, pin.utils.zero(state.nv), y_d_data[0], y_d_p_data[0]])
+x0 = np.concatenate([y_d_data[0], y_d_p_data[0]])
 
 
 # OPT Prob
@@ -143,6 +165,23 @@ actuationModel = cro.ActuationModelFull(state)
 
 # Summenkosten
 for i in range(N):
+    y_d    = y_d_data[i]
+    y_d_p  = y_d_p_data[i]
+    y_d_pp = y_d_pp_data[i]
+
+    yy_DAM = DifferentialActionModelPinocchio(y_d, y_d_p, y_d_pp)
+    
+    # data = yy_DAM.createData()
+    # tic()
+    # for j in range(0,10000):
+    #     yy_DAM.calcDiff(data, x0, np.zeros(3))
+    # toc()
+    # quit()
+
+    # yy_ND = crocoddyl.DifferentialActionModelNumDiff(yy_DAM, True) # langsam, nicht mehr notw.
+    # yy_NDIAM = crocoddyl.IntegratedActionModelEuler(yy_ND, dt)
+    yy_NDIAM = crocoddyl.IntegratedActionModelEuler(yy_DAM, dt)
+    
     runningCostModel = cro.CostModelSum(state)
 
     goalTrackingCost = cro.CostModelResidual(
@@ -160,35 +199,68 @@ for i in range(N):
         runningCostModel.addCost("ctrlReg", uRegCost, 1e-2)
         #CombinedActionModel
 
-        running_cost_models.append(CombinedActionModel(yy_NDIAM, cro.IntegratedActionModelEuler(
-            cro.DifferentialActionModelFreeFwdDynamics(
-                state, actuationModel, runningCostModel
-            ),
-            dt,
-        )))
+        # running_cost_models.append(CombinedActionModel(yy_NDIAM, cro.IntegratedActionModelEuler(
+        #     cro.DifferentialActionModelFreeFwdDynamics(
+        #         state, actuationModel, runningCostModel
+        #     ),
+        #     dt,
+        # )))
 
-        #running_cost_models.append(cro.IntegratedActionModelEuler(
+        running_cost_models.append(yy_NDIAM)
+
+        # running_cost_models.append(cro.IntegratedActionModelEuler(
         #    cro.DifferentialActionModelFreeFwdDynamics(
         #        state, actuationModel, runningCostModel
         #    ),
         #    dt,
-        #))
+        # ))        
+        
+        # running_cost_models.append(cro.IntegratedActionModelEuler(
+        #    DifferentialFwdDynamics(
+        #        state, runningCostModel
+        #    ),
+        #    dt,
+        # ))
+
+        # running_cost_models.append(cro.IntegratedActionModelEuler(
+        #    DifferentialFwdDynamics3(
+        #        state, actuationModel, runningCostModel
+        #    ),
+        #    dt,
+        # ))
     else: # i == N: # Endkostenterm
         terminalCostModel = cro.CostModelSum(state)
         terminalCostModel.addCost("TCP_pose", goalTrackingCost, 1e10)
         #terminalCostModel.addCost("stateReg", xRegCost, 1e0)
         #terminalCostModel.addCost("ctrlReg", uRegCost, 1e0)
 
-        terminate_cost_models.append(CombinedActionModel(yy_NDIAM, cro.IntegratedActionModelEuler(
-            cro.DifferentialActionModelFreeFwdDynamics(
-                state, actuationModel, terminalCostModel
-            )
-        )))
+        # terminate_cost_models.append(CombinedActionModel(yy_NDIAM, cro.IntegratedActionModelEuler(
+        #     cro.DifferentialActionModelFreeFwdDynamics(
+        #         state, actuationModel, terminalCostModel
+        #     )
+        # )))
+
+        terminate_cost_models.append(yy_NDIAM)
 
         # terminate_cost_models.append(cro.IntegratedActionModelEuler(
         #     cro.DifferentialActionModelFreeFwdDynamics(
         #         state, actuationModel, terminalCostModel
-        #     )
+        #     ),
+        #     dt
+        # ))
+
+        # terminate_cost_models.append(cro.IntegratedActionModelEuler(
+        #     DifferentialFwdDynamics(
+        #        state, terminalCostModel
+        #     ),
+        #     dt
+        # ))
+
+        # terminate_cost_models.append(cro.IntegratedActionModelEuler(
+        #     DifferentialFwdDynamics3(
+        #         state, actuationModel, terminalCostModel
+        #     ),
+        #     dt
         # ))
 
 # Create the shooting problem
@@ -202,7 +274,7 @@ ddp = cro.SolverDDP(problem)
 ddp.setCallbacks([cro.CallbackVerbose()])
 
 tic()
-hasConverged = ddp.solve([], [], 300, False, 1e-5)
+hasConverged = ddp.solve([], [], 50, False, 1e-5)
 toc()
 
 robot_data = robot_model.createData()
@@ -225,22 +297,27 @@ if plot_sol:
     robot_data = robot_model.createData()
     xs = np.array(ddp.xs)
     y_opt = np.zeros((len(xs), 3))
+    y_ref = np.zeros((len(xs), 3))
 
     for i in range(len(xs)):
-        q = xs[i, :robot_model.nq]
-        #v = xs[i, robot_model.nq:robot_model.nq+robot_model.nv]
-        pin.forwardKinematics(robot_model, robot_data, q)
-        pin.updateFramePlacements(robot_model, robot_data)
-        y_opt[i] = robot_data.oMf[TCP_frame_id].translation.T
+        #q = xs[i, :robot_model.nq]
+        # q = xs[i, 6:6+robot_model.nq]
+        # #v = xs[i, robot_model.nq:robot_model.nq+robot_model.nv]
+        # pin.forwardKinematics(robot_model, robot_data, q)
+        # pin.updateFramePlacements(robot_model, robot_data)
+        # y_opt[i] = robot_data.oMf[TCP_frame_id].translation.T
+        y_ref[i] = xs[i, 0:3]
 
     y_target = traj_data
 
-    labels = ['x', 'y', 'z']
+    labels = ['yd_x', 'yd_y', 'yd_z']
+    labelsref = ['yref_x', 'yref_y', 'yref_z']
 
     # Plotten der x-Komponenten
     for i in range(3):
-        axs[i].plot(t, y_opt[:,i], label=f'yopt[{i}]: {labels[i]} coordinate')
-        axs[i].plot(t, y_target[:, i], linestyle='--', label=f'yref[{i}]: {labels[i]} coordinate')
+        # axs[i].plot(t, y_opt[:,i], label=f'yopt[{i}]: {labels[i]} coordinate')
+        axs[i].plot(t, y_ref[:, i], linestyle='-', label=f'yref[{i}]: {labelsref[i]} coordinate')
+        axs[i].plot(t, y_target[:, i], linestyle='--', label=f'yd[{i}]: {labels[i]} coordinate')
         axs[i].set_xlabel('t (s)')
         axs[i].set_ylabel('TCP (Gripper) position (m)')
         axs[i].legend()
@@ -248,7 +325,10 @@ if plot_sol:
     plt.tight_layout()
     plt.show()
 
-visualize=True
+max_err = np.max(y_ref - y_target, axis=0)
+print(max_err)
+
+visualize=False
 if visualize==True:
     # Meshcat Visualize
     robot_display = cro.MeshcatDisplay(robot, -1, 1, False)
