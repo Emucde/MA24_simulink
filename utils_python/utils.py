@@ -3,6 +3,11 @@ from scipy.spatial.transform import Rotation
 import time
 import crocoddyl
 import pinocchio
+import matplotlib.pyplot as plt
+import meshcat.geometry as g
+import meshcat.transformations as tf
+from meshcat.animation import Animation
+from pinocchio.visualize import MeshcatVisualizer
 
 def trajectory_poly(t, y0, yT, T):
     # The function plans a trajectory from y0 in R3 to yT in R3 and returns the desired position and velocity on this trajectory at time t.
@@ -304,3 +309,194 @@ class DifferentialFwdDynamics2(crocoddyl.DifferentialActionModelAbstract):
         data = self.DAM_free.createData()
         return data
 ###################################################################################################################
+
+def plot_trajectory(param_trajectory):
+    plt.figure(figsize=(10, 6))  # Adjust figure size as needed
+
+    plt.plot(param_trajectory['p_d'].T, label='y_d')
+    plt.plot(param_trajectory['p_d_p'].T, label='y_d_p')
+    plt.plot(param_trajectory['p_d_pp'].T, label='y_d_pp')
+
+    # Add labels and title
+    plt.xlabel('Time Step (Assuming data represents time series)')
+    plt.ylabel('Data Value')
+    plt.title('Plot of y_d, y_d_p, and y_d_pp Data')
+
+    # Add legend
+    plt.legend()
+
+    # Show the plot
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+def visualize_robot(robot, x_sol, param_trajectory, dt, rep_cnt = np.inf, rep_delay_sec=1):
+    # Meshcat Visualize
+    robot_model = robot.model
+    robot_display = MeshcatVisualizer(robot.model)
+    robot_display.initViewer(open=True)
+
+    y_d_data = param_trajectory['p_d'].T
+
+    # Display points:
+    # N_traj = len(y_d_data)
+    # for i, y_d in enumerate(y_d_data[::int(N_traj/100)]):
+    #     robot_display.viewer["y_d_" + str(i)].set_object(g.Sphere(1e-3))
+    #     Href = np.array(
+    #         [
+    #             [1.0, 0.0, 0.0, y_d[0]],
+    #             [0.0, 1.0, 0.0, y_d[1]],
+    #             [0.0, 0.0, 1.0, y_d[2]],
+    #             [0.0, 0.0, 0.0, 1.0],
+    #         ]
+    #     )
+    #     robot_display.viewer["y_d_" + str(i)].set_transform(Href)
+
+    # Display trajectory as line:
+    vertices = np.hstack([y_d_data.T[:, 0][:, np.newaxis], np.repeat(y_d_data.T[:,1::], 2, 1)]).astype(np.float32)
+    robot_display.viewer["line_segments"].set_object(
+            g.LineSegments(g.PointsGeometry(
+                vertices, np.repeat(np.array([[255.0, 165.0, 0.0]], dtype=np.float32).T, len(vertices.T), 1)
+                ), g.LineBasicMaterial(vertexColors=True))
+        )
+
+    anim = Animation()
+    vis = robot_display.viewer
+
+    obj1 = robot.visual_model.geometryObjects[0]
+    obj2 = robot.visual_model.geometryObjects[1]
+    obj3 = robot.visual_model.geometryObjects[2]
+
+    testobj1 = g.StlMeshGeometry.from_file(obj1.meshPath)
+    testobj2 = g.StlMeshGeometry.from_file(obj2.meshPath)
+    testobj3 = g.StlMeshGeometry.from_file(obj3.meshPath)
+
+    vis["testobj1"].set_object(testobj1)
+    vis["testobj1"].set_property('scale', obj1.meshScale.tolist()) # other settings: https://github.com/meshcat-dev/meshcat
+    vis["testobj2"].set_object(testobj2)
+    vis["testobj2"].set_property('scale', obj2.meshScale.tolist())
+    vis["testobj3"].set_object(testobj3)    
+    vis["testobj3"].set_property('scale', obj3.meshScale.tolist())
+
+    vis["testobj1"].set_property('color', obj1.meshColor.tolist())
+    vis["testobj2"].set_property('color', obj2.meshColor.tolist())
+    vis["testobj3"].set_property('color', obj3.meshColor.tolist())
+
+    robot_data = robot.viz.model.createData()
+
+    # Iterate through trajectory data (assuming x_sol[:, 6:6+robot_model.nq] represents joint positions)
+    for i in range(len(x_sol)):
+        pinocchio.forwardKinematics(robot_model, robot_data, x_sol[i, 6:6+robot_model.nq])
+        pinocchio.updateFramePlacements(robot_model, robot_data)
+
+        H2_0 = obj2.placement.homogeneous
+        H3_0 = obj3.placement.homogeneous
+
+        H_s2 = robot_data.oMf[robot_model.getFrameId('link1')].homogeneous
+        H_s3 = robot_data.oMf[robot_model.getFrameId('link2')].homogeneous
+
+        with anim.at_frame(vis, i) as frame:
+            frame["testobj1"].set_transform(tf.translation_matrix([0,0,0]))
+            frame["testobj2"].set_transform(H_s2 @ H2_0)
+            frame["testobj3"].set_transform(H_s3 @ H3_0)
+            frame["testobj1"].get_clip().fps=100
+            frame["testobj2"].get_clip().fps=100
+            frame["testobj3"].get_clip().fps=100
+
+    # Set the animation to the Meshcat viewer
+    vis.set_animation(anim)
+
+    # i = 0
+    # cnt=rep_cnt
+    # while i < cnt:
+    #     time.sleep(rep_delay_sec)
+    #     # robot_display.displayFromSolver(ddp)
+    #     robot_display.robot.viz.play(x_sol[:, 6:6+robot_model.nq], dt)
+    #     i = i +1
+    # ffmpeg -r 60 -i "%07d.jpg" -vcodec "libx264" -preset "slow" -crf 18 -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2" output.mp4
+    # ffmpeg -r 60 -i "%07d.png" -vcodec "libx264" -preset "slow" -crf 18 -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2" output.mp4
+    
+    create_video=False
+    if create_video:
+        robot_display = crocoddyl.MeshcatDisplay(robot, -1, 1, False, visibility=False)
+        with robot_display.robot.viz.create_video_ctx("test.mp4"):
+            robot_display.robot.viz.play(x_sol[:, 6:6+robot_model.nq], dt)
+
+def ocp_problem_v3(state, q0, TCP_frame_id, param_trajectory, dt):
+    y_d_data    = param_trajectory['p_d'].T
+    y_d_p_data  = param_trajectory['p_d_p'].T
+    y_d_pp_data = param_trajectory['p_d_pp'].T
+
+    # Reihenfolge beachten:
+    # Zuerst Model1: yref Model (yref = [x1,x2,x3], d/dt yref = [x4,x5,x6]), 
+    # dann Model2: Robot model (q = [q1, q2] = [x7, x8], d/dt q = d/dt [q1, q2] = [x9, x10])
+    x0 = np.concatenate([y_d_data[0], y_d_p_data[0], q0, pinocchio.utils.zero(state.nv)])
+
+    N = len(y_d_data)
+
+    # weights
+    q_tracking_cost = 1e5
+    q_terminate_tracking_cost = 1e10
+    # q_xreg_cost = 1e1 # was tut das eigentlich?? addcost einkommentieren nichtvergessen
+    q_ureg_cost = 0*1e-10
+
+    running_cost_models = list()
+    terminate_cost_models = list()
+
+    actuationModel = crocoddyl.ActuationModelFull(state)
+
+    # Summenkosten
+    for i in range(N):
+        y_d    = y_d_data[i]
+        y_d_p  = y_d_p_data[i]
+        y_d_pp = y_d_pp_data[i]
+
+        yy_DAM = DifferentialActionModelPinocchio(y_d, y_d_p, y_d_pp)
+        
+        # data = yy_DAM.createData()
+        # tic()
+        # for j in range(0,10000):
+        #     yy_DAM.calcDiff(data, x0, np.zeros(3))
+        # toc()
+        # quit()
+
+        yy_NDIAM = crocoddyl.IntegratedActionModelEuler(yy_DAM, dt)
+        
+        runningCostModel = crocoddyl.CostModelSum(state)
+
+        goalTrackingCost = crocoddyl.CostModelResidual(
+            state,
+            crocoddyl.ResidualModelFrameTranslation(
+                state, TCP_frame_id, np.zeros((3,1)) # np.zeros((3,1) wird in Klasse CombinedActionModel mit yref überschrieben.
+            ),
+        )
+        xRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ResidualModelState(state))
+        uRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ResidualModelControl(state))
+
+        if i < N-1:
+            runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
+            # runningCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
+            runningCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
+
+            running_cost_models.append(CombinedActionModel(yy_NDIAM, crocoddyl.IntegratedActionModelEuler(
+                crocoddyl.DifferentialActionModelFreeFwdDynamics(
+                    state, actuationModel, runningCostModel
+                ),
+                dt,
+            )))
+        else: # i == N: # Endkostenterm
+            terminalCostModel = crocoddyl.CostModelSum(state)
+            terminalCostModel.addCost("TCP_pose", goalTrackingCost, q_terminate_tracking_cost)
+            # terminalCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
+            terminalCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
+
+            terminate_cost_models.append(CombinedActionModel(yy_NDIAM, crocoddyl.IntegratedActionModelEuler(
+                crocoddyl.DifferentialActionModelFreeFwdDynamics(
+                    state, actuationModel, terminalCostModel
+                )
+            )))
+
+    # Create the shooting problem
+    seq = running_cost_models
+    problem = crocoddyl.ShootingProblem(x0, seq, terminate_cost_models[-1])
+    return problem
