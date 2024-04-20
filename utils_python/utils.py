@@ -101,171 +101,25 @@ def toc():
     else:
         print("Call tic() before calling toc()")
 
-class ExtendedDynamicsModel(crocoddyl.DifferentialActionModelAbstract):
-    def __init__(self, robot, new_states_input):
-        self.new_states_input = new_states_input
-        self.robot = robot
-        self.nq = robot.model.nq + 2
-        self.nv = robot.model.nv + new_states_input
+def block_diag_onlydiagmatr(a, b):
+    return np.kron(a, b)
 
-        # initialize the new states
-        self.new_states = np.zeros(new_states_input)
-        self.new_state_dot = np.zeros(new_states_input)
-        self.u = np.zeros(robot.model.nv + new_states_input)
-
-    def calc(self, data, x, u):
-        # calculate the dynamics of the original model
-        f = self.robot.forwardKinematics(x[:self.robot.model.nq], x[self.robot.model.nq:])
-        fdot = self.robot.forwardDynamics(x[:self.robot.model.nq], x[self.robot.model.nq:], u[:self.robot.model.nv])
-
-        # calculate the dynamics of the new states
-        self.new_state_dot[:-1] = self.new_states[1:]
-        self.new_state_dot[-1] = u[-1]
-
-        # set the state dot
-        data.state_dot.x[:self.robot.model.nq] = fdot
-        data.state_dot.x[self.robot.model.nq:] = self.new_state_dot
-
-    #def calcDiff(self, data, x, u):
-    #    # calculate the derivatives of the dynamics of the original model
-    #    # ...
-    #
-    #    # calculate the derivatives of the dynamics of the new states
-    #    # ...
-
-class CustomState(crocoddyl.StateAbstract):
-    def __init__(self, urdf_path):
-        # Load Pinocchio model from URDF file
-        self.robot = pinocchio.robot_wrapper.RobotWrapper.BuildFromURDF(urdf_path)
-        self.model = self.robot.model
-
-        # Define state dimension
-        self.nq_ = self.model.nq
-        self.nv_ = self.model.nv
-        self.nx_ = self.nq_ + self.nv_
-
-        # Initialize state with correct dimensions
-        crocoddyl.StateAbstract.__init__(self, self.nx_, self.nx_)
-
-    def zero(self):
-        q = pinocchio.neutral(self.model)
-        v = pinocchio.zero(self.model.nv)
-        return pinocchio.SE3(q, v)
-
-    def integrate(self, x, dx):
-        q, v = pinocchio.decompose(x)
-        v += dx
-        return pinocchio.SE3(q, v)
-
-    def Jintegrate(self, x, dx):
-        q, v = pinocchio.decompose(x)
-        J = pinocchio.JointData(self.model)
-        pinocchio.computeJointJacobians(self.model, q, J)
-        Jv = J.matrix[self.model.nv:, :]
-        return Jv
-
-    def JintegrateTransport(self, x, dx):
-        q, v = pinocchio.decompose(x)
-        J = pinocchio.JointData(self.model)
-        pinocchio.computeJointJacobians(self.model, q, J)
-        Jv = J.matrix[self.model.nv:, :]
-        return Jv
-
-    def createData(self):
-        return CustomData(self.model, self)
-
-class CustomData(crocoddyl.ActionDataAbstract):
-    def __init__(self, state):
-        crocoddyl.StateDataAbstract.__init__(self, state)
-
-    def copy(self):
-        return pinocchio.SE3(self.q, self.v)
-
-    def cost(self):
-        return 0.0
-
-    def costDiff(self):
-        return pinocchio.SE3(self.q, self.v), pinocchio.SE3(self.q, self.v)
-
-    def costQuad(self):
-        return 0.0
-    
-
-class CustomJointSphericalWithVelocityInput(pinocchio.JointModelSpherical):
-    """
-    Erweitertes sphärisches Gelenkmodell mit zusätzlichem Eingang v für die Dynamik d/dt [z1, z2] = [z2, v].
-    """
-
-    def __init__(self, jidx, parent_jidx, name, joint_placement):
-        super().__init__(jidx, parent_jidx, name, joint_placement)
-        self.v = pinocchio.SE3.Identity()  # Eingabe für die Rotationsgeschwindigkeit
-
-    def computeJointJacobian(self, model, data, jacobian):
-        """
-        Berechnet die Jacobian-Matrix des Gelenks.
-        """
-        super().computeJointJacobian(model, data, jacobian)
-
-        # Hinzufügen einer zusätzlichen Spalte für den Eingang v
-        jacobian[3, 0] = 0.0  # x-Komponente der Rotationsgeschwindigkeit
-        jacobian[4, 0] = 0.0  # y-Komponente der Rotationsgeschwindigkeit
-        jacobian[5, 0] = 1.0  # z-Komponente der Rotationsgeschwindigkeit
-
-    def computeJointAcceleration(self, model, data, acceleration):
-        """
-        Berechnet die Gelenkbeschleunigung.
-        """
-        super().computeJointAcceleration(model, data, acceleration)
-
-        # Implementieren Sie die Dynamik d/dt [z1, z2] = [z2, v]
-        acceleration[0] = data.v[self.jointIndex + 3]  # z1_dot = z2
-        acceleration[1] = self.v[2]  # z2_dot = v
+def block_diag(a, b):
+    an, am = a.shape
+    bn, bm = b.shape
+    return np.block([[a, np.zeros((an, bm))], [np.zeros((bn, am)), b]])
 
 ###################### HERE ########################################################
-
-
-class DifferentialActionModelPinocchio2222(crocoddyl.DifferentialActionModelAbstract):
-    def __init__(self):
-        crocoddyl.DifferentialActionModelAbstract.__init__(
-            self, crocoddyl.StateVector(2), 1, 2
-        )  # nu = 1; nr = 2
-        self.unone = np.zeros(self.nu)
-
-        self.m1 = 1.0
-        self.m2 = 0.1
-        self.l = 0.5
-        self.g = 9.81
-        self.costWeights = [
-            1.0,
-            0.1,
-            1.0,
-        ]  # z1, z2, u
-
-    def calc(self, data, x, u=None):
-        if u is None:
-            u = self.unone
-        # Getting the state and control variables
-        z1, z2 = x[0], x[1]
-        u = u[0]
-
-        # Defining the equation of motions
-        z1dot = z2
-        z2dot = u
-
-        data.xout = np.matrix([z1dot, z2dot]).T
-
-        # Computing the cost residual and value
-        data.r = np.matrix(self.costWeights * np.array([z1, z2, u])).T
-        data.cost = 0.5 * sum(np.asarray(data.r) ** 2)
-
-
 class DifferentialActionModelPinocchio(crocoddyl.DifferentialActionModelAbstract):
     def __init__(self, y_d, y_d_p, y_d_pp):
         self.m = 3
+        self.n1 = 3
+        self.n2 = 3
+        self.n = 6
 
         crocoddyl.DifferentialActionModelAbstract.__init__(
             self, crocoddyl.StateVector(2*self.m), self.m, self.m
-        )  # nu = 1; nr = 2
+        )
 
         self.y_d    = y_d
         self.y_d_p  = y_d_p
@@ -277,102 +131,119 @@ class DifferentialActionModelPinocchio(crocoddyl.DifferentialActionModelAbstract
         self.Kp_squarex2 = 2*self.Kp**2
         self.Kd_squarex2 = 2*self.Kd**2
 
+        self.I = np.eye(self.m)
+        self.Ix2 = 2*self.I # es ist wirklich schneller so
+
     def calc(self, data, x, u):
-        # Getting the state and control variables
-        m = self.m
-        z1 = x[0:m]
-        z2 = x[m:2*m]
+        n1 = self.n1
+        n = self.n
 
-        alpha  = u[0:m]
+        z1 = x[:n1]
+        z2 = x[n1:n]
 
-        # Defining the equation of motions
-        z1dot = z2
-        z2dot = alpha
+        alpha  = u
 
-        z1ddot = alpha
+        data.xout = alpha # = z1ddot
 
-        #data.xout = np.matrix([z1dot, z2dot]).T#np.array([z1dot, z2dot]).T
-        #data.xout = np.matrix([z1ddot]).T#np.array([z1dot, z2dot]).T
-        data.xout = z1ddot
-        # data.r = np.matrix(self.costWeights * np.array([z1, z2, u])).T
-        # data.cost = 0.5 * sum(np.asarray(data.r) ** 2)
         data.r = (alpha - self.y_d_pp) + self.Kd @ (z2 - self.y_d_p) + self.Kp @ (z1 - self.y_d)
         data.cost = np.linalg.norm(data.r)**2
+        # data.cost = np.sum(data.r**2) # slower than linalg
 
     def calcDiff(self, data, x, u):
-        m=self.m
-        z1 = x[0:m]
-        z2 = x[m:2*m]
-        #O = np.zeros((m,m))
-        I = np.eye(m)
+        n1 = self.n1
+        n = self.n
+        z1 = x[:n1]
+        z2 = x[n1:n]
+
         Kp_squarex2 = self.Kp_squarex2
         Kd_squarex2 = self.Kd_squarex2
 
         # data.Fx = np.block([O, O]) # f = d^2/dt^2 z2 = u # ist eh standardmäßig 0
-        data.Fu = I
+        data.Fu = self.I
 
         #data.Lx  = np.block([2*Kp_square @ (z1 - self.y_d), 2*Kd_square @ (z2 - self.y_d_p)])
-        data.Lx[:m]  = Kp_squarex2 @ (z1 - self.y_d)
-        data.Lx[-m:]  = Kd_squarex2 @ (z2 - self.y_d_p)
+        data.Lx[:n1]  = Kp_squarex2 @ (z1 - self.y_d)
+        data.Lx[n1:n] = Kd_squarex2 @ (z2 - self.y_d_p)
 
         data.Lu = 2*(u - self.y_d_pp)
         
         #data.Lxx = np.block([[2*Kp_square, O], [O, 2*Kd_square]])
-        data.Lxx[:m, :m] = Kp_squarex2
-        data.Lxx[-m:, -m:] = Kd_squarex2
-        data.Luu = 2*I
+        data.Lxx[:n1, :n1]    = Kp_squarex2
+        data.Lxx[n1:n:, n1:n] = Kd_squarex2
+        data.Luu = self.Ix2
         #data.Lxu = np.block([[O],[O]]) # is eh standardmäßig 0
-
-def block_diag_onlydiagmatr(a, b):
-    return np.kron(a, b)
-
-def block_diag(a, b):
-    an, am = a.shape
-    bn, bm = b.shape
-    return np.block([[a, np.zeros((an, bm))], [np.zeros((bn, am)), b]])
 
 class CombinedActionModel(crocoddyl.ActionModelAbstract):
     def __init__(self, model1, model2):
         crocoddyl.ActionModelAbstract.__init__(self, crocoddyl.StateVector(model1.state.nx + model2.state.nx), model1.nu + model2.nu, model1.nr + model2.nr)
         self.model1 = model1
-        self.model2 = model2
+        self.model2 = model2 # model 2 should be robot model!!
+
         self.data1 = self.model1.createData()
         self.data2 = self.model2.createData()
-        self.m = 3
+
+        self.mu_model1 = self.model1.nu
+        self.mu_model2 = self.model2.nu
+        self.m = self.mu_model1 + self.mu_model2
+
+        self.nx_model1 = self.model1.state.nx
+        self.nx_model2 = self.model2.state.nx
+        self.n = self.nx_model1 + self.nx_model2
 
     def calc(self, data, x, u):
-        m=self.m
-        self.model1.calc(self.data1, x[0:2*m],  u[0:m] )
-        self.model2.calc(self.data2, x[2*m:2*m+4], u[m:m+2])
+        m1 = self.mu_model1
+        m = self.m
+
+        n1 = self.nx_model1
+        n = self.n
+
+        yref = x[:m1]
+        self.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = yref
+        # self.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = self.model1.differential.y_d
+
+        self.model1.calc(self.data1, x[:n1],  u[:m1] )
+        self.model2.calc(self.data2, x[n1:n], u[m1:m])
+
         data.xnext = np.hstack([self.data1.xnext, self.data2.xnext])
         data.cost  = self.data1.cost + self.data2.cost
 
     def calcDiff(self, data, x, u):
-        m=self.m
-        self.model1.calcDiff(self.data1, x[0:2*m],  u[0:m] )
-        self.model2.calcDiff(self.data2, x[2*m:2*m+4], u[m:m+2])
+        m1 = self.mu_model1
+        m = self.m
 
-        data.Fx = block_diag(self.data1.Fx, self.data2.Fx)
-        data.Fu = block_diag(self.data1.Fu, self.data2.Fu)
+        n1 = self.nx_model1
+        n = self.n
 
-        data.Lx  = np.hstack([self.data1.Lx, self.data2.Lx])
-        data.Lu  = np.hstack([self.data1.Lu, self.data2.Lu])
-        data.Lxx = block_diag(self.data1.Lxx, self.data2.Lxx)
-        data.Luu = block_diag(self.data1.Luu, self.data2.Luu)
-        data.Lxu = block_diag(self.data1.Lxu, self.data2.Lxu)
+        yref = x[:m1]
+        self.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = yref
+        # self.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = self.model1.differential.y_d
+        
+        self.model1.calcDiff(self.data1, x[0:n1],  u[0:m1])
+        self.model2.calcDiff(self.data2, x[n1:n],  u[m1:m])
 
-class IntState(crocoddyl.StateAbstract):
-# ist das gleiche wie "crocoddyl.StateVector(2)"
-    def __init__(self):
-        crocoddyl.StateAbstract.__init__(self, 2, 2)  # 2 states (z1, z2), 1 input (u)
+        data.Fx[:n1, :n1]    = self.data1.Fx
+        data.Fx[n1:n, n1:n]  = self.data2.Fx
 
-    def zero(self):
-        return self.zero()
+        data.Fu[:n1, :m1]    = self.data1.Fu
+        data.Fu[n1:n, m1:m]  = self.data2.Fu
 
-    def integrate(self, x, dx):
-        return np.array(x+dx)
-    
+        data.Lx[:n1]         = self.data1.Lx
+        data.Lx[n1:n]        = self.data2.Lx
+        
+        data.Lu[:m1]         = self.data1.Lu
+        data.Lu[m1:m]        = self.data2.Lu
 
+        data.Lxx[:n1, :n1]   = self.data1.Lxx
+        data.Lxx[n1:n, n1:n] = self.data2.Lxx
+
+        data.Luu[:m1, :m1]   = self.data1.Luu
+        data.Luu[m1:m, m1:m] = self.data2.Luu
+
+        data.Lxu[:n1, :m1]   = self.data1.Lxu
+        data.Lxu[n1:n, m1:m] = self.data2.Lxu
+
+############### Beide Klassen sind equivalent zu crocoddyl.DifferentialActionModelFreeFwdDynamics: ################
+# Ausführgeschwindigkeit: 140s (opt problem mit 10000 punkten)
 class DifferentialFwdDynamics(crocoddyl.DifferentialActionModelAbstract):
     def __init__(self, state, costModel):
         crocoddyl.DifferentialActionModelAbstract.__init__(
@@ -411,18 +282,10 @@ class DifferentialFwdDynamics(crocoddyl.DifferentialActionModelAbstract):
             data
         )  # this allows us to share the memory of cost-terms of action model
         return data
-    
-# class DifferentialFwdDynamics2(crocoddyl.DifferentialActionModelFreeFwdDynamics):
-#     def __init__(self, state, actuationModel, costModel):
-#         crocoddyl.DifferentialActionModelFreeFwdDynamics.__init__(
-#             self, state, actuationModel, costModel
-#         )
 
-#     def calc(self, data, x, u):
-#         super(DifferentialFwdDynamics2, self).calc(data, x, u)
-#         data.costs = 0
-
-class DifferentialFwdDynamics3(crocoddyl.DifferentialActionModelAbstract):
+# Ist 2-3 mal schneller als obige Klasse in der die Crocoddyl Funktionen direkt aufgerufen werden. (50s, (opt problem mit 10000 punkten))
+# Diese Klasse ist identisch schnell wie crocoddyl.DifferentialActionModelFreeFwdDynamics
+class DifferentialFwdDynamics2(crocoddyl.DifferentialActionModelAbstract):
     def __init__(self, state, actuationModel, costModel):
         crocoddyl.DifferentialActionModelAbstract.__init__( # das wird ein problem sein, da ich so die dimension nicht verändern kann.
             self, state, state.nv, costModel.nr# besser: crocoddyl.ActionModelAbstract.__init__(self, crocoddyl.StateVector(model1.state.nx + model2.state.nx), model1.nu + model2.nu, model1.nr + model2.nr)
@@ -440,3 +303,4 @@ class DifferentialFwdDynamics3(crocoddyl.DifferentialActionModelAbstract):
     def createData(self):
         data = self.DAM_free.createData()
         return data
+###################################################################################################################
