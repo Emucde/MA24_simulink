@@ -8,6 +8,9 @@ import meshcat.geometry as g
 import meshcat.transformations as tf
 from meshcat.animation import Animation
 from pinocchio.visualize import MeshcatVisualizer
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import plotly.offline as py
 
 def trajectory_poly(t, y0, yT, T):
     # The function plans a trajectory from y0 in R3 to yT in R3 and returns the desired position and velocity on this trajectory at time t.
@@ -330,11 +333,140 @@ def plot_trajectory(param_trajectory):
     plt.tight_layout()
     plt.show()
 
+def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_plot=False, file_name='plot_saved'):
+    robot_data = robot_model.createData()
+
+    line_dict = dict(width=1)
+    line_dict_dot = dict(width=1, dash='dot')
+
+    n = robot_model.nq
+
+    y_opt    = np.zeros((len(xs), 3))
+    y_opt_p  = np.zeros((len(xs), 3))
+    y_opt_pp = np.zeros((len(xs), 3))
+    q        = np.zeros((len(xs), n))
+    q_p      = np.zeros((len(xs), n))
+    q_pp     = np.zeros((len(xs), n))
+    w        = np.zeros(len(xs)) # manipulability
+
+    y_ref    = xs[:, 0:3]
+    y_p_ref  = xs[:, 3:6]
+    y_pp_ref = us[:, 0:3]
+
+    y_d    = param_trajectory['p_d'].T
+    y_d_p  = param_trajectory['p_d_p'].T
+    y_d_pp = param_trajectory['p_d_pp'].T
+
+    tau = np.concatenate([us[:, 3:3+n], [us[-1, 3:3+n]]]) # es wird ja ein u weniger erzeugt, da es nicht notw. ist
+
+    for i in range(len(xs)):
+        q[i]   = xs[i, 6:6+n]
+        q_p[i] = xs[i, 6+n:6+2*n]
+        q_pp[i] = pinocchio.aba(robot_model, robot_data, q[i], q_p[i], tau[i])
+
+        pinocchio.forwardKinematics(robot_model, robot_data, q[i])
+        pinocchio.updateFramePlacements(robot_model, robot_data)
+        y_opt[i] = robot_data.oMf[TCP_frame_id].translation.T.copy()
+
+        J = pinocchio.computeJointJacobians(robot_model, robot_data)
+        # J = pinocchio.getFrameJacobian(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.WORLD)# pinocchio.LOCAL
+        J_p = pinocchio.computeJointJacobiansTimeVariation(robot_model, robot_data, q[i], q_p[i])
+        # dJ = pinocchio.getFrameJacobianTimeVariation(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.WORLD)
+
+        J_v   = J[  0:3, 0:2] # mir translatorischen anteil
+        J_v_p = J_p[0:3, 0:2] # z ist unnötig
+
+        y_opt_p[i]  = J_v @ q_p[i]
+        y_opt_pp[i] = J_v @ q_pp[i] + J_v_p @ q_p[i]
+
+        w[i] = np.sqrt(np.linalg.det(J_v[0:2, 0:2] @ J_v[0:2, 0:2].T))
+
+    e    = y_d    - y_opt
+    e_p  = y_d_p  - y_opt_p
+    e_pp = y_d_pp - y_opt_pp
+
+    yd_labels    = ["$\\Large{x^d}$",             "$\\Large{y^d}$"           ]
+    yd_labels_t    = ["x_d", "y_d"]
+
+    y_opt_labels = ["$\\Large{x^\\mathrm{opt}}$",  "$\\Large{y^\\mathrm{opt}}$"]
+    y_opt_labels_t = ["x_opt",  "y_opt",]
+
+    y_ref_labels = ["$\\Large{x^{\\mathrm{ref}}}$", "$\\Large{y^{\\mathrm{ref}}}$"]
+    y_ref_labels_t = ["x_ref", "y_ref"]
+
+    tau_labels = ["$\\Large{\\tau_1}$", "$\\Large{\\tau_2}$"]
+    tau_labels_t = ["tau_1", "tau_2"]
+
+    e_x_labels = ["$\\Large{e_x}$", "$\\Large{\\dot{e}_x}$", "$\\Large{\\ddot{e}_x}$"]
+    e_x_labels_t = ["e_x", "d/dt e_x", "d^2/dt^2 e_x"]
+
+    e_y_labels = ["$\\Large{e_y}$", "$\\Large{\\dot{e}_y}$", "$\\Large{\\ddot{e}_y}$"]
+    e_y_labels_t = ["e_y", "d/dt e_y", "d^2/dt^2 e_y"]
+
+    q1_labels = ["$\\Large{q_1}$", "$\\Large{\\dot{q}_1}$", "$\\Large{\\ddot{q}_1}$"]
+    q1_labels_t = ["q_1", "d/dt q_1", "d^2/dt^2 q_1"]
+
+    q2_labels = ["$\\Large{q_2}$", "$\\Large{\\dot{q}_2}$", "$\\Large{\\ddot{q}_2}$"]
+    q2_labels_t = ["q_2", "d/dt q_2", "d^2/dt^2 q_2"]
+
+    # Create a Plotly subplot
+    fig = make_subplots(rows=3, cols=4, shared_xaxes=True, vertical_spacing=0.05, 
+        subplot_titles=("$\\mathrm{TCP~position~(m)}$",                                                "$e_x = x^d - x\\mathrm{ (m)}$",                          "$e_y = y^d - y\\mathrm{~(m)}$",                          "$\\mathrm{Joint~coordinates~}q\\mathrm{~(rad)}$", 
+                        "$\\mathrm{Manipulability~}w = \\sqrt{\\det(\\mathbf{J}\\mathbf{J}^\\mathrm{T})}$", "$\\dot{e}_x = \\dot{x}^d - \\dot{x}\\mathrm{~(m/s)}$",      "$\\dot{e}_y = \\dot{y}^d - \\dot{y}\\mathrm{~(m/s)}$",      "$\\mathrm{Joint~velocities~}\\dot{q}\\mathrm{~(rad/s)}$",
+                        "$\\mathrm{Torque~}\\boldsymbol{\\tau}~(Nm)$",                                 "$\\ddot{e}_x = \\ddot{x}^d - \\ddot{x}\\mathrm{~(m/s^2)}$", "$\\ddot{e}_y = \\ddot{y}^d - \\ddot{y}\\mathrm{~(m/s^2)}$", "$\\mathrm{Joint~acceleration~}\\ddot{q}\\mathrm{~(rad/s^2)}$"))
+    
+    # Plot the x-components using Plotly
+    for i in range(2): # nur bis 2 wegen x und y, z ist unwichtig
+        fig.add_trace(go.Scatter(x=t, y=y_opt[:, i], name=f'{y_opt_labels[i]}', line = line_dict, hoverinfo = 'x+y+text', hovertext=y_opt_labels_t[i]), row=1, col=1)
+    for i in range(2):
+        # fig.add_trace(go.Scatter(x=t, y=y_ref[:, i], name=f'yref[{i}]: {y_ref_labels[i]}', line = line_dict), row=1, col=1)
+        fig.add_trace(go.Scatter(x=t, y=y_d[  :, i], name=f'{yd_labels[i]}'     , line = line_dict_dot, hoverinfo = 'x+y+text', hovertext=yd_labels_t[i]), row=1, col=1)
+    for i in range(2):
+        fig.add_trace(go.Scatter(x=t, y=tau[:, i], line = line_dict, name = tau_labels[i], hoverinfo = 'x+y+text', hovertext=tau_labels_t[i]), row=3, col=1)
+
+    fig.add_trace(go.Scatter(x=t, y=w, line = line_dict, name='$w$', hoverinfo = 'x+y+text', hovertext="Manip w"), row=2, col=1)
+
+    e_x_arr = [e[:, 0], e_p[:, 0], e_pp[:, 0]]
+    e_y_arr = [e[:, 1], e_p[:, 1], e_pp[:, 1]]
+
+    q_arr = [q, q_p, q_pp]
+
+    for i in range(3):
+        fig.add_trace(go.Scatter(x=t, y=e_x_arr[i], line = line_dict, name = e_x_labels[i], hoverinfo = 'x+y+text', hovertext=e_x_labels_t[i]), row=i+1, col=2)
+    for i in range(3):
+        fig.add_trace(go.Scatter(x=t, y=e_y_arr[i], line = line_dict, name = e_y_labels[i], hoverinfo = 'x+y+text', hovertext=e_y_labels_t[i]), row=i+1, col=3)
+    for i in range(3):
+        fig.add_trace(go.Scatter(x=t, y=q_arr[i][:, 0], line = line_dict, name = q1_labels[i], hoverinfo = 'x+y+text', hovertext=q1_labels_t[i]), row=i+1, col=4)
+        fig.add_trace(go.Scatter(x=t, y=q_arr[i][:, 1], line = line_dict, name = q2_labels[i], hoverinfo = 'x+y+text', hovertext=q2_labels_t[i]), row=i+1, col=4)
+
+    fig.update_xaxes(title_text='t (s)', row=3, col=1)
+    fig.update_xaxes(title_text='t (s)', row=3, col=2)
+    fig.update_xaxes(title_text='t (s)', row=3, col=3)
+
+
+    # fig.update_layout(plot_bgcolor='#1e1e1e', paper_bgcolor='#1e1e1e', font=dict(color='#ffffff'), legend=dict(orientation='h'))
+    fig.update_layout(
+    plot_bgcolor='#101010',  # Set plot background color
+    paper_bgcolor='#1e1e1e',  # Set paper background color
+    font=dict(color='#ffffff'),  # Set font color
+    legend=dict(orientation='h'),  # Set legend orientation
+    hovermode = 'closest',
+    # Gridline customization for all subplots
+    **{f'xaxis{i}': dict(gridwidth=1, gridcolor='#757575', linecolor='#757575', zerolinecolor='#757575', zerolinewidth=1) for i in range(1, 13)},
+    **{f'yaxis{i}': dict(gridwidth=1, gridcolor='#757575', linecolor='#757575', zerolinecolor='#757575', zerolinewidth=1) for i in range(1, 13)}
+    )
+
+    fig.show()
+
+    if(save_plot):
+        py.plot(fig, filename=file_name, include_mathjax='cdn')
+    
+
 def visualize_robot(robot, x_sol, param_trajectory, dt, rep_cnt = np.inf, rep_delay_sec=1):
     # Meshcat Visualize
     robot_model = robot.model
     robot_display = MeshcatVisualizer(robot.model)
-    robot_display.initViewer(open=True)
+    robot_display.initViewer(open=False)
 
     y_d_data = param_trajectory['p_d'].T
 
@@ -372,39 +504,52 @@ def visualize_robot(robot, x_sol, param_trajectory, dt, rep_cnt = np.inf, rep_de
     testobj3 = g.StlMeshGeometry.from_file(obj3.meshPath)
 
     vis["testobj1"].set_object(testobj1)
-    vis["testobj1"].set_property('scale', obj1.meshScale.tolist()) # other settings: https://github.com/meshcat-dev/meshcat
     vis["testobj2"].set_object(testobj2)
+    vis["testobj3"].set_object(testobj3)
+
+    vis["testobj1"].set_property('scale', obj1.meshScale.tolist()) # other settings: https://github.com/meshcat-dev/meshcat
     vis["testobj2"].set_property('scale', obj2.meshScale.tolist())
-    vis["testobj3"].set_object(testobj3)    
     vis["testobj3"].set_property('scale', obj3.meshScale.tolist())
 
     vis["testobj1"].set_property('color', obj1.meshColor.tolist())
     vis["testobj2"].set_property('color', obj2.meshColor.tolist())
     vis["testobj3"].set_property('color', obj3.meshColor.tolist())
 
-    robot_data = robot.viz.model.createData()
+    vis["testobj1"].set_property('visible', False)
+    vis["testobj2"].set_property('visible', False)
+    vis["testobj3"].set_property('visible', False)
+
+    robot_display.setCameraPose(np.eye(4))
+    robot_display.setCameraPosition([0,0,1])
+
+    robot_data = robot.model.createData()
 
     # Iterate through trajectory data (assuming x_sol[:, 6:6+robot_model.nq] represents joint positions)
     for i in range(len(x_sol)):
         pinocchio.forwardKinematics(robot_model, robot_data, x_sol[i, 6:6+robot_model.nq])
         pinocchio.updateFramePlacements(robot_model, robot_data)
 
-        H2_0 = obj2.placement.homogeneous
-        H3_0 = obj3.placement.homogeneous
+        H_s1_1 = obj2.placement.homogeneous # = H_0^s1, CoM s1 of link 1 in dependence of inertial KOS
+        H_s2_2 = obj3.placement.homogeneous # = H_0^s2, CoM s1 of link 2 in dependence of inertial KOS
 
-        H_s2 = robot_data.oMf[robot_model.getFrameId('link1')].homogeneous
-        H_s3 = robot_data.oMf[robot_model.getFrameId('link2')].homogeneous
+        H_0_s1 = robot_data.oMf[robot_model.getFrameId('link1')].homogeneous # = H_s1^1, joint 1 in dependence of CoM s1 of link 1
+        H_0_s2 = robot_data.oMf[robot_model.getFrameId('link2')].homogeneous # = H_s2^2, joint 2 in dependence of CoM s2 of link 2
 
         with anim.at_frame(vis, i) as frame:
             frame["testobj1"].set_transform(tf.translation_matrix([0,0,0]))
-            frame["testobj2"].set_transform(H_s2 @ H2_0)
-            frame["testobj3"].set_transform(H_s3 @ H3_0)
-            frame["testobj1"].get_clip().fps=100
-            frame["testobj2"].get_clip().fps=100
-            frame["testobj3"].get_clip().fps=100
+            frame["testobj2"].set_transform(H_0_s1 @ H_s1_1)
+            frame["testobj3"].set_transform(H_0_s2 @ H_s2_2)
+            frame["testobj1"].get_clip().fps=1/dt
+            frame["testobj2"].get_clip().fps=1/dt
+            frame["testobj3"].get_clip().fps=1/dt
 
     # Set the animation to the Meshcat viewer
     vis.set_animation(anim)
+    vis["testobj1"].set_property('visible', True)
+    vis["testobj2"].set_property('visible', True)
+    vis["testobj3"].set_property('visible', True)
+
+    robot_display.viewer.open()
 
     # i = 0
     # cnt=rep_cnt
@@ -415,6 +560,8 @@ def visualize_robot(robot, x_sol, param_trajectory, dt, rep_cnt = np.inf, rep_de
     #     i = i +1
     # ffmpeg -r 60 -i "%07d.jpg" -vcodec "libx264" -preset "slow" -crf 18 -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2" output.mp4
     # ffmpeg -r 60 -i "%07d.png" -vcodec "libx264" -preset "slow" -crf 18 -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2" output.mp4
+
+    time.sleep(1) # othervise visualization don't work
     
     create_video=False
     if create_video:

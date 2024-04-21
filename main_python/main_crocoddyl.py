@@ -53,18 +53,19 @@ def f_cost_forward(q):
     return 1/2 * (xe - xe0) @ (xe - xe0)
 
 bounds = ((-np.pi, np.pi), (-np.pi, np.pi))
-qq0 = [1, 1] # Define the initial guess - avoid to start in singularity!!
+qq0 = [1, 0] # Define the initial guess - avoid to start in singularity!! - Don't forget: There are always two q solutions for each pose!
 res = minimize(f_cost_forward, qq0, method='SLSQP', bounds=bounds, options={'ftol': 1e-20, 'disp': False})
+print(res.x)
 
 # Create a multibody state from the pinocchio model.
 state = cro.StateMultibody(robot_model)
-state.lb[0:2] = -np.pi
-state.ub[0:2] = np.pi
+state.lb[0:2] = np.array([-np.pi, -np.pi])
+state.ub[0:2] = np.array([np.pi, np.pi])
 
 state.lb[2:4] = -100
 state.ub[2:4] = 100
 
-dt = 10e-3  # Time step
+dt = 5e-3  # Time step
 
 # Generate Trajectory
 T_start = 0
@@ -113,8 +114,11 @@ hasConverged = ddp.solve([], [], 300, False, 1e-5)
 toc()
 
 robot_data = robot_model.createData()
-xT = ddp.xs[-1]
-pin.forwardKinematics(robot_model, robot_data, xT[: state.nq])
+xs = np.array(ddp.xs)
+us = np.array(ddp.us)
+
+xs_T = xs[-1]
+pin.forwardKinematics(robot_model, robot_data, xs_T[: state.nq])
 pin.updateFramePlacements(robot_model, robot_data)
 print(
     "\nFinally reached = ",
@@ -127,42 +131,12 @@ print("Minimum Found:", hasConverged)
 
 plot_sol=True
 if plot_sol:
-    fig, axs = plt.subplots(3, 1, figsize=(10, 10))
+    plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory)
 
-    robot_data = robot_model.createData()
-    xs = np.array(ddp.xs)
-    y_opt = np.zeros((len(xs), 3))
-    y_ref = np.zeros((len(xs), 3))
-    t = np.linspace(T_start, T_end, N_traj)
-
-    for i in range(len(xs)):
-        q = xs[i, 6:6+robot_model.nq]
-        #v = xs[i, robot_model.nq:robot_model.nq+robot_model.nv]
-        pin.forwardKinematics(robot_model, robot_data, q)
-        pin.updateFramePlacements(robot_model, robot_data)
-        y_opt[i] = robot_data.oMf[TCP_frame_id].translation.T.copy()
-        y_ref[i] = xs[i, 0:3]
-
-    y_target = param_trajectory['p_d'].T
-
-    labels = ['yd_x', 'yd_y', 'yd_z']
-    labelsref = ['yref_x', 'yref_y', 'yref_z']
-
-    # Plotten der x-Komponenten
-    for i in range(3):
-        axs[i].plot(t, y_opt[:,i], label=f'yopt[{i}]: {labels[i]} coordinate')
-        axs[i].plot(t, y_ref[:, i], linestyle='-', label=f'yref[{i}]: {labelsref[i]} coordinate')
-        axs[i].plot(t, y_target[:, i], linestyle='--', label=f'yd[{i}]: {labels[i]} coordinate')
-        axs[i].set_xlabel('t (s)')
-        axs[i].set_ylabel('TCP (Gripper) position (m)')
-        axs[i].legend()
-
-    plt.tight_layout()
-    plt.show()
-
-max_err = np.max(np.abs(y_ref - y_target), axis=0)
+y_ref = xs[:, 0:3]
+max_err = np.max(np.abs(y_ref - param_trajectory['p_d'].T), axis=0)
 print(max_err)
 
-visualize=True
+visualize=False
 if visualize==True:
     visualize_robot(robot, xs, param_trajectory, dt, 3, 1)
