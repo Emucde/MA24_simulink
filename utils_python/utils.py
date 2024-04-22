@@ -336,8 +336,11 @@ def plot_trajectory(param_trajectory):
 def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_plot=False, file_name='plot_saved'):
     robot_data = robot_model.createData()
 
-    line_dict = dict(width=1)
-    line_dict_dot = dict(width=1, dash='dot')
+    line_dict_y        = dict(width=1, color='#ffff11')
+    line_dict_b        = dict(width=1, color='#14a1ff')
+    line_dict_traj     = [dict(width=1, color='#ffff11'), dict(width=1, color='#14a1ff')]
+    line_dict_traj_dot = [dict(width=1, color='green', dash='dash'), dict(width=1, color='#ff0000', dash='dash')]
+    # #ffff11 = yellow, #ff0000 = red, #14a1ff = lightblue, #0000ff = darkblue
 
     n = robot_model.nq
 
@@ -350,8 +353,8 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
     w        = np.zeros(len(xs)) # manipulability
 
     y_ref    = xs[:, 0:3]
-    y_p_ref  = xs[:, 3:6]
-    y_pp_ref = us[:, 0:3]
+    y_ref_p  = xs[:, 3:6]
+    y_ref_pp = us[:, 0:3]
 
     y_d    = param_trajectory['p_d'].T
     y_d_p  = param_trajectory['p_d_p'].T
@@ -364,20 +367,22 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
         q_p[i] = xs[i, 6+n:6+2*n]
         q_pp[i] = pinocchio.aba(robot_model, robot_data, q[i], q_p[i], tau[i])
 
-        pinocchio.forwardKinematics(robot_model, robot_data, q[i])
+        pinocchio.forwardKinematics(robot_model, robot_data, q[i], q_p[i], q_pp[i])
         pinocchio.updateFramePlacements(robot_model, robot_data)
         y_opt[i] = robot_data.oMf[TCP_frame_id].translation.T.copy()
 
-        J = pinocchio.computeJointJacobians(robot_model, robot_data)
-        # J = pinocchio.getFrameJacobian(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.WORLD)# pinocchio.LOCAL
-        J_p = pinocchio.computeJointJacobiansTimeVariation(robot_model, robot_data, q[i], q_p[i])
-        # dJ = pinocchio.getFrameJacobianTimeVariation(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.WORLD)
+        pinocchio.computeJointJacobians(robot_model, robot_data, q[i])
+        # J = pinocchio.computeFrameJacobian(robot_model, robot_data, q[i], TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+        J = pinocchio.getFrameJacobian(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+        pinocchio.computeJointJacobiansTimeVariation(robot_model, robot_data, q[i], q_p[i])
+        J_p = pinocchio.getFrameJacobianTimeVariation(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED) # ist falsch!!
 
         J_v   = J[  0:3, 0:2] # mir translatorischen anteil
         J_v_p = J_p[0:3, 0:2] # z ist unnötig
 
-        y_opt_p[i]  = J_v @ q_p[i]
-        y_opt_pp[i] = J_v @ q_pp[i] + J_v_p @ q_p[i]
+        y_opt_p[i]  = J_v @ q_p[i] # pinocchio.getVelocity(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).linear ist falsch
+        # y_opt_pp[i] = J_v @ q_pp[i] + J_v_p @ q_p[i] # J_p und damit J_V_p stimmt einfach nicht, vgl maple????? vgl Issue auf Github Doku
+        y_opt_pp[i] = pinocchio.getFrameClassicalAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).linear # mit maple bestätigt.
 
         w[i] = np.sqrt(np.linalg.det(J_v[0:2, 0:2] @ J_v[0:2, 0:2].T))
 
@@ -385,75 +390,118 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
     e_p  = y_d_p  - y_opt_p
     e_pp = y_d_pp - y_opt_pp
 
-    yd_labels    = ["$\\Large{x^d}$",             "$\\Large{y^d}$"           ]
-    yd_labels_t    = ["x_d", "y_d"]
+    y_opt_labels      = [ "$\\Large{x^\\mathrm{opt}}$",        "$\\Large{y^\\mathrm{opt}}$"        ]
+    y_opt_labels_t    = [ "x_opt",                             "y_opt",                            ]
+    y_opt_p_labels    = [ "$\\Large{\\dot{x}^\\mathrm{opt}}$", "$\\Large{\\dot{y}^\\mathrm{opt}}$" ]
+    y_opt_p_labels_t  = [ "d/dt x_opt",                        "d/dt y_opt",                       ]
+    y_opt_pp_labels   = [ "$\\Large{\\ddot{x}^\\mathrm{opt}}$", "$\\Large{\\ddot{y}^\\mathrm{opt}}$" ]
+    y_opt_pp_labels_t = [ "d^2/dt^2 x_opt",                    "d^2/dt^2 y_opt",                   ]
 
-    y_opt_labels = ["$\\Large{x^\\mathrm{opt}}$",  "$\\Large{y^\\mathrm{opt}}$"]
-    y_opt_labels_t = ["x_opt",  "y_opt",]
+    y_ref_labels      = [ "$\\Large{x^{\\mathrm{ref}}}$",        "$\\Large{y^{\\mathrm{ref}}}$"          ]
+    y_ref_labels_t    = [ "x_ref",                               "y_ref"                                 ]
+    y_ref_p_labels    = [ "$\\Large{\\dot{x}^{\\mathrm{ref}}}$", "$\\Large{\\dot{y}^{\\mathrm{ref}}}$"   ]
+    y_ref_p_labels_t  = [ "d/dt x_ref",                          "d/dt y_ref"                            ]
+    y_ref_pp_labels   = [ "$\\Large{\\ddot{x}^{\\mathrm{ref}}}$", "$\\Large{\\ddot{y}^{\\mathrm{ref}}}$" ]
+    y_ref_pp_labels_t = [ "d^2/dt^2 x_ref",                      "d^2/dt^2 y_ref"                        ]
 
-    y_ref_labels = ["$\\Large{x^{\\mathrm{ref}}}$", "$\\Large{y^{\\mathrm{ref}}}$"]
-    y_ref_labels_t = ["x_ref", "y_ref"]
+    y_d_labels      = [ "$\\Large{x^d}$",         "$\\Large{y^d}$"        ]
+    y_d_labels_t    = [ "x_d",                    "y_d"                   ]
+    y_d_p_labels    = [ "$\\Large{\\dot{x}^d}$",  "$\\Large{\\dot{y}^d}$" ]
+    y_d_p_labels_t  = [ "d/dt x_d",               "d/dt y_d"              ]
+    y_d_pp_labels   = [ "$\\Large{\\ddot{x}^d}$", "$\\Large{\\ddot{y}^d}$" ]
+    y_d_pp_labels_t = [ "d^2/dt^2 x_d",           "d^2/dt^2 y_d"          ]
 
-    tau_labels = ["$\\Large{\\tau_1}$", "$\\Large{\\tau_2}$"]
-    tau_labels_t = ["tau_1", "tau_2"]
+    yy_opt_labels   = [ y_opt_labels   , y_opt_p_labels  , y_opt_pp_labels   ]
+    yy_opt_labels_t = [ y_opt_labels_t , y_opt_p_labels_t, y_opt_pp_labels_t ]
+    yy_d_labels     = [ y_d_labels     , y_d_p_labels    , y_d_pp_labels     ]
+    yy_d_labels_t   = [ y_d_labels_t   , y_d_p_labels_t  , y_d_pp_labels_t   ]
+
+    yy_d   = [y_d,   y_d_p,   y_d_pp]
+    yy_ref = [y_ref, y_ref_p, y_ref_pp]
+    yy_opt = [y_opt, y_opt_p, y_opt_pp]
+
+    tau_labels   = ["$\\Large{\\tau_1}$", "$\\Large{\\tau_2}$"]
+    tau_labels_t = ["tau_1",              "tau_2"]
 
     e_x_labels = ["$\\Large{e_x}$", "$\\Large{\\dot{e}_x}$", "$\\Large{\\ddot{e}_x}$"]
-    e_x_labels_t = ["e_x", "d/dt e_x", "d^2/dt^2 e_x"]
+    e_x_labels_t = ["e_x",          "d/dt e_x",              "d^2/dt^2 e_x"]
 
     e_y_labels = ["$\\Large{e_y}$", "$\\Large{\\dot{e}_y}$", "$\\Large{\\ddot{e}_y}$"]
-    e_y_labels_t = ["e_y", "d/dt e_y", "d^2/dt^2 e_y"]
+    e_y_labels_t = ["e_y",          "d/dt e_y",              "d^2/dt^2 e_y"]
 
-    q1_labels = ["$\\Large{q_1}$", "$\\Large{\\dot{q}_1}$", "$\\Large{\\ddot{q}_1}$"]
-    q1_labels_t = ["q_1", "d/dt q_1", "d^2/dt^2 q_1"]
+    q1_labels = ["$\\Large{q_1}$",  "$\\Large{\\dot{q}_1}$", "$\\Large{\\ddot{q}_1}$"]
+    q1_labels_t = ["q_1",           "d/dt q_1",              "d^2/dt^2 q_1"]
 
-    q2_labels = ["$\\Large{q_2}$", "$\\Large{\\dot{q}_2}$", "$\\Large{\\ddot{q}_2}$"]
-    q2_labels_t = ["q_2", "d/dt q_2", "d^2/dt^2 q_2"]
+    q2_labels = ["$\\Large{q_2}$",  "$\\Large{\\dot{q}_2}$", "$\\Large{\\ddot{q}_2}$"]
+    q2_labels_t = ["q_2",           "d/dt q_2",              "d^2/dt^2 q_2"]
 
     # Create a Plotly subplot
-    fig = make_subplots(rows=3, cols=4, shared_xaxes=True, vertical_spacing=0.05, 
-        subplot_titles=("$\\mathrm{TCP~position~(m)}$",                                                "$e_x = x^d - x\\mathrm{ (m)}$",                          "$e_y = y^d - y\\mathrm{~(m)}$",                          "$\\mathrm{Joint~coordinates~}q\\mathrm{~(rad)}$", 
-                        "$\\mathrm{Manipulability~}w = \\sqrt{\\det(\\mathbf{J}\\mathbf{J}^\\mathrm{T})}$", "$\\dot{e}_x = \\dot{x}^d - \\dot{x}\\mathrm{~(m/s)}$",      "$\\dot{e}_y = \\dot{y}^d - \\dot{y}\\mathrm{~(m/s)}$",      "$\\mathrm{Joint~velocities~}\\dot{q}\\mathrm{~(rad/s)}$",
-                        "$\\mathrm{Torque~}\\boldsymbol{\\tau}~(Nm)$",                                 "$\\ddot{e}_x = \\ddot{x}^d - \\ddot{x}\\mathrm{~(m/s^2)}$", "$\\ddot{e}_y = \\ddot{y}^d - \\ddot{y}\\mathrm{~(m/s^2)}$", "$\\mathrm{Joint~acceleration~}\\ddot{q}\\mathrm{~(rad/s^2)}$"))
+    fig = make_subplots(rows=4, cols=4, shared_xaxes=False, vertical_spacing=0.05, horizontal_spacing=0.035, 
+        subplot_titles=(
+        "$\\Large{\\mathrm{TCP~position~(m)}}$",
+        "$\\Large{e_x = x^d - x\\mathrm{ (m)}}$",
+        "$\\Large{e_y = y^d - y\\mathrm{~(m)}}$",
+        "$\\Large{\\mathrm{Joint~coordinates~}q\\mathrm{~(rad)}}$",
+        "$\\Large{\\mathrm{TCP~velocity~(m)}}$",
+        "$\\Large{\\dot{e}_x = \\dot{x}^d - \\dot{x}\\mathrm{~(m/s)}}$",
+        "$\\Large{\\dot{e}_y = \\dot{y}^d - \\dot{y}\\mathrm{~(m/s)}}$",
+        "$\\Large{\\mathrm{Joint~velocities~}\\dot{q}\\mathrm{~(rad/s)}}$",
+        "$\\Large{\\mathrm{TCP~acceleration~(m)}}$",
+        "$\\Large{\\ddot{e}_x = \\ddot{x}^d - \\ddot{x}\\mathrm{~(m/s^2)}}$",
+        "$\\Large{\\ddot{e}_y = \\ddot{y}^d - \\ddot{y}\\mathrm{~(m/s^2)}}$",
+        "$\\Large{\\mathrm{Joint~acceleration~}\\ddot{q}\\mathrm{~(rad/s^2)}}$",
+        "$\\Large{\\mathrm{Manipulability~}w = \\sqrt{\\det(\\mathbf{J}\\mathbf{J}^\\mathrm{T})}}$",
+        "$\\Large{\\mathrm{Torque~}\\boldsymbol{\\tau}~(Nm)}$",
+    ))
     
     # Plot the x-components using Plotly
-    for i in range(2): # nur bis 2 wegen x und y, z ist unwichtig
-        fig.add_trace(go.Scatter(x=t, y=y_opt[:, i], name=f'{y_opt_labels[i]}', line = line_dict, hoverinfo = 'x+y+text', hovertext=y_opt_labels_t[i]), row=1, col=1)
-    for i in range(2):
-        # fig.add_trace(go.Scatter(x=t, y=y_ref[:, i], name=f'yref[{i}]: {y_ref_labels[i]}', line = line_dict), row=1, col=1)
-        fig.add_trace(go.Scatter(x=t, y=y_d[  :, i], name=f'{yd_labels[i]}'     , line = line_dict_dot, hoverinfo = 'x+y+text', hovertext=yd_labels_t[i]), row=1, col=1)
-    for i in range(2):
-        fig.add_trace(go.Scatter(x=t, y=tau[:, i], line = line_dict, name = tau_labels[i], hoverinfo = 'x+y+text', hovertext=tau_labels_t[i]), row=3, col=1)
-
-    fig.add_trace(go.Scatter(x=t, y=w, line = line_dict, name='$w$', hoverinfo = 'x+y+text', hovertext="Manip w"), row=2, col=1)
-
+    for j in range(3):
+        for i in range(2): # nur bis 2 wegen x und y, z ist unwichtig
+            fig.add_trace(go.Scatter(x=t, y=yy_opt[j][:, i], name=f'{yy_opt_labels[j][i]}', line = line_dict_traj[i], hoverinfo = 'x+y+text', hovertext=yy_opt_labels_t[j][i]), row=j+1, col=1)
+        for i in range(2):
+            # fig.add_trace(go.Scatter(x=t, y=yy_ref[j][:, i], name=f'yy_ref_labels[j][i]', line = line_dict_traj2), row=j+1, col=1)
+            fig.add_trace(go.Scatter(x=t, y=yy_d[j][  :, i], name=f'{yy_d_labels[j][i]}'     , line = line_dict_traj_dot[i], hoverinfo = 'x+y+text', hovertext=yy_d_labels_t[j][i]), row=j+1, col=1)
+    
     e_x_arr = [e[:, 0], e_p[:, 0], e_pp[:, 0]]
     e_y_arr = [e[:, 1], e_p[:, 1], e_pp[:, 1]]
 
     q_arr = [q, q_p, q_pp]
 
     for i in range(3):
-        fig.add_trace(go.Scatter(x=t, y=e_x_arr[i], line = line_dict, name = e_x_labels[i], hoverinfo = 'x+y+text', hovertext=e_x_labels_t[i]), row=i+1, col=2)
+        fig.add_trace(go.Scatter(x=t, y=e_x_arr[i], line = line_dict_y, name = e_x_labels[i], hoverinfo = 'x+y', hovertext=e_x_labels_t[i]), row=i+1, col=2)
     for i in range(3):
-        fig.add_trace(go.Scatter(x=t, y=e_y_arr[i], line = line_dict, name = e_y_labels[i], hoverinfo = 'x+y+text', hovertext=e_y_labels_t[i]), row=i+1, col=3)
+        fig.add_trace(go.Scatter(x=t, y=e_y_arr[i], line = line_dict_y, name = e_y_labels[i], hoverinfo = 'x+y', hovertext=e_y_labels_t[i]), row=i+1, col=3)
     for i in range(3):
-        fig.add_trace(go.Scatter(x=t, y=q_arr[i][:, 0], line = line_dict, name = q1_labels[i], hoverinfo = 'x+y+text', hovertext=q1_labels_t[i]), row=i+1, col=4)
-        fig.add_trace(go.Scatter(x=t, y=q_arr[i][:, 1], line = line_dict, name = q2_labels[i], hoverinfo = 'x+y+text', hovertext=q2_labels_t[i]), row=i+1, col=4)
+        fig.add_trace(go.Scatter(x=t, y=q_arr[i][:, 0], line = line_dict_traj[0], name = q1_labels[i], hoverinfo = 'x+y+text', hovertext=q1_labels_t[i]), row=i+1, col=4)
+        fig.add_trace(go.Scatter(x=t, y=q_arr[i][:, 1], line = line_dict_traj[1], name = q2_labels[i], hoverinfo = 'x+y+text', hovertext=q2_labels_t[i]), row=i+1, col=4)
 
-    fig.update_xaxes(title_text='t (s)', row=3, col=1)
-    fig.update_xaxes(title_text='t (s)', row=3, col=2)
-    fig.update_xaxes(title_text='t (s)', row=3, col=3)
+    fig.add_trace(go.Scatter(x=t, y=w, line = line_dict_y, name='$w$', hoverinfo = 'x+y', hovertext="Manip w"), row=4, col=1)
+    for i in range(2):
+        fig.add_trace(go.Scatter(x=t, y=tau[:, i], line = line_dict_traj[i], name = tau_labels[i], hoverinfo = 'x+y+text', hovertext=tau_labels_t[i]), row=4, col=2)
+
+    fig.update_xaxes(title_text='$\\Large{t\\mathrm{~(s)}}$', row=4, col=1)
+    fig.update_xaxes(title_text='$\\Large{t\\mathrm{~(s)}}$', row=4, col=2)
+    fig.update_xaxes(title_text='$\\Large{t\\mathrm{~(s)}}$', row=3, col=3)
+    fig.update_xaxes(title_text='$\\Large{t\\mathrm{~(s)}}$', row=3, col=4)
 
 
     # fig.update_layout(plot_bgcolor='#1e1e1e', paper_bgcolor='#1e1e1e', font=dict(color='#ffffff'), legend=dict(orientation='h'))
     fig.update_layout(
-    plot_bgcolor='#101010',  # Set plot background color
-    paper_bgcolor='#1e1e1e',  # Set paper background color
-    font=dict(color='#ffffff'),  # Set font color
-    legend=dict(orientation='h'),  # Set legend orientation
-    hovermode = 'closest',
-    # Gridline customization for all subplots
-    **{f'xaxis{i}': dict(gridwidth=1, gridcolor='#757575', linecolor='#757575', zerolinecolor='#757575', zerolinewidth=1) for i in range(1, 13)},
-    **{f'yaxis{i}': dict(gridwidth=1, gridcolor='#757575', linecolor='#757575', zerolinecolor='#757575', zerolinewidth=1) for i in range(1, 13)}
+        plot_bgcolor='#101010',  # Set plot background color
+        paper_bgcolor='#1e1e1e',  # Set paper background color
+        font=dict(color='#ffffff'),  # Set font color
+        legend=dict(orientation='h', yanchor='middle', y=10, yref='container'),  # Set legend orientation
+        hovermode = 'closest',
+        margin=dict(l=10, r=10, t=50, b=70),
+        # legend_indentation = 0,
+        # margin_pad=0,
+        # Gridline customization for all subplots
+        **{f'xaxis{i}': dict(gridwidth=1, gridcolor='#757575', linecolor='#757575', zerolinecolor='#757575', zerolinewidth=1) for i in range(1, 15)},
+        **{f'yaxis{i}': dict(gridwidth=1, gridcolor='#757575', linecolor='#757575', zerolinecolor='#757575', zerolinewidth=1) for i in range(1, 15)}
+    )
+
+    fig.update_layout(
+        **{f'xaxis{i}': dict(showticklabels=False) for i in range(1, 11)}
     )
 
     fig.show()
@@ -461,6 +509,9 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
     if(save_plot):
         py.plot(fig, filename=file_name, include_mathjax='cdn')
     
+
+
+####################################################### VIS ROBOT #################################################
 
 def visualize_robot(robot, x_sol, param_trajectory, dt, rep_cnt = np.inf, rep_delay_sec=1):
     # Meshcat Visualize
