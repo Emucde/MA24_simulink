@@ -20,6 +20,10 @@ urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation',
 robot = pin.robot_wrapper.RobotWrapper.BuildFromURDF(str(urdf_model_path))
 robot_model = robot.model
 
+nq = robot_model.nq
+nx = 2*nq
+nu = nq # fully actuated
+
 # Gravity should be in -y direction
 robot_model.gravity.linear[:] = [0, -9.81, 0]
 
@@ -65,18 +69,7 @@ state.ub[0:2] = np.array([np.pi, np.pi])
 state.lb[2:4] = -100
 state.ub[2:4] = 100
 
-dt = 5e-3  # Time step
-
-# Generate Trajectory
-T_start = 0
-T_end = 10
-
-N_traj = int((T_end-T_start)/dt)
-N = N_traj  # Number of knots
-
-# t = 0 : param_global.Ta : T_sim + T_horizon_max;
-t = np.linspace(T_start, T_end, N_traj)
-
+# Init trajectory rotation
 R_init = np.eye(3)# H_0_init[0:3, 0:3]
 R_target = np.eye(3)
 RR = np.dot(R_init.T, R_target)
@@ -88,34 +81,103 @@ if rot_alpha_scale == 0:
 else:
     rot_ax = rot_quat[1:4] / np.sin(rot_alpha_scale / 2)
 
-param_traj_poly = {}
-param_traj_poly['T'] = T_end/2-3
-
-param_trajectory = generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, T_end, param_traj_poly)
-
-plot_traj=False
-if plot_traj:
-    plot_trajectory(param_trajectory)
-
-q0 = res.x
+# Init state
+q0   = res.x
+q0_p = np.zeros(nq)
 
 # OPT Prob
 
-problem = ocp_problem_v3(state, q0, TCP_frame_id, param_trajectory, dt)
+param_mpc_weight = {
+    'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
+    'q_terminate_tracking_cost': 1e5, # penalizes deviations from the trajectory at the end
+    'q_xreg_cost': 0*1e1,                # penalizes changes from the current state
+    'q_ureg_cost': 0 * 1e-10           # penalizes changes from the current input
+}
 
-# Creating the DDP solver for this OC problem, defining a logger
-ddp = cro.SolverDDP(problem)
+# Generate Trajectory
+T_start = 0
+T_end = 10
+dt = 5e-3  # Time step
 
-# IV. Callbacks
-ddp.setCallbacks([cro.CallbackVerbose()])
+# Parameters for the trajectory
+param_traj_poly = {}
+param_traj_poly['T'] = T_end/2-3
 
-tic()
-hasConverged = ddp.solve([], [], 300, False, 1e-5)
-toc()
+# Choose the optimization type
+opt_type = 'MPC' # 'OCP' or 'MPC'
+
+if opt_type == 'OCP':
+    T = T_end-T_start
+    N_traj = int(T/dt)
+
+    start_index = 0
+    end_index = N_traj
+
+    t = np.arange(T_start, T, dt)
+
+    param_trajectory = generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, T, param_traj_poly, plot_traj=False)
+
+    x0_robot = np.hstack([q0, q0_p])
+    problem = ocp_problem_v3(start_index, end_index, state, x0_robot, TCP_frame_id, param_trajectory, param_mpc_weight, dt)
+
+    # Creating the DDP solver for this OC problem, defining a logger
+    ddp = cro.SolverDDP(problem)
+
+    # IV. Callbacks
+    ddp.setCallbacks([cro.CallbackVerbose()])
+
+    tic()
+    hasConverged = ddp.solve([], [], 300, False, 1e-5)
+    toc()
+
+    # adapt trajectory for plotting
+    param_trajectory['p_d']    = param_trajectory['p_d'][   :, start_index:end_index]
+    param_trajectory['p_d_p']  = param_trajectory['p_d_p'][ :, start_index:end_index]
+    param_trajectory['p_d_pp'] = param_trajectory['p_d_pp'][:, start_index:end_index]
+
+    xs = np.array(ddp.xs)
+    us = np.array(ddp.us)
+elif opt_type == 'MPC':
+    N_horizon = 5
+    T_horizon = N_horizon*dt
+    T = T_end+T_horizon-T_start # need more trajectory points for mpc
+    N_traj = int(T_end/dt)
+
+    t = np.arange(T_start, T, dt)
+
+    param_trajectory = generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, T, param_traj_poly, plot_traj=False)
+    xs = np.zeros((N_traj, 6+nx))
+    us = np.zeros((N_traj, 3+nu))
+
+    # TODO: Warm start (simulate system)
+    xs_init_guess = []
+    us_init_guess = []
+    x0_robot = np.hstack([q0, q0_p])
+
+    tic()
+    for i in range(N_traj):
+        problem = ocp_problem_v3(i, i+N_horizon, state, x0_robot, TCP_frame_id, param_trajectory, param_mpc_weight, dt)
+        ddp = cro.SolverDDP(problem)
+        ddp.setCallbacks([cro.CallbackVerbose()])
+        hasConverged = ddp.solve(xs_init_guess, us_init_guess, 300, False, 1e-5)
+
+        us[i] = ddp.us[0]
+
+        xs_init_guess = ddp.xs
+        us_init_guess = ddp.us
+
+        # TODO: Simulation
+        xs[i] = ddp.xs[1] # cheap simulation
+        x0_robot = ddp.xs[1][6:6+nx] # cheap simulation
+    toc()
+
+    param_trajectory['p_d']    = param_trajectory['p_d'][   :, 0:N_traj]
+    param_trajectory['p_d_p']  = param_trajectory['p_d_p'][ :, 0:N_traj]
+    param_trajectory['p_d_pp'] = param_trajectory['p_d_pp'][:, 0:N_traj]
+else:
+    print("Unknown opt_type")
 
 robot_data = robot_model.createData()
-xs = np.array(ddp.xs)
-us = np.array(ddp.us)
 
 xs_T = xs[-1]
 pin.forwardKinematics(robot_model, robot_data, xs_T[: state.nq])

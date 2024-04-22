@@ -66,7 +66,7 @@ def create_poly_traj(x_target, x0_target, T_start, t, R_init, rot_ax, rot_alpha_
     
     return x_d
 
-def generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, T_end, param_traj_poly):
+def generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, T_end, param_traj_poly, plot_traj=False):
     N = len(t)
     p_d = np.zeros((3, N))
     p_d_p = np.zeros((3, N))
@@ -95,6 +95,9 @@ def generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, T
             flag = 1
 
     param_trajectory = {'p_d': p_d, 'p_d_p': p_d_p, 'p_d_pp': p_d_pp, 'q_d': q_d, 'omega_d': omega_d, 'omega_d_p': omega_d_p}
+
+    if plot_traj:
+        plot_trajectory(param_trajectory)
 
     return param_trajectory
 
@@ -342,15 +345,16 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
     line_dict_traj_dot = [dict(width=1, color='green', dash='dash'), dict(width=1, color='#ff0000', dash='dash')]
     # #ffff11 = yellow, #ff0000 = red, #14a1ff = lightblue, #0000ff = darkblue
 
+    N = len(xs)
     n = robot_model.nq
 
-    y_opt    = np.zeros((len(xs), 3))
-    y_opt_p  = np.zeros((len(xs), 3))
-    y_opt_pp = np.zeros((len(xs), 3))
-    q        = np.zeros((len(xs), n))
-    q_p      = np.zeros((len(xs), n))
-    q_pp     = np.zeros((len(xs), n))
-    w        = np.zeros(len(xs)) # manipulability
+    y_opt    = np.zeros((N, 3))
+    y_opt_p  = np.zeros((N, 3))
+    y_opt_pp = np.zeros((N, 3))
+    q        = np.zeros((N, n))
+    q_p      = np.zeros((N, n))
+    q_pp     = np.zeros((N, n))
+    w        = np.zeros(N) # manipulability
 
     y_ref    = xs[:, 0:3]
     y_ref_p  = xs[:, 3:6]
@@ -362,7 +366,7 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
 
     tau = np.concatenate([us[:, 3:3+n], [us[-1, 3:3+n]]]) # es wird ja ein u weniger erzeugt, da es nicht notw. ist
 
-    for i in range(len(xs)):
+    for i in range(N):
         q[i]   = xs[i, 6:6+n]
         q_p[i] = xs[i, 6+n:6+2*n]
         q_pp[i] = pinocchio.aba(robot_model, robot_data, q[i], q_p[i], tau[i])
@@ -620,7 +624,7 @@ def visualize_robot(robot, x_sol, param_trajectory, dt, rep_cnt = np.inf, rep_de
         with robot_display.robot.viz.create_video_ctx("test.mp4"):
             robot_display.robot.viz.play(x_sol[:, 6:6+robot_model.nq], dt)
 
-def ocp_problem_v3(state, q0, TCP_frame_id, param_trajectory, dt):
+def ocp_problem_v3(start_index, end_index, state, x0_robot, TCP_frame_id, param_trajectory, param_mpc_weight, dt):
     y_d_data    = param_trajectory['p_d'].T
     y_d_p_data  = param_trajectory['p_d_p'].T
     y_d_pp_data = param_trajectory['p_d_pp'].T
@@ -628,15 +632,15 @@ def ocp_problem_v3(state, q0, TCP_frame_id, param_trajectory, dt):
     # Reihenfolge beachten:
     # Zuerst Model1: yref Model (yref = [x1,x2,x3], d/dt yref = [x4,x5,x6]), 
     # dann Model2: Robot model (q = [q1, q2] = [x7, x8], d/dt q = d/dt [q1, q2] = [x9, x10])
-    x0 = np.concatenate([y_d_data[0], y_d_p_data[0], q0, pinocchio.utils.zero(state.nv)])
+    x0 = np.concatenate([y_d_data[start_index], y_d_p_data[start_index], x0_robot])
 
-    N = len(y_d_data)
+    N = end_index
 
     # weights
-    q_tracking_cost = 1e5
-    q_terminate_tracking_cost = 1e10
-    # q_xreg_cost = 1e1 # was tut das eigentlich?? addcost einkommentieren nichtvergessen
-    q_ureg_cost = 0*1e-10
+    q_tracking_cost = param_mpc_weight['q_tracking_cost']
+    q_terminate_tracking_cost = param_mpc_weight['q_terminate_tracking_cost']
+    # q_xreg_cost = param_mpc_weight['q_xreg_cost']
+    q_ureg_cost = param_mpc_weight['q_ureg_cost']
 
     running_cost_models = list()
     terminate_cost_models = list()
@@ -644,7 +648,7 @@ def ocp_problem_v3(state, q0, TCP_frame_id, param_trajectory, dt):
     actuationModel = crocoddyl.ActuationModelFull(state)
 
     # Summenkosten
-    for i in range(N):
+    for i in range(start_index, N):
         y_d    = y_d_data[i]
         y_d_p  = y_d_p_data[i]
         y_d_pp = y_d_pp_data[i]
@@ -668,7 +672,7 @@ def ocp_problem_v3(state, q0, TCP_frame_id, param_trajectory, dt):
                 state, TCP_frame_id, np.zeros((3,1)) # np.zeros((3,1) wird in Klasse CombinedActionModel mit yref überschrieben.
             ),
         )
-        xRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ResidualModelState(state))
+        # xRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ResidualModelState(state))
         uRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ResidualModelControl(state))
 
         if i < N-1:
