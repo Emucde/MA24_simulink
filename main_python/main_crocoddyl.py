@@ -36,7 +36,7 @@ print(robot.model)
 # Horizont eben extrem lang ist und wenn das Ende ohnehin im Arbeitsbereich liegt, kann man
 # damit nicht sicherstellen, dass yref immer innerhlab der Trajektorie liegt.
 # y_offset = 0.1 # Funktioniert bei OCP nicht ordentlich
-y_offset = 0.1
+y_offset = 0.1*0
 
 # Calculate strechted position
 qT = np.array([0,0])
@@ -66,7 +66,7 @@ state = cro.StateMultibody(robot_model)
 state.lb[0:2] = np.array([-np.pi, -np.pi])
 state.ub[0:2] = np.array([np.pi, np.pi])
 
-state.lb[2:4] = -100
+state.lb[2:4] = -100 # wird ignored
 state.ub[2:4] = 100
 
 # Init trajectory rotation
@@ -85,19 +85,10 @@ else:
 q0   = res.x
 q0_p = np.zeros(nq)
 
-# OPT Prob
-
-param_mpc_weight = {
-    'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
-    'q_terminate_tracking_cost': 1e10, # penalizes deviations from the trajectory at the end
-    'q_xreg_cost': 1e-10,             # penalizes changes from the current state
-    'q_ureg_cost': 1e0                 # penalizes changes from the current input
-}
-
 # Generate Trajectory
 T_start = 0
 T_end = 10
-dt = 1e-3  # Time step
+dt = 1e-3  # Time step # y_offset nicht vergessen!!!
 
 # Parameters for the trajectory
 param_traj_poly = {}
@@ -107,18 +98,28 @@ param_traj_poly['T'] = T_end/2-3
 opt_type = 'MPC' # 'OCP' or 'MPC'
 
 if opt_type == 'OCP':
+    param_mpc_weight = {
+        'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
+        'q_terminate_tracking_cost': 1e10, # penalizes deviations from the trajectory at the end
+        'q_xreg_cost': 0,             # penalizes changes from the current state
+        'q_ureg_cost': 0,                 # penalizes changes from the current input
+        'Kd': 100*np.eye(3),
+        'Kp': 2500*np.eye(3),
+    }
     T = T_end-T_start
     N_traj = int(T/dt)
 
     start_index = 0
     end_index = N_traj
 
+    N_solver_steps = 300
+
     t = np.arange(T_start, T, dt)
 
     param_trajectory = generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, T, param_traj_poly, plot_traj=False)
 
     x0_robot = np.hstack([q0, q0_p])
-    problem = ocp_problem_v3(start_index, end_index, state, x0_robot, TCP_frame_id, param_trajectory, param_mpc_weight, dt)
+    problem = ocp_problem_v3(start_index, end_index, 1, state, x0_robot, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type='euler', int_steps=1)
 
     # Creating the DDP solver for this OC problem, defining a logger
     ddp = cro.SolverDDP(problem)
@@ -127,19 +128,33 @@ if opt_type == 'OCP':
     ddp.setCallbacks([cro.CallbackVerbose()])
 
     tic()
-    hasConverged = ddp.solve([], [], 300, False, 1e-5)
+    hasConverged = ddp.solve([], [], N_solver_steps, False, 1e-5)
     toc()
 
     # adapt trajectory for plotting
-    param_trajectory['p_d']    = param_trajectory['p_d'][   :, start_index:end_index]
-    param_trajectory['p_d_p']  = param_trajectory['p_d_p'][ :, start_index:end_index]
-    param_trajectory['p_d_pp'] = param_trajectory['p_d_pp'][:, start_index:end_index]
+    param_trajectory['p_d']    = param_trajectory['p_d'][   :, start_index:end_index:1]
+    param_trajectory['p_d_p']  = param_trajectory['p_d_p'][ :, start_index:end_index:1]
+    param_trajectory['p_d_pp'] = param_trajectory['p_d_pp'][:, start_index:end_index:1]
 
     xs = np.array(ddp.xs)
     us = np.array(ddp.us)
 elif opt_type == 'MPC':
+    param_mpc_weight = {
+        'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
+        'q_terminate_tracking_cost': 1e10, # penalizes deviations from the trajectory at the end
+        'q_xreg_cost': 1e-10,             # penalizes changes from the current state
+        'q_ureg_cost': 1e-5,                 # penalizes changes from the current input
+        'Kd': 100*np.eye(3),
+        'Kp': 2500*np.eye(3),
+    }
+
+    N_solver_steps = 50
     N_horizon = 5
-    T_horizon = N_horizon*dt # TODO: variable time skips
+    N_step = 10
+    T_horizon = N_step*N_horizon*dt
+
+    print(f'T_horizon: {T_horizon} s, dt: {dt} s, N_horizon: {N_horizon}\n')
+
     T = T_end+T_horizon-T_start # need more trajectory points for mpc
     N_traj = int(T_end/dt)
 
@@ -149,35 +164,56 @@ elif opt_type == 'MPC':
     xs = np.zeros((N_traj, 6+nx))
     us = np.zeros((N_traj, 3+nu))
 
-    # TODO: Warm start (simulate system)
-    x0_robot = np.hstack([q0, q0_p])
-    tau0_robot = pin.rnea(robot_model, robot_data, q0, np.zeros(nq), np.zeros(nq))
+    # Reihenfolge beachten:
+    # Zuerst Model1: yref Model (yref = [x1,x2,x3], d/dt yref = [x4,x5,x6]), 
+    # dann Model2: Robot model (q = [q1, q2] = [x7, x8], d/dt q = d/dt [q1, q2] = [x9, x10])
 
-    xs_init_guess = [np.hstack([param_trajectory['p_d'][:, 0], param_trajectory['p_d_p'][:, 0], x0_robot])] * (N_horizon)
-    us_init_guess = [np.hstack([np.zeros(3), tau0_robot])] * (N_horizon-1)
+    # TODO: Warm start (simulate system)
+
+    x0_init_robot = np.hstack([q0, q0_p])
+    x0_init = np.hstack([param_trajectory['p_d'][:, 0], param_trajectory['p_d_p'][:, 0], x0_init_robot])
+    xk = x0_init
+
+    tau_init_robot = pin.rnea(robot_model, robot_data, q0, q0_p, np.zeros(nq))
+
+    xs_init_guess = [x0_init] * (N_horizon)
+    us_init_guess = [np.hstack([param_trajectory['p_d_pp'][:, 0], tau_init_robot])] * (N_horizon-1)
 
     tic()
     for i in range(N_traj):
-        problem = ocp_problem_v3(i, i+N_horizon, state, x0_robot, TCP_frame_id, param_trajectory, param_mpc_weight, dt)
+        problem = ocp_problem_v3(i, i+N_horizon, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler', int_steps=1)
         ddp = cro.SolverDDP(problem)
         # ddp.setCallbacks([cro.CallbackVerbose()])
-        hasConverged = ddp.solve(xs_init_guess, us_init_guess, 50, False, 1e-5)
+        hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
 
         us[i] = ddp.us[0]
+        xs[i] = xk
 
         xs_init_guess = ddp.xs
         us_init_guess = ddp.us
 
         # TODO: Simulation
-        xs[i] = ddp.xs[1] # cheap simulation
-        x0_robot = ddp.xs[1][6:6+nx] # cheap simulation
+        tau_k = us[i, 3:]
+        q = xk[6:6+nq]
+        q_p = xk[6+nq:6+nx]
+
+        q_pp     = pin.aba(robot_model, robot_data, q, q_p, tau_k)
+        q_p_next = q_p + dt * q_pp # Euler method
+        q_next   = pin.integrate(robot_model, q, dt * q_p_next)
+
+        xk[0:6]      = np.hstack([param_trajectory['p_d'][:, i+1], param_trajectory['p_d_p'][:, i+1]])
+        xk[6:6+nq]   = q_next
+        xk[6+nq:6+nx] = q_p_next
     toc()
 
     param_trajectory['p_d']    = param_trajectory['p_d'][   :, 0:N_traj]
     param_trajectory['p_d_p']  = param_trajectory['p_d_p'][ :, 0:N_traj]
     param_trajectory['p_d_pp'] = param_trajectory['p_d_pp'][:, 0:N_traj]
 else:
-    print("Unknown opt_type")
+    print("\033[91mUnknown opt_type\033[0m")
+    print("\033[91mChosen option:\033[0m", opt_type)
+    print("\033[91mAllowed options:\033[0m 'OCP' or 'MPC'")
+    exit()
 
 robot_data = robot_model.createData()
 
@@ -189,7 +225,7 @@ print(
     robot_data.oMf[TCP_frame_id].translation.T,
 )
 
-print("\nTotal cost:", ddp.cost)
+#print("\nTotal cost:", ddp.cost)
 print("Feasibility:", ddp.isFeasible)
 print("Minimum Found:", hasConverged)
 
