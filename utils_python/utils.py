@@ -120,9 +120,76 @@ def block_diag(a, b):
     bn, bm = b.shape
     return np.block([[a, np.zeros((an, bm))], [np.zeros((bn, am)), b]])
 
-###################### HERE ########################################################
-class DifferentialActionModelPinocchio(crocoddyl.DifferentialActionModelAbstract):
-    def __init__(self, y_d, y_d_p, y_d_pp):
+################################## MODEL TESTS ############################################
+
+
+############### Beide Klassen sind equivalent zu crocoddyl.DifferentialActionModelFreeFwdDynamics: ################
+# Ausführgeschwindigkeit: 140s (opt problem mit 10000 punkten)
+class DifferentialFwdDynamics(crocoddyl.DifferentialActionModelAbstract):
+    def __init__(self, state, costModel):
+        crocoddyl.DifferentialActionModelAbstract.__init__(
+            self, state, state.nv, costModel.nr
+        )
+        self.costs = costModel
+
+    def calc(self, data, x, u):
+        q, v = x[: self.state.nq], x[-self.state.nv :]
+        # Computing the dynamics using ABA or manually for armature case
+        data.xout = pinocchio.aba(self.state.pinocchio, data.pinocchio, q, v, u)
+        pinocchio.forwardKinematics(self.state.pinocchio, data.pinocchio, q, v)
+        pinocchio.updateFramePlacements(self.state.pinocchio, data.pinocchio)
+        self.costs.calc(data.costs, x, u)
+        data.cost = data.costs.cost
+
+    def calcDiff(self, data, x, u=None):
+        q, v = x[: self.state.nq], x[-self.state.nv :]
+        #self.calc(data, x, u) # bringt nix
+
+        ## Computing the dynamics derivatives
+        pinocchio.computeABADerivatives(
+            self.state.pinocchio, data.pinocchio, q, v, u
+        )
+        data.Fx = np.hstack([data.pinocchio.ddq_dq, data.pinocchio.ddq_dv])
+        data.Fu = data.pinocchio.Minv
+        # Computing the cost derivatives
+        self.costs.calcDiff(data.costs, x, u)
+
+    def createData(self):
+        data = crocoddyl.DifferentialActionModelAbstract.createData(self)
+        data.pinocchio = pinocchio.Data(self.state.pinocchio)
+        data.multibody = crocoddyl.DataCollectorMultibody(data.pinocchio)
+        data.costs = self.costs.createData(data.multibody)
+        data.costs.shareMemory(
+            data
+        )  # this allows us to share the memory of cost-terms of action model
+        return data
+
+# Ist 2-3 mal schneller als obige Klasse in der die Crocoddyl Funktionen direkt aufgerufen werden. (50s, (opt problem mit 10000 punkten))
+# Diese Klasse ist identisch schnell wie crocoddyl.DifferentialActionModelFreeFwdDynamics
+class DifferentialFwdDynamics2(crocoddyl.DifferentialActionModelAbstract):
+    def __init__(self, state, actuationModel, costModel):
+        crocoddyl.DifferentialActionModelAbstract.__init__( # das wird ein problem sein, da ich so die dimension nicht verändern kann.
+            self, state, state.nv, costModel.nr# besser: crocoddyl.ActionModelAbstract.__init__(self, crocoddyl.StateVector(model1.state.nx + model2.state.nx), model1.nu + model2.nu, model1.nr + model2.nr)
+        )
+        self.DAM_free = crocoddyl.DifferentialActionModelFreeFwdDynamics(
+            state, actuationModel, costModel
+        )
+
+    def calc(self, data, x, u):
+        self.DAM_free.calc(data, x, u)
+
+    def calcDiff(self, data, x, u=None):
+        self.DAM_free.calcDiff(data, x, u)
+
+    def createData(self):
+        data = self.DAM_free.createData()
+        return data
+
+
+###################### MCP & OCP Models ########################################################
+
+class DifferentialActionModelRunningYref(crocoddyl.DifferentialActionModelAbstract):
+    def __init__(self, y_d, y_d_p, y_d_pp, Kd, Kp):
         self.m = 3
         self.n1 = 3
         self.n2 = 3
@@ -136,8 +203,8 @@ class DifferentialActionModelPinocchio(crocoddyl.DifferentialActionModelAbstract
         self.y_d_p  = y_d_p
         self.y_d_pp = y_d_pp
 
-        self.Kd = 100*np.eye(self.m)
-        self.Kp = 2500*np.eye(self.m)
+        self.Kd = Kd
+        self.Kp = Kp
 
         self.Kp_squarex2 = 2*self.Kp**2
         self.Kd_squarex2 = 2*self.Kd**2
@@ -151,14 +218,17 @@ class DifferentialActionModelPinocchio(crocoddyl.DifferentialActionModelAbstract
 
         z1 = x[:n1]
         z2 = x[n1:n]
-
         alpha  = u
 
         data.xout = alpha # = z1ddot
 
-        data.r = (alpha - self.y_d_pp) + self.Kd @ (z2 - self.y_d_p) + self.Kp @ (z1 - self.y_d)
-        data.cost = np.linalg.norm(data.r)**2
-        # data.cost = np.sum(data.r**2) # slower than linalg
+        # data.r (cost residual ist eigentlich unnötig und frisst nur Rechenzeit)
+        r = (alpha - self.y_d_pp) + self.Kd @ (z2 - self.y_d_p) + self.Kp @ (z1 - self.y_d)
+        data.r=r
+        # data.cost = np.linalg.norm(r)**2
+        # data.cost = r @ r
+        # data.cost = np.sum(r**2)
+        data.cost = r[0]**2 + r[1]**2 + r[2]**2 # fastest
 
     def calcDiff(self, data, x, u):
         n1 = self.n1
@@ -173,8 +243,17 @@ class DifferentialActionModelPinocchio(crocoddyl.DifferentialActionModelAbstract
         data.Fu = self.I
 
         #data.Lx  = np.block([2*Kp_square @ (z1 - self.y_d), 2*Kd_square @ (z2 - self.y_d_p)])
-        data.Lx[:n1]  = Kp_squarex2 @ (z1 - self.y_d)
-        data.Lx[n1:n] = Kd_squarex2 @ (z2 - self.y_d_p)
+        # data.Lx[:n1]  = Kp_squarex2 @ (z1 - self.y_d)
+        # data.Lx[n1:n] = Kd_squarex2 @ (z2 - self.y_d_p)
+        dz1 = (z1 - self.y_d) # 5% faster
+        dz2 = (z2 - self.y_d_p)
+        data.Lx[0]  = Kp_squarex2[0,0]*dz1[0]
+        data.Lx[1]  = Kp_squarex2[1,1]*dz1[1]
+        data.Lx[2]  = Kp_squarex2[2,2]*dz1[2]
+        
+        data.Lx[3]  = Kd_squarex2[0,0]*dz2[0]
+        data.Lx[4]  = Kd_squarex2[1,1]*dz2[1]
+        data.Lx[5]  = Kd_squarex2[2,2]*dz2[2]
 
         data.Lu = 2*(u - self.y_d_pp)
         
@@ -253,87 +332,40 @@ class CombinedActionModel(crocoddyl.ActionModelAbstract):
         data.Lxu[:n1, :m1]   = self.data1.Lxu
         data.Lxu[n1:n, m1:m] = self.data2.Lxu
 
-############### Beide Klassen sind equivalent zu crocoddyl.DifferentialActionModelFreeFwdDynamics: ################
-# Ausführgeschwindigkeit: 140s (opt problem mit 10000 punkten)
-class DifferentialFwdDynamics(crocoddyl.DifferentialActionModelAbstract):
-    def __init__(self, state, costModel):
-        crocoddyl.DifferentialActionModelAbstract.__init__(
-            self, state, state.nv, costModel.nr
-        )
-        self.costs = costModel
+def IntegratedActionModelRK2(DAM, dt):
+    return crocoddyl.IntegratedActionModelRK(DAM, crocoddyl.RKType(2), dt)
 
-    def calc(self, data, x, u):
-        q, v = x[: self.state.nq], x[-self.state.nv :]
-        # Computing the dynamics using ABA or manually for armature case
-        data.xout = pinocchio.aba(self.state.pinocchio, data.pinocchio, q, v, u)
-        pinocchio.forwardKinematics(self.state.pinocchio, data.pinocchio, q, v)
-        pinocchio.updateFramePlacements(self.state.pinocchio, data.pinocchio)
-        self.costs.calc(data.costs, x, u)
-        data.cost = data.costs.cost
+def IntegratedActionModelRK3(DAM, dt):
+    return crocoddyl.IntegratedActionModelRK(DAM, crocoddyl.RKType(3), dt)
 
-    def calcDiff(self, data, x, u=None):
-        q, v = x[: self.state.nq], x[-self.state.nv :]
-        #self.calc(data, x, u) # bringt nix
+def IntegratedActionModelRK4(DAM, dt):
+    return crocoddyl.IntegratedActionModelRK(DAM, crocoddyl.RKType(4), dt)
 
-        ## Computing the dynamics derivatives
-        pinocchio.computeABADerivatives(
-            self.state.pinocchio, data.pinocchio, q, v, u
-        )
-        data.Fx = np.hstack([data.pinocchio.ddq_dq, data.pinocchio.ddq_dv])
-        data.Fu = data.pinocchio.Minv
-        # Computing the cost derivatives
-        self.costs.calcDiff(data.costs, x, u)
+def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type='euler', int_steps=1):
+    # macht das mit dem int_steps sinn?
 
-    def createData(self):
-        data = crocoddyl.DifferentialActionModelAbstract.createData(self)
-        data.pinocchio = pinocchio.Data(self.state.pinocchio)
-        data.multibody = crocoddyl.DataCollectorMultibody(data.pinocchio)
-        data.costs = self.costs.createData(data.multibody)
-        data.costs.shareMemory(
-            data
-        )  # this allows us to share the memory of cost-terms of action model
-        return data
+    if int_type == 'euler':
+        IntegratedActionModel = crocoddyl.IntegratedActionModelEuler
+    elif int_type == 'rk2':
+        IntegratedActionModel = IntegratedActionModelRK2
+    elif int_type == 'rk3':
+        IntegratedActionModel = IntegratedActionModelRK3
+    elif int_type == 'rk4':
+        IntegratedActionModel = IntegratedActionModelRK4
 
-# Ist 2-3 mal schneller als obige Klasse in der die Crocoddyl Funktionen direkt aufgerufen werden. (50s, (opt problem mit 10000 punkten))
-# Diese Klasse ist identisch schnell wie crocoddyl.DifferentialActionModelFreeFwdDynamics
-class DifferentialFwdDynamics2(crocoddyl.DifferentialActionModelAbstract):
-    def __init__(self, state, actuationModel, costModel):
-        crocoddyl.DifferentialActionModelAbstract.__init__( # das wird ein problem sein, da ich so die dimension nicht verändern kann.
-            self, state, state.nv, costModel.nr# besser: crocoddyl.ActionModelAbstract.__init__(self, crocoddyl.StateVector(model1.state.nx + model2.state.nx), model1.nu + model2.nu, model1.nr + model2.nr)
-        )
-        self.DAM_free = crocoddyl.DifferentialActionModelFreeFwdDynamics(
-            state, actuationModel, costModel
-        )
-
-    def calc(self, data, x, u):
-        self.DAM_free.calc(data, x, u)
-
-    def calcDiff(self, data, x, u=None):
-        self.DAM_free.calcDiff(data, x, u)
-
-    def createData(self):
-        data = self.DAM_free.createData()
-        return data
-    
-
-
-def ocp_problem_v3(start_index, end_index, state, x0_robot, TCP_frame_id, param_trajectory, param_mpc_weight, dt):
     y_d_data    = param_trajectory['p_d'].T
     y_d_p_data  = param_trajectory['p_d_p'].T
     y_d_pp_data = param_trajectory['p_d_pp'].T
 
-    # Reihenfolge beachten:
-    # Zuerst Model1: yref Model (yref = [x1,x2,x3], d/dt yref = [x4,x5,x6]), 
-    # dann Model2: Robot model (q = [q1, q2] = [x7, x8], d/dt q = d/dt [q1, q2] = [x9, x10])
-    x0 = np.concatenate([y_d_data[start_index], y_d_p_data[start_index], x0_robot])
-
-    N = end_index
+    N = start_index + (end_index-start_index)*N_step
 
     # weights
     q_tracking_cost = param_mpc_weight['q_tracking_cost']
     q_terminate_tracking_cost = param_mpc_weight['q_terminate_tracking_cost']
     q_xreg_cost = param_mpc_weight['q_xreg_cost']
     q_ureg_cost = param_mpc_weight['q_ureg_cost']
+    Kd = param_mpc_weight['Kd']
+    Kp = param_mpc_weight['Kp']
 
     running_cost_models = list()
     terminate_cost_models = list()
@@ -341,21 +373,21 @@ def ocp_problem_v3(start_index, end_index, state, x0_robot, TCP_frame_id, param_
     actuationModel = crocoddyl.ActuationModelFull(state)
 
     # Summenkosten
-    for i in range(start_index, N):
+    for i in range(start_index, N, N_step):
         y_d    = y_d_data[i]
         y_d_p  = y_d_p_data[i]
         y_d_pp = y_d_pp_data[i]
 
-        yy_DAM = DifferentialActionModelPinocchio(y_d, y_d_p, y_d_pp)
+        yy_DAM = DifferentialActionModelRunningYref(y_d, y_d_p, y_d_pp, Kd, Kp)
         
         # data = yy_DAM.createData()
         # tic()
-        # for j in range(0,10000):
+        # for j in range(0,100000):
         #     yy_DAM.calcDiff(data, x0, np.zeros(3))
         # toc()
         # quit()
 
-        yy_NDIAM = crocoddyl.IntegratedActionModelEuler(yy_DAM, dt)
+        yy_NDIAM = IntegratedActionModel(yy_DAM, dt/int_steps)
         
         runningCostModel = crocoddyl.CostModelSum(state)
 
@@ -365,21 +397,23 @@ def ocp_problem_v3(start_index, end_index, state, x0_robot, TCP_frame_id, param_
                 state, TCP_frame_id, np.zeros((3,1)) # np.zeros((3,1) wird in Klasse CombinedActionModel mit yref überschrieben.
             ),
         )
-        xRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ResidualModelState(state))
-        uRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ResidualModelControl(state))
+        if q_xreg_cost not in [0, None]:
+            xRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ResidualModelState(state))
+        if q_ureg_cost not in [0, None]:
+            uRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ResidualModelControl(state))
 
-        if i < N-1:
+        if i < N-N_step:
             runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
             if q_xreg_cost not in [0, None]:
                 runningCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
             if q_ureg_cost not in [0, None]:
                 runningCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
 
-            running_cost_models.append(CombinedActionModel(yy_NDIAM, crocoddyl.IntegratedActionModelEuler(
+            running_cost_models.append(CombinedActionModel(yy_NDIAM, IntegratedActionModel(
                 crocoddyl.DifferentialActionModelFreeFwdDynamics(
                     state, actuationModel, runningCostModel
                 ),
-                dt,
+                dt/int_steps
             )))
         else: # i == N: # Endkostenterm
             terminalCostModel = crocoddyl.CostModelSum(state)
@@ -388,17 +422,19 @@ def ocp_problem_v3(start_index, end_index, state, x0_robot, TCP_frame_id, param_
                 terminalCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
             if q_ureg_cost not in [0, None]:
                 terminalCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
-            # TODO: Habe terminal bedingung für yref vergessen, es muss erzwungen werden, dass yref am ende auf y_d liegt!
-            terminate_cost_models.append(CombinedActionModel(yy_NDIAM, crocoddyl.IntegratedActionModelEuler(
+
+            terminate_cost_models.append(CombinedActionModel(yy_NDIAM, IntegratedActionModel(
                 crocoddyl.DifferentialActionModelFreeFwdDynamics(
                     state, actuationModel, terminalCostModel
-                )
+                ),
+                dt/int_steps
             )))
 
     # Create the shooting problem
     seq = running_cost_models
     problem = crocoddyl.ShootingProblem(x0, seq, terminate_cost_models[-1])
     return problem
+
 ###################################################################################################################
 
 def plot_trajectory(param_trajectory):
@@ -420,6 +456,7 @@ def plot_trajectory(param_trajectory):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+
 
 def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_plot=False, file_name='plot_saved'):
     robot_data = robot_model.createData()
