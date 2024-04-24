@@ -36,7 +36,7 @@ print(robot.model)
 # Horizont eben extrem lang ist und wenn das Ende ohnehin im Arbeitsbereich liegt, kann man
 # damit nicht sicherstellen, dass yref immer innerhlab der Trajektorie liegt.
 # y_offset = 0.1 # Funktioniert bei OCP nicht ordentlich
-y_offset = 0.1*0
+y_offset = 0.1
 
 # Calculate strechted position
 qT = np.array([0,0])
@@ -95,7 +95,7 @@ param_traj_poly = {}
 param_traj_poly['T'] = T_end/2-3
 
 # Choose the optimization type
-opt_type = 'MPC' # 'OCP' or 'MPC'
+opt_type = 'MPC_v3' # 'OCP' | 'MPC_v1' | 'MPC_v3'
 
 if opt_type == 'OCP':
     param_mpc_weight = {
@@ -105,6 +105,8 @@ if opt_type == 'OCP':
         'q_ureg_cost': 0,                 # penalizes changes from the current input
         'Kd': 100*np.eye(3),
         'Kp': 2500*np.eye(3),
+        'lb_y_ref_N': -1e-5*np.ones(3),
+        'ub_y_ref_N': 1e-5*np.ones(3),
     }
     T = T_end-T_start
     N_traj = int(T/dt)
@@ -138,19 +140,116 @@ if opt_type == 'OCP':
 
     xs = np.array(ddp.xs)
     us = np.array(ddp.us)
-elif opt_type == 'MPC':
+elif opt_type == 'MPC_v1':
     param_mpc_weight = {
         'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
-        'q_terminate_tracking_cost': 1e10, # penalizes deviations from the trajectory at the end
-        'q_xreg_cost': 1e-10,             # penalizes changes from the current state
-        'q_ureg_cost': 1e-5,                 # penalizes changes from the current input
-        'Kd': 100*np.eye(3),
-        'Kp': 2500*np.eye(3),
+        'q_terminate_tracking_cost': 1e6, # penalizes deviations from the trajectory at the end
+        'q_xreg_cost': 1e0,             # penalizes changes from the current state
+        'q_ureg_cost': 1e1,                 # penalizes changes from the current input
     }
 
     N_solver_steps = 50
     N_horizon = 5
-    N_step = 10
+    N_step = 1
+    T_horizon = N_step*N_horizon*dt
+
+    print(f'T_horizon: {T_horizon} s, dt: {dt} s, N_horizon: {N_horizon}\n')
+
+    T = T_end+T_horizon-T_start # need more trajectory points for mpc
+    N_traj = int(T_end/dt)
+
+    t = np.arange(T_start, T, dt)
+
+    param_trajectory = generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, T, param_traj_poly, plot_traj=False)
+    xs = np.zeros((N_traj, nx))
+    us = np.zeros((N_traj, nu))
+
+    x0_init = np.hstack([q0, q0_p])
+    xk = x0_init
+
+    tau_init = pin.rnea(robot_model, robot_data, q0, q0_p, np.zeros(nq))
+
+    xs_init_guess = [x0_init]  * (N_horizon)
+    us_init_guess = [tau_init] * (N_horizon-1)
+
+    tic()
+    error = False
+    warn_cnt = 0
+    conv_max_limit = 10
+    for i in range(N_traj):
+        problem = ocp_problem_v1(i, i+N_horizon, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler')
+        ddp = cro.SolverDDP(problem)
+        # ddp.setCallbacks([cro.CallbackVerbose()])
+        hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
+
+        if not hasConverged:
+            print("\033[43mWarning: Solver did not converge at time t = ", f"{i*dt:.3f}", "\033[0m")
+            warn_cnt += 1
+            # plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory)
+            if warn_cnt > conv_max_limit:
+                print("\033[91mError: Solver failed to converge ", f"{conv_max_limit}", " times in a row. Exiting...\033[0m")
+                error = 1
+        else:
+            warn_cnt = 0
+
+        if ddp.isFeasible == False:
+            # print("\033[93mWarning: Solver is not feasible at time t = ", f"{i*dt:.3f}", "\033[0m")
+            print("\033[91mError: Solver is not feasible at time t = ", f"{i*dt:.3f}", "\033[0m")
+            error = 1
+        if np.isnan(ddp.xs).any() or np.isnan(ddp.us).any():
+            # print("\033[93mWarning: NaN values detected in xs or us arrays at time t = ", f"{i*dt:.3f}", "\033[0m")
+            print("\033[91mError: NaN values detected in xs or us arrays at time t = ", f"{i*dt:.3f}", "\033[0m")
+            error = 1
+        if error:
+            plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory)
+            plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, param_trajectory)
+            exit()
+
+        xs_init_guess = ddp.xs
+        us_init_guess = ddp.us
+
+        us[i] = ddp.us[0]
+        xs[i] = xk
+
+        # Modell Simulation
+        tau_k = us[i]
+        q     = xk[:nq]
+        q_p   = xk[nq:nx]
+
+        q_pp     = pin.aba(robot_model, robot_data, q, q_p, tau_k)
+        q_p_next = q_p + dt * q_pp # Euler method
+        q_next   = pin.integrate(robot_model, q, dt * q_p_next)
+
+        xk[:nq]   = q_next
+        xk[nq:nx] = q_p_next
+
+        print(f"{100 * (i+1)/N_traj:.2f} %", end='\r')
+    toc()
+
+    if np.isnan(xs).any() or np.isnan(us).any():
+        print("\033[91mError: NaN values detected in xs or us arrays.\033[0m")
+        exit()
+
+    param_trajectory['p_d']    = param_trajectory['p_d'][   :, 0:N_traj]
+    param_trajectory['p_d_p']  = param_trajectory['p_d_p'][ :, 0:N_traj]
+    param_trajectory['p_d_pp'] = param_trajectory['p_d_pp'][:, 0:N_traj]
+elif opt_type == 'MPC_v3':
+    param_mpc_weight = {
+        'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
+        'q_terminate_tracking_cost': 1e8, # penalizes deviations from the trajectory at the end
+        'q_xreg_cost': 1e1,             # penalizes changes from the current state
+        'q_ureg_cost': 1e2,                 # penalizes changes from the current input
+        'Kd': 100*np.eye(3),
+        'Kp': 2500*np.eye(3),
+        'lb_y_ref_N': -1e-5*np.ones(3), # only used if use_bounds
+        'ub_y_ref_N': 1e-5*np.ones(3),
+    }
+
+    use_bounds = False
+
+    N_solver_steps = 50
+    N_horizon = 5
+    N_step = 5
     T_horizon = N_step*N_horizon*dt
 
     print(f'T_horizon: {T_horizon} s, dt: {dt} s, N_horizon: {N_horizon}\n')
@@ -180,19 +279,52 @@ elif opt_type == 'MPC':
     us_init_guess = [np.hstack([param_trajectory['p_d_pp'][:, 0], tau_init_robot])] * (N_horizon-1)
 
     tic()
+    error = False
+    warn_cnt = 0
+    conv_max_limit = 10
     for i in range(N_traj):
-        problem = ocp_problem_v3(i, i+N_horizon, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler', int_steps=1)
-        ddp = cro.SolverDDP(problem)
+        if use_bounds:
+            problem = ocp_problem_v3(i, i+N_horizon, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler', use_bounds=True)
+            ddp = cro.SolverFDDP(problem)
+        else:
+            problem = ocp_problem_v3(i, i+N_horizon, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler', use_bounds=False)
+            ddp = cro.SolverDDP(problem)
         # ddp.setCallbacks([cro.CallbackVerbose()])
         hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
 
-        us[i] = ddp.us[0]
-        xs[i] = xk
+        if not hasConverged:
+            print("\033[43mWarning: Solver did not converge at time t = ", f"{i*dt:.3f}", "\033[0m")
+            warn_cnt += 1
+            # plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory)
+            if warn_cnt > conv_max_limit:
+                print("\033[91mError: Solver failed to converge ", f"{conv_max_limit}", " times in a row. Exiting...\033[0m")
+                error = 1
+        else:
+            warn_cnt = 0
+
+        if ddp.isFeasible == False:
+            # print("\033[93mWarning: Solver is not feasible at time t = ", f"{i*dt:.3f}", "\033[0m")
+            print("\033[91mError: Solver is not feasible at time t = ", f"{i*dt:.3f}", "\033[0m")
+            error = 1
+        if np.isnan(ddp.xs).any() or np.isnan(ddp.us).any():
+            # print("\033[93mWarning: NaN values detected in xs or us arrays at time t = ", f"{i*dt:.3f}", "\033[0m")
+            print("\033[91mError: NaN values detected in xs or us arrays at time t = ", f"{i*dt:.3f}", "\033[0m")
+            error = 1
+        if error:
+            plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory)
+            plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, param_trajectory)
+            exit()
+
 
         xs_init_guess = ddp.xs
         us_init_guess = ddp.us
 
-        # TODO: Simulation
+        us[i] = ddp.us[0]
+        # xs[i] = xk
+        xs[i, :6] = ddp.xs[-1][:6] # yref model at the end of the horizon
+        xs[i, 6:6+nx] = xk[6:6+nx]
+
+        # Modell Simulation
         tau_k = us[i, 3:]
         q = xk[6:6+nq]
         q_p = xk[6+nq:6+nx]
@@ -204,7 +336,13 @@ elif opt_type == 'MPC':
         xk[0:6]      = np.hstack([param_trajectory['p_d'][:, i+1], param_trajectory['p_d_p'][:, i+1]])
         xk[6:6+nq]   = q_next
         xk[6+nq:6+nx] = q_p_next
+
+        print(f"{100 * (i+1)/N_traj:.2f} %", end='\r')
     toc()
+
+    if np.isnan(xs).any() or np.isnan(us).any():
+        print("\033[91mError: NaN values detected in xs or us arrays.\033[0m")
+        exit()
 
     param_trajectory['p_d']    = param_trajectory['p_d'][   :, 0:N_traj]
     param_trajectory['p_d_p']  = param_trajectory['p_d_p'][ :, 0:N_traj]
