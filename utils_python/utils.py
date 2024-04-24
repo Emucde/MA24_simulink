@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
+import scipy as sp
 import time
 import crocoddyl
 import pinocchio
@@ -108,7 +109,7 @@ def tic():
 def toc():
     if 'start_time' in globals():
         elapsed_time = time.time() - start_time
-        print(f"Elapsed time: {elapsed_time} seconds")
+        print(f"\033[92mElapsed time: {elapsed_time} seconds\033[0m")
     else:
         print("Call tic() before calling toc()")
 
@@ -332,6 +333,36 @@ class CombinedActionModel(crocoddyl.ActionModelAbstract):
         data.Lxu[:n1, :m1]   = self.data1.Lxu
         data.Lxu[n1:n, m1:m] = self.data2.Lxu
 
+class CombinedActionModelTerminal(CombinedActionModel):
+    def __init__(self, model1, model2):
+        # CombinedActionModel.__init__(self, model1, model2)
+        self.model = CombinedActionModel(model1, model2)
+        crocoddyl.ActionModelAbstract.__init__(self, crocoddyl.StateVector(self.model.state.nx), self.model.nu, self.model.nr)
+        self.m1 = self.model.mu_model1
+
+        # self.lb = -1e-3*np.ones(self.m1)
+        # self.ub = +1e-3*np.ones(self.m1)
+
+    def calc(self, data, x, u):
+        # m1 = self.m1
+        # yref = x[:m1]
+        # self.model.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = yref*0
+        # self.model.model2.differential.costs.costs['TCP_pose'].cost.activation.bounds.lb = yref-1e-5
+        # self.model.model2.differential.costs.costs['TCP_pose'].cost.activation.bounds.ub = yref+1e-5
+        # self.model.model2.differential.costs.costs['TCP_pose'].cost.activation.bounds.lb = self.lb # das kann ich dann gleich in terminalmodel machen
+        # self.model.model2.differential.costs.costs['TCP_pose'].cost.activation.bounds.ub = self.ub
+        self.model.calc(data, x, u)
+
+    def calcDiff(self, data, x, u):
+        # m1 = self.m1
+        # yref = x[:m1]
+        # self.model.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = yref*0
+        # self.model.model2.differential.costs.costs['TCP_pose'].cost.activation.bounds.lb = yref-1e-5
+        # self.model.model2.differential.costs.costs['TCP_pose'].cost.activation.bounds.ub = yref+1e-5
+        # self.model.model2.differential.costs.costs['TCP_pose'].cost.activation.bounds.lb = self.lb
+        # self.model.model2.differential.costs.costs['TCP_pose'].cost.activation.bounds.ub = self.ub
+        self.model.calcDiff(data, x, u)
+
 def IntegratedActionModelRK2(DAM, dt):
     return crocoddyl.IntegratedActionModelRK(DAM, crocoddyl.RKType(2), dt)
 
@@ -341,17 +372,91 @@ def IntegratedActionModelRK3(DAM, dt):
 def IntegratedActionModelRK4(DAM, dt):
     return crocoddyl.IntegratedActionModelRK(DAM, crocoddyl.RKType(4), dt)
 
-def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type='euler', int_steps=1):
-    # macht das mit dem int_steps sinn?
-
+def get_int_type(int_type):
     if int_type == 'euler':
-        IntegratedActionModel = crocoddyl.IntegratedActionModelEuler
-    elif int_type == 'rk2':
-        IntegratedActionModel = IntegratedActionModelRK2
-    elif int_type == 'rk3':
-        IntegratedActionModel = IntegratedActionModelRK3
-    elif int_type == 'rk4':
-        IntegratedActionModel = IntegratedActionModelRK4
+        return crocoddyl.IntegratedActionModelEuler
+    elif int_type == 'RK2':
+        return IntegratedActionModelRK2
+    elif int_type == 'RK3':
+        return IntegratedActionModelRK3
+    elif int_type == 'RK4':
+        return IntegratedActionModelRK4
+    else:
+        raise ValueError("int_type must be 'euler', 'RK2', 'RK3' or 'RK4'")
+
+def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type='euler'):
+    IntegratedActionModel = get_int_type(int_type)
+
+    y_d_data    = param_trajectory['p_d'].T
+    y_d_p_data  = param_trajectory['p_d_p'].T
+    y_d_pp_data = param_trajectory['p_d_pp'].T
+
+    N = start_index + (end_index-start_index)*N_step
+
+    # weights
+    q_tracking_cost = param_mpc_weight['q_tracking_cost']
+    q_terminate_tracking_cost = param_mpc_weight['q_terminate_tracking_cost']
+    q_xreg_cost = param_mpc_weight['q_xreg_cost']
+    q_ureg_cost = param_mpc_weight['q_ureg_cost']
+
+    running_cost_models = list()
+    terminate_cost_models = list()
+
+    actuationModel = crocoddyl.ActuationModelFull(state)
+
+    for i in range(start_index, N, N_step):
+        y_d    = y_d_data[i]
+        
+        runningCostModel = crocoddyl.CostModelSum(state)
+
+        if q_xreg_cost not in [0, None]:
+            xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state))
+        if q_ureg_cost not in [0, None]:
+            uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state))
+
+        goalTrackingCost = crocoddyl.CostModelResidual(
+            state,
+            residual=crocoddyl.ResidualModelFrameTranslation(
+                state, TCP_frame_id, y_d
+            ),
+        )
+
+        if i < N-N_step:
+            runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
+            if q_xreg_cost not in [0, None]:
+                runningCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
+            if q_ureg_cost not in [0, None]:
+                runningCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
+
+            running_cost_models.append(IntegratedActionModel(
+                crocoddyl.DifferentialActionModelFreeFwdDynamics(
+                    state, actuationModel, runningCostModel
+                ),
+                dt*N_step
+            ))
+        else: # i == N: # Endkostenterm
+            terminalCostModel = crocoddyl.CostModelSum(state)
+            terminalCostModel.addCost("TCP_pose", goalTrackingCost, q_terminate_tracking_cost)
+            if q_xreg_cost not in [0, None]:
+                terminalCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
+            if q_ureg_cost not in [0, None]:
+                terminalCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
+
+            terminate_cost_models.append(IntegratedActionModel(
+                crocoddyl.DifferentialActionModelFreeFwdDynamics(
+                    state, actuationModel, terminalCostModel
+                ),
+                dt*N_step
+            ))
+
+    # Create the shooting problem
+    seq = running_cost_models
+    problem = crocoddyl.ShootingProblem(x0, seq, terminate_cost_models[-1])
+    return problem
+
+def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type='euler', use_bounds=False):
+
+    IntegratedActionModel = get_int_type(int_type)
 
     y_d_data    = param_trajectory['p_d'].T
     y_d_p_data  = param_trajectory['p_d_p'].T
@@ -366,13 +471,14 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
     q_ureg_cost = param_mpc_weight['q_ureg_cost']
     Kd = param_mpc_weight['Kd']
     Kp = param_mpc_weight['Kp']
+    lb_y_ref_N = param_mpc_weight['lb_y_ref_N']
+    ub_y_ref_N = param_mpc_weight['ub_y_ref_N']
 
     running_cost_models = list()
     terminate_cost_models = list()
 
     actuationModel = crocoddyl.ActuationModelFull(state)
 
-    # Summenkosten
     for i in range(start_index, N, N_step):
         y_d    = y_d_data[i]
         y_d_p  = y_d_p_data[i]
@@ -387,22 +493,22 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
         # toc()
         # quit()
 
-        yy_NDIAM = IntegratedActionModel(yy_DAM, dt/int_steps)
+        yy_NDIAM = IntegratedActionModel(yy_DAM, dt*N_step)
         
         runningCostModel = crocoddyl.CostModelSum(state)
 
-        goalTrackingCost = crocoddyl.CostModelResidual(
-            state,
-            crocoddyl.ResidualModelFrameTranslation(
-                state, TCP_frame_id, np.zeros((3,1)) # np.zeros((3,1) wird in Klasse CombinedActionModel mit yref überschrieben.
-            ),
-        )
         if q_xreg_cost not in [0, None]:
-            xRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ResidualModelState(state))
+            xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state))
         if q_ureg_cost not in [0, None]:
-            uRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ResidualModelControl(state))
+            uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state))
 
         if i < N-N_step:
+            goalTrackingCost = crocoddyl.CostModelResidual(
+                    state,
+                    residual=crocoddyl.ResidualModelFrameTranslation(
+                        state, TCP_frame_id, np.zeros((3,1)) # np.zeros((3,1) wird in Klasse CombinedActionModel mit yref überschrieben.
+                    ),
+                )
             runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
             if q_xreg_cost not in [0, None]:
                 runningCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
@@ -413,22 +519,47 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                 crocoddyl.DifferentialActionModelFreeFwdDynamics(
                     state, actuationModel, runningCostModel
                 ),
-                dt/int_steps
+                dt*N_step
             )))
         else: # i == N: # Endkostenterm
+            if use_bounds:
+                bounds = crocoddyl.ActivationBounds(lb_y_ref_N, ub_y_ref_N)
+                activationModel = crocoddyl.ActivationModelQuadraticBarrier(bounds)
+                terminalGoalTrackingCost = crocoddyl.CostModelResidual(
+                    state,
+                    activation=activationModel,
+                    residual=crocoddyl.ResidualModelFrameTranslation(
+                        state, TCP_frame_id, np.zeros((3,1)) # np.zeros((3,1) wird in Klasse CombinedActionModel mit yref überschrieben.
+                    ),
+                )
+            else:
+                terminalGoalTrackingCost = crocoddyl.CostModelResidual(
+                    state,
+                    residual=crocoddyl.ResidualModelFrameTranslation(
+                        state, TCP_frame_id, np.zeros((3,1)) # np.zeros((3,1) wird in Klasse CombinedActionModel mit yref überschrieben.
+                    ),
+                )
             terminalCostModel = crocoddyl.CostModelSum(state)
-            terminalCostModel.addCost("TCP_pose", goalTrackingCost, q_terminate_tracking_cost)
+            terminalCostModel.addCost("TCP_pose", terminalGoalTrackingCost, q_terminate_tracking_cost)
             if q_xreg_cost not in [0, None]:
                 terminalCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
             if q_ureg_cost not in [0, None]:
                 terminalCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
 
-            terminate_cost_models.append(CombinedActionModel(yy_NDIAM, IntegratedActionModel(
-                crocoddyl.DifferentialActionModelFreeFwdDynamics(
-                    state, actuationModel, terminalCostModel
-                ),
-                dt/int_steps
-            )))
+            if use_bounds:
+                terminate_cost_models.append(CombinedActionModelTerminal(yy_NDIAM, IntegratedActionModel(
+                    crocoddyl.DifferentialActionModelFreeFwdDynamics(
+                        state, actuationModel, terminalCostModel
+                    ),
+                    dt*N_step
+                )))
+            else:
+                terminate_cost_models.append(CombinedActionModel(yy_NDIAM, IntegratedActionModel(
+                    crocoddyl.DifferentialActionModelFreeFwdDynamics(
+                        state, actuationModel, terminalCostModel
+                    ),
+                    dt*N_step
+                )))
 
     # Create the shooting problem
     seq = running_cost_models
@@ -479,19 +610,26 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
     q_pp     = np.zeros((N, n))
     w        = np.zeros(N) # manipulability
 
-    y_ref    = xs[:, 0:3]
-    y_ref_p  = xs[:, 3:6]
-    y_ref_pp = us[:, 0:3]
-
     y_d    = param_trajectory['p_d'].T
     y_d_p  = param_trajectory['p_d_p'].T
     y_d_pp = param_trajectory['p_d_pp'].T
 
-    tau = np.concatenate([us[:, 3:3+n], [us[-1, 3:3+n]]]) # es wird ja ein u weniger erzeugt, da es nicht notw. ist
+    if xs.shape[1] == 2*n+6:
+        y_ref    = xs[:, 0:3]
+        y_ref_p  = xs[:, 3:6]
+        y_ref_pp = us[:, 0:3]
+
+        tau = np.concatenate([us[:, 3:3+n], [us[-1, 3:3+n]]]) # es wird ja ein u weniger erzeugt, da es nicht notw. ist
+        q   = xs[:, 6:6+n]
+        q_p = xs[:, 6+n:6+2*n]
+        plot_yref = True
+    else:
+        tau = np.concatenate([us, [us[-1]]]) # es wird ja ein u weniger erzeugt, da es nicht notw. ist
+        q   = xs[:, 0:n  ]
+        q_p = xs[:, n:2*n]
+        plot_yref = False
 
     for i in range(N):
-        q[i]   = xs[i, 6:6+n]
-        q_p[i] = xs[i, 6+n:6+2*n]
         q_pp[i] = pinocchio.aba(robot_model, robot_data, q[i], q_p[i], tau[i])
 
         pinocchio.forwardKinematics(robot_model, robot_data, q[i], q_p[i], q_pp[i])
@@ -511,7 +649,7 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
         # y_opt_pp[i] = J_v @ q_pp[i] + J_v_p @ q_p[i] # J_p und damit J_V_p stimmt einfach nicht, vgl maple????? vgl Issue auf Github Doku
         y_opt_pp[i] = pinocchio.getFrameClassicalAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).linear # mit maple bestätigt.
 
-        w[i] = np.sqrt(np.linalg.det(J_v[0:2, 0:2] @ J_v[0:2, 0:2].T))
+        w[i] = np.sqrt(sp.linalg.det(J_v[0:2, 0:2] @ J_v[0:2, 0:2].T))
 
     e    = y_d    - y_opt
     e_p  = y_d_p  - y_opt_p
@@ -546,7 +684,8 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
     yy_d_labels_t   = [ y_d_labels_t   , y_d_p_labels_t  , y_d_pp_labels_t   ]
 
     yy_d   = [y_d,   y_d_p,   y_d_pp]
-    yy_ref = [y_ref, y_ref_p, y_ref_pp]
+    if plot_yref:
+        yy_ref = [y_ref, y_ref_p, y_ref_pp]
     yy_opt = [y_opt, y_opt_p, y_opt_pp]
 
     tau_labels   = ["$\\Large{\\tau_1}$", "$\\Large{\\tau_2}$"]
@@ -589,8 +728,9 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
             fig.add_trace(go.Scatter(x=t, y=yy_opt[j][:, i],   name=yy_opt_labels[j][i], line = line_dict_traj[i],     hoverinfo = 'x+y+text', hovertext=yy_opt_labels_t[j][i]), row=j+1, col=1)
         for i in range(2):
             fig.add_trace(go.Scatter(x=t, y=yy_d[j][  :, i],   name=yy_d_labels[j][i]  , line = line_dict_traj_dot[i], hoverinfo = 'x+y+text', hovertext=yy_d_labels_t[j][i]), row=j+1, col=1)
-        for i in range(2):
-            fig.add_trace(go.Scatter(x=t, y=yy_ref[j][  :, i], name=yy_ref_labels[j][i], line = line_dict_yref_dot[i], hoverinfo = 'x+y+text', hovertext=yy_ref_labels_t[j][i]), row=j+1, col=1)
+        if plot_yref:
+            for i in range(2):
+                fig.add_trace(go.Scatter(x=t, y=yy_ref[j][  :, i], name=yy_ref_labels[j][i], line = line_dict_yref_dot[i], hoverinfo = 'x+y+text', hovertext=yy_ref_labels_t[j][i]), row=j+1, col=1)
 
     e_x_arr = [e[:, 0], e_p[:, 0], e_pp[:, 0]]
     e_y_arr = [e[:, 1], e_p[:, 1], e_pp[:, 1]]
@@ -640,7 +780,24 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
         py.plot(fig, filename=file_name, include_mathjax='cdn')
     
 
-
+def plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory):
+    xs = np.array(ddp.xs)
+    us = np.array(ddp.us)
+    t = np.arange(i*dt, (i+N_horizon)*dt, dt)
+    param_trajectory_copy = {
+        'p_d':    param_trajectory['p_d'][:,    i:i+N_step*N_horizon:N_step],
+        'p_d_p':  param_trajectory['p_d_p'][:,  i:i+N_step*N_horizon:N_step],
+        'p_d_pp': param_trajectory['p_d_pp'][:, i:i+N_step*N_horizon:N_step]
+    }
+    plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory_copy)
+    
+def plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, param_trajectory):
+    param_trajectory_copy = {
+        'p_d':    param_trajectory['p_d'][:,    0:i],
+        'p_d_p':  param_trajectory['p_d_p'][:,  0:i],
+        'p_d_pp': param_trajectory['p_d_pp'][:, 0:i]
+    }
+    plot_solution(us[0:i], xs[0:i], t[0:i], TCP_frame_id, robot_model, param_trajectory_copy)
 ####################################################### VIS ROBOT #################################################
 
 def visualize_robot(robot, x_sol, param_trajectory, dt, rep_cnt = np.inf, rep_delay_sec=1):
