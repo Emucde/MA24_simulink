@@ -109,9 +109,62 @@ def tic():
 def toc():
     if 'start_time' in globals():
         elapsed_time = time.time() - start_time
-        print(f"\033[92mElapsed time: {elapsed_time} seconds\033[0m")
+        formatted_time = format_time(elapsed_time)
+        print(f"\033[92mElapsed time: {formatted_time}\033[0m")
     else:
         print("Call tic() before calling toc()")
+
+class TicToc:
+    def __init__(self):
+        self.start_time = None
+        self.elapsed_total_time = 0
+
+    def tic(self, reset=False):
+        if reset:
+            self.start_time = None
+            self.elapsed_total_time = 0
+        else:
+            self.start_time = time.time()
+
+    def toc(self):
+        if self.start_time is None:
+            print("Error: Tic not started.")
+            return
+
+        current_time = time.time()
+        elapsed_time = current_time - self.start_time
+        self.elapsed_total_time += elapsed_time
+        self.start_time = current_time
+
+    def get_time(self):
+        self.toc()
+        return self.elapsed_total_time
+    
+    def get_time_str(self, additional_text="time"):
+        self.toc()
+        formatted_time = format_time(self.elapsed_total_time)
+        return f"\033[92mElapsed {additional_text}: {formatted_time}\033[0m"
+    
+    def print_time(self, additional_text="time"):
+        time_str = self.get_time_str(additional_text)
+        print(time_str, end='\n')
+
+    def reset(self):
+        self.start_time = None
+        self.elapsed_total_time = 0
+
+def format_time(elapsed_time):
+    """Formats the elapsed time based on its magnitude."""
+    if elapsed_time < 1e-3:
+        return f"{elapsed_time * 1e6:.2f} μs"  # Microseconds
+    elif elapsed_time < 1:
+        return f"{elapsed_time * 1e3:.2f} ms"  # Milliseconds
+    elif elapsed_time < 60:
+        return f"{elapsed_time:.2f} s"  # Seconds
+    else:
+        minutes = int(elapsed_time // 60)
+        seconds = elapsed_time % 60
+        return f"{minutes}m {seconds:.2f}s"  # Minutes and seconds
 
 def block_diag_onlydiagmatr(a, b):
     return np.kron(a, b)
@@ -456,6 +509,11 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
 
 def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type='euler', use_bounds=False):
 
+    ###################
+    # Reihenfolge beachten:
+    # Zuerst Model1: yref Model (yref = [x1,x2,x3], d/dt yref = [x4,x5,x6]), 
+    # dann Model2: Robot model (q = [q1, q2] = [x7, x8], d/dt q = d/dt [q1, q2] = [x9, x10])
+
     IntegratedActionModel = get_int_type(int_type)
 
     y_d_data    = param_trajectory['p_d'].T
@@ -506,7 +564,7 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
             goalTrackingCost = crocoddyl.CostModelResidual(
                     state,
                     residual=crocoddyl.ResidualModelFrameTranslation(
-                        state, TCP_frame_id, np.zeros((3,1)) # np.zeros((3,1) wird in Klasse CombinedActionModel mit yref überschrieben.
+                        state, TCP_frame_id, y_d # y_d wird in Klasse CombinedActionModel mit yref überschrieben.
                     ),
                 )
             runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
@@ -529,14 +587,14 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                     state,
                     activation=activationModel,
                     residual=crocoddyl.ResidualModelFrameTranslation(
-                        state, TCP_frame_id, np.zeros((3,1)) # np.zeros((3,1) wird in Klasse CombinedActionModel mit yref überschrieben.
+                        state, TCP_frame_id, y_d # y_d wird in Klasse CombinedActionModel mit yref überschrieben.
                     ),
                 )
             else:
                 terminalGoalTrackingCost = crocoddyl.CostModelResidual(
                     state,
                     residual=crocoddyl.ResidualModelFrameTranslation(
-                        state, TCP_frame_id, np.zeros((3,1)) # np.zeros((3,1) wird in Klasse CombinedActionModel mit yref überschrieben.
+                        state, TCP_frame_id, y_d # y_d wird in Klasse CombinedActionModel mit yref überschrieben.
                     ),
                 )
             terminalCostModel = crocoddyl.CostModelSum(state)
@@ -566,7 +624,143 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
     problem = crocoddyl.ShootingProblem(x0, seq, terminate_cost_models[-1])
     return problem
 
+
+#############
+
+def get_mpc_funs(problem_name):
+    if problem_name == 'MPC_v1':
+        return crocoddyl.SolverDDP, first_init_guess_mpc_v1, create_ocp_problem_v1, simulate_model_mpc_v1
+        # return crocoddyl.SolverBoxFDDP, first_init_guess_mpc_v1, create_ocp_problem_v1, simulate_model_mpc_v1
+        # return crocoddyl.SolverFDDP, first_init_guess_mpc_v1, create_ocp_problem_v1, simulate_model_mpc_v1
+    elif problem_name == 'MPC_v3_soft_yN_ref':
+        return  crocoddyl.SolverDDP, first_init_guess_mpc_v3, create_ocp_problem_v3_soft_yN_ref, simulate_model_mpc_v3
+    elif problem_name == 'MPC_v3_bounds_yN_ref':
+        return crocoddyl.SolverBoxDDP, first_init_guess_mpc_v3, create_ocp_problem_v3_bounds_yN_ref, simulate_model_mpc_v3
+        # return crocoddyl.SolverFDDP, first_init_guess_mpc_v3, create_ocp_problem_v3_bounds_yN_ref, simulate_model_mpc_v3
+    else:
+        raise ValueError("problem_name must be 'MPC_v1' | 'MPC_v3_soft_yN_ref' | 'MPC_v3_bounds_yN_ref'")
+
+def create_ocp_problem_v1(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
+    return ocp_problem_v1(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type)
+
+def create_ocp_problem_v3_bounds_yN_ref(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
+    return ocp_problem_v3(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type, use_bounds=True)
+
+def create_ocp_problem_v3_soft_yN_ref(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
+    return ocp_problem_v3(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type, use_bounds=False)
+
+##############
+
+def simulate_model_mpc_v1(ddp, i, dt, nq, nx, robot_model, robot_data, param_trajectory):
+
+    xk = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
+    uk = ddp.us[0]
+
+    # Modell Simulation
+    tau_k = uk
+    q     = xk[:nq]
+    q_p   = xk[nq:nx]
+
+    q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
+
+    xk[:nq]   = q_next
+    xk[nq:nx] = q_p_next
+
+    xs_init_guess = ddp.xs
+    us_init_guess = ddp.us
+
+    us_i = uk
+    xs_i = xk
+
+    return xk, xs_i, us_i, xs_init_guess, us_init_guess
+
+def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, param_trajectory):
+
+    xk = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
+    uk = ddp.us[0]
+
+    # Modell Simulation
+    tau_k = uk[3:]
+    q = xk[6:6+nq]
+    q_p = xk[6+nq:6+nx]
+
+    q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
+
+    xk[0:6]      = np.hstack([param_trajectory['p_d'][:, i+1], param_trajectory['p_d_p'][:, i+1]])
+    xk[6:6+nq]   = q_next
+    xk[6+nq:6+nx] = q_p_next
+
+    xs_init_guess = ddp.xs
+    us_init_guess = ddp.us
+
+    us_i = uk
+    xs_i = xk
+
+    # us_i = ddp.us[-1]
+    # xs_i = ddp.xs[-1]
+
+    return xk, xs_i, us_i, xs_init_guess, us_init_guess
+
+def sim_model(robot_model, robot_data, q, q_p, tau, dt):
+    q_pp     = pinocchio.aba(robot_model, robot_data, q, q_p, tau)
+    q_p_next = q_p + dt * q_pp # Euler method
+    q_next   = pinocchio.integrate(robot_model, q, dt * q_p_next)
+    return q_next, q_p_next
+
+###############
+
+def first_init_guess_mpc_v1(tau_init_robot, x_init_robot, N_traj, N_horizon, nx, nu, param_trajectory):
+    xk = x_init_robot
+
+    xs_init_guess = [x_init_robot]  * (N_horizon)
+    us_init_guess = [tau_init_robot] * (N_horizon-1)
+
+    xs = np.zeros((N_traj, nx))
+    us = np.zeros((N_traj, nu))
+    return xk, xs, us, xs_init_guess, us_init_guess
+
+def first_init_guess_mpc_v3(tau_init_robot, x_init_robot, N_traj, N_horizon, nx, nu, param_trajectory):
+    x0_init = np.hstack([param_trajectory['p_d'][:, 0], param_trajectory['p_d_p'][:, 0], x_init_robot])
+    xk = x0_init
+
+    xs_init_guess = [x0_init] * (N_horizon)
+    us_init_guess = [np.hstack([param_trajectory['p_d_pp'][:, 0], tau_init_robot])] * (N_horizon-1)
+
+    xs = np.zeros((N_traj, 6+nx))
+    us = np.zeros((N_traj, 3+nu))
+    return xk, xs, us, xs_init_guess, us_init_guess
+
 ###################################################################################################################
+
+
+def check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory, conv_max_limit=5):
+    error = 0
+    
+    if not hasConverged:
+        print("\033[43mWarning: Solver did not converge at time t =", f"{i*dt:.3f}", "\033[0m")
+        warn_cnt += 1
+        # plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory)
+        if warn_cnt > conv_max_limit:
+            print("\033[91mError: Solver failed to converge", f"{conv_max_limit}", "times in a row. Exiting...\033[0m")
+            error = 1
+    else:
+        warn_cnt = 0
+
+    if ddp.isFeasible == False:
+        # print("\033[93mWarning: Solver is not feasible at time t = ", f"{i*dt:.3f}", "\033[0m")
+        print("\033[91mError: Solver is not feasible at time t =", f"{i*dt:.3f}", "\033[0m")
+        error = 1
+    if np.isnan(ddp.xs).any() or np.isnan(ddp.us).any():
+        # print("\033[93mWarning: NaN values detected in xs or us arrays at time t = ", f"{i*dt:.3f}", "\033[0m")
+        print("\033[91mError: NaN values detected in xs or us arrays at time t =", f"{i*dt:.3f}", "\033[0m")
+        error = 1
+    if error:
+        plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory)
+        plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, param_trajectory)
+        exit()
+    return warn_cnt
+
+#######################################
 
 def plot_trajectory(param_trajectory):
     plt.figure(figsize=(10, 6))  # Adjust figure size as needed
@@ -589,7 +783,7 @@ def plot_trajectory(param_trajectory):
     plt.show()
 
 
-def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_plot=False, file_name='plot_saved'):
+def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_plot=False, file_name='plot_saved', plot_fig=True):
     robot_data = robot_model.createData()
 
     line_dict_y        = dict(width=1, color='#ffff11')
@@ -707,7 +901,7 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
     fig = make_subplots(rows=4, cols=4, shared_xaxes=False, vertical_spacing=0.05, horizontal_spacing=0.035, 
         subplot_titles=(
         "$\\Large{\\mathrm{TCP~position~(m)}}$",
-        "$\\Large{e_x = x^d - x\\mathrm{ (m)}}$",
+        "$\\Large{e_x = x^d - x\\mathrm{~(m)}}$",
         "$\\Large{e_y = y^d - y\\mathrm{~(m)}}$",
         "$\\Large{\\mathrm{Joint~coordinates~}q\\mathrm{~(rad)}}$",
         "$\\Large{\\mathrm{TCP~velocity~(m)}}$",
@@ -774,11 +968,13 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
         **{f'xaxis{i}': dict(showticklabels=False) for i in range(1, 11)}
     )
 
-    fig.show()
+    if(plot_fig):
+        fig.show()
 
     if(save_plot):
         py.plot(fig, filename=file_name, include_mathjax='cdn')
     
+    return y_opt, y_opt_p, y_opt_pp, e, e_p, e_pp, w, q, q_p, q_pp, tau
 
 def plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory):
     xs = np.array(ddp.xs)
@@ -800,7 +996,7 @@ def plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, param_traject
     plot_solution(us[0:i], xs[0:i], t[0:i], TCP_frame_id, robot_model, param_trajectory_copy)
 ####################################################### VIS ROBOT #################################################
 
-def visualize_robot(robot, x_sol, param_trajectory, dt, rep_cnt = np.inf, rep_delay_sec=1):
+def visualize_robot(robot, q_sol, param_trajectory, dt, rep_cnt = np.inf, rep_delay_sec=1):
     # Meshcat Visualize
     robot_model = robot.model
     robot_display = MeshcatVisualizer(robot.model)
@@ -862,9 +1058,9 @@ def visualize_robot(robot, x_sol, param_trajectory, dt, rep_cnt = np.inf, rep_de
 
     robot_data = robot.model.createData()
 
-    # Iterate through trajectory data (assuming x_sol[:, 6:6+robot_model.nq] represents joint positions)
-    for i in range(len(x_sol)):
-        pinocchio.forwardKinematics(robot_model, robot_data, x_sol[i, 6:6+robot_model.nq])
+    # Iterate through trajectory data (assuming q_sol[:, 6:6+robot_model.nq] represents joint positions)
+    for i in range(len(q_sol)):
+        pinocchio.forwardKinematics(robot_model, robot_data, q_sol[i])
         pinocchio.updateFramePlacements(robot_model, robot_data)
 
         H_s1_1 = obj2.placement.homogeneous # = H_0^s1, CoM s1 of link 1 in dependence of inertial KOS
@@ -894,7 +1090,7 @@ def visualize_robot(robot, x_sol, param_trajectory, dt, rep_cnt = np.inf, rep_de
     # while i < cnt:
     #     time.sleep(rep_delay_sec)
     #     # robot_display.displayFromSolver(ddp)
-    #     robot_display.robot.viz.play(x_sol[:, 6:6+robot_model.nq], dt)
+    #     robot_display.robot.viz.play(q_sol[:, 6:6+robot_model.nq], dt)
     #     i = i +1
     # ffmpeg -r 60 -i "%07d.jpg" -vcodec "libx264" -preset "slow" -crf 18 -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2" output.mp4
     # ffmpeg -r 60 -i "%07d.png" -vcodec "libx264" -preset "slow" -crf 18 -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2" output.mp4
@@ -905,4 +1101,4 @@ def visualize_robot(robot, x_sol, param_trajectory, dt, rep_cnt = np.inf, rep_de
     if create_video:
         robot_display = crocoddyl.MeshcatDisplay(robot, -1, 1, False, visibility=False)
         with robot_display.robot.viz.create_video_ctx("test.mp4"):
-            robot_display.robot.viz.play(x_sol[:, 6:6+robot_model.nq], dt)
+            robot_display.robot.viz.play(q_sol, dt)
