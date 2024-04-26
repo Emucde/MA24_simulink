@@ -38,7 +38,7 @@ print(robot.model)
 # Horizont eben extrem lang ist und wenn das Ende ohnehin im Arbeitsbereich liegt, kann man
 # damit nicht sicherstellen, dass yref immer innerhlab der Trajektorie liegt.
 # y_offset = 0.1 # Funktioniert bei OCP nicht ordentlich
-y_offset = 0.0
+y_offset = 0
 
 # Calculate strechted position
 qT = np.array([0,0])
@@ -115,7 +115,7 @@ N_step = 10
 
 param_mpc_weight = {
     'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
-    'q_terminate_tracking_cost': 1e10,  # penalizes deviations from the trajectory at the end
+    'q_terminate_tracking_cost': 1e5,  # penalizes deviations from the trajectory at the end
     'q_xreg_cost': 1*1e-10,              # penalizes changes from the current state
     'q_ureg_cost': 1*1e-10,              # penalizes changes from the current input
     'Kd': 100*np.eye(3),
@@ -163,7 +163,7 @@ for i in range(N_traj):
     hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
     measureSolver.toc()
 
-    warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory, conv_max_limit=5)
+    warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory, conv_max_limit=5, plot_sol=not False)
 
     xk, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, dt, nq, nx, robot_model, robot_data, param_trajectory)
 
