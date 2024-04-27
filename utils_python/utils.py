@@ -279,13 +279,13 @@ class DifferentialActionModelRunningYref(crocoddyl.DifferentialActionModelAbstra
 
         r = (alpha - self.y_d_pp) + self.Kd @ (z2 - self.y_d_p) + self.Kp @ (z1 - self.y_d)
         data.r=r
-        # data.cost = np.linalg.norm(r)**2
-        # data.cost = r @ r
-        # data.cost = np.sum(r**2)
-        data.cost = r[0]**2 + r[1]**2 + r[2]**2 # fastest
+        # data.cost = 1/2 * np.linalg.norm(r)**2
+        # data.cost = 1/2 * r @ r
+        # data.cost = 1/2 * np.sum(r**2)
+        data.cost = 1/2*(r[0]**2 + r[1]**2 + r[2]**2) # fastest
 
     def calcDiff(self, data, x, u):
-        n1 = self.n1
+        n1 = self.n1 # TODO: Benennung verwirrend zu unteren Klassen
         n = self.n
 
         Kp = self.Kp
@@ -421,6 +421,8 @@ class CombinedActionModel(crocoddyl.ActionModelAbstract):
         self.robot_model = self.model2.state.pinocchio
         self.robot_data = self.robot_model.createData()
 
+        self.dt_int = self.model1.dt
+
     def calc(self, data, x, u):
         m1 = self.mu_model1
         m = self.m
@@ -446,14 +448,16 @@ class CombinedActionModel(crocoddyl.ActionModelAbstract):
         n1 = self.nx_model1
         n = self.n
 
+        dt_int = self.dt_int
+
         yref = x[:m1]
-        #y = self.data2.differential.pinocchio.oMf[self.TCP_frame_id].translation # GEHT NUR MIT EULER????
+        y = self.data2.differential.pinocchio.oMf[self.TCP_frame_id].translation # GEHT NUR MIT EULER????
         
-        robot_data = self.robot_data
-        robot_model = self.robot_model
-        pinocchio.forwardKinematics(robot_model, robot_data, x[n1:n1+2])
-        pinocchio.updateFramePlacements(robot_model, robot_data)
-        y = robot_data.oMf[self.TCP_frame_id].translation.copy()
+        # robot_data = self.robot_data
+        # robot_model = self.robot_model
+        # pinocchio.forwardKinematics(robot_model, robot_data, x[n1:n1+2])
+        # pinocchio.updateFramePlacements(robot_model, robot_data)
+        # y = robot_data.oMf[self.TCP_frame_id].translation.copy()
 
         self.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = yref
         
@@ -471,12 +475,15 @@ class CombinedActionModel(crocoddyl.ActionModelAbstract):
         # der Optimierungsvariable yref muss dieses Residual in der Ableitung nach x und z1 berücksichtigt
         # werden. Allerdings ist die Ableitung nach z1 in model1 nicht machbar, da model 1 nicht
         # y kennt. Daher berechne ich die Ableitungen hier manuell.
-        data.Lx[:nq1]        = self.data1.Lx[:nq1] - self.Q_tracking_cost @ (y - yref)
+        data.Lx[:nq1]        = self.data1.Lx[:nq1] - dt_int*self.Q_tracking_cost @ (y - yref)
         data.Lx[nq1:n1]      = self.data1.Lx[nq1:n1]
         data.Lx[n1:n]        = self.data2.Lx # + self.Q_tracking_cost @ (y - yref) ist wegen goal residuum schon dabei
 
-        data.Lxx[:nq1, :nq1]     = self.data1.Lxx[:nq1, :nq1] + self.Q_tracking_cost
-        data.Lxx[nq1:n1, nq1:n1] = self.data1.Lxx[nq1:n1, nq1:n1]
+        data.Lxx[:nq1, :nq1]     = self.data1.Lxx[:nq1, :nq1] + dt_int*self.Q_tracking_cost # Kp_square + Q
+        data.Lxx[:nq1, nq1:n1]   = self.data1.Lxx[:nq1, nq1:n1] # KdKp
+        data.Lxx[nq1:n1, nq1:n1] = self.data1.Lxx[nq1:n1, nq1:n1] # Kd_square
+        data.Lxx[nq1:n1, :nq1]   = self.data1.Lxx[nq1:n1, :nq1] # KdKp
+
         data.Lxx[n1:n, n1:n] = self.data2.Lxx
         
         data.Lu[:m1]         = self.data1.Lu
@@ -510,6 +517,8 @@ class CombinedActionModelTerminal(CombinedActionModel):
         self.robot_model = self.model.robot_model
         self.robot_data = self.model.robot_data
 
+        self.dt_int = self.model.dt_int
+
     def calc(self, data, x, u):
         m1 = self.m1
         m = self.m
@@ -531,22 +540,31 @@ class CombinedActionModelTerminal(CombinedActionModel):
         n1 = self.n1
         n = self.n
 
+        dt_int = self.dt_int
+
         yref = x[:m1] # das wird in model1.calc berechnet
         
         
-        # y = self.data2.differential.pinocchio.oMf[self.TCP_frame_id].translation # GEHT NUR MIT EULER????
+        y = self.data2.differential.pinocchio.oMf[self.TCP_frame_id].translation # GEHT NUR MIT EULER????
         
-        robot_data = self.robot_data
-        robot_model = self.robot_model
-        pinocchio.forwardKinematics(robot_model, robot_data, x[n1:n1+2])
-        pinocchio.updateFramePlacements(robot_model, robot_data)
-        y = robot_data.oMf[self.TCP_frame_id].translation.copy()
+        # robot_data = self.robot_data
+        # robot_model = self.robot_model
+        # pinocchio.forwardKinematics(robot_model, robot_data, x[n1:n1+2])
+        # pinocchio.updateFramePlacements(robot_model, robot_data)
+        # y = robot_data.oMf[self.TCP_frame_id].translation.copy()
         
         self.model.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = yref
+        # self.model.model1.calcDiff(self.data1, x[0:n1],  u[0:m1])
         self.model.model2.calcDiff(self.data2, x[n1:n], u[m1:m])
 
+        # data.Fx[:n1, :n1]    = self.data1.Fx
+        data.Fx[n1:n, n1:n]  = self.data2.Fx
+
+        # data.Fu[:n1, :m1]    = self.data1.Fu
+        data.Fu[n1:n, m1:m]  = self.data2.Fu
+
         # data.Lx[:n1]       = self.data1.Lx
-        data.Lx[:m1]         = -self.Q_tracking_cost @ (y - yref)
+        data.Lx[:nq1]         = -dt_int*self.Q_tracking_cost @ (y - yref)
 
         data.Lx[n1:n]        = self.data2.Lx
         
@@ -554,7 +572,7 @@ class CombinedActionModelTerminal(CombinedActionModel):
         data.Lu[m1:m]        = self.data2.Lu
 
         # data.Lxx[:n1, :n1]   = self.data1.Lxx
-        data.Lxx[:nq1, :nq1] = self.Q_tracking_cost
+        data.Lxx[:nq1, :nq1] = dt_int*self.Q_tracking_cost
         data.Lxx[n1:n, n1:n] = self.data2.Lxx
 
         # data.Luu[:m1, :m1]   = self.data1.Luu
@@ -765,11 +783,11 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                 terminalCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
 
             if use_bounds:
-                terminate_cost_models.append(CombinedActionModel(yy_NDIAM, IntegratedActionModel(
+                terminate_cost_models.append(CombinedActionModelTerminal(yy_NDIAM, IntegratedActionModel(
                     crocoddyl.DifferentialActionModelFreeFwdDynamics(
                         state, actuationModel, terminalCostModel
                     ),
-                    0 # disable integration: https://github.com/loco-3d/crocoddyl/issues/962
+                    0*dt*N_step # disable integration: https://github.com/loco-3d/crocoddyl/issues/962 (besser in calc ohne u beruecks.)
                 )))
             else:
                 # terminate_cost_models.append(
@@ -788,7 +806,7 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                     crocoddyl.DifferentialActionModelFreeFwdDynamics(
                         state, actuationModel, terminalCostModel
                     ),
-                    0#dt*N_step
+                    0*dt*N_step # (unsicher obt dt=0 zulaessig: besser in calc ohne u beruecks.)
                 )))
 
     # Create the shooting problem

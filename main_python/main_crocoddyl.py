@@ -38,7 +38,7 @@ print(robot.model)
 # Horizont eben extrem lang ist und wenn das Ende ohnehin im Arbeitsbereich liegt, kann man
 # damit nicht sicherstellen, dass yref immer innerhlab der Trajektorie liegt.
 # y_offset = 0.1 # Funktioniert bei OCP nicht ordentlich
-y_offset = 0
+y_offset = 0.1
 
 # Calculate strechted position
 qT = np.array([0,0])
@@ -107,21 +107,21 @@ param_traj_poly['T'] = T_end/2-3
 # Ich denke MPC_v3_bounds_yN_ref funktioniert nicht, weil sich diese boundaries nur auf die Inputs beziehen,
 # Nicht aber auf die states. 
 
-opt_type = 'MPC_v1' # 'MPC_v1' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' 
+opt_type = 'MPC_v3_soft_yN_ref' # 'MPC_v1' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' 
 int_type = 'euler' # 'euler' | 'RK2' | 'RK3' | 'RK4'
 N_solver_steps = 1000
 N_horizon = 5
-N_step = 10
+N_step = 1
 
 param_mpc_weight = {
     'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
-    'q_terminate_tracking_cost': 1e5,  # penalizes deviations from the trajectory at the end
-    'q_xreg_cost': 1*1e-10,              # penalizes changes from the current state
-    'q_ureg_cost': 1*1e-10,              # penalizes changes from the current input
+    'q_terminate_tracking_cost': 1e10,  # penalizes deviations from the trajectory at the end
+    'q_xreg_cost': 0*1e-10,              # penalizes changes from the current state
+    'q_ureg_cost': 0*1e-10,              # penalizes changes from the current input
     'Kd': 100*np.eye(3),
     'Kp': 2500*np.eye(3),
-    'lb_y_ref_N': -1e-10*np.ones(3), # only used if MPC_v3_bounds_yN_ref
-    'ub_y_ref_N': 1e-10*np.ones(3),
+    'lb_y_ref_N': -1e-6*np.ones(3), # only used if MPC_v3_bounds_yN_ref
+    'ub_y_ref_N': 1e-6*np.ones(3),
 }
 
 #########################################################################################################
