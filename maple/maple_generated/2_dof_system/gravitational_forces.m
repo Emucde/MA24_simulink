@@ -8,5 +8,5 @@ function tmpreturn = gravitational_forces(q, param)
   t12 = sin(t1);
   t13 = t12 * t11;
   m(1,1) = -(t9 * (param.l__s2 * param.m2 * t2 + param.l__1 * param.m2 + param.m1 * param.l__s1) - param.l__s2 * param.m2 * t13) * param.g;
-  m(1,2) = (-t2 * t9 + t13) * param.l__s2 * param.g * param.m2;
+  m(1,2) = -(t2 * t9 - t13) * param.l__s2 * param.g * param.m2;
   tmpreturn = m';
