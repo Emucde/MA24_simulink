@@ -16,13 +16,15 @@
 %closeAllSimulinkModels('./MPC_shared_subsystems')
 %closeAllSimulinkModels('.')
 
+s_fun_path = 's_functions/s_functions_2dof';
+
 %restoredefaultpath
 cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_matlab
 addpath(genpath('../main_matlab'));
 addpath(genpath('../utils/matlab_utils'));
 addpath(genpath('../utils/matlab_init_2dof'));
 addpath(genpath('../utils/utils_casadi'));
-addpath(genpath('../s_functions'));
+addpath(genpath(['../', s_fun_path]));
 addpath(genpath('../maple/maple_generated/2_dof_system'));
 addpath(genpath('../urdf_creation'))
 addpath(genpath('../main_simulink'))
@@ -165,7 +167,7 @@ param_init_pose.rot_ax_init = rot_ax;
 
 %% GENERATE OFFLINE TRAJECTORY
 
-files = dir('./s_functions/mpc_settings/*.mat');
+files = dir(['./', s_fun_path, '/mpc_settings/*.mat']);
 cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
 
 % 1. get maximum horizont length of all mpcs:
@@ -186,8 +188,8 @@ for name={files.name}
     end
 end
 
-param_MPC_traj_data_mat_file = "./s_functions/trajectory_data/param_traj_data.mat";
-param_traj_data_old = './s_functions/trajectory_data/param_traj_data_old.mat';
+param_MPC_traj_data_mat_file = ['./', s_fun_path, '/trajectory_data/param_traj_data.mat'];
+param_traj_data_old = ['./', s_fun_path, '/trajectory_data/param_traj_data_old.mat'];
 load(param_traj_data_old);
 
 T_traj_poly         = param_traj_poly.T;
@@ -253,8 +255,8 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         param_MPC_name   = name_mat_file(1:end-4);
         param_MPC_struct = eval(param_MPC_name);
     
-        param_MPC_init_guess_name = param_MPC_name+"_init_guess";
-        param_MPC_init_guess_mat_file = "./s_functions/initial_guess/" + param_MPC_init_guess_name + ".mat";
+        param_MPC_init_guess_name = [param_MPC_name, '_init_guess'];
+        param_MPC_init_guess_mat_file = ['./', s_fun_path, '/initial_guess/', param_MPC_init_guess_name,'.mat'];
     
         casadi_func_name = param_MPC_struct.name;
         MPC_variant      = param_MPC_struct.variant;
@@ -292,7 +294,7 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
     
         param_MPC = struct('init_guess', init_guess_arr);
         
-        eval(param_MPC_init_guess_name+ ' = param_MPC;');
+        eval([param_MPC_init_guess_name, ' = param_MPC;']);
         save(param_MPC_init_guess_mat_file, param_MPC_init_guess_name);
     end
     disp(['parameter.m: Execution Time for Init guess Calculation: ', sprintf('%f', toc), 's']);
@@ -323,7 +325,7 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
 
     init_MPC_weights; % why necessary?
 else
-    files = dir('./s_functions/initial_guess/*.mat');
+    files = dir(['./', s_fun_path, '/initial_guess/*.mat']);
     cellfun(@load, {files.name});
 
     load(param_MPC_traj_data_mat_file);
