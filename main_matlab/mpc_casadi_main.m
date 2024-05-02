@@ -74,8 +74,8 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'traj_feasible'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible | traj_feasible)
-param_casadi_fun_name.(MPC).Ts      = -1;
-param_casadi_fun_name.(MPC).rk_iter = -1;
+param_casadi_fun_name.(MPC).Ts      = 1;
+param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 
@@ -106,12 +106,12 @@ if(convert_maple_to_casadi)
 end
 
 %% path for init guess
-mpc_settings_path                = './s_functions/mpc_settings/';%todo:  UP
+mpc_settings_path                = ['./', s_fun_path, '/mpc_settings/'];%todo:  UP
 mpc_settings_struct_name         = "param_"+casadi_func_name;
-param_MPC_traj_data_old_mat_file = "./s_functions/trajectory_data/param_traj_data_old.mat";
+param_MPC_traj_data_old_mat_file = ['./', s_fun_path, '/trajectory_data/param_traj_data_old.mat'];
 
 %% Create trajectory for y_initial_guess
-param_MPC_traj_data_mat_file = "./s_functions/trajectory_data/param_traj_data.mat";
+param_MPC_traj_data_mat_file = ['./', s_fun_path, '/trajectory_data/param_traj_data.mat'];
 
 try
     load(param_MPC_traj_data_mat_file);
@@ -154,8 +154,8 @@ param_trajectory.p_d_pp = param_traj_data.p_d_pp(:,:,traj_select_mpc);
 
 %% OPT PROBLEM
 %[TODO: oben init]
-s_fun_path               = './s_functions/'; % backslash on end necessary! [TODO: remove]
-output_dir = './s_functions/';
+s_fun_path               = ['./', s_fun_path,'/']; % slash on end necessary! [TODO: remove]
+output_dir = s_fun_path; % needed?
 casadi_fun_c_header_str  = [casadi_func_name, '.c'];
 casadi_fun_h_header_str  = [casadi_func_name, '.h'];
 s_func_name              = ['s_function_', casadi_fun_c_header_str]; % final name for Simulink s-function
