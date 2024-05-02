@@ -1,6 +1,6 @@
 % Init scripts
 tic
-parameters; init_casadi; import casadi.*;
+parameters_2dof; init_casadi; import casadi.*;
 %dbstop if error
 %% GLOBAL SETTINGS FOR MPC
 
@@ -325,6 +325,6 @@ if(compile_matlab_sfunction)
     disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
 end
 
-parameters;
+parameters_2dof;
 cd ..
 cd MA24_simulink

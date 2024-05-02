@@ -19,7 +19,9 @@
 %restoredefaultpath
 cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_matlab
 addpath(genpath('../main_matlab'));
-addpath(genpath('../utils'));
+addpath(genpath('../utils/matlab_utils'));
+addpath(genpath('../utils/matlab_init_2dof'));
+addpath(genpath('../utils/utils_casadi'));
 addpath(genpath('../s_functions'));
 addpath(genpath('../maple/maple_generated/2_dof_system'));
 addpath(genpath('../urdf_creation'))
@@ -29,7 +31,7 @@ set(groot, 'DefaultFigurePosition', [350, -650, 800, 600])
 
 init_casadi;
 
-simulink_main_model_name = 'sim_discrete_planar';
+simulink_main_model_name = 'sim_discrete_planar_2dof';
 open_simulink_on_start = true;
 if(~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && sum(strfind([getenv().keys{:}], 'VSCODE')) == 0)
     tic
