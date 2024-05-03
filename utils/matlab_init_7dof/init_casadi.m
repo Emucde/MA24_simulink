@@ -1,5 +1,3 @@
-addpath(genpath('./maple_generated/2_dof_system'));
-addpath(genpath('./utils_casadi'));
 addpath('/media/daten/Anwendungen/casadi-3.6.4-linux64-matlab2018b/')
 import casadi.*
 
