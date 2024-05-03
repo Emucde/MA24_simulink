@@ -25,9 +25,6 @@ coord_yaxis_opacity = 1;
 coord_zaxis_color = [0 0.0 1]; % blue
 coord_zaxis_opacity = 1;
 
-%% Robot gravity
-param_robot.g_vis=[0;0;-9.81];
-
 param_robot_fr3 = struct;
 white = [1 1 1];
 off_white = [0.901961 0.921569 0.929412];

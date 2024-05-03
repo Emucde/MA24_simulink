@@ -3,10 +3,16 @@ param_robot = struct;
 
 param_robot.n_DOF = 7; % DOF
 param_robot.g = -9.81; %m/s
+%% Robot gravity
+param_robot.g_vis=[0;0;-9.81];
 
 param_robot.q_limit_lower = q_min;
 param_robot.q_limit_upper = q_max;
 param_robot.q_n = (q_max + q_min) / 2;
+
+% Inertial System
+param_robot.p_0 = [0; 0; 0]; % m
+param_robot.R_0 = eye(3); % m
 
 % LINK 0 (BASE)
 param_robot.sp0_x = -0.041018; % m
