@@ -26,7 +26,7 @@ coord_zaxis_color = [0 0.0 1]; % blue
 coord_zaxis_opacity = 1;
 
 %% Robot gravity
-param_robot.g_vis=[0;0;-param_robot.g];
+param_robot.g_vis=[0;0;-9.81];
 
 param_robot_fr3 = struct;
 white = [1 1 1];
@@ -281,19 +281,19 @@ fr3.robot.rightfinger = fr3.robot.leftfinger;
 %q_dot_min = -q_dot_max;
 
 % Maximale Gelenkbeschleunigung in Radiant pro Sekunde Quadrat
-q_ddot_max = [10, 10, 10, 10, 10, 10, 10];
+q_ddot_max = [10; 10; 10; 10; 10; 10; 10];
 q_ddot_min = -q_ddot_max;
 
 % Maximale Gelenkruck in Radiant pro Sekunde Kubik
-q_dddot_max = [5000, 5000, 5000, 5000, 5000, 5000, 5000];
+q_dddot_max = [5000; 5000; 5000; 5000; 5000; 5000; 5000];
 q_dddot_min = -q_dddot_max;
 
 % Maximales Drehmoment in Newtonmeter
-tau_max = [87, 87, 87, 87, 12, 12, 12];
+tau_max = [87; 87; 87; 87; 12; 12; 12];
 tau_min = -tau_max;
 
 % Maximale Drehmomentänderung in Newtonmeter pro Sekunde
-tau_dot_max = [1000, 1000, 1000, 1000, 1000, 1000, 1000];
+tau_dot_max = [1000; 1000; 1000; 1000; 1000; 1000; 1000];
 tau_dot_min = -tau_dot_max;
 
 % Die exakten Werte für die Gelenkgeschwindigkeit könnte man über diese Formeln berechnen
@@ -323,9 +323,9 @@ q_dot_min_fun = @(q) [qi_dot_max_fun(q, 1, 0.30, 12.0, 2.750100); ...
 % Geschwindigkeitslimits. Mehr dazu in der Dokumentation von Franka GMBH im obigen Link.
 
 % Gelenkpositionsgrenzen in Radiant
-q_min = [-2.3093, -1.5133, -2.4937, -2.7478, -2.4800, 0.8521, -2.6895];
-q_max = [2.3093, 1.5133, 2.4937, -0.4461, 2.4800, 4.2094, 2.6895];
+q_min = [-2.3093; -1.5133; -2.4937; -2.7478; -2.4800; 0.8521; -2.6895];
+q_max = [2.3093; 1.5133; 2.4937; -0.4461; 2.4800; 4.2094; 2.6895];
 
 % Maximale Gelenkgeschwindigkeit in Radiant pro Sekunde
-q_dot_max = [2, 1, 1.5, 1.25, 3, 1.5, 3];
+q_dot_max = [2; 1; 1.5; 1.25; 3; 1.5; 3];
 q_dot_min = -q_dot_max;
