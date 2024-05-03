@@ -5,12 +5,19 @@
 n = param_robot.n_DOF;
 
 %% debug data bus
-bus_temp_struct.p = zeros(n,1);
-bus_temp_struct.p_p = zeros(n,1);
-bus_temp_struct.p_pp = zeros(n,1);
-bus_temp_struct.rot_x_err = 0;
-bus_temp_struct.rot_y_err = 0;
-bus_temp_struct.rot_z_err = 0;
+bus_temp_struct.p = zeros(3,1);
+bus_temp_struct.p_p = zeros(3,1);
+bus_temp_struct.p_pp = zeros(3,1);
+bus_temp_struct.q       = [0; 0; 0; 0];
+bus_temp_struct.omega   = [0; 0; 0];
+bus_temp_struct.omega_p = [0; 0; 0];
+bus_temp_struct.p_err = [0; 0; 0];
+bus_temp_struct.p_p_err = [0; 0; 0];
+bus_temp_struct.p_pp_err = [0; 0; 0];
+bus_temp_struct.q_err = [0; 0; 0; 0];
+bus_temp_struct.omega_err = [0; 0; 0];
+bus_temp_struct.omega_p_err = [0; 0; 0];
+
 init_debug_data_bus = bus_temp_struct;
 debug_data_bus = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;

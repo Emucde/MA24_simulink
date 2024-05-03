@@ -44,7 +44,7 @@ end
 
 %% debug parameter
 start_in_singularity = false;
-trajectory_out_of_workspace = true; % TODO: einfach offset 0 setzten
+trajectory_out_of_workspace = false; % TODO: einfach offset 0 setzten
 x_traj_out_of_workspace_value = 0.1;
 
 plot_trajectory = ~true;
@@ -71,16 +71,28 @@ traj_select_fin = 4;
 
 param_traj_allg.T_switch = 2;%T_sim/2; % ab dem zeitpunkt schält xe0 in xeT um und umgekehrt (only for differential filter)
 %% Param CT Controller
-ct_ctrl_param.Kd1 = 1e3 * diag(ones(n, 1));
-ct_ctrl_param.Kp1 = ct_ctrl_param.Kd1^2/4;
 
-%ct_ctrl_param.Kd1 = diag(ones(1,2)*500);
-%ct_ctrl_param.Kp1 = diag(ones(1,2)*1000);
+% K_d = 100*diag([1 1 1]);
+% K_d_r = 10*diag([1 1 1]);
+% 
+% K_p = K_d^2/4;
+% K_p_r = K_d_r^2/4;
+% 
+% ct_ctrl_param.Kd1 = blkdiag(K_d, K_d_r); %1e0 * diag(ones(6, 1));
+% ct_ctrl_param.Kp1 = blkdiag(K_p, K_p_r); %ct_ctrl_param.Kd1^2/4;
 
-%ct_ctrl_param.Kd1 = diag(ones(1,2)*80);
-%ct_ctrl_param.Kp1 = diag(ones(1,2)*64);
+ct_ctrl_param.Kp1=diag([100 100 100 100 100 100]); %5e2
+ct_ctrl_param.Kd1=diag([20 20 20 20 20 20]); %150
 
-ct_ctrl_param.mode = 2;
+%ct_ctrl_param.Kp1=64*diag([ones(1,3) 2.25*ones(1,3)]); %5e2
+%ct_ctrl_param.Kd1=16*diag([ones(1,3) 1.5*ones(1,3)]); %150
+%ct_ctrl_param.Kp1=64*eye(6); % Stabiler Endeffektor, aber instabiler Nullraum mit F_ext=[000001]', P2= eye(9)-J'*inv(J*inv(M)*J')*J*inv(M);. stabil mit P2 = M*(eye(9)-J'*inv(J*J')*J);
+%ct_ctrl_param.Kd1=16*eye(6);
+
+%ct_ctrl_param.Kd1 = diag(ones(1,6)*500);
+%ct_ctrl_param.Kp1 = diag(ones(1,6)*1000);
+
+ct_ctrl_param.mode = 0;
 % 0: no sing robust
 % 1: simpliy use J_pinv = (J'*J + k*E)^(-1)*J' = (J'*J + k*E)\J'
 % 2: use Sugihara singular robust method: J_pinv = (J'*W_E*J + W_N)^(-1)*J' = (J'*W_E*J + W_N)\J'
@@ -90,16 +102,21 @@ ct_ctrl_param.mode = 2;
 ct_ctrl_param.k = 1e-2;
 
 % 2:
-ct_ctrl_param.w_bar_N = 1e-3*[param_robot.l1^2; param_robot.l2^2; param_robot.l3^2; param_robot.l4^2; param_robot.l5^2; param_robot.l6^2; param_robot.l7^2];
-ct_ctrl_param.w_E = 1e0; %ct_ctrl_param.w_bar_N;
+ct_ctrl_param.w_bar_N = 1e-3*[param_robot.l1^2; param_robot.l2^2; param_robot.l3^2; param_robot.l4^2; param_robot.l5^2; param_robot.l6^2];% ; param_robot.l7^2];
+ct_ctrl_param.W_E = 1e0 * eye(6); %ct_ctrl_param.w_bar_N;
 
 % 3:
 ct_ctrl_param.eps  = 1e-1;
 
 % nullspace for CT controller
 ct_ctrl_param.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;
-ct_ctrl_param.K_n = 1e3*diag([ones(1,7)]); %%% (die Feder hier macht Probleme)
-ct_ctrl_param.k_n_nl = 10*diag([ones(1,7)]);
+%ct_ctrl_param.K_n = 1e2*eye(n);
+%ct_ctrl_param.D_n = sqrt(4*ct_ctrl_param.K_n) + 0*50 * eye(n);
+
+ct_ctrl_param.K_n = 64*eye(n);
+ct_ctrl_param.D_n = 16*eye(n);
+
+ct_ctrl_param.k_n_nl = 0*eye(n);
 ct_ctrl_param.nl_spring_threshold = [0.2; 0.2; 0.2; 0.2; 0.2; 0.2; 0.2];
 
 %% Param Trajektory differential filter 5th order
@@ -117,7 +134,7 @@ param_traj_sin_poly.phi   = 0; % in rad
 %% Calculate target positions
 
 q_0 = [0; 0; 0; -pi/2; 0; pi/2; 0];
-q_0_p = [0 0];
+q_0_p = zeros(n, 1);
 
 H_0_init = hom_transform_endeffector(q_0, param_robot); % singular pose
 R_init = H_0_init(1:3, 1:3);
@@ -133,7 +150,7 @@ if(start_in_singularity)
 end
 
 %% Inverse Kin (Zum Prüfen ob Endwert im Aufgabenraum ist.)
-calc_inverse_kin = true;
+calc_inverse_kin = false;
 if(calc_inverse_kin)
     % Define the cost function.
     Q1 = 1e10 * eye(6); % Weight for the position error in the cost function.
@@ -159,12 +176,16 @@ if(trajectory_out_of_workspace)
 end
 
 %R_target = eval_path_r(theta,1,path_param);
-R_target = eye(3);
+R_target = R_init; % SHOULD NOT ROTATE
 RR = R_init'*R_target;
 rot_quat = rotation2quaternion(RR);
 rot_rho = rot_quat(1);
 rot_alpha_scale = 2*acos(rot_rho);
-rot_ax = rot_quat(2:4)/sin(rot_alpha_scale/2); % bug: in case of non rotation rot_ax is NAN!
+if(sin(rot_alpha_scale/2) == 0)
+    rot_ax = [0; 0; 0]; % muss 0 sein, sonst macht alpha_p probleme
+else
+    rot_ax = rot_quat(2:4)/sin(rot_alpha_scale/2); % bug: in case of non rotation rot_ax is NAN!
+end
 
 rot_alpha_scale_init = rot_alpha_scale;
 rot_ax_init = rot_ax;
