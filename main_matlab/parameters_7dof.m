@@ -72,17 +72,17 @@ traj_select_fin = 4;
 param_traj_allg.T_switch = 2;%T_sim/2; % ab dem zeitpunkt schält xe0 in xeT um und umgekehrt (only for differential filter)
 %% Param CT Controller
 
-% K_d = 100*diag([1 1 1]);
-% K_d_r = 10*diag([1 1 1]);
-% 
-% K_p = K_d^2/4;
-% K_p_r = K_d_r^2/4;
-% 
-% ct_ctrl_param.Kd1 = blkdiag(K_d, K_d_r); %1e0 * diag(ones(6, 1));
-% ct_ctrl_param.Kp1 = blkdiag(K_p, K_p_r); %ct_ctrl_param.Kd1^2/4;
+K_d = 1e3*diag([1 1 1]);
+K_d_r = 1e3*diag([1 1 1]);
 
-ct_ctrl_param.Kp1=diag([100 100 100 100 100 100]); %5e2
-ct_ctrl_param.Kd1=diag([20 20 20 20 20 20]); %150
+K_p = K_d^2/4;
+K_p_r = K_d_r^2/4;
+
+ct_ctrl_param.Kd1 = blkdiag(K_d, K_d_r); %1e0 * diag(ones(6, 1));
+ct_ctrl_param.Kp1 = blkdiag(K_p, K_p_r); %ct_ctrl_param.Kd1^2/4;
+
+%ct_ctrl_param.Kp1=diag([100 100 100 100 100 100]); %5e2
+%ct_ctrl_param.Kd1=diag([20 20 20 20 20 20]); %150
 
 %ct_ctrl_param.Kp1=64*diag([ones(1,3) 2.25*ones(1,3)]); %5e2
 %ct_ctrl_param.Kd1=16*diag([ones(1,3) 1.5*ones(1,3)]); %150
@@ -116,7 +116,7 @@ ct_ctrl_param.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;
 ct_ctrl_param.K_n = 64*eye(n);
 ct_ctrl_param.D_n = 16*eye(n);
 
-ct_ctrl_param.k_n_nl = 0*eye(n);
+ct_ctrl_param.k_n_nl = 10*eye(n);
 ct_ctrl_param.nl_spring_threshold = [0.2; 0.2; 0.2; 0.2; 0.2; 0.2; 0.2];
 
 %% Param Trajektory differential filter 5th order
@@ -133,14 +133,16 @@ param_traj_sin_poly.phi   = 0; % in rad
 
 %% Calculate target positions
 
-q_0 = [0; 0; 0; -pi/2; 0; pi/2; 0];
+q_0 = [0; 0; pi/4; -pi/2; 0; pi/2; 0];
+%q_0 = [-1.081, -1.035, 1.231, -1.778, 0.967, 1.394, -0.652]';
 q_0_p = zeros(n, 1);
 
 H_0_init = hom_transform_endeffector(q_0, param_robot); % singular pose
 R_init = H_0_init(1:3, 1:3);
-xe0 = [H_0_init(1:3,4); rotm2eul(R_init)'];
+xe0 = [H_0_init(1:3,4); rotm2eul(R_init, 'XYZ')'];
 
-xeT = xe0 + [0 0 -0.1 0 0 0]';
+xeT = xe0 + [0 0 -0.1 0 0 0]'; % DAS PROBLEM IST XET BUGGGGG
+R_target = eul2rotm(xeT(4:6)', 'XYZ');
 
 if(start_in_singularity)
     % set xe0 to xeT and xeT to xe0;
@@ -154,17 +156,27 @@ calc_inverse_kin = false;
 if(calc_inverse_kin)
     % Define the cost function.
     Q1 = 1e10 * eye(6); % Weight for the position error in the cost function.
-    Q2 = 0*0.5; % Weight for the manipulability error in the cost function.
-    Q3 = 0*1e-5 * eye(7); % Weight for the deviaton of q_sol to q_d
-    Q4 = 0*1e-1 * eye(7);% Weight of nl_spring_force(q, ct_ctrl_param, param_robot) -> pose should not start near to limits!
+    Q2 = 0.5; % Weight for the manipulability error in the cost function.
+    Q3 = 1*1e0 * eye(7); % Weight for the deviaton of q_sol to q_d
+    Q4 = 1e-1 * eye(7);% Weight of nl_spring_force(q, ct_ctrl_param, param_robot) -> pose should not start near to limits!
     tolerance = 0.01;
     random_q0_count = 100;
 
     q_d = param_robot.q_n;
+    q_d = q_0;
     
     [q_sol, ~] = inverse_kinematics(param_robot, xeT, q_d, Q1, Q2, Q3, Q4, tolerance, random_q0_count, ct_ctrl_param);
     %%
 end
+
+%q_0 = q_sol;
+%H_0_init = hom_transform_endeffector(q_0, param_robot); % singular pose
+%R_init = H_0_init(1:3, 1:3);
+%xe0 = [H_0_init(1:3,4); rotm2eul(R_init, 'XYZ')'];
+
+
+
+%xeT = xe0%; + [0 0 -0.1 0 0 0]'; % DAS PROBLEM IST XET BUGGGGG
 
 if(trajectory_out_of_workspace)
     if(start_in_singularity)
@@ -175,8 +187,6 @@ if(trajectory_out_of_workspace)
     H_0_init(1, 4) = H_0_init(1, 4) + x_traj_out_of_workspace_value;
 end
 
-%R_target = eval_path_r(theta,1,path_param);
-R_target = R_init; % SHOULD NOT ROTATE
 RR = R_init'*R_target;
 rot_quat = rotation2quaternion(RR);
 rot_rho = rot_quat(1);
