@@ -27,6 +27,7 @@ bus_temp_struct = struct;
 bus_temp_struct.p_d = [0; 0; 0];
 bus_temp_struct.p_d_p = [0; 0; 0];
 bus_temp_struct.p_d_pp = [0; 0; 0];
+bus_temp_struct.R_d = eye(3);
 bus_temp_struct.q_d = [0; 0; 0; 0];
 bus_temp_struct.omega_d = [0; 0; 0];
 bus_temp_struct.omega_d_p = [0; 0; 0];

@@ -20,6 +20,7 @@ function [x_d] = create_poly_traj(x_target, x0_target, T_start, t, R_init, rot_a
     x_d.p_d = p_d(1:3);
     x_d.p_d_p =  p_d_p(1:3);
     x_d.p_d_pp = p_d_pp(1:3);
+    x_d.R_d = R_act;
     x_d.q_d = rotation2quaternion(R_act);
     x_d.omega_d   = alpha_p*rot_ax;
     x_d.omega_d_p = alpha_pp*rot_ax;
