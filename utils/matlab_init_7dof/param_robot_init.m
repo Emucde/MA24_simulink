@@ -2,6 +2,7 @@
 param_robot = struct;
 
 param_robot.n_DOF = 7; % DOF
+param_robot.m     = 6; % Dimension of the task space
 param_robot.g = 9.81; %m/s
 %% Robot gravity
 param_robot.g_vis=[0;0;-9.81];

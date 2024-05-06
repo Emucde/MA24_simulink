@@ -25,6 +25,7 @@ param_robot.inertia_matrix_s2 = rho*[7.46749e+06 3.35834e+08 3.33465e+08]*1e-15;
 param_robot.I2 = param_robot.inertia_matrix_s2(3); %kgm^2
 
 param_robot.n_DOF = 2; % DOF
+param_robot.m     = 2; % Dimension of the task space
 
 %{
 % 2M Full Alu 2 DOF
