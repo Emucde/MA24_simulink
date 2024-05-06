@@ -16,6 +16,7 @@
 %closeAllSimulinkModels('./MPC_shared_subsystems')
 %closeAllSimulinkModels('.')
 
+parameter_str = "parameters7dof";
 s_fun_path = 's_functions/s_functions_7dof';
 
 %restoredefaultpath
@@ -72,25 +73,14 @@ traj_select_fin = 4;
 param_traj_allg.T_switch = 2;%T_sim/2; % ab dem zeitpunkt schält xe0 in xeT um und umgekehrt (only for differential filter)
 %% Param CT Controller
 
-K_d = 1e3*diag([1 1 1]);
-K_d_r = 1e3*diag([1 1 1]);
+K_d_t = 1e3*diag([1 1 1]);
+K_p_t = K_d_t^2/4;
 
-K_p = K_d^2/4;
+K_d_r = 1e3*diag([1 1 1]);
 K_p_r = K_d_r^2/4;
 
-ct_ctrl_param.Kd1 = blkdiag(K_d, K_d_r); %1e0 * diag(ones(6, 1));
-ct_ctrl_param.Kp1 = blkdiag(K_p, K_p_r); %ct_ctrl_param.Kd1^2/4;
-
-%ct_ctrl_param.Kp1=diag([100 100 100 100 100 100]); %5e2
-%ct_ctrl_param.Kd1=diag([20 20 20 20 20 20]); %150
-
-%ct_ctrl_param.Kp1=64*diag([ones(1,3) 2.25*ones(1,3)]); %5e2
-%ct_ctrl_param.Kd1=16*diag([ones(1,3) 1.5*ones(1,3)]); %150
-%ct_ctrl_param.Kp1=64*eye(6); % Stabiler Endeffektor, aber instabiler Nullraum mit F_ext=[000001]', P2= eye(9)-J'*inv(J*inv(M)*J')*J*inv(M);. stabil mit P2 = M*(eye(9)-J'*inv(J*J')*J);
-%ct_ctrl_param.Kd1=16*eye(6);
-
-%ct_ctrl_param.Kd1 = diag(ones(1,6)*500);
-%ct_ctrl_param.Kp1 = diag(ones(1,6)*1000);
+ct_ctrl_param.Kd1 = blkdiag(K_d_t, K_d_r);
+ct_ctrl_param.Kp1 = blkdiag(K_p_t, K_p_r);
 
 ct_ctrl_param.mode = 0;
 % 0: no sing robust
@@ -139,9 +129,10 @@ q_0_p = zeros(n, 1);
 
 H_0_init = hom_transform_endeffector(q_0, param_robot); % singular pose
 R_init = H_0_init(1:3, 1:3);
+quat_init = rotation2quaternion(R_init)';
 xe0 = [H_0_init(1:3,4); rotm2eul(R_init, 'XYZ')'];
 
-xeT = xe0 + [0 0 -0.1 0 0 0]'; % DAS PROBLEM IST XET BUGGGGG
+xeT = xe0 + [0 0 -0.5 0 0 0]'; % DAS PROBLEM IST XET BUGGGGG
 R_target = eul2rotm(xeT(4:6)', 'XYZ');
 
 if(start_in_singularity)
@@ -150,6 +141,7 @@ if(start_in_singularity)
     xeT = xe0;
     xe0 = temp;
 end
+
 
 %% Inverse Kin (Zum Prüfen ob Endwert im Aufgabenraum ist.)
 calc_inverse_kin = false;

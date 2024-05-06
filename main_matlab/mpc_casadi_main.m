@@ -1,6 +1,9 @@
 % Init scripts
-tic
-parameters_2dof; init_casadi; import casadi.*;
+if(~exist('parameter_str', 'var')) % otherwise parameter_str is already defined from parameters_xdof
+    parameter_str = "parameters_2dof"; % default value
+    %parameter_str = "parameters_7dof"; % default value
+end
+run(parameter_str); init_casadi; import casadi.*;
 %dbstop if error
 %% GLOBAL SETTINGS FOR MPC
 
@@ -128,7 +131,7 @@ if(traj_not_exist_flag || T_horizon_MPC > T_horizon_max_old)
         disp('mpc_casadi_main.m: T_horizon_MPC > T_horizon_max_old: create new trajectory');
     end
     
-    for i=1:traj_select.traj_amount
+    for i=1:traj_select.traj_amount % defined in parameters_xdof, x = 2, 7
         tic;
         
         param_trajectory = generate_trajectory(t, i, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
@@ -138,6 +141,7 @@ if(traj_not_exist_flag || T_horizon_MPC > T_horizon_max_old)
         param_traj_data.p_d(     :, :, i) = param_trajectory.p_d;
         param_traj_data.p_d_p(   :, :, i) = param_trajectory.p_d_p;
         param_traj_data.p_d_pp(  :, :, i) = param_trajectory.p_d_pp;
+        param_traj_data.R_d(     :, :, i) = param_trajectory.R_d;
         param_traj_data.q_d(     :, :, i) = param_trajectory.q_d;
         param_traj_data.omega_d( :, :, i) = param_trajectory.omega_d;
         param_traj_data.omega_d_p(:, :, i) = param_trajectory.omega_d_p;
@@ -154,7 +158,7 @@ param_trajectory.p_d_pp = param_traj_data.p_d_pp(:,:,traj_select_mpc);
 
 %% OPT PROBLEM
 %[TODO: oben init]
-s_fun_path               = ['./', s_fun_path,'/']; % slash on end necessary! [TODO: remove]
+s_fun_path               = ['./', s_fun_path,'/']; % slash on end necessary! [TODO: more stable solution]
 output_dir = s_fun_path; % needed?
 casadi_fun_c_header_str  = [casadi_func_name, '.c'];
 casadi_fun_h_header_str  = [casadi_func_name, '.h'];
@@ -325,6 +329,6 @@ if(compile_matlab_sfunction)
     disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
 end
 
-parameters_2dof;
+run(parameter_str);
 cd ..
 cd MA24_simulink

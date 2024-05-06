@@ -16,6 +16,7 @@
 %closeAllSimulinkModels('./MPC_shared_subsystems')
 %closeAllSimulinkModels('.')
 
+parameter_str = "parameters_2dof";
 s_fun_path = 's_functions/s_functions_2dof';
 
 %restoredefaultpath
