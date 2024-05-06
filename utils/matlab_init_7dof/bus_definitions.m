@@ -73,6 +73,20 @@ init_bus_param.init_robot_model = bus_temp_struct;
 robot_model = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;
 
+%% Collinearity bus init
+
+bus_temp_struct = struct;
+bus_temp_struct.JJ_Y12_B13_R14 = zeros(3,1);
+bus_temp_struct.JJ_Y15_B16_R17 = zeros(3,1);
+bus_temp_struct.JJ_Y23_B24_R25 = zeros(3,1);
+bus_temp_struct.JJ_Y26_B27_R34 = zeros(3,1);
+bus_temp_struct.JJ_Y35_B36_R37 = zeros(3,1);
+bus_temp_struct.JJ_Y45_B46_R47 = zeros(3,1);
+bus_temp_struct.JJ_Y56_B57_R67 = zeros(3,1);
+init_bus_param.init_collinearity_bus = bus_temp_struct;
+collinearity_bus = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
+clear -regexp slBus; clear bus_temp_struct;
+
 %% Bus init definitions
 % Diese Structs braucht man in den Matlab Funktionen da die Busse
 % initialisiert werden müssen.
