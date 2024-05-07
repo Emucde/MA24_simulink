@@ -1,4 +1,9 @@
 %% INIT
+if(exist('parameter_str', 'var') && strcmp(parameter_str, "parameters_7dof"))
+    rmpath('../utils/matlab_init_7dof');
+    rmpath('../maple/maple_generated/7_dof_system');
+end
+
 %if strcmp(mfilename, 'parameters')
     clear
     %close all
@@ -130,7 +135,7 @@ end
 qq1 = inverse_kinematik_down([xe0(1) xe0(2)-1e-17], param_robot); % upper solution
 qq2 = inverse_kinematik_up([xe0(1) xe0(2)-1e-17], param_robot); % lower solution
 q_0 = qq1;
-q_0_p = [0 0];
+q_0_p = [0; 0];
 
 H_0_init = hom_transform_endeffector(q_0, param_robot);
 

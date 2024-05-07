@@ -1,4 +1,9 @@
 %% INIT
+if(exist('parameter_str', 'var') && strcmp(parameter_str, "parameters_2dof"))
+    rmpath('../utils/matlab_init_2dof');
+    rmpath('../maple/maple_generated/2_dof_system');
+end
+
 %if strcmp(mfilename, 'parameters')
     clear
     %close all
@@ -16,7 +21,7 @@
 %closeAllSimulinkModels('./MPC_shared_subsystems')
 %closeAllSimulinkModels('.')
 
-parameter_str = "parameters7dof";
+parameter_str = "parameters_7dof";
 s_fun_path = 's_functions/s_functions_7dof';
 
 %restoredefaultpath
