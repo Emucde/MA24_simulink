@@ -1,5 +1,10 @@
 %% PARAM ROBOT
 
+param_robot.n_DOF = 2; % DOF
+param_robot.m     = 2; % Dimension of the task space
+param_robot.m_t   = 2; % Translational task space
+param_robot.m_r   = 0; % Rotational task space
+
 rho = 2698.9; % Dichte Aluminium kg/m^3
 param_robot.g = -9.81; %m/s
 
@@ -23,9 +28,6 @@ param_robot.l__s2 = 0.123039; %m
 param_robot.m2 = rho*68850.57565993538*1e-9; %kg
 param_robot.inertia_matrix_s2 = rho*[7.46749e+06 3.35834e+08 3.33465e+08]*1e-15; %kgm^2
 param_robot.I2 = param_robot.inertia_matrix_s2(3); %kgm^2
-
-param_robot.n_DOF = 2; % DOF
-param_robot.m     = 2; % Dimension of the task space
 
 %{
 % 2M Full Alu 2 DOF
