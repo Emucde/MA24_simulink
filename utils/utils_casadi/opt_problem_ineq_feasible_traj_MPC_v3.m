@@ -39,7 +39,10 @@
 
 import casadi.*
 
-n = param_robot.n_DOF;
+n = param_robot.n_DOF; % Dimension of joint space
+m = param_robot.m; % Dimension of Task Space
+m_t = param_robot.m_t; % Translational part of Task Space
+m_r = param_robot.m_r; % Rotational part of Task Space 
 
 % Declare model variables
 x = SX.sym('x', 2*n);
@@ -72,15 +75,15 @@ F = Function('F', {X0, U}, {X});
 %F = Function('F', {X0, U}, {X});
 
 % Discrete y_ref system
-z     = SX.sym('z',     2*2);
-alpha = SX.sym('alpha',   2);
+z     = SX.sym('z',     2*m);
+alpha = SX.sym('alpha',   m);
 
 h_ref = Function('h_ref', {z, alpha}, {[z(3:4); alpha]});
 
 M = rk_iter; % RK4 steps per interval
 DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
-Z0    = SX.sym('Z0',    2*2);
-ALPHA = SX.sym('ALPHA',   2);
+Z0    = SX.sym('Z0',    2*m);
+ALPHA = SX.sym('ALPHA',   m);
 Z     = Z0;
 for j=1:M
     % Runge-Kutta 4th order method
@@ -93,18 +96,25 @@ end
 H = Function('F', {Z0, ALPHA}, {Z});
 
 %% Calculate Initial Guess
-y_d_0    = param_trajectory.p_d(    1:2, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
-y_p_d_0  = param_trajectory.p_d_p(  1:2, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
-y_pp_d_0 = param_trajectory.p_d_pp( 1:2, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
+y_d_0    = param_trajectory.p_d(    1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
+y_p_d_0  = param_trajectory.p_d_p(  1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
+y_pp_d_0 = param_trajectory.p_d_pp( 1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
 
-x_0_0  = [q_0; 0;0];%q1, q2, d/dt q1, d/dt q2
+if(m > 3)
+    R_d_0       = param_trajectory.R_d(       1:m_r, 1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (R_0 ... R_N)
+    q_d_0       = param_trajectory.q_d(       1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
+    omega_d_0   = param_trajectory.omega_d(   1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
+    omega_d_p_0 = param_trajectory.omega_d_p( 1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
+end
+
+x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
 q_0    = x_0_0(1:n); % useless line...
 dq_0   = x_0_0(n+1:2*n);
 ddq_0  = [0;0];
-xe_k_0 = xe0(1:2); % x pos, y pos
+xe_k_0 = xe0(1:m_t); % x pos, y pos, defined in parameters_xdof.m
 u_k_0  = compute_tau(q_0, dq_0, ddq_0, param_robot); % tau1, tau2
 
-u_init_guess_0 = ones(2,N_MPC).*u_k_0;
+u_init_guess_0 = ones(n, N_MPC).*u_k_0; % fully actuated
 
 % für die S-funktion ist der Initial Guess wesentlich!
 F_sim              = F.mapaccum(N_MPC);
@@ -139,8 +149,8 @@ end
 % Optimization Variables:
 u     = SX.sym( 'u',       n, N_MPC   );
 x     = SX.sym( 'x',     2*n, N_MPC+1 );
-z     = SX.sym( 'z',     2*2, N_MPC+1 );
-alpha = SX.sym( 'alpha',   2, N_MPC+1 );
+z     = SX.sym( 'z',     2*m, N_MPC+1 );
+alpha = SX.sym( 'alpha',   m, N_MPC+1 );
 
 mpc_opt_var_inputs = {u, x, z, alpha};
 
@@ -153,10 +163,10 @@ ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:
 
 % input parameter
 x_k    = SX.sym( 'x_k',    2*n,     1 ); % current x state
-z_0    = SX.sym( 'z_0',    2*2,     1 ); % initial z state
-y_d    = SX.sym( 'y_d',    2, N_MPC+1 ); % (y_d_0 ... y_d_N)
-y_p_d  = SX.sym( 'y_p_d',  2, N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
-y_pp_d = SX.sym( 'y_pp_d', 2, N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
+z_0    = SX.sym( 'z_0',    2*m,     1 ); % initial z state
+y_d    = SX.sym( 'y_d',    m, N_MPC+1 ); % (y_d_0 ... y_d_N)
+y_p_d  = SX.sym( 'y_p_d',  m, N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
+y_pp_d = SX.sym( 'y_pp_d', m, N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
 
 mpc_parameter_inputs = {x_k, z_0, y_d, y_p_d, y_pp_d};
 mpc_init_reference_values = [x_0_0(:); z_0_0(:); y_d_0(:); y_p_d_0(:); y_pp_d_0(:)];
@@ -183,12 +193,12 @@ lambda_x0 = SX.sym('lambda_x0', size(w));
 lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
-y        = SX( 2, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
+y        = SX( m, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
 
 % reference trajectory values
-y_ref    = SX( 2, N_MPC+1 ); % TCP position:      (y_ref_0 ... y_ref_N)
-y_p_ref  = SX( 2, N_MPC+1 ); % TCP velocity:      (y_p_ref_0 ... y_p_ref_N)
-y_pp_ref = SX( 2, N_MPC+1 ); % TCP acceleration:  (y_pp_ref_0 ... y_pp_ref_N)
+y_ref    = SX( m, N_MPC+1 ); % TCP position:      (y_ref_0 ... y_ref_N)
+y_p_ref  = SX( m, N_MPC+1 ); % TCP velocity:      (y_p_ref_0 ... y_p_ref_N)
+y_pp_ref = SX( m, N_MPC+1 ); % TCP acceleration:  (y_pp_ref_0 ... y_pp_ref_N)
 
 q_pp = SX( n, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1)
 
@@ -200,11 +210,14 @@ for i=0:N_MPC
 
     % calculate trajectory values (y_0 ... y_N)
     H_e = hom_transform_endeffector_casadi_SX(q, param_robot);
-    y(:, 1 + (i)) = H_e(1:2, 4); %y_0 wird nicht verwendet
+    y(1:m_t,   1 + (i)) = H_e(1:m_t, 4);     %y_t_0 wird nicht verwendet
+    if(m_r == 4)
+        y(1+m_t:m, 1 + (i)) = rotm2quat_v2(H_e(1:3, 1:3)); %y_r_0 wird nicht verwendet
+    end
 
-    y_ref(   :, 1 + (i)) = z(    1:2, 1 + (i));
-    y_p_ref( :, 1 + (i)) = z(    3:4, 1 + (i));
-    y_pp_ref(:, 1 + (i)) = alpha( : , 1 + (i));
+    y_ref(   :, 1 + (i)) = z(    1:m,   1 + (i));
+    y_p_ref( :, 1 + (i)) = z(  m+1:2*m, 1 + (i));
+    y_pp_ref(:, 1 + (i)) = alpha( :,    1 + (i));
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
@@ -215,8 +228,12 @@ for i=0:N_MPC
         q_pp(:, 1 + (i  )) = dx(n+1:2*n, 1);
     end
 end
-g_eps(1, 1) = {norm_2(y(:,end)-y_ref(:,end))}; % for pp.epsilon
+g_eps(1, 1) = {norm_2(y(:,end) - y_ref(:,end))}; % for pp.epsilon
 g = [g_x, g_z, g_eps];
+
+e    = SX( m, N_MPC+1 );
+e_p  = SX( m, N_MPC+1 );
+e_pp = SX( m, N_MPC+1 );
 
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
@@ -226,11 +243,23 @@ J_y        = Q_norm_square( y(        :, 1 + (1:N_MPC-1) ) - y_ref(    :, 1 + (1
 %J_y_p_ref  = Q_norm_square( y_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  :, 1 + (0:N_MPC)), pp.Q_y_p_ref  );
 %J_y_ref    = Q_norm_square( y_ref(    :, 1 + (0:N_MPC) ) - y_d(    :, 1 + (0:N_MPC)), pp.Q_y_ref    );
 
-e_pp = y_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( :, 1 + (0:N_MPC));
-e_p  = y_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  :, 1 + (0:N_MPC));
-e    = y_ref(    :, 1 + (0:N_MPC) ) - y_d(    :, 1 + (0:N_MPC));
+e_pp( 1:m_t, :) = y_pp_ref( 1:m_t, 1 + (0:N_MPC) ) - y_pp_d( 1:m_t, 1 + (0:N_MPC));
+e_p(  1:m_t, :) = y_p_ref(  1:m_t, 1 + (0:N_MPC) ) - y_p_d(  1:m_t, 1 + (0:N_MPC));
+e(    1:m_t, :) = y_ref(    1:m_t, 1 + (0:N_MPC) ) - y_d(    1:m_t, 1 + (0:N_MPC));
 
-J_yy_ref = Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_y_ref, e), eye(2,2));
+if(m > 3)
+    q_rot = y_ref(1+m_t:m, 1 + (0:N_MPC));
+    %rot_alpha = 2*asin(norm(q_rot));
+    q_rho = sqrt(1 - norm(q_rot)^2); % = cos(alpha/2) = cos(asin(norm(q_rot)))
+    q_ref = [q_rho; q_rot];
+
+    R_ref = quat2rotm_v2(q_ref);
+    e_pp( 1+m_t:m, :) = y_pp_ref( 1+m_t:m, 1 + (0:N_MPC) ) - y_pp_d( 1+m_t:m, 1 + (0:N_MPC)); % omega_p_ref - omega_p_d
+    e_p(  1+m_t:m, :) = y_p_ref(  1+m_t:m, 1 + (0:N_MPC) ) - y_p_d(  1+m_t:m, 1 + (0:N_MPC)); % omega_ref - omega_d
+    e(    1+m_t:m, :) = rotm2quat_v2(R_ref * R_d');                                           % quat_mult(q_ref,  conjugate(q_d))
+end
+
+J_yy_ref = Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_y_ref, e), eye(m));
 J_q_pp = Q_norm_square(q_pp, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
 
 cost_vars_names = '{J_y, J_yy_ref, J_q_pp}';
@@ -239,3 +268,4 @@ cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 
 % calculate cost function
 J = sum([cost_vars_SX{:}]);
+%asfsadf
