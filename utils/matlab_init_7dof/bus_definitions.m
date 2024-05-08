@@ -2,7 +2,6 @@
 % https://de.mathworks.com/matlabcentral/answers/29638-rename-bus
 
 % to check try 'typeeditor'
-n = param_robot.n_DOF;
 
 %% debug data bus
 bus_temp_struct.p = zeros(3,1);

@@ -62,6 +62,9 @@ param_global.Ta = 1e-3;
 
 param_visual;
 param_robot_init;
+n = param_robot.n_DOF;
+m = param_robot.m;
+
 bus_definitions;
 init_MPC_weights; %% set MPC weights
 
