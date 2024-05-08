@@ -1,7 +1,7 @@
 % Init scripts
 if(~exist('parameter_str', 'var')) % otherwise parameter_str is already defined from parameters_xdof
-    parameter_str = "parameters_2dof"; % default value
-    %parameter_str = "parameters_7dof"; % default value
+    %parameter_str = "parameters_2dof"; % default value
+    parameter_str = "parameters_7dof"; % default value
 end
 run(parameter_str); init_casadi; import casadi.*;
 %dbstop if error
@@ -105,7 +105,12 @@ if mod(Ts_MPC, param_global.Ta) ~= 0
 end
 %% Convert Maple Functions to casadi functions
 if(convert_maple_to_casadi)
-    create_casadi_functions('SX'); %  script for matlab to casadi conversion
+    maple_fun_arr = {"inertia_matrix.m", "coriolis_matrix.m", ...
+        "gravitational_forces.m", "forward_kinematics_endeffector.m"...
+        "hom_transform_endeffector.m", "geo_jacobian_endeffector.m", ...
+        "geo_jacobian_endeffector_p.m"};
+    maple_path = "maple/maple_generated/7_dof_system_fr3/"
+    create_casadi_functions('SX', "maple/maple_generated/7_dof_system_fr3/", maple_fun_arr); %  script for matlab to casadi conversion
 end
 
 %% path for init guess
@@ -141,7 +146,7 @@ if(traj_not_exist_flag || T_horizon_MPC > T_horizon_max_old)
         param_traj_data.p_d(     :, :, i) = param_trajectory.p_d;
         param_traj_data.p_d_p(   :, :, i) = param_trajectory.p_d_p;
         param_traj_data.p_d_pp(  :, :, i) = param_trajectory.p_d_pp;
-        param_traj_data.R_d(     :, :, i) = param_trajectory.R_d;
+        param_traj_data.R_d(     :, :, :, i) = param_trajectory.R_d;
         param_traj_data.q_d(     :, :, i) = param_trajectory.q_d;
         param_traj_data.omega_d( :, :, i) = param_trajectory.omega_d;
         param_traj_data.omega_d_p(:, :, i) = param_trajectory.omega_d_p;
@@ -151,10 +156,14 @@ if(traj_not_exist_flag || T_horizon_MPC > T_horizon_max_old)
 end
 
 param_trajectory = struct;
-param_trajectory.t      = param_traj_data.t;
-param_trajectory.p_d    = param_traj_data.p_d(:,:,traj_select_mpc);
-param_trajectory.p_d_p  = param_traj_data.p_d_p(:,:,traj_select_mpc);
-param_trajectory.p_d_pp = param_traj_data.p_d_pp(:,:,traj_select_mpc);
+param_trajectory.t         = param_traj_data.t;
+param_trajectory.p_d       = param_traj_data.p_d(      :, :, traj_select_mpc);
+param_trajectory.p_d_p     = param_traj_data.p_d_p(    :, :, traj_select_mpc);
+param_trajectory.p_d_pp    = param_traj_data.p_d_pp(   :, :, traj_select_mpc);
+param_trajectory.R_d       = param_traj_data.R_d(      :, :, :, traj_select_mpc);
+param_trajectory.q_d       = param_traj_data.q_d(      :, :, traj_select_mpc);
+param_trajectory.omega_d   = param_traj_data.omega_d(  :, :, traj_select_mpc);
+param_trajectory.omega_d_p = param_traj_data.omega_d_p(:, :, traj_select_mpc);
 
 %% OPT PROBLEM
 %[TODO: oben init]

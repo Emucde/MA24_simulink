@@ -49,8 +49,14 @@ x = SX.sym('x', 2*n);
 u = SX.sym('u', n);
 
 % Model equations
-xdot = sys_fun_SX(x, u, param_robot);
-f = Function('f', {x, u}, {xdot});
+sys_fun_path = fullfile(output_dir, 'sys_fun.casadi');
+if(exist(sys_fun_path, 'file'))
+    f = Function.load(sys_fun_path);
+else
+    xdot = sys_fun_SX(x, u, param_robot); % ultra slow (5min)
+    f = Function('f', {x, u}, {xdot});
+    f.save([output_dir, 'sys_fun', '.casadi']);
+end
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
@@ -78,7 +84,7 @@ F = Function('F', {X0, U}, {X});
 z     = SX.sym('z',     2*m);
 alpha = SX.sym('alpha',   m);
 
-h_ref = Function('h_ref', {z, alpha}, {[z(3:4); alpha]});
+h_ref = Function('h_ref', {z, alpha}, {[z(m+1:2*m); alpha]});
 
 M = rk_iter; % RK4 steps per interval
 DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
@@ -94,6 +100,7 @@ for j=1:M
     Z  = Z + DT/6 * (k1 +2*k2 +2*k3 +k4);
 end
 H = Function('F', {Z0, ALPHA}, {Z});
+% TODO: Funktion speichern!
 
 %% Calculate Initial Guess
 y_d_0    = param_trajectory.p_d(    1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
@@ -110,7 +117,7 @@ end
 x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
 q_0    = x_0_0(1:n); % useless line...
 dq_0   = x_0_0(n+1:2*n);
-ddq_0  = [0;0];
+ddq_0  = zeros(n,1);
 xe_k_0 = xe0(1:m_t); % x pos, y pos, defined in parameters_xdof.m
 u_k_0  = compute_tau(q_0, dq_0, ddq_0, param_robot); % tau1, tau2
 
@@ -121,9 +128,9 @@ F_sim              = F.mapaccum(N_MPC);
 x_init_guess_kp1_0 = F_sim(x_0_0, u_init_guess_0);
 x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
 
-z_0_0 = [y_d_0(:,1); y_p_d_0(:,1)];
-alpha_init_guess_0 = y_pp_d_0(:, 1:end-1);
-alpha_N_0 = y_pp_d_0(:,end);
+z_0_0 = [y_d_0(:,1); q_d_0(2:4,1); y_p_d_0(:,1); omega_d_0(:,1)]; % q_d_0 ist nicht konsistent zu omega_d_0
+alpha_init_guess_0 = [y_pp_d_0(:, 1:end-1); q_d_0(2:4, 1:end-1)];
+alpha_N_0 = [y_pp_d_0(:,end); omega_d_p_0(:,end)];
 
 H_sim              = H.mapaccum(N_MPC);
 z_init_guess_kp1_0 = H_sim(z_0_0, alpha_init_guess_0);
@@ -211,7 +218,7 @@ for i=0:N_MPC
     % calculate trajectory values (y_0 ... y_N)
     H_e = hom_transform_endeffector_casadi_SX(q, param_robot);
     y(1:m_t,   1 + (i)) = H_e(1:m_t, 4);     %y_t_0 wird nicht verwendet
-    if(m_r == 4)
+    if(m > 3)
         y(1+m_t:m, 1 + (i)) = rotm2quat_v2(H_e(1:3, 1:3)); %y_r_0 wird nicht verwendet
     end
 
@@ -238,6 +245,7 @@ e_pp = SX( m, N_MPC+1 );
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
 J_y        = Q_norm_square( y(        :, 1 + (1:N_MPC-1) ) - y_ref(    :, 1 + (1:N_MPC-1)), pp.Q_y  );
+% TODO: SO KANN DAS NICHT KLAPPEN: Ich muss ROTATIONSMATRIZEN mit Multiplikationen Vergleichen und q_err verwenden!
 
 %J_y_pp_ref = Q_norm_square( y_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( :, 1 + (0:N_MPC)), pp.Q_y_pp_ref );
 %J_y_p_ref  = Q_norm_square( y_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  :, 1 + (0:N_MPC)), pp.Q_y_p_ref  );

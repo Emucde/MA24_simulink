@@ -1,4 +1,12 @@
-function create_casadi_functions(casadi_datatype)
+function create_casadi_functions(casadi_datatype, maple_path, maple_fun_arr)
+    arguments
+        casadi_datatype = "SX"; % default SX datatype
+        maple_path = "maple/maple_generated/2_dof_system/"; % slash at end necessary
+        maple_fun_arr = {"inertia_matrix.m", "coriolis_matrix.m", ...
+            "gravitational_forces.m", "inertia_matrix_inv.m", ...
+            "hom_transform_endeffector.m", "geo_jacobian_endeffector.m", ...
+            "geo_jacobian_endeffector_p.m"};
+    end
     % This function takes a string input 'casadi_datatype' which can be either 'SX' or 'MX'.
     % It checks if the input is valid and proceeds to create Casadi functions from Maple functions accordingly.
     
@@ -7,12 +15,9 @@ function create_casadi_functions(casadi_datatype)
     end
     
     % CREATE CASADI FUNCTIONS FROM MAPLE FUNCTIONS
-    fun_path = "maple_generated/2_dof_system/"; % slash at end necessary
-    fun_arr = {"inertia_matrix.m", "coriolis_matrix.m", ...
-        "gravitational_forces.m", "inertia_matrix_inv.m", ...
-        "hom_transform_endeffector.m", "geo_jacobian_endeffector.m", ...
-        "geo_jacobian_endeffector_p.m"};
-    
+    fun_path = maple_path;
+    fun_arr = maple_fun_arr;
+
     for i=1:length(fun_arr)
         dat_path = char(fun_path + fun_arr{i});
         old_dat_name_split = split(dat_path, "/");

@@ -238,7 +238,7 @@ if(compile_sfun)
     elseif(compile_mode == 2)
         tic;
         s_fun_name = 's_function_opti.c';
-        compile_casadi_sfunction(f_opt, s_fun_name, output_dir, MPC_solver, '-O2', compile_mode); % default nlpsol s-function
+        compile_casadi_sfunction(f_opt, s_fun_name, output_dir, MPC_solver, '-O2', compile_mode); % default opti s-function
         disp(['Compile time for casadi s-function (opti for nlpsol): ', num2str(toc), ' s']);
     end
 end
