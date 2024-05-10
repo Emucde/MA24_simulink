@@ -264,7 +264,7 @@ if(m > 3)
     R_ref = quat2rotm_v2(q_ref);
     e_pp( 1+m_t:m, :) = y_pp_ref( 1+m_t:m, 1 + (0:N_MPC) ) - y_pp_d( 1+m_t:m, 1 + (0:N_MPC)); % omega_p_ref - omega_p_d
     e_p(  1+m_t:m, :) = y_p_ref(  1+m_t:m, 1 + (0:N_MPC) ) - y_p_d(  1+m_t:m, 1 + (0:N_MPC)); % omega_ref - omega_d
-    e(    1+m_t:m, :) = rotm2quat_v2(R_ref * R_d');                                           % quat_mult(q_ref,  conjugate(q_d))
+    e(    1+m_t:m, :) = rotm2quat_v3(R_ref * R_d');                                           % quat_mult(q_ref,  conjugate(q_d))
 end
 
 J_yy_ref = Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_y_ref, e), eye(m));

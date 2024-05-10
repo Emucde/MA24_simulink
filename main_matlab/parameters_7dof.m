@@ -151,6 +151,24 @@ if(start_in_singularity)
 end
 
 
+%%
+%%{
+RR = zeros(3,3,8);
+RR_d = zeros(3,3,8);
+qq = zeros(4,8);
+qq_d = zeros(4,8);
+j=1;
+ppath = '../quaternion_flipping_problems/Problem2/';
+for i=78:85
+    load([ppath, 'qdRd_t', num2str(i), '.mat']);
+    RR(:,:,j) = R;
+    qq(:,j) = q_e;
+    RR_d(:,:,j) = R_d;
+    qq_d(:,j) = q_d;
+    j=j+1;
+end
+%}
+
 %% Inverse Kin (Zum Prüfen ob Endwert im Aufgabenraum ist.)
 calc_inverse_kin = false;
 if(calc_inverse_kin)
