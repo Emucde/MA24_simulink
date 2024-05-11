@@ -28,5 +28,6 @@ function [x_d] = create_sinus_traj(x_target, x0_target, t, R_init, param_traj_si
     x_d.R_d = R_init;
     x_d.q_d = zeros(4,1);
     x_d.omega_d   = zeros(3,1);
+    x_d.q_d_p = quat_deriv(x_d.q_d, x_d.omega_d);
     x_d.omega_d_p = zeros(3,1);
 end

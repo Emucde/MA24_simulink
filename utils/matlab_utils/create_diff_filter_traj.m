@@ -22,5 +22,6 @@ function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, R_init, rot_ax, r
     x_d.R_d = R_act;
     x_d.q_d = rotm2quat_v3(R_act);
     x_d.omega_d   = alpha_p*rot_ax;
+    x_d.q_d_p = quat_deriv(x_d.q_d, x_d.omega_d);
     x_d.omega_d_p = alpha_pp*rot_ax;
 end

@@ -6,6 +6,7 @@ function [param_trajectory] = generate_trajectory(t, modus, xe0, xeT, R_init, ro
     p_d_pp    = zeros(3, N);
     R_d       = zeros(3, 3, N);
     q_d       = zeros(4, N);
+    q_d_p     = zeros(4, N);
     omega_d   = zeros(3, N);
     omega_d_p = zeros(3, N);
 
@@ -19,6 +20,7 @@ function [param_trajectory] = generate_trajectory(t, modus, xe0, xeT, R_init, ro
             p_d_pp(:,i)    = x_d.p_d_pp;
             R_d(:,:,i)     = x_d.R_d;
             q_d(:,i)       = x_d.q_d;
+            q_d_p(:,i)     = x_d.q_d_p;
             omega_d(:,i)   = x_d.omega_d;
             omega_d_p(:,i) = x_d.omega_d_p;
             if(t(i) >= T_start && flag == 0)
@@ -39,6 +41,7 @@ function [param_trajectory] = generate_trajectory(t, modus, xe0, xeT, R_init, ro
             p_d_pp(:,i)    = x_d.p_d_pp;
             R_d(:,:,i)     = x_d.R_d;
             q_d(:,i)       = x_d.q_d;
+            q_d_p(:,i)     = x_d.q_d_p;
             omega_d(:,i)   = x_d.omega_d;
             omega_d_p(:,i) = x_d.omega_d_p;
             x_k = x_kp1;
@@ -61,6 +64,7 @@ function [param_trajectory] = generate_trajectory(t, modus, xe0, xeT, R_init, ro
             p_d_pp(:,i)    = x_d.p_d_pp;
             R_d(:,:,i)     = x_d.R_d;
             q_d(:,i)       = x_d.q_d;
+            q_d_p(:,i)     = x_d.q_d_p;
             omega_d(:,i)   = x_d.omega_d;
             omega_d_p(:,i) = x_d.omega_d_p;
             if(t(i) >= T_start_end && flag == 0)
@@ -79,6 +83,7 @@ function [param_trajectory] = generate_trajectory(t, modus, xe0, xeT, R_init, ro
             p_d_pp(:,i)    = x_d.p_d_pp;
             R_d(:,:,i)     = x_d.R_d;
             q_d(:,i)       = x_d.q_d;
+            q_d_p(:,i)     = x_d.q_d_p;
             omega_d(:,i)   = x_d.omega_d;
             omega_d_p(:,i) = x_d.omega_d_p;
         end
@@ -103,6 +108,7 @@ function [param_trajectory] = generate_trajectory(t, modus, xe0, xeT, R_init, ro
     param_trajectory.p_d_pp    = p_d_pp;
     param_trajectory.R_d       = R_d;
     param_trajectory.q_d       = q_d;
+    param_trajectory.q_d_p     = q_d_p;
     param_trajectory.omega_d   = omega_d;
     param_trajectory.omega_d_p = omega_d_p;
 

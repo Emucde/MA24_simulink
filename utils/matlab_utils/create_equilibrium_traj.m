@@ -7,6 +7,7 @@ function [x_d] = create_equilibrium_traj(x_target)
     x_d.R_d = R_act;
     x_d.q_d = rotm2quat_v3(R_act);
     x_d.omega_d   = zeros(3,1);
+    x_d.q_d_p = quat_deriv(x_d.q_d, x_d.omega_d);
     x_d.omega_d_p = zeros(3,1);
 
 end
