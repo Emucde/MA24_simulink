@@ -108,12 +108,11 @@ y_d_0    = param_trajectory.p_d(    1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step
 y_p_d_0  = param_trajectory.p_d_p(  1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
 y_pp_d_0 = param_trajectory.p_d_pp( 1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
 
-if(m > 3)
-    R_d_0       = param_trajectory.R_d(       1:m_r, 1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (R_0 ... R_N)
-    q_d_0       = param_trajectory.q_d(       1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
-    omega_d_0   = param_trajectory.omega_d(   1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
-    omega_d_p_0 = param_trajectory.omega_d_p( 1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
-end
+R_d_0       = param_trajectory.R_d(       1:m_r, 1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (R_0 ... R_N)
+q_d_0       = param_trajectory.q_d(       1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
+q_d_p_0     = param_trajectory.q_d_p(     1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_p_0 ... q_p_N)
+omega_d_0   = param_trajectory.omega_d(   1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
+omega_d_p_0 = param_trajectory.omega_d_p( 1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
 
 x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
 q_0    = x_0_0(1:n); % useless line...
@@ -129,8 +128,8 @@ F_sim              = F.mapaccum(N_MPC);
 x_init_guess_kp1_0 = F_sim(x_0_0, u_init_guess_0);
 x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
 
-z_0_0 = [y_d_0(:,1); q_d_0(2:4,1); y_p_d_0(:,1); omega_d_0(:,1)]; % q_d_0 ist nicht konsistent zu omega_d_0
-alpha_init_guess_0 = [y_pp_d_0(:, 1:end-1); q_d_0(2:4, 1:end-1)];
+z_0_0 = [y_d_0(:,1); q_d_0(:,1); y_p_d_0(:,1); omega_d_0(:,1)]; % 13 Dimensional bei m=6
+alpha_init_guess_0 = [y_pp_d_0(:, 1:end-1); omega_d_p_0(:, 1:end-1)]; % 6 Dimensional bei m=6
 alpha_N_0 = [y_pp_d_0(:,end); omega_d_p_0(:,end)];
 
 H_sim              = H.mapaccum(N_MPC);
@@ -219,9 +218,8 @@ for i=0:N_MPC
     % calculate trajectory values (y_0 ... y_N)
     H_e = hom_transform_endeffector_casadi_SX(q, param_robot);
     y(1:m_t,   1 + (i)) = H_e(1:m_t, 4);     %y_t_0 wird nicht verwendet
-    if(m > 3)
-        y(1+m_t:m, 1 + (i)) = rotm2quat_v3(H_e(1:3, 1:3)); %y_r_0 wird nicht verwendet
-    end
+       %%%%%%%%%%%%%%
+    y(1+m_t:m, 1 + (i)) = rotm2quat_v3(H_e(1:3, 1:3)); %y_r_0 wird nicht verwendet
 
     y_ref(   :, 1 + (i)) = z(    1:m,   1 + (i));
     y_p_ref( :, 1 + (i)) = z(  m+1:2*m, 1 + (i));
@@ -255,18 +253,16 @@ J_y        = Q_norm_square( y(        :, 1 + (1:N_MPC-1) ) - y_ref(    :, 1 + (1
 e_pp( 1:m_t, :) = y_pp_ref( 1:m_t, 1 + (0:N_MPC) ) - y_pp_d( 1:m_t, 1 + (0:N_MPC));
 e_p(  1:m_t, :) = y_p_ref(  1:m_t, 1 + (0:N_MPC) ) - y_p_d(  1:m_t, 1 + (0:N_MPC));
 e(    1:m_t, :) = y_ref(    1:m_t, 1 + (0:N_MPC) ) - y_d(    1:m_t, 1 + (0:N_MPC));
+%%%%%%%%%%%%%
+q_rot = y_ref(1+m_t:m, 1 + (0:N_MPC));
+%rot_alpha = 2*asin(norm(q_rot));
+q_rho = sqrt(1 - norm(q_rot)^2); % = cos(alpha/2) = cos(asin(norm(q_rot)))
+q_ref = [q_rho; q_rot];
 
-if(m > 3)
-    q_rot = y_ref(1+m_t:m, 1 + (0:N_MPC));
-    %rot_alpha = 2*asin(norm(q_rot));
-    q_rho = sqrt(1 - norm(q_rot)^2); % = cos(alpha/2) = cos(asin(norm(q_rot)))
-    q_ref = [q_rho; q_rot];
-
-    R_ref = quat2rotm_v2(q_ref);
-    e_pp( 1+m_t:m, :) = y_pp_ref( 1+m_t:m, 1 + (0:N_MPC) ) - y_pp_d( 1+m_t:m, 1 + (0:N_MPC)); % omega_p_ref - omega_p_d
-    e_p(  1+m_t:m, :) = y_p_ref(  1+m_t:m, 1 + (0:N_MPC) ) - y_p_d(  1+m_t:m, 1 + (0:N_MPC)); % omega_ref - omega_d
-    e(    1+m_t:m, :) = rotm2quat_v3(R_ref * R_d');                                           % quat_mult(q_ref,  conjugate(q_d))
-end
+R_ref = quat2rotm_v2(q_ref);
+e_pp( 1+m_t:m, :) = y_pp_ref( 1+m_t:m, 1 + (0:N_MPC) ) - y_pp_d( 1+m_t:m, 1 + (0:N_MPC)); % omega_p_ref - omega_p_d
+e_p(  1+m_t:m, :) = y_p_ref(  1+m_t:m, 1 + (0:N_MPC) ) - y_p_d(  1+m_t:m, 1 + (0:N_MPC)); % omega_ref - omega_d
+e(    1+m_t:m, :) = rotm2quat_v3(R_ref * R_d');                                           % quat_mult(q_ref,  conjugate(q_d))
 
 J_yy_ref = Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_y_ref, e), eye(m));
 J_q_pp = Q_norm_square(q_pp, pp.R_q_pp); %Q_norm_square(u, pp.R_u);

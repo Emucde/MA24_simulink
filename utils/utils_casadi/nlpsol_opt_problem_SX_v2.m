@@ -8,6 +8,8 @@ elseif(strcmp(MPC_version, "v2"))
     opt_problem_alldeviations_MPC_v2;
 elseif(strcmp(MPC_version, "v3"))
     opt_problem_ineq_feasible_traj_MPC_v3;
+elseif(strcmp(MPC_version, "v3_quat"))
+    opt_problem_ineq_feasible_traj_MPC_v3_quat;
 elseif(strcmp(MPC_version, "v4"))
     opt_problem_ineq_feasible_block_MPC_v4;
 elseif(strcmp(MPC_version, "traj_feasible"))
