@@ -169,14 +169,15 @@ lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:
 ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
 
 % input parameter
-x_k    = SX.sym( 'x_k',    2*n,     1 ); % current x state
-z_0    = SX.sym( 'z_0',    2*m,     1 ); % initial z state
-y_d    = SX.sym( 'y_d',    m, N_MPC+1 ); % (y_d_0 ... y_d_N)
-y_p_d  = SX.sym( 'y_p_d',  m, N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
-y_pp_d = SX.sym( 'y_pp_d', m, N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
+x_k    = SX.sym( 'x_k',    2*n,      1 ); % current x state
+z_0    = SX.sym( 'z_0',    2*m,      1 ); % initial z state
+y_d    = SX.sym( 'y_d',    m+1,N_MPC+1 ); % (y_d_0 ... y_d_N) +1 wegen quaternion
+y_p_d  = SX.sym( 'y_p_d',  m,  N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
+y_pp_d = SX.sym( 'y_pp_d', m,  N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
 
 mpc_parameter_inputs = {x_k, z_0, y_d, y_p_d, y_pp_d};
-mpc_init_reference_values = [x_0_0(:); z_0_0(:); y_d_0(:); y_p_d_0(:); y_pp_d_0(:)];
+
+mpc_init_reference_values = [x_0_0(:); z_0_0(:); y_d_0(:); q_d_0(:); y_p_d_0(:); omega_d_0(:); y_pp_d_0(:); omega_d_p_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -228,13 +229,18 @@ for i=0:N_MPC
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
         g_x(1, 1 + (i+1)) = {F(x(:, 1 + (i)), u(    :, 1 + (i))) - x(:, 1 + (i+1))}; % Set the state dynamics constraints
-        g_z(1, 1 + (i+1)) = {H(z(:, 1 + (i)), alpha(:, 1 + (i))) - z(:, 1 + (i+1))}; % Set the state dynamics constraints
+        g_z(1, 1 + (i+1)) = {H(z(:, 1 + (i)), alpha(:, 1 + (i))) - z(:, 1 + (i+1))}; % ggf special sub necessary [TODO]
 
         dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
         q_pp(:, 1 + (i  )) = dx(n+1:2*n, 1);
     end
 end
-g_eps(1, 1) = {norm_2(y(:,end) - y_ref(:,end))}; % for pp.epsilon
+
+sub_fun = @(y1, y2) [y1(1:3) - y2(1:3); quat_mult(  y1(4:7), quat_inv( y2(4:7) )  )];
+sub_fun2 = @(y1,y2) [y1(1:3) - y2(1:3); rotm2quat_v3(  quat2rotm_v2( y1(4:7) ) * quat2rotm_v2( y2(4:7) )'  )]; % inefficient but maybe better
+
+% g_eps(1, 1) = {norm_2(         y(:,end) - y_ref(:,end))}; % for pp.epsilon
+g_eps(1, 1) = {norm_2(  sub_fun( y(:,end),  y_ref(:,end) )  )}; % for pp.epsilon
 g = [g_x, g_z, g_eps];
 
 e    = SX( m, N_MPC+1 );
@@ -243,26 +249,17 @@ e_pp = SX( m, N_MPC+1 );
 
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-J_y        = Q_norm_square( y(        :, 1 + (1:N_MPC-1) ) - y_ref(    :, 1 + (1:N_MPC-1)), pp.Q_y  );
+% J_y        = Q_norm_square(         y(        :, 1 + (1:N_MPC-1) ) - y_ref(    :, 1 + (1:N_MPC-1)), pp.Q_y  );
+J_y        = Q_norm_square(  sub_fun( y(        :, 1 + (1:N_MPC-1) ),  y_ref(    :, 1 + (1:N_MPC-1)) ), pp.Q_y  );
 % TODO: SO KANN DAS NICHT KLAPPEN: Ich muss ROTATIONSMATRIZEN mit Multiplikationen Vergleichen und q_err verwenden!
 
 %J_y_pp_ref = Q_norm_square( y_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( :, 1 + (0:N_MPC)), pp.Q_y_pp_ref );
 %J_y_p_ref  = Q_norm_square( y_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  :, 1 + (0:N_MPC)), pp.Q_y_p_ref  );
 %J_y_ref    = Q_norm_square( y_ref(    :, 1 + (0:N_MPC) ) - y_d(    :, 1 + (0:N_MPC)), pp.Q_y_ref    );
 
-e_pp( 1:m_t, :) = y_pp_ref( 1:m_t, 1 + (0:N_MPC) ) - y_pp_d( 1:m_t, 1 + (0:N_MPC));
-e_p(  1:m_t, :) = y_p_ref(  1:m_t, 1 + (0:N_MPC) ) - y_p_d(  1:m_t, 1 + (0:N_MPC));
-e(    1:m_t, :) = y_ref(    1:m_t, 1 + (0:N_MPC) ) - y_d(    1:m_t, 1 + (0:N_MPC));
-%%%%%%%%%%%%%
-q_rot = y_ref(1+m_t:m, 1 + (0:N_MPC));
-%rot_alpha = 2*asin(norm(q_rot));
-q_rho = sqrt(1 - norm(q_rot)^2); % = cos(alpha/2) = cos(asin(norm(q_rot)))
-q_ref = [q_rho; q_rot];
-
-R_ref = quat2rotm_v2(q_ref);
-e_pp( 1+m_t:m, :) = y_pp_ref( 1+m_t:m, 1 + (0:N_MPC) ) - y_pp_d( 1+m_t:m, 1 + (0:N_MPC)); % omega_p_ref - omega_p_d
-e_p(  1+m_t:m, :) = y_p_ref(  1+m_t:m, 1 + (0:N_MPC) ) - y_p_d(  1+m_t:m, 1 + (0:N_MPC)); % omega_ref - omega_d
-e(    1+m_t:m, :) = rotm2quat_v3(R_ref * R_d');                                           % quat_mult(q_ref,  conjugate(q_d))
+e_pp( 1:m_t, :) = y_pp_ref( 1:m,   1 + (0:N_MPC) ) - y_pp_d( 1:m,   1 + (0:N_MPC));
+e_p(  1:m_t, :) = y_p_ref(  1:m,   1 + (0:N_MPC) ) - y_p_d(  1:m,   1 + (0:N_MPC));
+e(    1:m_t, :) = y_ref(    1:m+1, 1 + (0:N_MPC) ) - y_d(    1:m+1, 1 + (0:N_MPC));
 
 J_yy_ref = Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_y_ref, e), eye(m));
 J_q_pp = Q_norm_square(q_pp, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
