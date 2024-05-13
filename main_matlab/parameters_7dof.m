@@ -25,7 +25,7 @@ parameter_str = "parameters_7dof";
 s_fun_path = 's_functions/s_functions_7dof';
 
 %restoredefaultpath
-cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_matlab
+cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_matlab % [TODO: besser machen]
 addpath(genpath('../main_matlab'));
 addpath(genpath('../utils/matlab_utils'));
 addpath(genpath('../utils/matlab_init_7dof'));
@@ -138,10 +138,11 @@ q_0_p = zeros(n, 1);
 H_0_init = hom_transform_endeffector(q_0, param_robot); % singular pose
 R_init = H_0_init(1:3, 1:3);
 quat_init = rotation2quaternion(R_init)';
-xe0 = [H_0_init(1:3,4); rotm2eul(R_init, 'XYZ')'];
+xe0 = [H_0_init(1:3,4); rotm2quat_v3(R_init)]; % xe0 = [x,y,z,q1,q2,q3,q4]
 
-xeT = xe0 + [0 0 -0.5 0 0 0]'; % DAS PROBLEM IST XET BUGGGGG
-R_target = eul2rotm(xeT(4:6)', 'XYZ');
+rotq_fun = @(x1, x2) [x1(1:3) + x2(1:3); quat_mult(x1(4:7), x2(4:7))]; % multiplikation von quaternions = rotationen hintereinander ausführen
+xeT = rotq_fun(xe0, [0; 0; -0.5; 1; 0; 0; 0]); % correct addition of quaternions
+R_target = quat2rotm_v2(xeT(4:7));
 
 if(start_in_singularity)
     % set xe0 to xeT and xeT to xe0;
@@ -152,7 +153,7 @@ end
 
 
 %%
-%%{
+%{
 RR = zeros(3,3,8);
 RR_d = zeros(3,3,8);
 qq = zeros(4,8);
@@ -187,15 +188,6 @@ if(calc_inverse_kin)
     %%
 end
 
-%q_0 = q_sol;
-%H_0_init = hom_transform_endeffector(q_0, param_robot); % singular pose
-%R_init = H_0_init(1:3, 1:3);
-%xe0 = [H_0_init(1:3,4); rotm2eul(R_init, 'XYZ')'];
-
-
-
-%xeT = xe0%; + [0 0 -0.1 0 0 0]'; % DAS PROBLEM IST XET BUGGGGG
-
 if(trajectory_out_of_workspace)
     if(start_in_singularity)
         xe0(1) = xe0(1) + x_traj_out_of_workspace_value;
@@ -205,7 +197,7 @@ if(trajectory_out_of_workspace)
     H_0_init(1, 4) = H_0_init(1, 4) + x_traj_out_of_workspace_value;
 end
 
-RR = R_init'*R_target;
+RR = R_init'*R_target; % Differenz von Rotationen: R_2_0 = R_2_1*R_1_0 => R_1_0 = R_2_1^(-1) * R_2_0 = R_2_1' * R_2_0 = R_1_2 * R_2_0
 rot_quat = rotation2quaternion(RR);
 rot_rho = rot_quat(1);
 rot_alpha_scale = 2*acos(rot_rho);
@@ -285,6 +277,7 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
     param_traj_data.p_d_p     = zeros(3, N_traj, traj_select.traj_amount);
     param_traj_data.p_d_pp    = zeros(3, N_traj, traj_select.traj_amount);
     param_traj_data.q_d       = zeros(4, N_traj, traj_select.traj_amount);
+    param_traj_data.q_d_p     = zeros(4, N_traj, traj_select.traj_amount);
     param_traj_data.omega_d   = zeros(3, N_traj, traj_select.traj_amount);
     param_traj_data.omega_d_p = zeros(3, N_traj, traj_select.traj_amount);
     
@@ -294,12 +287,13 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         param_trajectory = generate_trajectory(t, i, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
         disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
     
-        param_traj_data.t(       :, :   ) = param_trajectory.t;
-        param_traj_data.p_d(     :, :, i) = param_trajectory.p_d;
-        param_traj_data.p_d_p(   :, :, i) = param_trajectory.p_d_p;
-        param_traj_data.p_d_pp(  :, :, i) = param_trajectory.p_d_pp;
-        param_traj_data.q_d(     :, :, i) = param_trajectory.q_d;
-        param_traj_data.omega_d( :, :, i) = param_trajectory.omega_d;
+        param_traj_data.t(        :, :   ) = param_trajectory.t;
+        param_traj_data.p_d(      :, :, i) = param_trajectory.p_d;
+        param_traj_data.p_d_p(    :, :, i) = param_trajectory.p_d_p;
+        param_traj_data.p_d_pp(   :, :, i) = param_trajectory.p_d_pp;
+        param_traj_data.q_d(      :, :, i) = param_trajectory.q_d;
+        param_traj_data.q_d_p(    :, :, i) = param_trajectory.q_d_p;
+        param_traj_data.omega_d(  :, :, i) = param_trajectory.omega_d;
         param_traj_data.omega_d_p(:, :, i) = param_trajectory.omega_d_p;
     end
     
@@ -334,10 +328,14 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         init_guess_cell = cell(1, traj_select.traj_amount);
             
         for ii=1:traj_select.traj_amount
-            param_trajectory = struct;
-            param_trajectory.p_d = param_traj_data.p_d(:,:,ii);
-            param_trajectory.p_d_p = param_traj_data.p_d_p(:,:,ii);
-            param_trajectory.p_d_pp = param_traj_data.p_d_pp(:,:,ii);
+            param_trajectory           = struct;
+            param_trajectory.p_d       = param_traj_data.p_d(      :, :, ii);
+            param_trajectory.p_d_p     = param_traj_data.p_d_p(    :, :, ii);
+            param_trajectory.p_d_pp    = param_traj_data.p_d_pp(   :, :, ii);
+            param_trajectory.q_d       = param_traj_data.q_d(      :, :, ii);
+            param_trajectory.q_d_p     = param_traj_data.q_d_p(    :, :, ii);
+            param_trajectory.omega_d   = param_traj_data.omega_d(  :, :, ii);
+            param_trajectory.omega_d_p = param_traj_data.omega_d_p(:, :, ii);
     
             opts = struct; % should be empty
             if(strcmp(MPC_variant, 'opti'))
@@ -363,22 +361,22 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
     disp(['parameter.m: Execution Time for Init guess Calculation: ', sprintf('%f', toc), 's']);
 
     % save old data
-    q_0_old = q_0;
-    q_0_p_old = q_0_p;
-    xe0_old = xe0;
-    xeT_old = xeT;
-    T_sim_old = T_sim;
-    Ta_old = param_global.Ta;
-    lamda_xyz_old = lamda_xyz;
-    lamda_alpha_old = lamda_alpha;
-    T_traj_poly_old         = T_traj_poly        ;
-    T_traj_sin_poly_old     = T_traj_sin_poly    ;
+    q_0_old                 = q_0;
+    q_0_p_old               = q_0_p;
+    xe0_old                 = xe0;
+    xeT_old                 = xeT;
+    T_sim_old               = T_sim;
+    Ta_old                  = param_global.Ta;
+    lamda_xyz_old           = lamda_xyz;
+    lamda_alpha_old         = lamda_alpha;
+    T_traj_poly_old         = T_traj_poly;
+    T_traj_sin_poly_old     = T_traj_sin_poly;
     omega_traj_sin_poly_old = omega_traj_sin_poly;
-    phi_traj_sin_poly_old   = phi_traj_sin_poly  ;
-    T_switch_old = T_switch;
-    T_horizon_max_old = T_horizon_max;
-    N_sum_old = N_sum;
-    Ts_sum_old = Ts_sum;
+    phi_traj_sin_poly_old   = phi_traj_sin_poly;
+    T_switch_old            = T_switch;
+    T_horizon_max_old       = T_horizon_max;
+    N_sum_old               = N_sum;
+    Ts_sum_old              = Ts_sum;
 
     save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
          'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
@@ -394,8 +392,9 @@ else
     load(param_MPC_traj_data_mat_file);
 end
 
-catch
+catch ME
     disp('Cannot create init guess, please compile new')
+    fprintf(2, 'Fehler: %s\n', getReport(ME));
 end
 
 if(plot_trajectory)
@@ -463,6 +462,7 @@ if(plot_trajectory)
         plot(param_MPC1_traj_data.t(1:end-2), (1/param_global.Ta^2)*diff(param_MPC1_traj_data.p_d(1,:)',2));
         ylabel('d/dt p(t) (m/s)');
         xlabel('t (s)');hold on;plot(param_MPC1_traj_data.t, param_MPC1_traj_data.p_d_pp(1,:));
+        % [TODO]: plot all trajectories (p_d, p_d_p, p_d_pp, q_d, q_d_p, omega_d, omega_d_p)
 end
 
 %% DEBUG

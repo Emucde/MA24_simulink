@@ -77,7 +77,7 @@ function [param_trajectory] = generate_trajectory(t, modus, xe0, xeT, R_init, ro
         end
     elseif(modus == 4) % smooth sinus
         for i=1:N
-            x_d = create_sinus_traj(xeT, xe0, t(i), R_init, param_traj_sin_poly);
+            x_d = create_sinus_traj(xeT, xe0, t(i), R_init, rot_ax, rot_alpha_scale, param_traj_sin_poly);
             p_d(:,i)       = x_d.p_d;
             p_d_p(:,i)     = x_d.p_d_p;
             p_d_pp(:,i)    = x_d.p_d_pp;
