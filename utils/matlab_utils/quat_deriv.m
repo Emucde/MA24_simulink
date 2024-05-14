@@ -5,16 +5,19 @@ function [q_dot, Q] = quat_deriv(q, omega)
     %   q_dot: Derivative of the quaternion (1x4)
 
     % Calculate the quaternion's components
-    q1 = q(1);
-    q2 = q(2);
-    q3 = q(3);
-    q4 = q(4);
+    q1 = q(1); % = eta
+    q2 = q(2); % )
+    q3 = q(3); % } = epsilon
+    q4 = q(4); % )
 
-    Q = [ -q2 -q3 -q4; ...
-           q1  q4 -q3; ...
-          -q4  q1  q2; ...
-           q3 -q2  q1];
+    Q =  0.5 * [ -q2 -q3 -q4; ...
+                  q1  q4 -q3; ...
+                 -q4  q1  q2; ...
+                  q3 -q2  q1];
+    % q_eta^T = -0.5 * [q2; q3; q4]^T = -0.5 * epsilon^T
+    % Q_epsilon = 0.5 * ( q1*eye(3) - skew([q2; q3; q4]) ) = 0.5 * ( eta*eye(3) - skew(epsilon) )
+    % Q = [q_eta^T; Q_epsilon]
 
     % Calculate the derivative of the quaternion
-    q_dot = 0.5 * Q * omega;
+    q_dot = Q * omega;
 end
