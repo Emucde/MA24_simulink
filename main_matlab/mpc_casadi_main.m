@@ -158,6 +158,7 @@ if(traj_not_exist_flag || T_horizon_MPC > T_horizon_max_old)
         param_traj_data.p_d_pp(  :, :, i) = param_trajectory.p_d_pp;
         param_traj_data.R_d(     :, :, :, i) = param_trajectory.R_d;
         param_traj_data.q_d(     :, :, i) = param_trajectory.q_d;
+        param_traj_data.q_d_p(     :, :, i) = param_trajectory.q_d_p;
         param_traj_data.omega_d( :, :, i) = param_trajectory.omega_d;
         param_traj_data.omega_d_p(:, :, i) = param_trajectory.omega_d_p;
     end
@@ -172,6 +173,7 @@ param_trajectory.p_d_p     = param_traj_data.p_d_p(    :, :, traj_select_mpc);
 param_trajectory.p_d_pp    = param_traj_data.p_d_pp(   :, :, traj_select_mpc);
 param_trajectory.R_d       = param_traj_data.R_d(      :, :, :, traj_select_mpc);
 param_trajectory.q_d       = param_traj_data.q_d(      :, :, traj_select_mpc);
+param_trajectory.q_d_p     = param_traj_data.q_d_p(    :, :, traj_select_mpc);
 param_trajectory.omega_d   = param_traj_data.omega_d(  :, :, traj_select_mpc);
 param_trajectory.omega_d_p = param_traj_data.omega_d_p(:, :, traj_select_mpc);
 

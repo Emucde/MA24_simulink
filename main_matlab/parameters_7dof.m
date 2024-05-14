@@ -151,6 +151,16 @@ if(start_in_singularity)
     xe0 = temp;
 end
 
+% K_p_r = eye(3);
+% z2 = [1.23;2.709;3.23;4.00000019]/norm([1.23;2.709;3.23;4.00000019]); %xe0(4:7);
+% q_eps = z2(2:4);
+% z4 = [0;0;0];
+% m_t = 3;
+% z4_p_v1 = -2 * ( z2(1)*eye(m_t) + skew(z2(2:4)) ) * K_p_r * q_eps - K_d_r*z4;
+% [~, Q_q] = quat_deriv(z2, z4); % z2=q_ref, z4=omega_ref, Q_p is 4x3
+% Q_eps = Q_q(2:4, :); % 3x3
+% z4_p_v2 = -4 * Q_eps' * K_p_r * q_eps                             - K_d_r*z4; % without Q_eps calculatin 28% faster, with 2x slower
+% z4_p_v1 - z4_p_v2
 
 %%
 %{
