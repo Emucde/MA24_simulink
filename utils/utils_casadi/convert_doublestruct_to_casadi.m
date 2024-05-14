@@ -12,7 +12,12 @@ function casadi_struct = convert_doublestruct_to_casadi(data_struct, casadi_data
     field_value = data_struct.(field_name);
     if isnumeric(field_value)
       % Convert numeric data to CasADi SX symbols
-      casadi_var = casadi_datatype_fun(field_name, size(field_value));
+      if(isdiag(field_value))
+        m = size(field_value, 1);
+        casadi_var = eye(m).*casadi_datatype_fun(field_name, m);
+      else
+        casadi_var = casadi_datatype_fun(field_name, size(field_value));
+      end
       casadi_struct.(field_name) = casadi_var;
     else
       % Handle non-numeric fields (optional: warning or error)
