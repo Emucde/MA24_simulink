@@ -97,9 +97,10 @@ param_weight.(MPC).u_max    = u_max;
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 6) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MPC='MPC6'; %= MPC_v3 with quaternion
 param_weight.(MPC).Q_y        = 1e5*diag(ones(m,1));  % d_kpn
-param_weight.(MPC).Q_y_ref    = eye(2*m);  % gewiht vom fehler vom yref system
+%param_weight.(MPC).Q_y_ref    = 1*eye(2*m);  % Gewicht vom fehler vom yref system
+%param_weight.(MPC).Q_y_ref_p  = 1e0*diag(ones(m,1));  % Gewicht vom fehler vom yref system
 
-param_weight.(MPC).R_q_pp     = 1e-5*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).R_q_pp     = 1e-10*diag(ones(n,1));  % d_kpn
 
 param_weight.(MPC).K_d_ref  = 100*diag(ones(m,1));
 param_weight.(MPC).K_p_ref  = param_weight.(MPC).K_d_ref^2/4;

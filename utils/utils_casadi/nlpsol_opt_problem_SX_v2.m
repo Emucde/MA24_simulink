@@ -65,6 +65,8 @@ input_vars_MX       = cellfun(@(x) sx_to_mx(x, 'get_MX_sym_cell' ), input_vars_S
 %| sqpmethod         |
 %|-------------------|
 
+tic;
+fprintf('\nStarting execution of solver = nlpsol(''solver'', ''sqpmethod'', prob, opts) (~105s)\n')
 if(strcmp(MPC_solver, 'qrqp'))
     % DOKU: https://casadi.sourceforge.net/v2.0.0/api/html/d6/d07/classcasadi_1_1NlpSolver.html
     opts = struct; % Create a new structure
@@ -87,7 +89,9 @@ if(strcmp(MPC_solver, 'qrqp'))
     % opts.max_iter = 1000;
     opts.tol_du=1e-6;
     opts.tol_pr=1e-6;
+
     solver = nlpsol('solver', 'sqpmethod', prob, opts);
+    
     % solver.print_options();
 elseif(strcmp(MPC_solver, 'feasiblesqpmethod'))
     opts = struct; % Create a new structure
@@ -151,6 +155,8 @@ else
     error(['invalid MPC solver=', MPC_solver, ...
            ' is a valid solver for nlpsol (only "qrqp", "ipopt", "qpoases", ... supported for nlpsol)']);
 end
+disp(['Execution time of solver = nlpsol(''solver'', ''sqpmethod'', prob, opts): ', num2str(toc), ' s']);
+fprintf('\n');
 
 %|--------------------------------------------------------------------------------------|
 %| Full name     | Short  | Description                                                 |
@@ -212,13 +218,21 @@ input_vars_MX = horzcat(merge_cell_arrays({input_vars_MX{1:input_parameter_len}}
 
 %% Define f_opt and calculate final initial guess values
 f_opt = Function(casadi_func_name, input_vars_MX, output_vars_MX);
+% 
 
+init_MPC_weights;
+param_weight_init = param_weight.(casadi_func_name);
 if(weights_and_limits_as_parameter)
     param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init), 'vector');
     [u_opt_sol, xx_full_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
 else  % ohne extra parameter 30-60 % schneller!
     [u_opt_sol, xx_full_opt_sol] = f_opt(mpc_init_reference_values, u_init_guess_0, x_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0);
 end
+
+u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
+x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
+z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z)), size(z)));
+z_d_init_guess_0; % vs z_full?
 
 % set init guess
 init_guess = full(xx_full_opt_sol);
@@ -230,6 +244,7 @@ if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
     end
 end
 
+asfsadf
 %% COMPILE (nlpsol)
 if(compile_sfun)
     if(compile_mode == 1)

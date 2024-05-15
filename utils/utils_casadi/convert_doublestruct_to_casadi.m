@@ -14,7 +14,7 @@ function casadi_struct = convert_doublestruct_to_casadi(data_struct, casadi_data
       % Convert numeric data to CasADi SX symbols
       if(isdiag(field_value))
         m = size(field_value, 1);
-        casadi_var = eye(m).*casadi_datatype_fun(field_name, m);
+        casadi_var = diag(casadi_datatype_fun(field_name, m));
       else
         casadi_var = casadi_datatype_fun(field_name, size(field_value));
       end

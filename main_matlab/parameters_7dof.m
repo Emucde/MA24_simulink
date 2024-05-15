@@ -40,7 +40,7 @@ set(groot, 'DefaultFigurePosition', [350, -650, 800, 600])
 init_casadi;
 
 simulink_main_model_name = 'sim_discrete_7dof';
-open_simulink_on_start = true;
+open_simulink_on_start = false;
 if(~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && sum(strfind([getenv().keys{:}], 'VSCODE')) == 0)
     tic
     fprintf(['open simulink model \"' simulink_main_model_name, '\" ...'])

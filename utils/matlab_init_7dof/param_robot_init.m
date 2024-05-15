@@ -10,11 +10,11 @@ param_robot.g = 9.81; %m/s
 %% Robot gravity
 param_robot.g_vis=[0;0;-9.81];
 
-param_robot.q_limit_lower = q_min;
 param_robot.q_limit_upper = q_max;
+param_robot.q_limit_lower = q_min;
 
-param_robot.q_p_limit_lower = q_dot_max;
-param_robot.q_p_limit_upper = q_dot_min;
+param_robot.q_p_limit_upper = q_dot_max;
+param_robot.q_p_limit_lower = q_dot_min;
 
 param_robot.q_n = (q_max + q_min) / 2;
 

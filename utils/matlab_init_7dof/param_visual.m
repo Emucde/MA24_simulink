@@ -320,8 +320,8 @@ q_dot_min_fun = @(q) [qi_dot_max_fun(q, 1, 0.30, 12.0, 2.750100); ...
 % Geschwindigkeitslimits. Mehr dazu in der Dokumentation von Franka GMBH im obigen Link.
 
 % Gelenkpositionsgrenzen in Radiant
-q_min = [-2.3093; -1.5133; -2.4937; -2.7478; -2.4800; 0.8521; -2.6895];
 q_max = [2.3093; 1.5133; 2.4937; -0.4461; 2.4800; 4.2094; 2.6895];
+q_min = [-2.3093; -1.5133; -2.4937; -2.7478; -2.4800; 0.8521; -2.6895];
 
 % Maximale Gelenkgeschwindigkeit in Radiant pro Sekunde
 q_dot_max = [2; 1; 1.5; 1.25; 3; 1.5; 3];

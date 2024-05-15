@@ -132,8 +132,8 @@ if(quat_v1)
     H = Function('F', {Z0, ALPHA}, {Z});
 else
     z  = SX.sym('z', 2*m+1); % z = [y;quat;y_p;omega]
-    K_d = eye(m).*SX.sym('K_d', m, 1);
-    K_p = eye(m).*SX.sym('K_p', m, 1);
+    K_d = diag(SX.sym('K_d', m, 1));
+    K_p = diag(SX.sym('K_p', m, 1));
 
     z1 = z(1:m_t); % y_ref transl
     z2 = z(m_t+1:m+1); % q_ref quaternion (not joint angles!)
@@ -147,22 +147,22 @@ else
 
     [q_ref_p, Q_q] = quat_deriv(z2, z4); % z2=q_ref, z4=omega_ref, Q_p is 4x3
     Q_eps = Q_q(2:4, :); % 3x3
-    q_eps = z2(2:4); % epsilon = q_vec
+    q_vec = z2(2:4); % epsilon = q_vec
 
     z1_p = z3; % y_p_ref = y_p_d
     z2_p = q_ref_p; % q_p_ref = Q(q_ref) * omega_ref
     z3_p = -K_d_t*(z3) -K_p_t*(z1); % = y_pp_ref
-    %z4_p = - K_d_r*z4 -2 * ( z2(1)*eye(m_t) + skew(z2(2:4)) ) * K_p_r * q_eps; 
-    z4_p = - K_d_r*z4-4 * Q_eps' * K_p_r * q_eps; % ~28% faster, = z4_p = omega_p_ref
+    z4_p = - K_d_r*z4 -2 * ( z2(1)*eye(m_t) + skew(q_vec) ) * K_p_r * q_vec; 
+    %z4_p = - K_d_r*z4-4 * q_vec' * K_p_r * q_vec; % ~28% faster, = z4_p = omega_p_ref
 
-    h_ref = Function('h_ref', {z, diag(K_d), diag(K_p)}, {[z1_p; z2_p; z3_p; z4_p]});
+    h_ref = Function('h_ref', {z, K_d, K_p}, {[z1_p; z2_p; z3_p; z4_p]});
 
     M = rk_iter; % RK4 steps per interval
     DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
     Z0    = SX.sym('Z0',    2*m+1);
     Z     = Z0;
-    K_D = SX.sym('K_D', m, 1); % only diag elements
-    K_P = SX.sym('K_P', m, 1);
+    K_D = diag(SX.sym('K_D', m, 1)); % only diag elements
+    K_P = diag(SX.sym('K_P', m, 1));
     for j=1:M
         % Runge-Kutta 4th order method
         k1 = h_ref(Z            , K_D, K_P);
@@ -202,24 +202,25 @@ x_init_guess_kp1_0 = F_sim(x_0_0, u_init_guess_0);
 x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
 
 z_0_0 = [y_d_0(:,1); q_d_0(:,1); y_p_d_0(:,1); omega_d_0(:,1)]; % init for z_ref
-z_d_0 = [y_d_0(:,1); q_d_0(:,1); y_p_d_0(:,1); omega_d_0(:,1)]; % init for z_d
+z_d_init_guess_0 = [y_d_0; q_d_0; y_p_d_0; omega_d_0]; % init for z_d
+z34_p_d_init_guess_0 = [y_pp_d_0; omega_d_p_0]; % init for z34_p_d
 
 % z_0_0 = [y_d_0(:,1); q_d_0(:,1); y_p_d_0(:,1); q_d_p_0(:,1)]; % 14 Dimensional bei m=6
 
-K_d_ref_guess_0 = diag(param_weight.(casadi_func_name).K_d_ref);
-K_p_ref_guess_0 = diag(param_weight.(casadi_func_name).K_p_ref);
+K_d_ref_0 = (param_weight.(casadi_func_name).K_d_ref); % Zahlenwerte aus init_MPC_weights.m
+K_p_ref_0 = (param_weight.(casadi_func_name).K_p_ref); % nur notwendig um init guess zu berechnen
 %alpha_init_guess_0 = [y_pp_d_0(:, 1:end-1); omega_d_p_0(:, 1:end-1)]; % 6 Dimensional bei m=6
 %alpha_N_0 = [y_pp_d_0(:,end); omega_d_p_0(:,end)];
 
 H_sim              = H.mapaccum(N_MPC);
-z_init_guess_kp1_0 = H_sim(z_0_0, K_d_ref_guess_0, K_p_ref_guess_0);
+z_init_guess_kp1_0 = H_sim(z_0_0, K_d_ref_0, K_p_ref_0);
 % z_init_guess_kp1_0 = H_sim(z_0_0, alpha_init_guess_0);
 z_init_guess_0     = [z_0_0 full(z_init_guess_kp1_0)];
 
-lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0)+numel(K_d_ref_guess_0) + numel(K_p_ref_guess_0), 1);
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0), 1);
 lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(z_init_guess_0)+1, 1); % + 1 wegen eps
 
-init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); K_d_ref_guess_0(:); K_p_ref_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 %% Start with an empty NLP
 
@@ -239,25 +240,27 @@ u_opt_indices = 1:n;
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:)));];
 ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:)));];
+lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:)));];
+
 
 % input parameter
 x_k    = SX.sym( 'x_k',      2*n,      1 ); % current x state
-z_0    = SX.sym( 'z_0',    1+2*m,      1 ); % initial z state
-z_d    = SX.sym( 'z_d',    1+2*m,      N_MPC+1 ); % desired z states
+z_0    = SX.sym( 'z_0',    1+2*m,      1 ); % initial z_ref state
+z_d    = SX.sym( 'z_d',    1+2*m,      N_MPC+1 ); % z_d states
+z34_p_d = SX.sym( 'z34_p_d',   m,      N_MPC+1 ); % z34_p_d = [y_pp_d; omega_p_d] = [z3_p_d; z4_p_d]
 
-K_d = eye(m).*SX.sym('K_d', m, 1);
-K_p = eye(m).*SX.sym('K_p', m, 1);
+K_d = pp.K_d_ref;
+K_p = pp.K_p_ref;
 
 K_d_t = K_d(1:m_t);
 K_d_r = K_d(m_t+1:m);
 K_p_t = K_p(1:m_t);
 K_p_r = K_p(m_t+1:m);
 
-mpc_parameter_inputs = {x_k, z_0, z_d(:), K_d, K_p};
+mpc_parameter_inputs = {x_k, z_0, z_d(:), z34_p_d(:)};
 
-mpc_init_reference_values = [x_0_0(:); z_0_0(:); z_d_0(:); K_d_ref_guess_0(:); K_p_ref_guess_0(:)];
+mpc_init_reference_values = [x_0_0(:); z_0_0(:); z_d_init_guess_0(:); z34_p_d_init_guess_0(:)]; % Zahlenwerte
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -280,9 +283,22 @@ ubg(end) = pp.epsilon;
 lambda_x0 = SX.sym('lambda_x0', size(w));
 lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
+
+%quat_err_fun1 = @(y1, y2) quat_mult_vec(  y1, quat_inv( y2 )  ); % liefert 3x1 Vektor
+% oben muss noch rotm2quatvec gmacht werden, denn abs(q) ist immer 1, selbst wenn der quaternoinenfehler 0 ist.
+quat_err_fun1 = @(y1, y2) rotm2quatvec(  quat2rotm_v2( y1 ) * quat2rotm_v2( y2 )'  ); % liefert 3x1 Vektor
+
+sub_fun_y = @(y1, y2) [ y1(1:m_t) - y2(1:m_t); ... 
+                        quat_err_fun1(y1(m_t+1:m+1), y2(m_t+1:m+1))]; % liefert 6x1 Vektor
+sub_fun_z = @(y1, y2) [ sub_fun_y(y1, y2); ...
+                      y1(m+2     : m+1+m_t) - y2(m+2     : m+1+m_t); ...
+                      y1(m+2+m_t : 2*m+1  ) - y2(m+2+m_t :   2*m+1)]; % liefert 12x1 Vektor
+
+
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
 y    = SX( m+1, N_MPC+1 ); % 
-q_pp = SX( n, N_MPC     ); % joint acceleration: (q_pp_0 ... q_pp_N-1)
+q_pp = SX( n, N_MPC     ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
+z34_p = SX( m, N_MPC+1   ); % z34_p = [y_pp; omega_pp] = [z3_p; z4_p], i.e. z = [y; q; y_p; omega] = [z1; z2; z3; z4]
 
 g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 g_z(1, 1 + (0)) = {z_0 - z(:, 1 + (0))}; % x0 = xk
@@ -295,6 +311,9 @@ for i=0:N_MPC
     y(    1:m_t, 1 + (i)) = H_e(1:m_t, 4);     %y_t_0 wird nicht verwendet
     y(m_t+1:m+1, 1 + (i)) = rotm2quat_v3(H_e(1:m_r, 1:m_r)); %y_r_0 wird nicht verwendet
 
+    dz = h_ref(z(:, 1 + (i)), K_d, K_p); % z_p = [y_p; q_p; y_pp; omega_p]
+    z34_p(:, 1 + (i)) = dz(m+2:1+2*m, 1); % z34_p = [y_pp; omega_pp] = [z3_p; z4_p]
+
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
         g_x(1, 1 + (i+1)) = {F(x(:, 1 + (i)), u(:, 1 + (i))) - x(:, 1 + (i+1))}; % Set the state dynamics constraints
@@ -305,25 +324,17 @@ for i=0:N_MPC
     end
 end
 
-%quat_err_fun1 = @(y1, y2) quat_mult(  y1(m_t+1:m+1), quat_inv( y2(m_t+1:m+1) )  );
-% oben muss noch rotm2quatvec gmacht werden, denn abs(q) ist immer 1, selbst wenn der quaternoinenfehler 0 ist.
-quat_err_fun1 = @(y1, y2) rotm2quatvec(  quat2rotm_v2( y1 ) * quat2rotm_v2( y2 )'  );
-
-sub_fun_y = @(y1, y2) [ y1(1:m_t) - y2(1:m_t); ... 
-                        quat_err_fun1(y1(m_t+1:m+1), y2(m_t+1:m+1))]; % liefert 6x1 Vektor
-sub_fun_z = @(y1, y2) [ sub_fun_y(y1, y2); ...
-                      y1(m+2:m+1+m_t) - y2(m+2:m+1+m_t); ...
-                      y1(m+2+m_t: 2*m+1) - y2(m+2+m_t: 2*m+1)]; % liefert 12x1 Vektor
-
-g_eps(1, 1) = {norm_2(  sub_fun_y( y(1:m+1,end),  z(1:m+1,end) )  )}; % for pp.epsilon
-g = [g_x, g_z, g_eps];
+g_eps(1, 1) = {norm_2(  sub_fun_y( y(1:m+1, end),  z(1:m+1, end) )  )}; % for pp.epsilon
+g = merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
 
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
 e_ref = SX( 2*m, N_MPC+1 ); % weil beim quaternionenfehler nur der Vektorteil betrachtet wird
 for i=0:N_MPC
-    e_ref(:, 1 + (i)) = sub_fun_z( z_d(:, 1 + (i)), z(:, 1 + (i)) );
+    e_ref(:, 1 + (i)) = sub_fun_z( z(:, 1 + (i)), z_d(:, 1 + (i)) );
 end
+
+e_ref_p = z34_p - z34_p_d;
 
 e = SX( m, N_MPC );
 for i=0:N_MPC-1
@@ -331,7 +342,9 @@ for i=0:N_MPC-1
 end
 
 J_y    = Q_norm_square( e ,    pp.Q_y     );
-J_ref  = Q_norm_square( e_ref, pp.Q_y_ref );
+%J_ref  = Q_norm_square( e_ref, pp.Q_y_ref + Q_norm_square( e_ref_p, pp.Q_y_ref_p );
+J_ref = Q_norm_square(e_ref_p + mtimes(K_d, e_ref(m+1:2*m,:)) + mtimes(K_p, e_ref(1:m,:)), eye(m));
+
 J_q_pp = Q_norm_square( q_pp,  pp.R_q_pp  ); %Q_norm_square(u, pp.R_u);
 
 cost_vars_names = '{J_y, J_ref, J_q_pp}';
@@ -340,4 +353,3 @@ cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 
 % calculate cost function
 J = sum([cost_vars_SX{:}]);
-asfsadf
