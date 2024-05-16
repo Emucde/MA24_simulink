@@ -5,4 +5,5 @@ slprj
 *.asv
 *.slxc
 *.autosave
+*.casadi
 utils_python/__pycache__
