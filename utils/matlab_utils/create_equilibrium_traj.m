@@ -8,7 +8,8 @@ function [x_d] = create_equilibrium_traj(x_target)
 
     omega_d   = zeros(3,1);
     omega_d_p = zeros(3,1);
-    q_d   = rotm2quat_v3(R_act);
+    q_d   = rotation2quaternion(R_act);
+    %q_d   = rotm2quat_v3(R_act);
     q_d_p = zeros(4,1);
 
     x_d.p_d       = x_target(1:3);

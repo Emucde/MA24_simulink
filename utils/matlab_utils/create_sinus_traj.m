@@ -31,7 +31,8 @@ function [x_d] = create_sinus_traj(x_target, x0_target, t, R_init, rot_ax, rot_a
 
     omega_d   = alpha_p*rot_ax;
     omega_d_p = alpha_pp*rot_ax;
-    q_d   = rotm2quat_v3(R_act);
+    q_d   = rotation2quaternion(R_act);
+    %q_d   = rotm2quat_v3(R_act);
     q_d_p = quat_deriv(q_d, omega_d);
 
     x_d.p_d       = x_ref;

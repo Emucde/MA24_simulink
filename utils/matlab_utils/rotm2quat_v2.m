@@ -12,7 +12,7 @@ function q = rotm2quat_v2(R)
     q1 = (r32 - r23) / (4 * q0);
     q2 = (r13 - r31) / (4 * q0);
     q3 = (r21 - r12) / (4 * q0);
-    
+    warning('rotm2quat_v3 is not robust to numerical errors for numbers < 2.2204e-16 = eps. Use rotation2quaternion instead.');
     % Assemble the quaternion
     q = [q0; q1; q2; q3];
 end

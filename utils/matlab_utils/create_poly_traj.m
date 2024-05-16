@@ -19,7 +19,8 @@ function [x_d] = create_poly_traj(x_target, x0_target, T_start, t, R_init, rot_a
     
     omega_d   = alpha_p*rot_ax;
     omega_d_p = alpha_pp*rot_ax;
-    q_d   = rotm2quat_v3(R_act);
+    q_d   = rotation2quaternion(R_act);
+    %q_d   = rotm2quat_v3(R_act);
     q_d_p = quat_deriv(q_d, omega_d);
 
     x_d.p_d       = p_d(1:3);

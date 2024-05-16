@@ -18,4 +18,8 @@ function q = rotm2quat_v3(R)
     
     % Assemble the quaternion
     q = [q0; q1; q2; q3];
+    warning('rotm2quat_v3 is not robust to numerical errors for numbers < 2.2204e-16 = eps. Use rotation2quaternion instead.');
+    % ACHTUNG IST NICHT ROBUST AUF RAUSCHEN NAHE 0! Wenn es zu vorzeichenwechseln kommt, dann ist das Ergebnis falsch.
+    % passiert wenn einträge < eps = 2.2204e-16 sind
+    %q=q/norm(q);
 end

@@ -18,7 +18,8 @@ function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, R_init, rot_ax, r
 
     omega_d   = alpha_p*rot_ax;
     omega_d_p = alpha_pp*rot_ax;
-    q_d   = rotm2quat_v3(R_act);
+    q_d   = rotation2quaternion(R_act);
+    %q_d   = rotm2quat_v3(R_act);
     q_d_p = quat_deriv(q_d, omega_d);
 
     x_d.p_d       =   xd(1:3);
