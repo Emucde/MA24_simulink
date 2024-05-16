@@ -91,7 +91,7 @@ if(strcmp(MPC_solver, 'qrqp'))
     opts.tol_pr=1e-6;
 
     solver = nlpsol('solver', 'sqpmethod', prob, opts);
-    
+
     % solver.print_options();
 elseif(strcmp(MPC_solver, 'feasiblesqpmethod'))
     opts = struct; % Create a new structure
@@ -220,7 +220,7 @@ input_vars_MX = horzcat(merge_cell_arrays({input_vars_MX{1:input_parameter_len}}
 f_opt = Function(casadi_func_name, input_vars_MX, output_vars_MX);
 % 
 
-init_MPC_weights;
+%init_MPC_weights;
 param_weight_init = param_weight.(casadi_func_name);
 if(weights_and_limits_as_parameter)
     param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init), 'vector');
@@ -232,10 +232,13 @@ end
 u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
 x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
 z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z)), size(z)));
-z_d_init_guess_0; % vs z_full?
+%z_d_init_guess_0; % vs z_full?
 
 % set init guess
 init_guess = full(xx_full_opt_sol);
+
+eval([param_MPC_init_guess_name, ' = init_guess;']);
+save(param_MPC_init_guess_mat_file, param_MPC_init_guess_name); % damit speichername eindeutig ist: param_MPCX_init_guess
 
 if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
     disp(['J = '      num2str(full( sum([ cost_values_sol{:} ]) )) ]);
@@ -244,14 +247,14 @@ if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
     end
 end
 
-asfsadf
+%asfsadf
 %% COMPILE (nlpsol)
 if(compile_sfun)
     if(compile_mode == 1)
         tic;
         s_fun_name = 's_function_nlpsol.c';
         compile_casadi_sfunction(f_opt, s_fun_name, output_dir, MPC_solver, '-O3', compile_mode); % default nlpsol s-function
-    disp(['Compile time for casadi s-function (nlpsol): ', num2str(toc), ' s']);
+        disp(['Compile time for casadi s-function (nlpsol): ', num2str(toc), ' s']);
     elseif(compile_mode == 2)
         tic;
         s_fun_name = 's_function_opti.c';
