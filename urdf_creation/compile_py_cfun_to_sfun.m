@@ -1,0 +1,29 @@
+import casadi.*;
+
+fun_arr = { ...
+    'sys_fun_py', ...
+    'inertia_matrix_py', ...
+    'coriolis_matrix_py', ...
+    'gravitational_forces_py', ...
+    'hom_transform_endeffector', ...
+    'quat_endeffector', ...
+    'geo_jacobian_endeffector', ...
+    'geo_jacobian_endeffector_p' ...
+};
+
+sys_fun = Function.load('./s_functions/s_functions_7dof/sys_fun_py.casadi');
+output_dir = './s_functions/s_functions_7dof/';
+compile_mode = 2;
+% f_opt = Function(casadi_func_name, input_vars_MX, output_vars_MX);
+
+if(compile_mode == 1)
+    tic;
+    s_fun_name = 's_function_nlpsol.c';
+    compile_casadi_sfunction(sys_fun, s_fun_name, output_dir, '', '-O3', compile_mode); % default nlpsol s-function
+    disp(['Compile time for casadi s-function (nlpsol): ', num2str(toc), ' s']);
+elseif(compile_mode == 2)
+    tic;
+    s_fun_name = 's_function_opti.c';
+    compile_casadi_sfunction(sys_fun, s_fun_name, output_dir, '', '-O2', compile_mode); % default opti s-function
+    disp(['Compile time for casadi s-function (opti for nlpsol): ', num2str(toc), ' s']);
+end

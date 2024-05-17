@@ -107,10 +107,10 @@ param_weight.(MPC).K_p_ref  = param_weight.(MPC).K_d_ref^2/4;
 
 param_weight.(MPC).epsilon    = 1e-5;
 
-param_weight.(MPC).x_min    = x_min;
-param_weight.(MPC).x_max    = x_max;
-param_weight.(MPC).u_min    = u_min;
-param_weight.(MPC).u_max    = u_max;
+param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
+param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
+param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
+param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
 
 %%%%%%%%%%%%%%%%%%%%% FEASIBLE BLOCK %%%%%%%%%%%%%%%%%%%%%
 MPC='FeasibleBlock';

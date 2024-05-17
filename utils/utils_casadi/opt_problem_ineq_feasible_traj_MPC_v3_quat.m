@@ -298,6 +298,7 @@ for i=0:N_MPC
     H_e = hom_transform_endeffector_casadi_SX(q, param_robot);
     y(    1:m_t, 1 + (i)) = H_e(1:m_t, 4);     %y_t_0 wird nicht verwendet
     y(m_t+1:m+1, 1 + (i)) = rotation2quaternion_casadi(H_e(1:m_r, 1:m_r)); %y_r_0 wird nicht verwendet
+    %y(m_t+1:m+1, 1 + (i)) = rotm2quat_v3(H_e(1:m_r, 1:m_r)); %y_r_0 wird nicht verwendet
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
