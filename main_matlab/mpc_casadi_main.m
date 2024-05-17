@@ -187,7 +187,7 @@ s_func_name              = ['s_function_', casadi_fun_c_header_str]; % final nam
 s_fun_c_file_path        = [s_fun_path, s_func_name];
 casadi_fun_h_header_path = [s_fun_path, casadi_func_name, '.h'];
 casadi_fun_c_header_path = [s_fun_path, casadi_func_name, '.c'];
-param_MPC_init_guess_name = ['param_', casadi_func_name', '_init_guess'];
+param_MPC_init_guess_name = ['param_', casadi_func_name, '_init_guess'];
 param_MPC_init_guess_mat_file = ['./', s_fun_path, '/initial_guess/', param_MPC_init_guess_name, '.mat'];
 
 substr = '_matlab';

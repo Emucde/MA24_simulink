@@ -237,7 +237,7 @@ z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+nume
 % set init guess
 init_guess = full(xx_full_opt_sol);
 
-eval([param_MPC_init_guess_name, ' = init_guess;']);
+eval([param_MPC_init_guess_name, ' = struct(''init_guess'', init_guess);']);
 save(param_MPC_init_guess_mat_file, param_MPC_init_guess_name); % damit speichername eindeutig ist: param_MPCX_init_guess
 
 if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
