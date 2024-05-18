@@ -14,53 +14,106 @@ print(fk_dict.keys())
 # should give ['q', 'upper', 'lower', 'dual_quaternion_fk', 'joint_names', 'T_fk', 'joint_list', 'quaternion_fk']
 #forward_kinematics = fk_dict["T_fk"]
 
-
+m=6
 n = 7
 u = cs.SX.sym('u', n, 1)
 q = cs.SX.sym('q', n, 1)
 q_p = cs.SX.sym('q_p', n, 1)
+q_pp = cs.SX.sym('q_pp', n, 1)
+x = cs.vertcat(q, q_p)
+tau = cs.SX.sym('tau', n, 1)
+S = cs.SX.sym('S', 3, 3)
 
 gravity = [0, 0, -9.81]
-M = robot_parser.get_inertia_matrix_crba(root_link, end_link) # sind casadi SX functions!
-C = robot_parser.get_coriolis_rnea(root_link, end_link)
-g = robot_parser.get_gravity_rnea(root_link, end_link, gravity)
 
-H = fk_dict["T_fk"]
+inv_dyn = robot_parser.get_inverse_dynamics_rnea(root_link, end_link, gravity) # Achtung berechnet tau!
+inv_dyn_tau = cs.Function('inv_dyn', [q, q_p, q_pp], [inv_dyn(q, q_p, q_pp)], ['q', 'q_p', 'q_pp'], ['tau(q, q_p, q_pp)'])
+
+qa = [1,2,3,4,5,6,7]
+qpa = [1,2,3,4,5,6,7]
+print('qa = [1,2,3,4,5,6,7], qpa = [1,2,3,4,5,6,7]', '\n')
+
+g1 = robot_parser.get_gravity_rnea(root_link, end_link, gravity)
+g = cs.Function('g', [q], [inv_dyn_tau(q, cs.SX(n,1), cs.SX(n,1))], ['q'], ['g(q)']) # gravitational forces
+print('g1(qa) - g(qa):', g1(qa) - g(qa), '\n') # sollte 0 sein
+
+M_mat = cs.SX(n,n)
+
+for i in range(n):
+    q_pp_vec = cs.SX(n,1)
+    q_pp_vec[i] = 1
+    M_mat[:, i] = inv_dyn_tau(q, cs.SX(n,1), q_pp_vec) - g(q) # methode nach ott
+
+M1 = robot_parser.get_inertia_matrix_crba(root_link, end_link) # sind casadi SX functions! Ineffizient, siehe paper
+M = cs.Function('M', [q], [M_mat], ['q'], ['M(q)']) # inertia matrix
+
+print('M1(qa) - M(qa):', M1(qa) - M(qa), '\n') # sollte 0 sein
+print('M(qa) - M(qa).T:', M(qa) - M(qa).T, '\n') # sollte 0 sein
+
+C_rnea_wog = robot_parser.get_coriolis_rnea(root_link, end_link) # rnea algorithm!! (man erhält nur einen nx1 vektor d. h. C(q, q_p) * q_p) - g(q)
+C_rnea1 = cs.Function('C_rnea1', [q, q_p], [C_rnea_wog(q, q_p) + g(q)], ['q', 'q_p'], ['C_rnea1(q, q_p)\n']) # = C(q, q_p)q_p
+C_rnea = cs.Function('C_rnea', [q, q_p], [inv_dyn_tau(q, q_p, cs.SX(n,1))], ['q', 'q_p'], ['C(q, q_p) = tau(q, q_p, 0)']) # = n(q, q_p) = C(q, q_p)q_p + g(q)
+print('C_rnea1(qa, qpa) - C_rnea(qa, qpa):', C_rnea1(qa, qpa) - C_rnea(qa, qpa)) # sollte 0 sein
+
+C_nq = cs.Function('C_nq', [q, q_p], [C_rnea(q, q_p)], ['q', 'q_p'], ['n(q, q_p) = C(q, q_p)q_p + g(q)\n']) # coriolis matrix
+
+# Die Eigenschaft C(q, q_p) + C(q, q_p).T = M kann nicht geprüft werden, da die Funktion C_rnea(q, q_p) = C(q, q_p)q_p + g(q) = n(q, q_p)
+dM = cs.Function('dM', [q, q_p], [cs.reshape( cs.jacobian(M(q), q) @ q_p, n, n)], ['q', 'q_p'], ['dM(q, q_p)']) # derivative of inertia matrix
+test_fun = cs.Function('test_fun', [q, q_p], [(dM(q, q_p) @ q_p - 2*(C_rnea(q, q_p) - g(q)))], ['q', 'q_p'], ['zero'])
+# test_fun(qa, qpa) # sollte 0 sein (funktioniert nicht)
+
+# Hinweis: es gibt cs.simplify()
+
+T_fk = fk_dict["T_fk"]
+H = cs.Function('H', [q], [T_fk(q)])
 H_q = H(q)
-f_e = cs.Function('f_e', [q], [H_q[0:3, 3]]) # endeffector position
-R_e = H_q[0:3, 0:3] # endeffector rotation matrix
-R_e = cs.Function('R_e', [q], [H_q[0:3, 0:3]]) # endeffector rotation matrix
-R_e_p = cs.reshape(  cs.jacobian(R_e, q) @ q_p  ,3,3)  # d/dt R_e
+f_e = cs.Function('f_e', [q], [H_q[0:3, 3]], ['q'], ['f_e(q)']) # endeffector position
+R_e = cs.Function('R_e', [q], [H_q[0:3, 0:3]], ['q'], ['R_e(q)']) # endeffector rotation matrix
+R_e_p = cs.Function('R_e_p', [q, q_p], [cs.reshape(  cs.jacobian(R_e(q), q) @ q_p  ,3,3)], ['q', 'q_p'], ['R_e_p(q, q_p)']) # derivative of rotation matrix
 
 # J_t = f_e.jacobian()
-J_t = cs.Function('J_t', [q], [cs.jacobian(f_e(q), q)]) # ist equivalent
+J_t = cs.Function('J_t', [q], [cs.jacobian(f_e(q), q)], ['q'], ['J_t(q)']) # translational jacobian
+S_omega = cs.Function('S_omega', [q, q_p], [R_e(q).T @ R_e_p(q, q_p)], ['q', 'q_p'], ['S_omega(q, q_p)'])
+skew_to_vector = cs.Function('skew_to_vector', [S], [cs.vertcat(S[2,1], S[0,2], S[1,0])], ['S'], ['skew_to_vector(S)'])
+omega = cs.Function('omega', [q, q_p], [skew_to_vector(S_omega(q, q_p))], ['q', 'q_p'], ['omega(q, q_p)'])
+domega = cs.jacobian(omega(q, q_p), q_p) # das q_p verschwindet dabei
+J_r = cs.Function('J_r', [q], [domega], ['q'], ['J_r(q)']) # rotational jacobian
+
+J = cs.Function('J', [q], [cs.vertcat(J_t(q), J_r(q))], ['q'], ['J(q)']) # geometric jacobian
+J_p = cs.Function('J_p', [q, q_p], [cs.reshape(  cs.jacobian(J(q), q) @ q_p  ,m ,n)], ['q', 'q_p'], ['J_p(q, q_p)']) # derivative of geometric jacobian
 
 quat = fk_dict["quaternion_fk"] # dual_quaternion_fk
+quat_e = cs.Function('quat_e', [q], [quat(q)], ['q'], ['quat_e(q)'])
 
-print(H([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5]))
-print(quat([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5]))
-
+# print(H([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5]))
+# print(quat([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5]))
 
 # solve Ax = b with
 # A = M(x1), b = u-C(x)*x2-g(x1)
-q_pp = cs.solve( M(q), u - C(q,q_p)*q_p - g(q) ) # = d^2/dt^2 q
-sys_fun = cs.Function('sys_fun', [q, q_p, u], [q_pp])
+# Achtung: C(q,q_p)*q_p + g(q) = C_rnea(q, q_p) = C_nq(q, q_p)
+# q_pp_sys = cs.solve( M(q), u - C_rnea(q,q_p)*q_p) # = d^2/dt^2 q, ineffizient
+q_pp_aba = robot_parser.get_forward_dynamics_aba(root_link, end_link, gravity) # = d^2/dt^2 q über aba berechnet
+sys_fun_qpp = cs.Function('sys_fun_qpp', [q, q_p, tau], [q_pp_aba(q, q_p, tau)], ['q', 'q_p', 'tau'], ['q_pp'])
+sys_fun_x = cs.Function('sys_fun_x', [x, u], [cs.vertcat(q_p, q_pp_aba(q, q_p, u))], ['x', 'u'], ['d/dt x = f(x, u)'])
 
-q_pp_tst = sys_fun([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
+q_pp_tst = sys_fun_qpp([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
 
-# oder
-inv_dyn = robot_parser.get_inverse_dynamics_rnea(root_link, end_link) # Achtung berechnet tau!
 tau = inv_dyn([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
 
+robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_nq(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'g(q)'])
 
-sys_fun.save('./s_functions/s_functions_7dof/sys_fun_py.casadi')
 M.save('./s_functions/s_functions_7dof/inertia_matrix_py.casadi')
-C.save('./s_functions/s_functions_7dof/coriolis_matrix_py.casadi')
+C_rnea.save('./s_functions/s_functions_7dof/n_q_coriols_qp_plus_g_py.casadi')
 g.save('./s_functions/s_functions_7dof/gravitational_forces_py.casadi')
-H.save('./s_functions/s_functions_7dof/hom_transform_endeffector.casadi')
-quat.save('./s_functions/s_functions_7dof/quat_endeffector.casadi')
-J.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector.casadi')
-J_p.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_p.casadi')
+H.save('./s_functions/s_functions_7dof/hom_transform_endeffector_py.casadi')
+quat.save('./s_functions/s_functions_7dof/quat_endeffector_py.casadi')
+J.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_py.casadi')
+J_p.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_p_py.casadi')
+
+sys_fun_qpp.save('./s_functions/s_functions_7dof/sys_fun_qpp_py.casadi')
+sys_fun_x.save('./s_functions/s_functions_7dof/sys_fun_x_py.casadi')
+inv_dyn_tau.save('./s_functions/s_functions_7dof/compute_tau_py.casadi')
+robot_model_bus_fun.save('./s_functions/s_functions_7dof/robot_model_bus_fun_py.casadi')
 
 
 # fun_arr = { ...

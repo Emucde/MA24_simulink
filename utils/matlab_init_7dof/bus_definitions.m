@@ -67,7 +67,8 @@ bus_temp_struct.H = zeros(4);
 bus_temp_struct.J = zeros(6, n);
 bus_temp_struct.J_p = zeros(6, n);
 bus_temp_struct.M = zeros(n);
-bus_temp_struct.C = zeros(n);
+%bus_temp_struct.C = zeros(n);
+bus_temp_struct.C_rnea = zeros(n, 1); % = C_rnea(q, q_p) = C(q, q_p)q_p + g(q) = n(q, q_p)
 bus_temp_struct.g = zeros(n,1);
 init_bus_param.init_robot_model = bus_temp_struct;
 robot_model = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
