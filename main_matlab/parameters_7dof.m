@@ -151,6 +151,17 @@ if(start_in_singularity)
     xe0 = temp;
 end
 
+C_matlab = casadi.Function.load(['./', s_fun_path, '/C_fun.casadi']); % matlab
+
+g      = casadi.Function.load(['./', s_fun_path, '/gravitational_forces_py.casadi']); % g(q) invertiert im vgl. zu matlab
+M      = casadi.Function.load(['./', s_fun_path, '/inertia_matrix_py.casadi']); % ok, rundungsfehler +- 0.003
+C_rnea = casadi.Function.load(['./', s_fun_path, '/n_q_coriols_qp_plus_g_py.casadi']);
+% invertiert im vgl. zu matlab (wegen C_rnea a C(q,qp)qp + g(q)): Extrem ungenau wenn q_p nicht 0 ist.
+J      = casadi.Function.load(['./', s_fun_path, '/geo_jacobian_endeffector_py.casadi']); % perfekt
+J_p    = casadi.Function.load(['./', s_fun_path, '/geo_jacobian_endeffector_p_py.casadi']); % perfekt
+H      = casadi.Function.load(['./', s_fun_path, '/hom_transform_endeffector_py.casadi']); % perfect
+quat   = casadi.Function.load(['./', s_fun_path, '/quat_endeffector_py.casadi']); % passt, aber achtung: Reihenfolge ist [eps, eta] = [q2, q3, q4, q1]
+robot_model_bus_fun = casadi.Function.load(['./', s_fun_path, '/robot_model_bus_fun_py.casadi']);
 % K_p_r = eye(3);
 % z2 = [1.23;2.709;3.23;4.00000019]/norm([1.23;2.709;3.23;4.00000019]); %xe0(4:7);
 % q_eps = z2(2:4);
