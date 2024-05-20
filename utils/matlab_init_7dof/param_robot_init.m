@@ -6,9 +6,12 @@ param_robot.m_t   = 3; % Translational task space
 param_robot.m_r   = 3; % Rotational task space
 param_robot.m     = param_robot.m_t + param_robot.m_r; % Task space dimension
 
-param_robot.g = 9.81; %m/s
+param_robot.g = [0;0;-9.81]; %m/s
+param_robot.g_x = param_robot.g(1);
+param_robot.g_y = param_robot.g(2);
+param_robot.g_z = param_robot.g(3);
 %% Robot gravity
-param_robot.g_vis=[0;0;-9.81];
+param_robot.g_vis=param_robot.g;
 
 param_robot.q_limit_upper = q_max;
 param_robot.q_limit_lower = q_min;
