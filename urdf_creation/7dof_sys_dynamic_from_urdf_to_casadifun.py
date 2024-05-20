@@ -1,7 +1,25 @@
 import casadi as cs
 import os
 from urdf2casadi import urdfparser as u2c
+import numpy as np
 
+def SX00_to_SX0(J_fun, q, q_p=None):
+    if q_p is None:
+        J_val = J_fun(q)
+    else:
+        J_val = J_fun(q, q_p)
+
+    for row in range(J_val.shape[0]):
+        for col in range(J_val.shape[1]):
+            try:
+                if(J_val[row, col] == 0):
+                    J_val[row, col] = 0
+            except:
+                pass
+    if q_p is None:
+        return cs.Function(J_fun.name(), [q], [J_val], J_fun.name_in(), J_fun.name_out())
+    else:
+        return cs.Function(J_fun.name(), [q, q_p], [J_val], J_fun.name_in(), J_fun.name_out())
 
 urdf_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'fr3.urdf')
 root_link = "fr3_link0"
@@ -25,10 +43,12 @@ tau = cs.SX.sym('tau', n, 1)
 S = cs.SX.sym('S', 3, 3)
 
 gravity = [0, 0, -9.81]
+gravity = [-1*el for el in gravity] # *(-1): scheinbar haben sie die Z-achse nach unten zeigend angenommen!!!
 
 inv_dyn = robot_parser.get_inverse_dynamics_rnea(root_link, end_link, gravity) # Achtung berechnet tau!
 inv_dyn_tau = cs.Function('inv_dyn', [q, q_p, q_pp], [inv_dyn(q, q_p, q_pp)], ['q', 'q_p', 'q_pp'], ['tau(q, q_p, q_pp)'])
 
+q_0 = [0, 0, np.pi/4, -np.pi/2, 0, np.pi/2, 0]
 qa = [1,2,3,4,5,6,7]
 qpa = [1,2,3,4,5,6,7]
 print('qa = [1,2,3,4,5,6,7], qpa = [1,2,3,4,5,6,7]', '\n')
@@ -65,7 +85,7 @@ test_fun = cs.Function('test_fun', [q, q_p], [(dM(q, q_p) @ q_p - 2*(C_rnea(q, q
 # Hinweis: es gibt cs.simplify()
 
 T_fk = fk_dict["T_fk"]
-H = cs.Function('H', [q], [T_fk(q)])
+H = cs.Function('H', [q], [T_fk(q)], ['q'], ['H(q)']) # homogenious transformation matrix
 H_q = H(q)
 f_e = cs.Function('f_e', [q], [H_q[0:3, 3]], ['q'], ['f_e(q)']) # endeffector position
 R_e = cs.Function('R_e', [q], [H_q[0:3, 0:3]], ['q'], ['R_e(q)']) # endeffector rotation matrix
@@ -101,6 +121,20 @@ sys_fun_x = cs.Function('sys_fun_x', [x, u], [cs.vertcat(q_p, q_pp_aba(q, q_p, u
 q_pp_tst = sys_fun_qpp([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
 
 tau = inv_dyn([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
+
+## Update: Es kam zu großen Problemen, wenn SX(00) in Casadi Funktionen vorkamen. Dann waren die Reihenfolge der
+## Spalten und Zeilen völlig durcheinander. Deshalb habe ich die Funktion SX00_to_SX0(J_fun, q, q_p=None), die alle
+## SX(00) mit SX(0) ersetzt, wohl eine Daterntypkonvertierung. Vermutlich könnte es daran liegen, die Zeros erst am Schluss
+## ausgegeben werden, aber das ist nicht klar. Bei SX(0) wird der Eintrag nicht mehr als nonzero (nz) erkannt.
+## Dadurch wird z.b. mit J = SX00_to_SX0(J, q) die ursprüngliche Funktion
+## Function(J:(q[7])->(J(q)[6x7,37nz]) SXFunction)
+## zu
+## Function(J:(q[7])->(J(q)[6x7]) SXFunction)
+## konvertiert.
+
+# H, M, C_rnea, g = SX00_to_SX0(H, q) nicht notwendig, da in H keine nz vorkommen. Das entsteht erst durch jacobimatrizen
+J = SX00_to_SX0(J, q)
+J_p = SX00_to_SX0(J_p, q, q_p)
 
 robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_nq(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'g(q)'])
 
