@@ -88,6 +88,15 @@ init_bus_param.init_collinearity_bus = bus_temp_struct;
 collinearity_bus = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;
 
+%% testing bus
+
+bus_temp_struct = struct;
+bus_temp_struct.mat_fun = 0;
+bus_temp_struct.pyt_fun = 0;
+init_bus_param.init_test_bus = bus_temp_struct;
+test_bus = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
+clear -regexp slBus; clear bus_temp_struct;
+
 %% Bus init definitions
 % Diese Structs braucht man in den Matlab Funktionen da die Busse
 % initialisiert werden müssen.
