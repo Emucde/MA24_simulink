@@ -63,9 +63,8 @@ ddq_SX = SX.sym('ddq_SX', n);
 tau_SX = SX.sym('tau_SX', n);
 
 % Model equations
-f = Function.load([output_dir, 'sys_fun_x_py.casadi']);
-tau_fun = Function.load([output_dir, 'compute_tau_fun.casadi']);
-compute_tau_fun_path = fullfile(output_dir, 'compute_tau_py.casadi');
+f = Function.load([output_dir, 'sys_fun_x_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
+compute_tau_fun = Function.load([output_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
 hom_transform_endeffector_py_fun = Function.load([output_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([output_dir, 'quat_endeffector_py.casadi']);
 
@@ -155,7 +154,7 @@ dq_0   = x_0_0(n+1:2*n);
 ddq_0  = zeros(n,1);
 xe_k_0 = xe0(1:m_t); % x pos, y pos, defined in parameters_xdof.m
 %u_k_0  = compute_tau(q_0, dq_0, ddq_0, param_robot); % tau1, tau2
-u_k_0  = tau_fun(q_0, dq_0, ddq_0); % much more faster than above command
+u_k_0  = compute_tau_fun(q_0, dq_0, ddq_0); % much more faster than above command
 
 u_init_guess_0 = ones(n, N_MPC).*u_k_0; % fully actuated
 
@@ -249,6 +248,20 @@ lambda_g0 = SX.sym('lambda_g0', size(lbg));
 y    = SX( m+1, N_MPC+1 ); % 
 q_pp = SX( n, N_MPC     ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
 
+
+%quat_err_fun1 = @(y1, y2) quat_mult_vec(  y1, quat_inv( y2 )  ); % liefert 3x1 Vektor
+% oben muss noch rotm2quatvec gmacht werden, denn abs(q) ist immer 1, selbst wenn der quaternoinenfehler 0 ist.
+quat_err_fun1 = @(y1, y2) rotm2quatvec(  quat2rotm_v2( y1 ) * quat2rotm_v2( y2 )'  ); % liefert 3x1 Vektor
+quat_err_fun2 = @(y1, y2) rotation2quaternion_casadi(  quat2rotm_v2( y1 ) * quat2rotm_v2( y2 )'  ); % liefert 3x1 Vektor
+
+sub_fun_y = @(y1, y2) [ y1(1:m_t) - y2(1:m_t); ... 
+                        quat_err_fun2(y1(m_t+1:m+1), y2(m_t+1:m+1))]; % liefert 6x1 Vektor
+sub_fun_z = @(y1, y2) [ sub_fun_y(y1, y2); ...
+                      y1(m+2     : m+1+m_t) - y2(m+2     : m+1+m_t); ...
+                      y1(m+2+m_t : 2*m+1  ) - y2(m+2+m_t :   2*m+1)]; % liefert 12x1 Vektor
+Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
+
+
 g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 g_z(1, 1 + (0)) = {z_0 - z(:, 1 + (0))}; % x0 = xk
 for i=0:N_MPC
@@ -269,6 +282,11 @@ for i=0:N_MPC
         e_i_ref   = z(:, 1 + (i))   - z_d(:, 1 + (i));
         e_ip1_ref = z(:, 1 + (i+1)) - z_d(:, 1 + (i+1));
         g_z(1, 1 + (i+1)) = {H(e_i_ref, K_d, K_p) - e_ip1_ref}; % ggf special sub necessary [TODO]
+        
+        % e_i_ref   = sub_fun_z( z(:, 1 + (i)), z_d(:, 1 + (i)) );
+        % e_ip1_ref = sub_fun_z( z(:, 1 + (i+1)), z_d(:, 1 + (i+1)) );
+        % g_z(1, 1 + (i+1)) = { sub_fun_z( H(e_i_ref, K_d, K_p), e_ip1_ref ) }; % ggf special sub necessary [TODO]
+
 
         dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
         q_pp(:, 1 + (i  )) = dx(n+1:2*n, 1);
@@ -279,23 +297,26 @@ end
 g_eps(1, 1) = {norm_2(  y(1:m+1, end) - z(1:m+1, end)  )}; % for pp.epsilon
 g = merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
 
-%quat_err_fun1 = @(y1, y2) quat_mult_vec(  y1, quat_inv( y2 )  ); % liefert 3x1 Vektor
-% oben muss noch rotm2quatvec gmacht werden, denn abs(q) ist immer 1, selbst wenn der quaternoinenfehler 0 ist.
-quat_err_fun1 = @(y1, y2) rotm2quatvec(  quat2rotm_v2( y1 ) * quat2rotm_v2( y2 )'  ); % liefert 3x1 Vektor
+%{
+    Fehlersuche:
+    1) Liegt es an z-z_d oder brauche ich sub_fun_z(z, z_d)???
+       vgl. 273-276
+       vgl. 286-290
+       vgl. 296-298
+       vgl. 310-315
+    2) Liegt es an rotation2quaternion_casadi oder rotm2quat_v3, v2
+    3) Liegt es am quat_err_fun1 oder quat_err_fun2
+    4) Liegt es an Gleichungsbedingung? Klappt es wenn man nur den translatorischen Anteil berücksichtigt?
 
-sub_fun_y = @(y1, y2) [ y1(1:m_t) - y2(1:m_t); ... 
-                        quat_err_fun1(y1(m_t+1:m+1), y2(m_t+1:m+1))]; % liefert 6x1 Vektor
-sub_fun_z = @(y1, y2) [ sub_fun_y(y1, y2); ...
-                      y1(m+2     : m+1+m_t) - y2(m+2     : m+1+m_t); ...
-                      y1(m+2+m_t : 2*m+1  ) - y2(m+2+m_t :   2*m+1)]; % liefert 12x1 Vektor
-Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-% e = SX( m, N_MPC );
-% for i=0:N_MPC-1
-%     e(:, 1 + (i)) = sub_fun_y( y(:, 1 + (i)),  z(1:m+1, 1 + (i)) );
-% end
+%}
 
-e = y(:, 1 + (1:N_MPC-1)) - z(1:m+1, 1 + (1:N_MPC-1));
+e = SX( m+1, N_MPC );
+for i=0:N_MPC-1
+    e(:, 1 + (i)) = sub_fun_y( y(:, 1 + (i)),  z(1:m+1, 1 + (i)) );
+    e(m_t+1, 1 + (i)) = e(m_t+1, 1 + (i)) - 1; 
+end
+% e = y(:, 1 + (1:N_MPC-1)) - z(1:m+1, 1 + (1:N_MPC-1));
 
 J_y    = Q_norm_square( e ,    pp.Q_y     );
 J_q_pp = Q_norm_square( q_pp,  pp.R_q_pp  ); %Q_norm_square(u, pp.R_u);
