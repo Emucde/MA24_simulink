@@ -1058,10 +1058,8 @@ i := 11: V_arr(1,(i+1)) := simplify( m_finger * (p_I_sfingerright)^+ . g_I ):</T
 </Input>
 </Group>
 <Group labelreference="L17467" drawlabel="true" applyint="true" applyrational="true" applyexponent="false">
-<Input><Text-field prompt="&gt; " style="Maple Input" layout="Normal">file_export(eval(gg, q_qvec union g_gvec), &quot;gravitational_forces&quot;, [q], model_folder_name, abs_file_path);</Text-field>
+<Input><Text-field prompt="&gt; " style="Maple Input" layout="Normal">file_export(eval(gg, q_qvec), &quot;gravitational_forces&quot;, [q], model_folder_name, abs_file_path);</Text-field>
 </Input>
-<Output><Text-field style="HyperlinkWarning" layout="HyperlinkWarning"><Hyperlink linktarget="http://www.maplesoft.com/support/help/errors/view.aspx?path=Warning,%20the%20following%20variable%20name%20replacements%20were%20made%3A%20param.g%5B2%5D%20-%3E%20cg,%20param.g%5B3%5D%20-%3E%20cg1" hyperlink="true"><Font style="HyperlinkWarning">Warning, the following variable name replacements were made: param.g[2] -&gt; cg, param.g[3] -&gt; cg1</Font></Hyperlink></Text-field>
-</Output>
 </Group>
 <Group labelreference="L17468" drawlabel="true" applyint="true" applyrational="true" applyexponent="false">
 <Input><Text-field prompt="&gt; " style="Maple Input" layout="Normal">file_export(eval(JJ, q_qvec), &quot;geo_jacobian_endeffector&quot;, [q], model_folder_name, abs_file_path);</Text-field>

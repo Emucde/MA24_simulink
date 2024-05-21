@@ -18,6 +18,8 @@ fun_arr = { ...
     'geo_jacobian_endeffector_p_py' ...
 };
 
+%fun_arr = {'quat_endeffector_py'};
+
 cd ./.tmp
 
 compile_mode = 2;

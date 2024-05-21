@@ -63,29 +63,11 @@ ddq_SX = SX.sym('ddq_SX', n);
 tau_SX = SX.sym('tau_SX', n);
 
 % Model equations
-overwrite_sysfun = false;
-sys_fun_path = fullfile(output_dir, 'sys_fun.casadi');
-if(exist(sys_fun_path, 'file') || overwrite_sysfun)
-    f = Function.load(sys_fun_path);
-else
-    fprintf('\n')
-    disp('Computing system function (can take a while, ~5min)');
-    xdot = sys_fun_SX(x, u, param_robot); % ultra slow (5min)
-    f = Function('f', {x, u}, {xdot});
-    f.save([output_dir, 'sys_fun', '.casadi']);
-end
-
-compute_tau_fun_path = fullfile(output_dir, 'compute_tau_fun.casadi');
-if(exist(compute_tau_fun_path, 'file') || overwrite_sysfun)
-    compute_tau_fun = Function.load(compute_tau_fun_path);
-else
-    fprintf('\n')
-    disp('Computing tau function (can take a while, ~5min)');
-    tau_SX = compute_tau_SX(q_SX, dq_SX, ddq_SX, param_robot); % ultra slow (5min)
-    compute_tau_fun = Function('compute_tau', {q_SX, dq_SX, ddq_SX}, {tau_SX});
-    compute_tau_fun.save([output_dir, 'compute_tau_fun', '.casadi']);
-end
-% TODO: save M, C and g as casadi functions and use it in sys_fun_SX and compute_tau
+f = Function.load([output_dir, 'sys_fun_x_py.casadi']);
+tau_fun = Function.load([output_dir, 'compute_tau_fun.casadi']);
+compute_tau_fun_path = fullfile(output_dir, 'compute_tau_py.casadi');
+hom_transform_endeffector_py_fun = Function.load([output_dir, 'hom_transform_endeffector_py.casadi']);
+quat_endeffector_py_fun = Function.load([output_dir, 'quat_endeffector_py.casadi']);
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
@@ -111,70 +93,49 @@ F = Function('F', {X0, U}, {X});
 
 % Discrete y_ref system
 
-quat_v1=false;
-if(quat_v1)
-    z     = SX.sym('z',     2*m);
-    alpha = SX.sym('alpha',   m);
-    h_ref = Function('h_ref', {z, alpha}, {[z(m+1:2*m); alpha]});
-    M = rk_iter; % RK4 steps per interval
-    DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
-    Z0    = SX.sym('Z0',    2*m);
-    ALPHA = SX.sym('ALPHA',   m);
-    Z     = Z0;
-    for j=1:M
-        % Runge-Kutta 4th order method
-        k1 = h_ref(Z,             ALPHA);
-        k2 = h_ref(Z + DT/2 * k1, ALPHA);
-        k3 = h_ref(Z + DT/2 * k2, ALPHA);
-        k4 = h_ref(Z + DT   * k3, ALPHA);
-        Z  = Z + DT/6 * (k1 +2*k2 +2*k3 +k4);
-    end
-    H = Function('F', {Z0, ALPHA}, {Z});
-else
-    % Achtung: hier kommen Errors rein,
-    % Achtung: hier kommen Errors rein, nicht yref!!!!
-    e_ref  = SX.sym('e_ref', 2*m+1); % e_ref = [y;quat;y_p;omega]
-    K_d = diag(SX.sym('K_d', m, 1));
-    K_p = diag(SX.sym('K_p', m, 1));
+% Achtung: hier kommen Errors rein,
+% Achtung: hier kommen Errors rein, nicht yref!!!!
+e_ref  = SX.sym('e_ref', 2*m+1); % e_ref = [y;quat;y_p;omega]
+K_d = diag(SX.sym('K_d', m, 1));
+K_p = diag(SX.sym('K_p', m, 1));
 
-    e1_ref = e_ref(1:m_t); % e_y_ref transl
-    e2_ref = e_ref(m_t+1:m+1); % e_q_ref quaternion (not joint angles!)
-    e3_ref = e_ref(m+2:m+4); % e_y_ref_p
-    e4_ref = e_ref(m+5:m+7); % e_omega_ref
+e1_ref = e_ref(1:m_t); % e_y_ref transl
+e2_ref = e_ref(m_t+1:m+1); % e_q_ref quaternion (not joint angles!)
+e3_ref = e_ref(m+2:m+4); % e_y_ref_p
+e4_ref = e_ref(m+5:m+7); % e_omega_ref
 
-    K_d_t = K_d(    1:m_t,     1:m_t );
-    K_d_r = K_d(m_t+1:m,   m_t+1:m   );
-    K_p_t = K_p(    1:m_t,     1:m_t );
-    K_p_r = K_p(m_t+1:m,   m_t+1:m   );
+K_d_t = K_d(    1:m_t,     1:m_t );
+K_d_r = K_d(m_t+1:m,   m_t+1:m   );
+K_p_t = K_p(    1:m_t,     1:m_t );
+K_p_r = K_p(m_t+1:m,   m_t+1:m   );
 
-    [q_ref_p, Q_q] = quat_deriv(e2_ref, e4_ref); % e2_ref=q_ref, e4_ref=omega_ref, Q_p is 4x3
-    Q_eps = Q_q(2:4, :); % 3x3
-    q_vec = e2_ref(2:4); % epsilon = q_vec
+[q_ref_p, Q_q] = quat_deriv(e2_ref, e4_ref); % e2_ref=q_ref, e4_ref=omega_ref, Q_p is 4x3
+Q_eps = Q_q(2:4, :); % 3x3
+q_vec = e2_ref(2:4); % epsilon = q_vec
 
-    e1_ref_p = e3_ref; % e_y_p_ref = y_p_d
-    e2_ref_p = q_ref_p; % e_q_p_ref = Q(q_ref) * e_omega_ref
-    e3_ref_p = -K_d_t*(e3_ref) -K_p_t*(e1_ref); % = e_y_pp_ref
-    e4_ref_p = - K_d_r*e4_ref -2 * ( e2_ref(1)*eye(m_t) + skew(q_vec) ) * K_p_r * q_vec; 
-    %e4_ref_p = - K_d_r*e4_ref-4 * q_vec' * K_p_r * q_vec; % ~28% faster, = e4_ref_p = omega_p_ref
+e1_ref_p = e3_ref; % e_y_p_ref = y_p_d
+e2_ref_p = q_ref_p; % e_q_p_ref = Q(q_ref) * e_omega_ref
+e3_ref_p = -K_d_t*(e3_ref) -K_p_t*(e1_ref); % = e_y_pp_ref
+e4_ref_p = - K_d_r*e4_ref -2 * ( e2_ref(1)*eye(m_t) + skew(q_vec) ) * K_p_r * q_vec; 
+%e4_ref_p = - K_d_r*e4_ref-4 * q_vec' * K_p_r * q_vec; % ~28% faster, = e4_ref_p = omega_p_ref
 
-    h_ref = Function('h_ref', {e_ref, K_d, K_p}, {[e1_ref_p; e2_ref_p; e3_ref_p; e4_ref_p]});
+h_ref = Function('h_ref', {e_ref, K_d, K_p}, {[e1_ref_p; e2_ref_p; e3_ref_p; e4_ref_p]});
 
-    M = rk_iter; % RK4 steps per interval
-    DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
-    E_REF_0    = SX.sym('E_REF_0',    2*m+1);
-    E_REF     = E_REF_0;
-    K_D = diag(SX.sym('K_D', m, 1)); % only diag elements
-    K_P = diag(SX.sym('K_P', m, 1));
-    for j=1:M
-        % Runge-Kutta 4th order method
-        k1 = h_ref(E_REF            , K_D, K_P);
-        k2 = h_ref(E_REF + DT/2 * k1, K_D, K_P);
-        k3 = h_ref(E_REF + DT/2 * k2, K_D, K_P);
-        k4 = h_ref(E_REF + DT   * k3, K_D, K_P);
-        E_REF  = E_REF + DT/6 * (k1 +2*k2 +2*k3 +k4);
-    end
-    H = Function('H', {E_REF_0, K_D, K_P}, {E_REF});
+M = rk_iter; % RK4 steps per interval
+DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
+E_REF_0    = SX.sym('E_REF_0',    2*m+1);
+E_REF     = E_REF_0;
+K_D = diag(SX.sym('K_D', m, 1)); % only diag elements
+K_P = diag(SX.sym('K_P', m, 1));
+for j=1:M
+    % Runge-Kutta 4th order method
+    k1 = h_ref(E_REF            , K_D, K_P);
+    k2 = h_ref(E_REF + DT/2 * k1, K_D, K_P);
+    k3 = h_ref(E_REF + DT/2 * k2, K_D, K_P);
+    k4 = h_ref(E_REF + DT   * k3, K_D, K_P);
+    E_REF  = E_REF + DT/6 * (k1 +2*k2 +2*k3 +k4);
 end
+H = Function('H', {E_REF_0, K_D, K_P}, {E_REF});
 % TODO: Funktion speichern!
 
 %% Calculate Initial Guess
@@ -194,7 +155,7 @@ dq_0   = x_0_0(n+1:2*n);
 ddq_0  = zeros(n,1);
 xe_k_0 = xe0(1:m_t); % x pos, y pos, defined in parameters_xdof.m
 %u_k_0  = compute_tau(q_0, dq_0, ddq_0, param_robot); % tau1, tau2
-u_k_0  = compute_tau_fun(q_0, dq_0, ddq_0); % much more faster than above command
+u_k_0  = tau_fun(q_0, dq_0, ddq_0); % much more faster than above command
 
 u_init_guess_0 = ones(n, N_MPC).*u_k_0; % fully actuated
 
@@ -295,10 +256,11 @@ for i=0:N_MPC
     q = x(1:n, 1 + (i));
 
     % calculate trajectory values (y_0 ... y_N)
-    H_e = hom_transform_endeffector_casadi_SX(q, param_robot);
+    H_e = hom_transform_endeffector_py_fun(q);
     y(    1:m_t, 1 + (i)) = H_e(1:m_t, 4);     %y_t_0 wird nicht verwendet
-    y(m_t+1:m+1, 1 + (i)) = rotation2quaternion_casadi(H_e(1:m_r, 1:m_r)); %y_r_0 wird nicht verwendet
+    %y(m_t+1:m+1, 1 + (i)) = rotation2quaternion_casadi(H_e(1:m_r, 1:m_r)); %y_r_0 wird nicht verwendet
     %y(m_t+1:m+1, 1 + (i)) = rotm2quat_v3(H_e(1:m_r, 1:m_r)); %y_r_0 wird nicht verwendet
+    y(m_t+1:m+1, 1 + (i)) = quat_endeffector_py_fun(q);
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)

@@ -102,8 +102,8 @@ J_r = cs.Function('J_r', [q], [domega], ['q'], ['J_r(q)']) # rotational jacobian
 J = cs.Function('J', [q], [cs.vertcat(J_t(q), J_r(q))], ['q'], ['J(q)']) # geometric jacobian
 J_p = cs.Function('J_p', [q, q_p], [cs.reshape(  cs.jacobian(J(q), q) @ q_p  ,m ,n)], ['q', 'q_p'], ['J_p(q, q_p)']) # derivative of geometric jacobian
 
-quat = fk_dict["quaternion_fk"] # dual_quaternion_fk
-quat_e = cs.Function('quat_e', [q], [quat(q)], ['q'], ['quat_e(q)'])
+quat = fk_dict["quaternion_fk"] # dual_quaternion_fk, order is quat = [q2,q3,q4,q1]
+quat_e = cs.Function('quat_e', [q], [cs.vertcat(quat(q)[3], quat(q)[0:3])], ['q'], ['quat_e(q)']) # order is quat_e(q) = [q1, q2, q3, q4]
 
 # print(H([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5]))
 # print(quat([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5]))
