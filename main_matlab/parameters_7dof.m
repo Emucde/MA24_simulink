@@ -40,8 +40,9 @@ set(groot, 'DefaultFigurePosition', [350, -650, 800, 600])
 init_casadi;
 
 simulink_main_model_name = 'sim_discrete_7dof';
-open_simulink_on_start = ~false;
-if(~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && sum(strfind([getenv().keys{:}], 'VSCODE')) == 0)
+open_simulink_on_start = true;
+%if(~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && sum(strfind([getenv().keys{:}], 'VSCODE')) == 0)
+if( open_simulink_on_start && desktop('-inuse') == 1) % in vscode inuse delivers 0 (running in background)
     tic
     fprintf(['open simulink model \"' simulink_main_model_name, '\" ...'])
     open_system([simulink_main_model_name '.slx'])
@@ -495,6 +496,6 @@ if(plot_trajectory)
 end
 
 %% DEBUG
-
+param_vis.T = 0.1;
 ew_test_CT_CTRL = [diag(-ct_ctrl_param.Kd1/2 + sqrt(ct_ctrl_param.Kd1^2/4 - ct_ctrl_param.Kp1)) diag(-ct_ctrl_param.Kd1/2 - sqrt(ct_ctrl_param.Kd1^2/4 - ct_ctrl_param.Kp1))]';
 plot_eigenvalues_controller_text([ew_test_CT_CTRL ew_test_CT_CTRL*0], 'Eigenvalues CT Ctrl', '');

@@ -18,7 +18,7 @@ fun_arr = { ...
     'geo_jacobian_endeffector_p_py' ...
 };
 
-%fun_arr = {'quat_endeffector_py'};
+% fun_arr = {'sys_fun_x_py'};
 
 cd ./.tmp
 

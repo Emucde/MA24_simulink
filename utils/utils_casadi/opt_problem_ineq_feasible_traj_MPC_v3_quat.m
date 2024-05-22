@@ -39,28 +39,11 @@
 
 import casadi.*
 
-% get weights from "init_MPC_weight.m"
-param_weight_init = param_weight.(casadi_func_name);
-
-% weights as parameter (~inputs)
-if(weights_and_limits_as_parameter)
-    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
-else % hardcoded weights
-    pp = param_weight_init;
-end
-
 n = param_robot.n_DOF; % Dimension of joint space
-m = param_robot.m; % Dimension of Task Space
+m = 3; % Dimension of Task Space
+% m = param_robot.m; % Dimension of Task Space
 m_t = param_robot.m_t; % Translational part of Task Space
-m_r = param_robot.m_r; % Rotational part of Task Space 
-
-% Declare model variables
-x = SX.sym('x', 2*n);
-u = SX.sym('u', n);
-q_SX = SX.sym('q_SX', n);
-dq_SX = SX.sym('dq_SX', n);
-ddq_SX = SX.sym('ddq_SX', n);
-tau_SX = SX.sym('tau_SX', n);
+%m_r = param_robot.m_r; % Rotational part of Task Space 
 
 % Model equations
 f = Function.load([output_dir, 'sys_fun_x_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
@@ -72,86 +55,32 @@ quat_endeffector_py_fun = Function.load([output_dir, 'quat_endeffector_py.casadi
 M = rk_iter; % RK4 steps per interval
 DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 
-X0 = SX.sym('X0', 2*n);
-U  = SX.sym('U', n);
-X  = X0;
-for j=1:M
-    % Runge-Kutta 4th order method
-    k1 = f(X, U);
-    k2 = f(X + DT/2 * k1, U);
-    k3 = f(X + DT/2 * k2, U);
-    k4 = f(X + DT * k3, U);
-    X=X+DT/6*(k1 +2*k2 +2*k3 +k4);
-end
-F = Function('F', {X0, U}, {X});
-
-% EULER (CA Doppelt so schnell wie RK4, aber problematisch bei 5th order poly mit out of workspace)
-%X  = X0;
-%X = X + f(X, U)*DT;
-%F = Function('F', {X0, U}, {X});
+%int_method = 'RK4';
+int_method = 'Euler';
+F = integrate_casadi(f, DT, M, int_method);
 
 % Discrete y_ref system
+z     = SX.sym('z',     2*m);
+alpha = SX.sym('alpha',   m);
 
-% Achtung: hier kommen Errors rein,
-% Achtung: hier kommen Errors rein, nicht yref!!!!
-e_ref  = SX.sym('e_ref', 2*m+1); % e_ref = [y;quat;y_p;omega]
-K_d = diag(SX.sym('K_d', m, 1));
-K_p = diag(SX.sym('K_p', m, 1));
-
-e1_ref = e_ref(1:m_t); % e_y_ref transl
-e2_ref = e_ref(m_t+1:m+1); % e_q_ref quaternion (not joint angles!)
-e3_ref = e_ref(m+2:m+4); % e_y_ref_p
-e4_ref = e_ref(m+5:m+7); % e_omega_ref
-
-K_d_t = K_d(    1:m_t,     1:m_t );
-K_d_r = K_d(m_t+1:m,   m_t+1:m   );
-K_p_t = K_p(    1:m_t,     1:m_t );
-K_p_r = K_p(m_t+1:m,   m_t+1:m   );
-
-[q_ref_p, Q_q] = quat_deriv(e2_ref, e4_ref); % e2_ref=q_ref, e4_ref=omega_ref, Q_p is 4x3
-Q_eps = Q_q(2:4, :); % 3x3
-q_vec = e2_ref(2:4); % epsilon = q_vec
-
-e1_ref_p = e3_ref; % e_y_p_ref = y_p_d
-e2_ref_p = q_ref_p; % e_q_p_ref = Q(q_ref) * e_omega_ref
-e3_ref_p = -K_d_t*(e3_ref) -K_p_t*(e1_ref); % = e_y_pp_ref
-e4_ref_p = - K_d_r*e4_ref -2 * ( e2_ref(1)*eye(m_t) + skew(q_vec) ) * K_p_r * q_vec; 
-%e4_ref_p = - K_d_r*e4_ref-4 * q_vec' * K_p_r * q_vec; % ~28% faster, = e4_ref_p = omega_p_ref
-
-h_ref = Function('h_ref', {e_ref, K_d, K_p}, {[e1_ref_p; e2_ref_p; e3_ref_p; e4_ref_p]});
-
-M = rk_iter; % RK4 steps per interval
-DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
-E_REF_0    = SX.sym('E_REF_0',    2*m+1);
-E_REF     = E_REF_0;
-K_D = diag(SX.sym('K_D', m, 1)); % only diag elements
-K_P = diag(SX.sym('K_P', m, 1));
-for j=1:M
-    % Runge-Kutta 4th order method
-    k1 = h_ref(E_REF            , K_D, K_P);
-    k2 = h_ref(E_REF + DT/2 * k1, K_D, K_P);
-    k3 = h_ref(E_REF + DT/2 * k2, K_D, K_P);
-    k4 = h_ref(E_REF + DT   * k3, K_D, K_P);
-    E_REF  = E_REF + DT/6 * (k1 +2*k2 +2*k3 +k4);
-end
-H = Function('H', {E_REF_0, K_D, K_P}, {E_REF});
-% TODO: Funktion speichern!
+h_ref = Function('h_ref', {z, alpha}, {[z(m+1:2*m); alpha]});
+H = integrate_casadi(h_ref, DT, M, int_method);
 
 %% Calculate Initial Guess
 p_d_0    = param_trajectory.p_d(    1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
 p_d_p_0  = param_trajectory.p_d_p(  1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
-p_pp_d_0 = param_trajectory.p_d_pp( 1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
+p_d_pp_0 = param_trajectory.p_d_pp( 1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
 
-R_d_0       = param_trajectory.R_d(       1:m_r, 1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (R_0 ... R_N)
-q_d_0       = param_trajectory.q_d(       1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
-q_d_p_0     = param_trajectory.q_d_p(     1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_p_0 ... q_p_N)
-omega_d_0   = param_trajectory.omega_d(   1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
-omega_d_p_0 = param_trajectory.omega_d_p( 1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
+% R_d_0       = param_trajectory.R_d(       1:m_r, 1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (R_0 ... R_N)
+% q_d_0       = param_trajectory.q_d(       1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
+% q_d_p_0     = param_trajectory.q_d_p(     1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_p_0 ... q_p_N)
+% omega_d_0   = param_trajectory.omega_d(   1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
+% omega_d_p_0 = param_trajectory.omega_d_p( 1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
 
 x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
-q_0    = x_0_0(1:n); % useless line...
-dq_0   = x_0_0(n+1:2*n);
-ddq_0  = zeros(n,1);
+q_0    = x_0_0(1   :   n); % useless line...
+dq_0   = x_0_0(1+n : 2*n);
+ddq_0  = zeros(n, 1);
 xe_k_0 = xe0(1:m_t); % x pos, y pos, defined in parameters_xdof.m
 %u_k_0  = compute_tau(q_0, dq_0, ddq_0, param_robot); % tau1, tau2
 u_k_0  = compute_tau_fun(q_0, dq_0, ddq_0); % much more faster than above command
@@ -163,65 +92,57 @@ F_sim              = F.mapaccum(N_MPC);
 x_init_guess_kp1_0 = F_sim(x_0_0, u_init_guess_0);
 x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
 
-z_0_0 = [p_d_0(:,1); q_d_0(:,1); p_d_p_0(:,1); omega_d_0(:,1)]; % init for z_ref
-e_ref_0_0 = zeros(size(z_0_0)); % init for e_ref = z_0_0 - yy_d_0: all errors are zero: start on trajectory
-
-z_d_init_guess_0 = [p_d_0; q_d_0; p_d_p_0; omega_d_0]; % init for z_d
-
-% z_0_0 = [y_d_0(:,1); q_d_0(:,1); y_p_d_0(:,1); q_d_p_0(:,1)]; % 14 Dimensional bei m=6
-
-K_d_ref_0 = (param_weight.(casadi_func_name).K_d_ref); % Zahlenwerte aus init_MPC_weights.m
-K_p_ref_0 = (param_weight.(casadi_func_name).K_p_ref); % nur notwendig um init guess zu berechnen
-%alpha_init_guess_0 = [y_pp_d_0(:, 1:end-1); omega_d_p_0(:, 1:end-1)]; % 6 Dimensional bei m=6
-%alpha_N_0 = [y_pp_d_0(:,end); omega_d_p_0(:,end)];
+z_0_0 = [p_d_0(:,1); p_d_p_0(:,1)]; % init for z_ref
+alpha_init_guess_0 = p_d_pp_0(:, 1:end-1);
+alpha_N_0 = p_d_pp_0(:,end);
 
 H_sim              = H.mapaccum(N_MPC);
-e_ref_init_guess_kp1_0 = H_sim(e_ref_0_0, K_d_ref_0, K_p_ref_0);
-z_ref_init_guess_0     = [e_ref_0_0 full(e_ref_init_guess_kp1_0)] + z_d_init_guess_0; % e = z-z_d => z = e+z_d
+z_init_guess_kp1_0 = H_sim(z_0_0, alpha_init_guess_0);
+z_init_guess_0     = [z_0_0 full(z_init_guess_kp1_0)];
+% z_d_init_guess_0 = [p_d_0; p_d_p_0]; % init for z_d
 
-lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_ref_init_guess_0), 1);
-lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(z_ref_init_guess_0)+1, 1); % + 1 wegen eps
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0)+numel(alpha_init_guess_0) + numel(alpha_N_0), 1);
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(z_init_guess_0)+1, 1); % + 1 wegen eps
 
-init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_ref_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+
+% get weights from "init_MPC_weight.m"
+param_weight_init = param_weight.(casadi_func_name);
+
+% weights as parameter (~inputs)
+if(weights_and_limits_as_parameter)
+    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
+else % hardcoded weights
+    pp = param_weight_init;
+end
 
 %% Start with an empty NLP
 
 % Optimization Variables:
-u = SX.sym( 'u',     n, N_MPC   );
-x = SX.sym( 'x',     2*n, N_MPC+1 );
-z = SX.sym( 'z_ref', 1+2*m, N_MPC+1 );
+u     = SX.sym( 'u',       n, N_MPC   );
+x     = SX.sym( 'x',     2*n, N_MPC+1 );
+z     = SX.sym( 'z',     2*3, N_MPC+1 );
+alpha = SX.sym( 'alpha',   3, N_MPC+1 );
 
-% y_ref     = z(1:m_t); % y_ref transl
-% q_ref     = z(m_t+1:m+1); % q_ref quaternion (not joint angles!)
-% y_p_ref   = z(m+2:m+4); % y_ref_p
-% omega_ref = z(m+5:m+7); % omega_ref
-
-mpc_opt_var_inputs = {u, x, z};
+mpc_opt_var_inputs = {u, x, z, alpha};
 
 u_opt_indices = 1:n;
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:)));];
-lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:)));];
+lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
+ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
 
 
 % input parameter
-x_k    = SX.sym( 'x_k',      2*n,      1 ); % current x state
-z_0    = SX.sym( 'z_0',    1+2*m,      1 ); % initial z_ref state
-z_d    = SX.sym( 'z_d',    1+2*m,      N_MPC+1 ); % z_d states
+x_k    = SX.sym( 'x_k',    2*n, 1       ); % current x state
+z_0    = SX.sym( 'z_0',    2*3, 1       ); % initial z state
+y_d    = SX.sym( 'y_d',      3, N_MPC+1 ); % (y_d_0 ... y_d_N)
+y_p_d  = SX.sym( 'y_p_d',    3, N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
+y_pp_d = SX.sym( 'y_pp_d',   3, N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
 
-K_d = pp.K_d_ref;
-K_p = pp.K_p_ref;
-
-K_d_t = K_d(1:m_t);
-K_d_r = K_d(m_t+1:m);
-K_p_t = K_p(1:m_t);
-K_p_r = K_p(m_t+1:m);
-
-mpc_parameter_inputs = {x_k, z_0, z_d(:)};
-
-mpc_init_reference_values = [x_0_0(:); z_0_0(:); z_d_init_guess_0(:)]; % Zahlenwerte
+mpc_parameter_inputs = {x_k, z_0, y_d, y_p_d, y_pp_d};
+mpc_init_reference_values = [x_0_0(:); z_0_0(:); p_d_0(:); p_d_p_0(:); p_d_pp_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -245,48 +166,32 @@ lambda_x0 = SX.sym('lambda_x0', size(w));
 lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
-y    = SX( m+1, N_MPC+1 ); % 
+y    = SX( 3, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
 q_pp = SX( n, N_MPC     ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
 
-
-%quat_err_fun1 = @(y1, y2) quat_mult_vec(  y1, quat_inv( y2 )  ); % liefert 3x1 Vektor
-% oben muss noch rotm2quatvec gmacht werden, denn abs(q) ist immer 1, selbst wenn der quaternoinenfehler 0 ist.
-quat_err_fun1 = @(y1, y2) rotm2quatvec(  quat2rotm_v2( y1 ) * quat2rotm_v2( y2 )'  ); % liefert 3x1 Vektor
-quat_err_fun2 = @(y1, y2) rotation2quaternion_casadi(  quat2rotm_v2( y1 ) * quat2rotm_v2( y2 )'  ); % liefert 3x1 Vektor
-
-sub_fun_y = @(y1, y2) [ y1(1:m_t) - y2(1:m_t); ... 
-                        quat_err_fun2(y1(m_t+1:m+1), y2(m_t+1:m+1))]; % liefert 6x1 Vektor
-sub_fun_z = @(y1, y2) [ sub_fun_y(y1, y2); ...
-                      y1(m+2     : m+1+m_t) - y2(m+2     : m+1+m_t); ...
-                      y1(m+2+m_t : 2*m+1  ) - y2(m+2+m_t :   2*m+1)]; % liefert 12x1 Vektor
-Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
-
+% reference trajectory values
+y_ref    = SX( 3, N_MPC+1 ); % TCP position:      (y_ref_0 ... y_ref_N)
+y_p_ref  = SX( 3, N_MPC+1 ); % TCP velocity:      (y_p_ref_0 ... y_p_ref_N)
+y_pp_ref = SX( 3, N_MPC+1 ); % TCP acceleration:  (y_pp_ref_0 ... y_pp_ref_N)
 
 g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
-g_z(1, 1 + (0)) = {z_0 - z(:, 1 + (0))}; % x0 = xk
+g_z(1, 1 + (0)) = {z_0 - z(:, 1 + (0))}; % z0 = zk
 for i=0:N_MPC
     % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
     q = x(1:n, 1 + (i));
 
     % calculate trajectory values (y_0 ... y_N)
     H_e = hom_transform_endeffector_py_fun(q);
-    y(    1:m_t, 1 + (i)) = H_e(1:m_t, 4);     %y_t_0 wird nicht verwendet
-    %y(m_t+1:m+1, 1 + (i)) = rotation2quaternion_casadi(H_e(1:m_r, 1:m_r)); %y_r_0 wird nicht verwendet
-    %y(m_t+1:m+1, 1 + (i)) = rotm2quat_v3(H_e(1:m_r, 1:m_r)); %y_r_0 wird nicht verwendet
-    y(m_t+1:m+1, 1 + (i)) = quat_endeffector_py_fun(q);
+    y(1:m_t, 1 + (i)) = H_e(1:m_t, 4);     %y_t_0 wird nicht verwendet
+
+    y_ref(   :, 1 + (i)) = z(    1:3, 1 + (i));
+    y_p_ref( :, 1 + (i)) = z(    4:6, 1 + (i));
+    y_pp_ref(:, 1 + (i)) = alpha( : , 1 + (i));
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        g_x(1, 1 + (i+1)) = {F(x(:, 1 + (i)), u(:, 1 + (i))) - x(:, 1 + (i+1))}; % Set the state dynamics constraints
-
-        e_i_ref   = z(:, 1 + (i))   - z_d(:, 1 + (i));
-        e_ip1_ref = z(:, 1 + (i+1)) - z_d(:, 1 + (i+1));
-        g_z(1, 1 + (i+1)) = {H(e_i_ref, K_d, K_p) - e_ip1_ref}; % ggf special sub necessary [TODO]
-        
-        % e_i_ref   = sub_fun_z( z(:, 1 + (i)), z_d(:, 1 + (i)) );
-        % e_ip1_ref = sub_fun_z( z(:, 1 + (i+1)), z_d(:, 1 + (i+1)) );
-        % g_z(1, 1 + (i+1)) = { sub_fun_z( H(e_i_ref, K_d, K_p), e_ip1_ref ) }; % ggf special sub necessary [TODO]
-
+        g_x(1, 1 + (i+1)) = {F(x(:, 1 + (i)), u(    :, 1 + (i))) - x(:, 1 + (i+1))}; % Set the state dynamics constraints
+        g_z(1, 1 + (i+1)) = {H(z(:, 1 + (i)), alpha(:, 1 + (i))) - z(:, 1 + (i+1))}; % Set the state dynamics constraints
 
         dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
         q_pp(:, 1 + (i  )) = dx(n+1:2*n, 1);
@@ -294,34 +199,22 @@ for i=0:N_MPC
 end
 
 % g_eps(1, 1) = {norm_2(  sub_fun_y( y(1:m+1, end),  z(1:m+1, end) )  )}; % for pp.epsilon
-g_eps(1, 1) = {norm_2(  y(1:m+1, end) - z(1:m+1, end)  )}; % for pp.epsilon
-g = merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
-
-%{
-    Fehlersuche:
-    1) Liegt es an z-z_d oder brauche ich sub_fun_z(z, z_d)???
-       vgl. 273-276
-       vgl. 286-290
-       vgl. 296-298
-       vgl. 310-315
-    2) Liegt es an rotation2quaternion_casadi oder rotm2quat_v3, v2
-    3) Liegt es am quat_err_fun1 oder quat_err_fun2
-    4) Liegt es an Gleichungsbedingung? Klappt es wenn man nur den translatorischen Anteil berücksichtigt?
+g_eps(1, 1) = {norm_2(y(:,end)-y_ref(:,end))}; % for pp.epsilon
+g = [g_x, g_z, g_eps]; % merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
 
 
-%}
+Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-e = SX( m+1, N_MPC );
-for i=0:N_MPC-1
-    e(:, 1 + (i)) = sub_fun_y( y(:, 1 + (i)),  z(1:m+1, 1 + (i)) );
-    e(m_t+1, 1 + (i)) = e(m_t+1, 1 + (i)) - 1; 
-end
-% e = y(:, 1 + (1:N_MPC-1)) - z(1:m+1, 1 + (1:N_MPC-1));
+J_y = Q_norm_square( y(        :, 1 + (1:N_MPC-1) ) - y_ref(    :, 1 + (1:N_MPC-1)), pp.Q_y  );
 
-J_y    = Q_norm_square( e ,    pp.Q_y     );
-J_q_pp = Q_norm_square( q_pp,  pp.R_q_pp  ); %Q_norm_square(u, pp.R_u);
+e_pp = y_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( :, 1 + (0:N_MPC));
+e_p  = y_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  :, 1 + (0:N_MPC));
+e    = y_ref(    :, 1 + (0:N_MPC) ) - y_d(    :, 1 + (0:N_MPC));
 
-cost_vars_names = '{J_y, J_q_pp}';
+J_yy_ref = Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_y_ref, e), eye(m_t));
+J_q_pp = Q_norm_square(q_pp, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
+
+cost_vars_names = '{J_y, J_yy_ref, J_q_pp}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 
