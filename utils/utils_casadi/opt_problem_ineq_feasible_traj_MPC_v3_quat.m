@@ -55,8 +55,6 @@ quat_endeffector_py_fun = Function.load([output_dir, 'quat_endeffector_py.casadi
 M = rk_iter; % RK4 steps per interval
 DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 
-%int_method = 'RK4';
-int_method = 'Euler';
 F = integrate_casadi(f, DT, M, int_method);
 
 % Discrete y_ref system
@@ -80,7 +78,7 @@ p_d_pp_0 = param_trajectory.p_d_pp( 1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step
 x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
 q_0    = x_0_0(1   :   n); % useless line...
 dq_0   = x_0_0(1+n : 2*n);
-ddq_0  = zeros(n, 1);
+ddq_0  = q_0_pp;
 xe_k_0 = xe0(1:m_t); % x pos, y pos, defined in parameters_xdof.m
 %u_k_0  = compute_tau(q_0, dq_0, ddq_0, param_robot); % tau1, tau2
 u_k_0  = compute_tau_fun(q_0, dq_0, ddq_0); % much more faster than above command

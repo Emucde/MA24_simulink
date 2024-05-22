@@ -31,6 +31,7 @@ param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | Euler)
 
 MPC='MPC2';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -41,6 +42,7 @@ param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | Euler)
 
 MPC='MPC3';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -51,6 +53,7 @@ param_casadi_fun_name.(MPC).Ts      = 10e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | Euler)
 
 MPC='MPC4';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -61,6 +64,7 @@ param_casadi_fun_name.(MPC).Ts      = 10e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | Euler)
 
 MPC='MPC5';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -71,6 +75,7 @@ param_casadi_fun_name.(MPC).Ts      = 50e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | Euler)
 
 MPC='MPC6';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -81,6 +86,7 @@ param_casadi_fun_name.(MPC).Ts      = 1e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
 
 MPC='FeasibleBlock';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -91,6 +97,7 @@ param_casadi_fun_name.(MPC).Ts      = 1;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 param_casadi_fun_struct = param_casadi_fun_name.MPC6;
@@ -108,6 +115,7 @@ MPC_variant      = param_casadi_fun_struct.variant;
 MPC_solver       = param_casadi_fun_struct.solver;
 MPC_version      = param_casadi_fun_struct.version;
 compile_mode     = param_casadi_fun_struct.compile_mode;
+int_method       = param_casadi_fun_struct.int_method;
 
 % checks
 if mod(Ts_MPC, param_global.Ta) ~= 0
@@ -311,7 +319,8 @@ param_MPC = struct( ...
   'variant',              MPC_variant, ...
   'solver',               MPC_solver, ...
   'version',              MPC_version, ...
-  'name',                 param_casadi_fun_struct.name ...
+  'name',                 param_casadi_fun_struct.name, ...
+  'int_method',           int_method ...
 );
 
 eval(mpc_settings_struct_name+"=param_MPC;"); % set new struct name
