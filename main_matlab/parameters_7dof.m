@@ -38,6 +38,7 @@ cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA2
 set(groot, 'DefaultFigurePosition', [350, -650, 800, 600])
 
 init_casadi;
+import casadi.*;
 
 simulink_main_model_name = 'sim_discrete_7dof';
 open_simulink_on_start = true;
@@ -55,7 +56,7 @@ trajectory_out_of_workspace = false; % TODO: einfach offset 0 setzten
 x_traj_out_of_workspace_value = 0.1;
 
 plot_trajectory = ~true;
-overwrite_offline_traj = false;
+overwrite_offline_traj = ~false;
 
 %% Other init scripts
 T_sim = 10; % = param_vis.T (see init_visual.m)
@@ -135,6 +136,7 @@ param_traj_sin_poly.phi   = 0; % in rad
 q_0 = [0; 0; pi/4; -pi/2; 0; pi/2; 0];
 %q_0 = [-1.081, -1.035, 1.231, -1.778, 0.967, 1.394, -0.652]';
 q_0_p = zeros(n, 1);
+q_0_pp = zeros(n, 1);
 
 H_0_init = hom_transform_endeffector(q_0, param_robot); % singular pose
 R_init = H_0_init(1:3, 1:3);
@@ -324,14 +326,19 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
     save(param_MPC_traj_data_mat_file, 'param_traj_data'); % save struct
     
     % 3. calculate initial guess for alle trajectories and mpcs
-    %{
+    
     compile_sfun                    = false;
     weights_and_limits_as_parameter = true;
     plot_null_simu                  = false;
     print_init_guess_cost_functions = false;
     
+    % [TODO] : Es ist viel einfacher direkt MPC_v3 aufzurufen und sich die
+    % notwendigen daten davon zu holen. Das muss dann eben für jede MPC
+    % separat getan werden, d. h. eig das If von nlpsol_opt_problem_v2
     
     tic
+    compute_tau_fun = Function.load([s_fun_path, '/', 'compute_tau_py.casadi']);
+    f = Function.load([s_fun_path, '/', 'sys_fun_x_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
     for name={files.name}
         name_mat_file    = name{1};
         param_MPC_name   = name_mat_file(1:end-4);
@@ -349,8 +356,23 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         T_horizon_MPC    = param_MPC_struct.T_horizon;                   
         N_step_MPC       = param_MPC_struct.N_step;
         MPC_version      = param_MPC_struct.version;
+        int_method       = param_MPC_struct.int_method;
 
-        casadi_fopt_fun_path     = [s_fun_path, '/', casadi_func_name, '.casadi'];
+        DT = Ts_MPC;
+        M = rk_iter;
+
+        f_opt = Function.load([s_fun_path, '/', casadi_func_name, '.casadi']);
+        F = integrate_casadi(f, DT, M, int_method);
+
+        z     = SX.sym('z',     2*3);
+        alpha = SX.sym('alpha',   3);
+
+        h_ref = Function('h_ref', {z, alpha}, {[z(3+1:2*3); alpha]});
+        H = integrate_casadi(h_ref, DT, M, int_method);
+
+        param_weight_init = param_weight.(casadi_func_name);
+        param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init), 'vector');
+
 
         init_guess_cell = cell(1, traj_select.traj_amount);
             
@@ -364,19 +386,39 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
             param_trajectory.q_d_p     = param_traj_data.q_d_p(    :, :, ii   );
             param_trajectory.omega_d   = param_traj_data.omega_d(  :, :, ii   );
             param_trajectory.omega_d_p = param_traj_data.omega_d_p(:, :, ii   );
+
+            p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
+            p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
+            p_d_pp_0 = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
+
+            % PFUSCH: [TODO] Duplicat in MPC_V3
+            u_k_0  = compute_tau_fun(q_0, q_0_p, q_0_pp); % much more faster than above command
+            u_init_guess_0 = ones(n, N_MPC).*u_k_0; % fully actuated
+
+            x_0_0  = [q_0; q_0_p];
+            F_sim              = F.mapaccum(N_MPC);
+            x_init_guess_kp1_0 = F_sim(x_0_0, u_init_guess_0);
+            x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
+            u_init_guess_0 = ones(n, N_MPC).*u_k_0; % fully actuated
+
+            z_0_0 = [p_d_0(:,1); p_d_p_0(:,1)]; % init for z_ref
+            alpha_init_guess_0 = p_d_pp_0(:, 1:end-1);
+            alpha_N_0 = p_d_pp_0(:,end);
+            
+            H_sim              = H.mapaccum(N_MPC);
+            z_init_guess_kp1_0 = H_sim(z_0_0, alpha_init_guess_0);
+            z_init_guess_0     = [z_0_0 full(z_init_guess_kp1_0)];
+
+            lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0)+numel(alpha_init_guess_0) + numel(alpha_N_0), 1);
+            lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(z_init_guess_0)+1, 1); % + 1 wegen eps
+            
+            init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+
+            
+            mpc_init_reference_values = [x_0_0(:); z_0_0(:); p_d_0(:); p_d_p_0(:); p_d_pp_0(:)];
     
-            opts = struct; % should be empty
-            if(strcmp(MPC_variant, 'opti'))
-                opti_opt_problem;
-            elseif(strcmp(MPC_variant, 'nlpsol'))
-                %nlpsol_opt_problem;
-                %nlpsol_opt_problem_SX;
-                nlpsol_opt_problem_SX_v2;
-                
-                f_opt = Function.load(casadi_fopt_fun_path);
-            else
-                error(['Error: Variant = ', MPC_variant, ' is not valid. Should be (opti | nlpsol)']);
-            end
+            [~, xx_full_opt_sol, ~] = f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
+            init_guess = full(xx_full_opt_sol);
 
             init_guess_cell{ii} = init_guess;
         end
@@ -389,7 +431,7 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         save(param_MPC_init_guess_mat_file, param_MPC_init_guess_name);
     end
     disp(['parameter.m: Execution Time for Init guess Calculation: ', sprintf('%f', toc), 's']);
-    %}
+    
     % save old data
     q_0_old                 = q_0;
     q_0_p_old               = q_0_p;
@@ -496,6 +538,6 @@ if(plot_trajectory)
 end
 
 %% DEBUG
-param_vis.T = 0.1;
+
 ew_test_CT_CTRL = [diag(-ct_ctrl_param.Kd1/2 + sqrt(ct_ctrl_param.Kd1^2/4 - ct_ctrl_param.Kp1)) diag(-ct_ctrl_param.Kd1/2 - sqrt(ct_ctrl_param.Kd1^2/4 - ct_ctrl_param.Kp1))]';
 plot_eigenvalues_controller_text([ew_test_CT_CTRL ew_test_CT_CTRL*0], 'Eigenvalues CT Ctrl', '');

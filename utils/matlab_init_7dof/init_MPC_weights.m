@@ -98,17 +98,17 @@ param_weight.(MPC).u_max    = u_max;
 MPC='MPC6';
 param_weight.(MPC).Q_y        = 1e5*diag([1 1 1]);  % d_kpn
 
-param_weight.(MPC).R_q_pp     = 1e-5*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).R_q_pp     = 1e-2*diag(ones(n,1));  % d_kpn
 
 param_weight.(MPC).Q_y_p_ref  = 100*diag([1 1 1]);
 param_weight.(MPC).Q_y_ref    = param_weight.(MPC).Q_y_p_ref^2/4;
 
-param_weight.(MPC).epsilon    = inf;%1e-5;
+param_weight.(MPC).epsilon    = 1e-5;
 
-% param_weight.(MPC).x_min    = 1*[ -pi; -pi; -20; -20 ];
-% param_weight.(MPC).x_max    = 1*[ pi; pi; 20; 20];
-% param_weight.(MPC).u_min    = 1*[ -10; -10 ];
-% param_weight.(MPC).u_max    = 1*[ 10; 10 ];
+% param_weight.(MPC).x_min    = x_min; 
+% param_weight.(MPC).x_max    = x_max; 
+% param_weight.(MPC).u_min    = u_min; 
+% param_weight.(MPC).u_max    = u_max; 
 param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
 param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
 param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
