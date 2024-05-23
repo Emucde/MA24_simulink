@@ -4,17 +4,21 @@
 % to check try 'typeeditor'
 
 %% debug data bus
-bus_temp_struct.p = zeros(3,1);
-bus_temp_struct.p_p = zeros(3,1);
-bus_temp_struct.p_pp = zeros(3,1);
-bus_temp_struct.q       = [0; 0; 0; 0];
-bus_temp_struct.omega   = [0; 0; 0];
-bus_temp_struct.omega_p = [0; 0; 0];
-bus_temp_struct.p_err = [0; 0; 0];
-bus_temp_struct.p_p_err = [0; 0; 0];
-bus_temp_struct.p_pp_err = [0; 0; 0];
-bus_temp_struct.q_err = [0; 0; 0; 0];
-bus_temp_struct.omega_err = [0; 0; 0];
+bus_temp_struct = struct;
+bus_temp_struct.p           = [0; 0; 0];
+bus_temp_struct.p_p         = [0; 0; 0];
+bus_temp_struct.p_pp        = [0; 0; 0];
+bus_temp_struct.Phi         = [0; 0; 0];
+bus_temp_struct.Phi_p       = [0; 0; 0];
+bus_temp_struct.Phi_pp      = [0; 0; 0];
+bus_temp_struct.q           = [0; 0; 0; 0];
+bus_temp_struct.omega       = [0; 0; 0];
+bus_temp_struct.omega_p     = [0; 0; 0];
+bus_temp_struct.p_err       = [0; 0; 0];
+bus_temp_struct.p_p_err     = [0; 0; 0];
+bus_temp_struct.p_pp_err    = [0; 0; 0];
+bus_temp_struct.q_err       = [0; 0; 0; 0];
+bus_temp_struct.omega_err   = [0; 0; 0];
 bus_temp_struct.omega_p_err = [0; 0; 0];
 
 init_debug_data_bus = bus_temp_struct;
@@ -22,15 +26,19 @@ debug_data_bus = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;
 
 %% trajectory bus init (already defined in bus.mat)
-bus_temp_struct = struct;
-bus_temp_struct.p_d = [0; 0; 0];
-bus_temp_struct.p_d_p = [0; 0; 0];
-bus_temp_struct.p_d_pp = [0; 0; 0];
-bus_temp_struct.R_d = eye(3);
-bus_temp_struct.q_d = [0; 0; 0; 0]; % quaternion
-bus_temp_struct.q_d_p = [0; 0; 0; 0]; 
-bus_temp_struct.omega_d = [0; 0; 0];
+bus_temp_struct           = struct;
+bus_temp_struct.p_d       = [0; 0; 0];
+bus_temp_struct.p_d_p     = [0; 0; 0];
+bus_temp_struct.p_d_pp    = [0; 0; 0];
+bus_temp_struct.Phi_d     = [0; 0; 0];
+bus_temp_struct.Phi_d_p   = [0; 0; 0];
+bus_temp_struct.Phi_d_pp  = [0; 0; 0];
+bus_temp_struct.R_d       = eye(3);
+bus_temp_struct.q_d       = [0; 0; 0; 0]; % quaternion
+bus_temp_struct.q_d_p     = [0; 0; 0; 0]; 
+bus_temp_struct.omega_d   = [0; 0; 0];
 bus_temp_struct.omega_d_p = [0; 0; 0];
+
 init_bus_param.init_x_d_bus = bus_temp_struct;
 x_d = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;

@@ -231,18 +231,20 @@ else
     rot_ax = rot_quat(2:4)/sin(rot_alpha_scale/2); % bug: in case of non rotation rot_ax is NAN!
 end
 
-rot_alpha_scale_init = rot_alpha_scale;
-rot_ax_init = rot_ax;
-
+% Achtung: Hier wird angenommen, dass um eine feste Achse rotiert wird.
 param_init_pose = struct;
+param_init_pose.T_start = T_sim/2;
 param_init_pose.xe0 = xe0;
 param_init_pose.xeT = xeT;
 param_init_pose.q_0 = q_0;
 param_init_pose.q_0_p = q_0_p;
 param_init_pose.R_init = R_init;
-param_init_pose.rot_alpha_scale_init = rot_alpha_scale;
-param_init_pose.rot_ax_init = rot_ax;
-
+param_init_pose.R_target = R_target;
+param_init_pose.rot_alpha_scale = rot_alpha_scale;
+param_init_pose.rot_ax = rot_ax;
+param_init_pose.Phi_init = rotm2eul(R_init, 'ZYZ');
+param_init_pose.Phi_target = quat2eul(xeT(4:7)', 'ZYZ');
+param_init_pose.delta_Phi = param_init_pose.Phi_target - param_init_pose.Phi_init;
 
 %% GENERATE OFFLINE TRAJECTORY
 
@@ -280,6 +282,8 @@ T_switch            = param_traj_allg.T_switch;
 T_start = param_vis.T/2;
 t = 0 : param_global.Ta : T_sim + T_horizon_max;
 
+% TODO: Alles so inefffizient mit diesen dauernden hin und her speichern
+
 try
 
 if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
@@ -300,6 +304,9 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
     param_traj_data.p_d       = zeros(3, N_traj,         traj_select.traj_amount);
     param_traj_data.p_d_p     = zeros(3, N_traj,         traj_select.traj_amount);
     param_traj_data.p_d_pp    = zeros(3, N_traj,         traj_select.traj_amount);
+    param_traj_data.Phi_d     = zeros(3, N_traj,         traj_select.traj_amount);
+    param_traj_data.Phi_d_p   = zeros(3, N_traj,         traj_select.traj_amount);
+    param_traj_data.Phi_d_pp  = zeros(3, N_traj,         traj_select.traj_amount);
     param_traj_data.R_d       = zeros(3, 3,      N_traj, traj_select.traj_amount);
     param_traj_data.q_d       = zeros(4, N_traj,         traj_select.traj_amount);
     param_traj_data.q_d_p     = zeros(4, N_traj,         traj_select.traj_amount);
@@ -309,13 +316,16 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
     for i=1:traj_select.traj_amount
         tic;
         
-        param_trajectory = generate_trajectory(t, i, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
+        param_trajectory = generate_trajectory(t, i, param_init_pose, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
         disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
     
         param_traj_data.t(        :, :      ) = param_trajectory.t;
         param_traj_data.p_d(      :, :, i   ) = param_trajectory.p_d;
         param_traj_data.p_d_p(    :, :, i   ) = param_trajectory.p_d_p;
         param_traj_data.p_d_pp(   :, :, i   ) = param_trajectory.p_d_pp;
+        param_traj_data.Phi_d(    :, :, i   ) = param_trajectory.Phi_d;
+        param_traj_data.Phi_d_p(  :, :, i   ) = param_trajectory.Phi_d_p;
+        param_traj_data.Phi_d_pp( :, :, i   ) = param_trajectory.Phi_d_pp;
         param_traj_data.R_d(      :, :, :, i) = param_trajectory.R_d;
         param_traj_data.q_d(      :, :, i   ) = param_trajectory.q_d;
         param_traj_data.q_d_p(    :, :, i   ) = param_trajectory.q_d_p;
@@ -363,11 +373,11 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
 
         f_opt = Function.load([s_fun_path, '/', casadi_func_name, '.casadi']);
         F = integrate_casadi(f, DT, M, int_method);
+        m=3; %%%%%% PUFSCH
+        z     = SX.sym('z',     2*m);
+        alpha = SX.sym('alpha',   m);
 
-        z     = SX.sym('z',     2*3);
-        alpha = SX.sym('alpha',   3);
-
-        h_ref = Function('h_ref', {z, alpha}, {[z(3+1:2*3); alpha]});
+        h_ref = Function('h_ref', {z, alpha}, {[z(m+1:2*m); alpha]});
         H = integrate_casadi(h_ref, DT, M, int_method);
 
         param_weight_init = param_weight.(casadi_func_name);
@@ -381,6 +391,9 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
             param_trajectory.p_d       = param_traj_data.p_d(      :, :, ii   );
             param_trajectory.p_d_p     = param_traj_data.p_d_p(    :, :, ii   );
             param_trajectory.p_d_pp    = param_traj_data.p_d_pp(   :, :, ii   );
+            param_trajectory.Phi_d     = param_traj_data.Phi_d(    :, :, ii   );
+            param_trajectory.Phi_d_p   = param_traj_data.Phi_d_p(  :, :, ii   );
+            param_trajectory.Phi_d_pp  = param_traj_data.Phi_d_pp( :, :, ii   );
             param_trajectory.R_d       = param_traj_data.R_d(      :, :, :, ii);
             param_trajectory.q_d       = param_traj_data.q_d(      :, :, ii   );
             param_trajectory.q_d_p     = param_traj_data.q_d_p(    :, :, ii   );
@@ -390,6 +403,15 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
             p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
             p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
             p_d_pp_0 = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
+
+            % Phi_d_0 = param_trajectory.Phi_d(     1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_0 ... Phi_N)
+            % Phi_d_p_0 = param_trajectory.Phi_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_p_0 ... Phi_p_N)
+            % Phi_d_pp_0 = param_trajectory.Phi_d_pp(1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_pp_0 ... Phi_pp_N)
+            % 
+            % % PFUSCH [TODO]
+            % p_d_0 = [p_d_0; Phi_d_0];
+            % p_d_p_0 = [p_d_p_0; Phi_d_p_0];
+            % p_d_pp_0 = [p_d_pp_0; Phi_d_pp_0];
 
             % PFUSCH: [TODO] Duplicat in MPC_V3
             u_k_0  = compute_tau_fun(q_0, q_0_p, q_0_pp); % much more faster than above command
