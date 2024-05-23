@@ -42,8 +42,8 @@ import casadi.*
 n = param_robot.n_DOF; % Dimension of joint space
 m = 3; % Dimension of Task Space
 % m = param_robot.m; % Dimension of Task Space
-m_t = param_robot.m_t; % Translational part of Task Space
-%m_r = param_robot.m_r; % Rotational part of Task Space 
+m_t = 3;%param_robot.m_t; % Translational part of Task Space
+m_r = 3;%param_robot.m_r; % Rotational part of Task Space 
 
 % Model equations
 f = Function.load([output_dir, 'sys_fun_x_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
@@ -68,6 +68,15 @@ H = integrate_casadi(h_ref, DT, M, int_method);
 p_d_0    = param_trajectory.p_d(    1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
 p_d_p_0  = param_trajectory.p_d_p(  1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
 p_d_pp_0 = param_trajectory.p_d_pp( 1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
+
+%Phi_d_0 = param_trajectory.Phi_d(     1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_0 ... Phi_N)
+%Phi_d_p_0 = param_trajectory.Phi_d_p( 1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_p_0 ... Phi_p_N)
+%Phi_d_pp_0 = param_trajectory.Phi_d_pp(1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_pp_0 ... Phi_pp_N)
+%
+%% PFUSCH [TODO]
+%p_d_0 = [p_d_0; Phi_d_0];
+%p_d_p_0 = [p_d_p_0; Phi_d_p_0];
+%p_d_pp_0 = [p_d_pp_0; Phi_d_pp_0];
 
 % R_d_0       = param_trajectory.R_d(       1:m_r, 1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (R_0 ... R_N)
 % q_d_0       = param_trajectory.q_d(       1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
@@ -119,8 +128,8 @@ end
 % Optimization Variables:
 u     = SX.sym( 'u',       n, N_MPC   );
 x     = SX.sym( 'x',     2*n, N_MPC+1 );
-z     = SX.sym( 'z',     2*3, N_MPC+1 );
-alpha = SX.sym( 'alpha',   3, N_MPC+1 );
+z     = SX.sym( 'z',     2*m, N_MPC+1 );
+alpha = SX.sym( 'alpha',   m, N_MPC+1 );
 
 mpc_opt_var_inputs = {u, x, z, alpha};
 
@@ -134,10 +143,10 @@ ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:
 
 % input parameter
 x_k    = SX.sym( 'x_k',    2*n, 1       ); % current x state
-z_0    = SX.sym( 'z_0',    2*3, 1       ); % initial z state
-y_d    = SX.sym( 'y_d',      3, N_MPC+1 ); % (y_d_0 ... y_d_N)
-y_p_d  = SX.sym( 'y_p_d',    3, N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
-y_pp_d = SX.sym( 'y_pp_d',   3, N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
+z_0    = SX.sym( 'z_0',    2*m, 1       ); % initial z state
+y_d    = SX.sym( 'y_d',      m, N_MPC+1 ); % (y_d_0 ... y_d_N)
+y_p_d  = SX.sym( 'y_p_d',    m, N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
+y_pp_d = SX.sym( 'y_pp_d',   m, N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
 
 mpc_parameter_inputs = {x_k, z_0, y_d, y_p_d, y_pp_d};
 mpc_init_reference_values = [x_0_0(:); z_0_0(:); p_d_0(:); p_d_p_0(:); p_d_pp_0(:)];
@@ -164,13 +173,13 @@ lambda_x0 = SX.sym('lambda_x0', size(w));
 lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
-y    = SX( 3, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
+y    = SX( m, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
 q_pp = SX( n, N_MPC     ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
 
 % reference trajectory values
-y_ref    = SX( 3, N_MPC+1 ); % TCP position:      (y_ref_0 ... y_ref_N)
-y_p_ref  = SX( 3, N_MPC+1 ); % TCP velocity:      (y_p_ref_0 ... y_p_ref_N)
-y_pp_ref = SX( 3, N_MPC+1 ); % TCP acceleration:  (y_pp_ref_0 ... y_pp_ref_N)
+y_ref    = SX( m, N_MPC+1 ); % TCP position:      (y_ref_0 ... y_ref_N)
+y_p_ref  = SX( m, N_MPC+1 ); % TCP velocity:      (y_p_ref_0 ... y_p_ref_N)
+y_pp_ref = SX( m, N_MPC+1 ); % TCP acceleration:  (y_pp_ref_0 ... y_pp_ref_N)
 
 g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 g_z(1, 1 + (0)) = {z_0 - z(:, 1 + (0))}; % z0 = zk
@@ -182,8 +191,8 @@ for i=0:N_MPC
     H_e = hom_transform_endeffector_py_fun(q);
     y(1:m_t, 1 + (i)) = H_e(1:m_t, 4);     %y_t_0 wird nicht verwendet
 
-    y_ref(   :, 1 + (i)) = z(    1:3, 1 + (i));
-    y_p_ref( :, 1 + (i)) = z(    4:6, 1 + (i));
+    y_ref(   :, 1 + (i)) = z(    1:m, 1 + (i));
+    y_p_ref( :, 1 + (i)) = z(    m+1:2*m, 1 + (i));
     y_pp_ref(:, 1 + (i)) = alpha( : , 1 + (i));
 
     if(i < N_MPC)
@@ -209,7 +218,7 @@ e_pp = y_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( :, 1 + (0:N_MPC));
 e_p  = y_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  :, 1 + (0:N_MPC));
 e    = y_ref(    :, 1 + (0:N_MPC) ) - y_d(    :, 1 + (0:N_MPC));
 
-J_yy_ref = Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_y_ref, e), eye(m_t));
+J_yy_ref = Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_y_ref, e), eye(m));
 J_q_pp = Q_norm_square(q_pp, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
 
 cost_vars_names = '{J_y, J_yy_ref, J_q_pp}';
