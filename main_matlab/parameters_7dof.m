@@ -133,7 +133,7 @@ param_traj_sin_poly.phi   = 0; % in rad
 
 %% Calculate target positions
 
-q_0 = [0; 0; pi/4; -pi/2; 0; pi/2; 0];
+q_0 = [0; 0; pi/4; -pi/2; 0*pi/4; pi/2; 0];
 %q_0 = [-1.081, -1.035, 1.231, -1.778, 0.967, 1.394, -0.652]';
 q_0_p = zeros(n, 1);
 q_0_pp = zeros(n, 1);
@@ -144,8 +144,8 @@ quat_init = rotation2quaternion(R_init);
 xe0 = [H_0_init(1:3,4); quat_init]; % xe0 = [x,y,z,q1,q2,q3,q4]
 
 rotq_fun = @(x1, x2) [x1(1:3) + x2(1:3); quat_mult(x1(4:7), x2(4:7))]; % multiplikation von quaternions = rotationen hintereinander ausführen
-xeT = xe0;
-%xeT = rotq_fun(xe0, [0; 0; -0.5; 1; 0; 0; 0]); % correct addition of quaternions
+%xeT = xe0;
+xeT = rotq_fun(xe0, [0; 0; -0.5; 1; 0; 0; 0]); % correct addition of quaternions
 R_target = quaternion2rotation(xeT(4:7));%R_init;% quat2rotm_v2(xeT(4:7));
 
 if(start_in_singularity)
@@ -217,8 +217,8 @@ param_init_pose.R_init = R_init;
 param_init_pose.R_target = R_target;
 param_init_pose.rot_alpha_scale = rot_alpha_scale;
 param_init_pose.rot_ax = rot_ax;
-param_init_pose.Phi_init = rotm2eul(R_init, 'ZYZ');
-param_init_pose.Phi_target = quat2eul(xeT(4:7)', 'ZYZ');
+param_init_pose.Phi_init = rotm2eul_v2(R_init);
+param_init_pose.Phi_target = rotm2eul_v2(quaternion2rotation(xeT(4:7)));
 param_init_pose.delta_Phi = param_init_pose.Phi_target - param_init_pose.Phi_init;
 
 %% GENERATE OFFLINE TRAJECTORY
@@ -322,8 +322,8 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
     % separat getan werden, d. h. eig das If von nlpsol_opt_problem_v2
     
     tic
-    compute_tau_fun = Function.load([s_fun_path, '/', 'compute_tau_py.casadi']);
-    f = Function.load([s_fun_path, '/', 'sys_fun_x_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
+    %compute_tau_fun = Function.load([s_fun_path, '/', 'compute_tau_py.casadi']);
+    %f = Function.load([s_fun_path, '/', 'sys_fun_x_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
     for name={files.name}
         name_mat_file    = name{1};
         param_MPC_name   = name_mat_file(1:end-4);
@@ -346,7 +346,10 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         DT = Ts_MPC;
         M = rk_iter;
 
+        output_dir = ['./', s_fun_path,'/'];
+
         f_opt = Function.load([s_fun_path, '/', casadi_func_name, '.casadi']);
+%{
         F = integrate_casadi(f, DT, M, int_method);
         m=3; %%%%%% PUFSCH
         z     = SX.sym('z',     2*m);
@@ -354,7 +357,7 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
 
         h_ref = Function('h_ref', {z, alpha}, {[z(m+1:2*m); alpha]});
         H = integrate_casadi(h_ref, DT, M, int_method);
-
+%}
         param_weight_init = param_weight.(casadi_func_name);
         param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init), 'vector');
 
@@ -374,7 +377,7 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
             param_trajectory.q_d_p     = param_traj_data.q_d_p(    :, :, ii   );
             param_trajectory.omega_d   = param_traj_data.omega_d(  :, :, ii   );
             param_trajectory.omega_d_p = param_traj_data.omega_d_p(:, :, ii   );
-
+%{
             p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
             p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
             p_d_pp_0 = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
@@ -413,7 +416,8 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
 
             
             mpc_init_reference_values = [x_0_0(:); z_0_0(:); p_d_0(:); p_d_p_0(:); p_d_pp_0(:)];
-    
+    %}
+            nlpsol_generate_opt_problem;
             [~, xx_full_opt_sol, ~] = f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
             init_guess = full(xx_full_opt_sol);
 
