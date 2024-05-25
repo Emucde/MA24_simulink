@@ -61,7 +61,7 @@ for i = 1:5:100
     quiver3(0, 0, 0, vecI_1(1), vecI_1(2), vecI_1(3), 'r', 'LineWidth', 1);
     quiver3(0, 0, 0, vecI_2(1), vecI_2(2), vecI_2(3), 'g', 'LineWidth', 1);
 end
-
+9i
 legend('RI_x', 'RI_y', 'RI_z', 'R1_x', 'R1_y', 'R1_z', 'Vektor 1', 'Vektor 21', 'Vektor 22', 'Location', 'best');
 axis equal;
 xlabel('X');
