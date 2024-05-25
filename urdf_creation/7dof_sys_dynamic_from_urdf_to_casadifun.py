@@ -70,8 +70,8 @@ M = cs.Function('M', [q], [M_mat], ['q'], ['M(q)']) # inertia matrix
 print('M1(qa) - M(qa):', M1(qa) - M(qa), '\n') # sollte 0 sein
 print('M(qa) - M(qa).T:', M(qa) - M(qa).T, '\n') # sollte 0 sein
 
-C_rnea_wog = robot_parser.get_coriolis_rnea(root_link, end_link) # rnea algorithm!! (man erhält nur einen nx1 vektor d. h. C(q, q_p) * q_p) - g(q)
-C_rnea1 = cs.Function('C_rnea1', [q, q_p], [C_rnea_wog(q, q_p) + g(q)], ['q', 'q_p'], ['C_rnea1(q, q_p)']) # = C(q, q_p)q_p
+C_rnea_wog = robot_parser.get_coriolis_rnea(root_link, end_link) # rnea algorithm!! (man erhält nur einen nx1 vektor d. h. C(q, q_p) * q_p)
+C_rnea1 = cs.Function('C_rnea1', [q, q_p], [C_rnea_wog(q, q_p) + g(q)], ['q', 'q_p'], ['C_rnea1(q, q_p)']) # = C(q, q_p)q_p + g(q)
 C_rnea = cs.Function('C_rnea', [q, q_p], [inv_dyn_tau(q, q_p, cs.SX(n,1))], ['q', 'q_p'], ['C(q, q_p) = tau(q, q_p, 0)']) # = n(q, q_p) = C(q, q_p)q_p + g(q)
 print('C_rnea1(qa, qpa) - C_rnea(qa, qpa):', C_rnea1(qa, qpa) - C_rnea(qa, qpa)) # sollte 0 sein
 
@@ -111,13 +111,15 @@ quat_e = cs.Function('quat_e', [q], [cs.vertcat(quat(q)[3], quat(q)[0:3])], ['q'
 # solve Ax = b with
 # A = M(x1), b = u-C(x)*x2-g(x1)
 # Achtung: C(q,q_p)*q_p + g(q) = C_rnea(q, q_p) = C_nq(q, q_p)
-#sys_qpp = cs.solve( M(q), tau - C_nq(q,q_p)) # = d^2/dt^2 q, ineffizient
-#sys_fun_qpp = cs.Function('sys_fun_qpp', [q, q_p, tau], [sys_qpp], ['q', 'q_p', 'tau'], ['q_pp'])
+q_pp_crba = cs.solve( M(q), tau - C_nq(q,q_p)) # = d^2/dt^2 q, ineffizient, vgl. robot_parser.get_forward_dynamics_crba
+q_pp_aba_fun = robot_parser.get_forward_dynamics_aba(root_link, end_link, gravity) # = d^2/dt^2 q über aba berechnet
+
+# q_pp_alg = q_pp_crba
+q_pp_alg = q_pp_aba_fun(q, q_p, tau)
+sys_fun_qpp = cs.Function('sys_fun_qpp', [q, q_p, tau], [q_pp_alg], ['q', 'q_p', 'tau'], ['q_pp'])
+
 #sys_fun_x = cs.Function('sys_fun_x', [x, u], [cs.vertcat(q_p, sys_fun_qpp(q, q_p, u))], ['x', 'u'], ['d/dt x = f(x, u)'])
-q_pp_aba = robot_parser.get_forward_dynamics_aba(root_link, end_link, gravity) # = d^2/dt^2 q über aba berechnet
-sys_fun_qpp = cs.Function('sys_fun_qpp', [q, q_p, tau], [q_pp_aba(q, q_p, tau)], ['q', 'q_p', 'tau'], ['q_pp'])
-# sys_fun_x = cs.Function('sys_fun_x', [x, u], [cs.vertcat(q_p, q_pp_aba(q, q_p, u))], ['x', 'u'], ['d/dt x = f(x, u)'])
-sys_fun_x = cs.Function('sys_fun_x', [x, u], [cs.vertcat(x[n:2*n], q_pp_aba(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u)'])
+sys_fun_x = cs.Function('sys_fun_x', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u)'])
 
 
 q_pp_tst = sys_fun_qpp([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])

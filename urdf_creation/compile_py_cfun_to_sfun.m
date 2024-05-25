@@ -1,3 +1,12 @@
+% Alternative: Standalone
+% if(~isdeployed)
+%     cd(fileparts(which(mfilename)));
+% end
+
+% init_casadi;
+% import casadi.*;
+% output_dir = './s_functions/s_functions_7dof/';
+
 import casadi.*;
 
 if(~exist('parameter_str', 'var'))
@@ -18,9 +27,7 @@ fun_arr = { ...
     'geo_jacobian_endeffector_p_py' ...
 };
 
-% fun_arr = {'sys_fun_x_py'};
-
-cd ./.tmp
+% fun_arr = {'sys_fun_qpp_py'};
 
 compile_mode = 2;
 output_dir = '../s_functions/s_functions_7dof/';
@@ -46,5 +53,3 @@ catch ME
     disp('Error in compile_py_cfun_to_sfun.m')
     fprintf(2, 'Fehler: %s\n', getReport(ME));
 end
-
-cd ..

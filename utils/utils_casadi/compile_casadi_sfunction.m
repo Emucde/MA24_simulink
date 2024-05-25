@@ -4,6 +4,7 @@ function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver
 % Inputs:
 %   casadi_fun      : CasADi function to be compiled.
 %   s_fun_name      : Name of the s_function (can be 's_function_nlpsol.c' (nlpsol) or 's_function.c' (opti))
+%   output_dir      : Directory where the compiled S-function will be saved.
 %   MPC_solver      : Name of the MPC solver to be used (optional, for display only).
 %   mode            : Compile Mode with different s_function file
 %                   :   mode = 1: use default nlpsol s_function "s_function_nlpsol.c" [from [1]]

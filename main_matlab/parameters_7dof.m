@@ -11,7 +11,7 @@ end
 %end
 
 % (turn off profiler when not needed anymore)
-%set_param(gcs,'Profile','off');
+% set_param(gcs,'Profile','off');
 % measure compile time: 
 %disp('Compile Time:')
 
@@ -56,7 +56,7 @@ trajectory_out_of_workspace = false; % TODO: einfach offset 0 setzten
 x_traj_out_of_workspace_value = 0.1;
 
 plot_trajectory = ~true;
-overwrite_offline_traj = ~false;
+overwrite_offline_traj = false;
 
 %% Other init scripts
 T_sim = 10; % = param_vis.T (see init_visual.m)
@@ -144,7 +144,8 @@ quat_init = rotation2quaternion(R_init);
 xe0 = [H_0_init(1:3,4); quat_init]; % xe0 = [x,y,z,q1,q2,q3,q4]
 
 rotq_fun = @(x1, x2) [x1(1:3) + x2(1:3); quat_mult(x1(4:7), x2(4:7))]; % multiplikation von quaternions = rotationen hintereinander ausführen
-xeT = rotq_fun(xe0, [0; 0; -0.5; 1; 0; 0; 0]); % correct addition of quaternions
+xeT = xe0;
+%xeT = rotq_fun(xe0, [0; 0; -0.5; 1; 0; 0; 0]); % correct addition of quaternions
 R_target = quaternion2rotation(xeT(4:7));%R_init;% quat2rotm_v2(xeT(4:7));
 
 if(start_in_singularity)
@@ -165,34 +166,8 @@ J_p    = casadi.Function.load(['./', s_fun_path, '/geo_jacobian_endeffector_p_py
 H      = casadi.Function.load(['./', s_fun_path, '/hom_transform_endeffector_py.casadi']); % perfect
 quat   = casadi.Function.load(['./', s_fun_path, '/quat_endeffector_py.casadi']); % passt, aber achtung: Reihenfolge ist [eps, eta] = [q2, q3, q4, q1]
 robot_model_bus_fun = casadi.Function.load(['./', s_fun_path, '/robot_model_bus_fun_py.casadi']);
-% K_p_r = eye(3);
-% z2 = [1.23;2.709;3.23;4.00000019]/norm([1.23;2.709;3.23;4.00000019]); %xe0(4:7);
-% q_eps = z2(2:4);
-% z4 = [0;0;0];
-% m_t = 3;
-% z4_p_v1 = -2 * ( z2(1)*eye(m_t) + skew(z2(2:4)) ) * K_p_r * q_eps - K_d_r*z4;
-% [~, Q_q] = quat_deriv(z2, z4); % z2=q_ref, z4=omega_ref, Q_p is 4x3
-% Q_eps = Q_q(2:4, :); % 3x3
-% z4_p_v2 = -4 * Q_eps' * K_p_r * q_eps                             - K_d_r*z4; % without Q_eps calculatin 28% faster, with 2x slower
-% z4_p_v1 - z4_p_v2
 
-%%
-%{
-RR = zeros(3,3,8);
-RR_d = zeros(3,3,8);
-qq = zeros(4,8);
-qq_d = zeros(4,8);
-j=1;
-ppath = '../quaternion_flipping_problems/Problem2/';
-for i=78:85
-    load([ppath, 'qdRd_t', num2str(i), '.mat']);
-    RR(:,:,j) = R;
-    qq(:,j) = q_e;
-    RR_d(:,:,j) = R_d;
-    qq_d(:,j) = q_d;
-    j=j+1;
-end
-%}
+% tests;
 
 %% Inverse Kin (Zum Prüfen ob Endwert im Aufgabenraum ist.)
 calc_inverse_kin = false;
