@@ -25,57 +25,13 @@ compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, file
 MPC='MPC1';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
-param_casadi_fun_name.(MPC).solver  = 'ipopt'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version = 'v2'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible)
-param_casadi_fun_name.(MPC).Ts      = 20e-3;
-param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 5;
-param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
-param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | Euler)
-
-MPC='MPC2';
-param_casadi_fun_name.(MPC).name    = MPC;
-param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v2'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible)
-param_casadi_fun_name.(MPC).Ts      = 20e-3;
+param_casadi_fun_name.(MPC).version = 'v1'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible)
+param_casadi_fun_name.(MPC).Ts      = 1e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
-param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | Euler)
-
-MPC='MPC3';
-param_casadi_fun_name.(MPC).name    = MPC;
-param_casadi_fun_name.(MPC).variant = 'nlpsol';
-param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v3'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible)
-param_casadi_fun_name.(MPC).Ts      = 10e-3;
-param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 5;
-param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
-param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | Euler)
-
-MPC='MPC4';
-param_casadi_fun_name.(MPC).name    = MPC;
-param_casadi_fun_name.(MPC).variant = 'nlpsol';
-param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v1'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible)
-param_casadi_fun_name.(MPC).Ts      = 10e-3;
-param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 5;
-param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
-param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | Euler)
-
-MPC='MPC5';
-param_casadi_fun_name.(MPC).name    = MPC;
-param_casadi_fun_name.(MPC).variant = 'nlpsol';
-param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v4'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible)
-param_casadi_fun_name.(MPC).Ts      = 50e-3;
-param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 5;
-param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
-param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | Euler)
+param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
 
 MPC='MPC6';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -88,19 +44,8 @@ param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
 
-MPC='FeasibleBlock';
-param_casadi_fun_name.(MPC).name    = MPC;
-param_casadi_fun_name.(MPC).variant = 'nlpsol';
-param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'traj_feasible'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible | traj_feasible)
-param_casadi_fun_name.(MPC).Ts      = 1;
-param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 5;
-param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
-param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | Euler)
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC6;
+param_casadi_fun_struct = param_casadi_fun_name.MPC1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -201,8 +146,6 @@ s_func_name              = ['s_function_', casadi_fun_c_header_str]; % final nam
 s_fun_c_file_path        = [s_fun_path, s_func_name];
 casadi_fun_h_header_path = [s_fun_path, casadi_func_name, '.h'];
 casadi_fun_c_header_path = [s_fun_path, casadi_func_name, '.c'];
-param_MPC_init_guess_name = ['param_', casadi_func_name, '_init_guess'];
-param_MPC_init_guess_mat_file = ['./', s_fun_path, '/initial_guess/', param_MPC_init_guess_name, '.mat'];
 
 substr = '_matlab';
 MPC_matlab_name = [casadi_func_name, substr];
@@ -347,13 +290,14 @@ omega_traj_sin_poly_old = omega_traj_sin_poly;
 phi_traj_sin_poly_old   = phi_traj_sin_poly  ;
 T_switch_old = T_switch;
 T_horizon_max_old = T_horizon_max;
+overwrite_offline_traj = true;
 %N_sum_old = -1;
 
 save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
      'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
      'Ta_old', 'T_traj_poly_old', ...
      'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
-     'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old');
+     'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old', 'overwrite_offline_traj');
 
 %% COMPILE matlab s_function (can be used as normal function in matlab)
 if(compile_matlab_sfunction)

@@ -10,6 +10,13 @@ end
     clc
 %end
 
+start_in_singularity = false;
+trajectory_out_of_workspace = false; % TODO: einfach offset 0 setzten
+x_traj_out_of_workspace_value = 0.1;
+
+plot_trajectory = ~true;
+overwrite_offline_traj = false;
+
 % (turn off profiler when not needed anymore)
 % set_param(gcs,'Profile','off');
 % measure compile time: 
@@ -49,14 +56,6 @@ if( open_simulink_on_start && desktop('-inuse') == 1) % in vscode inuse delivers
     open_system([simulink_main_model_name '.slx'])
     fprintf([' finished! (Loading time: ' num2str(toc) ' s)\n']);
 end
-
-%% debug parameter
-start_in_singularity = false;
-trajectory_out_of_workspace = false; % TODO: einfach offset 0 setzten
-x_traj_out_of_workspace_value = 0.1;
-
-plot_trajectory = ~true;
-overwrite_offline_traj = false;
 
 %% Other init scripts
 T_sim = 10; % = param_vis.T (see init_visual.m)
@@ -134,6 +133,7 @@ param_traj_sin_poly.phi   = 0; % in rad
 %% Calculate target positions
 
 q_0 = [0; 0; pi/4; -pi/2; 0*pi/4; pi/2; 0];
+%q_0 = [0; -pi/4; 0; -3*pi/4; pi/4; pi/2; pi/4];
 %q_0 = [-1.081, -1.035, 1.231, -1.778, 0.967, 1.394, -0.652]';
 q_0_p = zeros(n, 1);
 q_0_pp = zeros(n, 1);
@@ -145,7 +145,8 @@ xe0 = [H_0_init(1:3,4); quat_init]; % xe0 = [x,y,z,q1,q2,q3,q4]
 
 rotq_fun = @(x1, x2) [x1(1:3) + x2(1:3); quat_mult(x1(4:7), x2(4:7))]; % multiplikation von quaternions = rotationen hintereinander ausführen
 %xeT = xe0;
-xeT = rotq_fun(xe0, [0; 0; -0.5; 1; 0; 0; 0]); % correct addition of quaternions
+%xeT = rotq_fun(xe0, [0; 0; -0.5; 1; 0; 0; 0]); % correct addition of quaternions
+xeT = [xe0(1:3,1); rotation2quaternion(Rz(pi/4)*R_init)]; % correct addition of quaternions
 R_target = quaternion2rotation(xeT(4:7));%R_init;% quat2rotm_v2(xeT(4:7));
 
 if(start_in_singularity)
@@ -217,8 +218,8 @@ param_init_pose.R_init = R_init;
 param_init_pose.R_target = R_target;
 param_init_pose.rot_alpha_scale = rot_alpha_scale;
 param_init_pose.rot_ax = rot_ax;
-param_init_pose.Phi_init = rotm2eul_v2(R_init);
-param_init_pose.Phi_target = rotm2eul_v2(quaternion2rotation(xeT(4:7)));
+param_init_pose.Phi_init = rotm2rpy(R_init);
+param_init_pose.Phi_target = rotm2rpy(R_target); %rotm2rpy(quaternion2rotation(xeT(4:7)));
 param_init_pose.delta_Phi = param_init_pose.Phi_target - param_init_pose.Phi_init;
 
 %% GENERATE OFFLINE TRAJECTORY

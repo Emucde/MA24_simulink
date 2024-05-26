@@ -65,24 +65,24 @@ h_ref = Function('h_ref', {z, alpha}, {[z(m+1:2*m); alpha]});
 H = integrate_casadi(h_ref, DT, M, int_method);
 
 %% Calculate Initial Guess
-p_d_0    = param_trajectory.p_d(    1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
-p_d_p_0  = param_trajectory.p_d_p(  1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
-p_d_pp_0 = param_trajectory.p_d_pp( 1:m_t, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
+p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
+p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
+p_d_pp_0 = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
 
-Phi_d_0 = param_trajectory.Phi_d(     1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_0 ... Phi_N)
-Phi_d_p_0 = param_trajectory.Phi_d_p( 1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_p_0 ... Phi_p_N)
-Phi_d_pp_0 = param_trajectory.Phi_d_pp(1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_pp_0 ... Phi_pp_N)
-%
-%% PFUSCH [TODO]
-y_d_0 = [p_d_0; Phi_d_0];
-y_d_p_0 = [p_d_p_0; Phi_d_p_0];
-y_d_pp_0 = [p_d_pp_0; Phi_d_pp_0];
+Phi_d_0 = param_trajectory.Phi_d(     1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_0 ... Phi_N)
+Phi_d_p_0 = param_trajectory.Phi_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_p_0 ... Phi_p_N)
+Phi_d_pp_0 = param_trajectory.Phi_d_pp(1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_pp_0 ... Phi_pp_N)
 
 % R_d_0       = param_trajectory.R_d(       1:m_r, 1:m_r, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (R_0 ... R_N)
-% q_d_0       = param_trajectory.q_d(       1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
+q_d_0       = param_trajectory.q_d(       1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
 % q_d_p_0     = param_trajectory.q_d_p(     1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_p_0 ... q_p_N)
 % omega_d_0   = param_trajectory.omega_d(   1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
 % omega_d_p_0 = param_trajectory.omega_d_p( 1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
+
+y_d_0 = [p_d_0; q_d_0];
+%y_d_0 = q_d_0;
+%y_d_p_0 = [p_d_p_0; Phi_d_p_0];
+%y_d_pp_0 = [p_d_pp_0; Phi_d_pp_0];
 
 x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
 q_0    = x_0_0(1   :   n); % useless line...
@@ -99,19 +99,25 @@ F_sim              = F.mapaccum(N_MPC);
 x_init_guess_kp1_0 = F_sim(x_0_0, u_init_guess_0);
 x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
 
-z_0_0 = [y_d_0(:,1); y_d_p_0(:,1)]; % init for z_ref
-alpha_init_guess_0 = y_d_pp_0(:, 1:end-1);
-alpha_N_0 = y_d_pp_0(:,end);
-
-H_sim              = H.mapaccum(N_MPC);
-z_init_guess_kp1_0 = H_sim(z_0_0, alpha_init_guess_0);
-z_init_guess_0     = [z_0_0 full(z_init_guess_kp1_0)];
+% z_0_0 = [y_d_0(1:6,1); y_d_p_0(:,1)]; % init for z_ref
+% alpha_init_guess_0 = y_d_pp_0(:, 1:end-1);
+% alpha_N_0 = y_d_pp_0(:,end);
+% 
+% H_sim              = H.mapaccum(N_MPC);
+% z_init_guess_kp1_0 = H_sim(z_0_0, alpha_init_guess_0);
+% z_init_guess_0     = [z_0_0 full(z_init_guess_kp1_0)];
 % z_d_init_guess_0 = [y_d_0; y_d_p_0]; % init for z_d
 
-lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0)+numel(alpha_init_guess_0) + numel(alpha_N_0), 1);
-lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(z_init_guess_0)+1, 1); % + 1 wegen eps
+%lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0)+numel(alpha_init_guess_0) + numel(alpha_N_0), 1);
+%lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(z_init_guess_0)+1, 1); % + 1 wegen eps
 
-init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+%init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
+
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+
 
 % get weights from "init_MPC_weight.m"
 param_weight_init = param_weight.(casadi_func_name);
@@ -128,28 +134,38 @@ end
 % Optimization Variables:
 u     = SX.sym( 'u',       n, N_MPC   );
 x     = SX.sym( 'x',     2*n, N_MPC+1 );
-z     = SX.sym( 'z',     2*m, N_MPC+1 );
-alpha = SX.sym( 'alpha',   m, N_MPC+1 );
+%z     = SX.sym( 'z',     2*m, N_MPC+1 );
+%alpha = SX.sym( 'alpha',   m, N_MPC+1 );
 
-mpc_opt_var_inputs = {u, x, z, alpha};
+%mpc_opt_var_inputs = {u, x, z, alpha};
+mpc_opt_var_inputs = {u, x};
 
 u_opt_indices = 1:n;
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
-ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
+%lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
+%ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
+
+lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1)];
+ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1)];
 
 
 % input parameter
 x_k    = SX.sym( 'x_k',    2*n, 1       ); % current x state
-z_0    = SX.sym( 'z_0',    2*m, 1       ); % initial z state
-y_d    = SX.sym( 'y_d',      m, N_MPC+1 ); % (y_d_0 ... y_d_N)
-y_p_d  = SX.sym( 'y_p_d',    m, N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
-y_pp_d = SX.sym( 'y_pp_d',   m, N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
+%z_0    = SX.sym( 'z_0',    2*m, 1       ); % initial z state
+y_d    = SX.sym( 'y_d',      m+1, N_MPC+1 ); % (y_d_0 ... y_d_N)
+%y_p_d  = SX.sym( 'y_p_d',    m, N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
+%y_pp_d = SX.sym( 'y_pp_d',   m, N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
 
-mpc_parameter_inputs = {x_k, z_0, y_d, y_p_d, y_pp_d};
-mpc_init_reference_values = [x_0_0(:); z_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:)];
+%mpc_parameter_inputs = {x_k, z_0, y_d, y_p_d, y_pp_d};
+%mpc_init_reference_values = [x_0_0(:); z_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:)];
+
+%mpc_parameter_inputs = {x_k, y_d, y_p_d, y_pp_d};
+%mpc_init_reference_values = [x_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:)];
+
+mpc_parameter_inputs = {x_k, y_d};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -159,11 +175,14 @@ end
 
 % constraints conditions cellarray g
 g_x = cell(1, N_MPC+1); % for F
-g_z = cell(1, N_MPC+1); % for H
-g_eps = cell(1, 1);
+%g_z = cell(1, N_MPC+1); % for H
+%g_eps = cell(1, 1);
 
-lbg = SX(numel(x)+numel(z)+1, 1);
-ubg = SX(numel(x)+numel(z)+1, 1);
+%lbg = SX(numel(x)+numel(z)+1, 1);
+%ubg = SX(numel(x)+numel(z)+1, 1);
+
+lbg = SX(numel(x), 1);
+ubg = SX(numel(x), 1);
 
 lbg(end) = 0;
 ubg(end) = pp.epsilon;
@@ -173,16 +192,18 @@ lambda_x0 = SX.sym('lambda_x0', size(w));
 lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
-y    = SX( m, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
+y    = SX( 3, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
 q_pp = SX( n, N_MPC     ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
 
 % reference trajectory values
-y_ref    = SX( m, N_MPC+1 ); % TCP position:      (y_ref_0 ... y_ref_N)
-y_p_ref  = SX( m, N_MPC+1 ); % TCP velocity:      (y_p_ref_0 ... y_p_ref_N)
-y_pp_ref = SX( m, N_MPC+1 ); % TCP acceleration:  (y_pp_ref_0 ... y_pp_ref_N)
+%y_ref    = SX( m, N_MPC+1 ); % TCP position:      (y_ref_0 ... y_ref_N)
+%y_p_ref  = SX( m, N_MPC+1 ); % TCP velocity:      (y_p_ref_0 ... y_p_ref_N)
+%y_pp_ref = SX( m, N_MPC+1 ); % TCP acceleration:  (y_pp_ref_0 ... y_pp_ref_N)
+
+R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
-g_z(1, 1 + (0)) = {z_0 - z(:, 1 + (0))}; % z0 = zk
+%g_z(1, 1 + (0)) = {z_0 - z(:, 1 + (0))}; % z0 = zk
 for i=0:N_MPC
     % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
     q = x(1:n, 1 + (i));
@@ -190,41 +211,56 @@ for i=0:N_MPC
     % calculate trajectory values (y_0 ... y_N)
     H_e = hom_transform_endeffector_py_fun(q);
     y(1:m_t,   1 + (i)) = H_e(1:m_t, 4);     %y_t_0 wird nicht verwendet
-    y(m_t+1:m, 1 + (i)) = rotm2eul_casadi(H_e(1:m_t, 1:m_t)); %y_r_0 wird nicht verwendet
+    %y(m_t+1:m, 1 + (i)) = rotm2rpy_casadi(H_e(1:m_t, 1:m_t)); %y_r_0 wird nicht verwendet
+    %y(:, 1 + (i)) = rotm2rpy_casadi(H_e(1:m_t, 1:m_t)); %y_r_0 wird nicht verwendet
+    R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
-    y_ref(   :, 1 + (i)) = z(    1:m, 1 + (i));
-    y_p_ref( :, 1 + (i)) = z(    m+1:2*m, 1 + (i));
-    y_pp_ref(:, 1 + (i)) = alpha( : , 1 + (i));
+    %y_ref(   :, 1 + (i)) = z(    1:m, 1 + (i));
+    %y_p_ref( :, 1 + (i)) = z(    m+1:2*m, 1 + (i));
+    %y_pp_ref(:, 1 + (i)) = alpha( : , 1 + (i));
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
         g_x(1, 1 + (i+1)) = {F(x(:, 1 + (i)), u(    :, 1 + (i))) - x(:, 1 + (i+1))}; % Set the state dynamics constraints
-        g_z(1, 1 + (i+1)) = {H(z(:, 1 + (i)), alpha(:, 1 + (i))) - z(:, 1 + (i+1))}; % Set the state dynamics constraints
+        %g_z(1, 1 + (i+1)) = {H(z(:, 1 + (i)), alpha(:, 1 + (i))) - z(:, 1 + (i+1))}; % Set the state dynamics constraints
 
         dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
         q_pp(:, 1 + (i  )) = dx(n+1:2*n, 1);
     end
 end
 
-% [TODO]: Ich denke ich sollte den relativen Euler Fehler gewichten, nicht den absoluten!
+% [TODO]: Ich denke ich sollte den relativen RPY XYZ Fehler gewichten, nicht den absoluten!
 
 % g_eps(1, 1) = {norm_2(  sub_fun_y( y(1:m+1, end),  z(1:m+1, end) )  )}; % for pp.epsilon
-g_eps(1, 1) = {norm_2( blkdiag(eye(3), 0*eye(3)) * (y(:,end)-y_ref(:,end)) )}; % for pp.epsilon %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROBLEM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-g = [g_x, g_z, g_eps]; % merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
-
+%g_eps(1, 1) = {norm_2( blkdiag(0*eye(3), 0*eye(3)) * (y(:,end)-y_ref(:,end)) )}; % for pp.epsilon %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROBLEM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%g = [g_x, g_z, g_eps]; % merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
+g = g_x;
 
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-J_y = Q_norm_square( y(:, 1 + (1:N_MPC-1) ) - y_ref(    :, 1 + (1:N_MPC-1)), pp.Q_y  );
+%e_pp = y_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( :, 1 + (0:N_MPC));
+%e_p  = y_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  :, 1 + (0:N_MPC));
+%e    = y_ref(   :, 1 + (0:N_MPC) ) - y_d(  :, 1 + (0:N_MPC));
 
-e_pp = y_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( :, 1 + (0:N_MPC));
-e_p  = y_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  :, 1 + (0:N_MPC));
-e    = y_ref(    :, 1 + (0:N_MPC) ) - y_d(    :, 1 + (0:N_MPC));
+%e = SX(m, N_MPC+1);
+Q_ori = SX(1,1);
+%e(1:m_t, :) = y_ref(   1:m_t, 1 + (0:N_MPC) ) - y_d(  1:m_t, 1 + (0:N_MPC));
+for i=0:N_MPC
+    %e(m_t+1:m, 1 + (i)) = rotm2rpy_casadi( rpy2rotm_casadi(y_ref(m_t+1:m, 1 + (i))) * R_e_arr{1 + (i)}');
+    %e(m_t+1:m, 1 + (i)) = rotm2rpy_casadi( R_e_arr{1 + (i)} * rpy2rotm_casadi(y_ref(m_t+1:m, 1 + (i)))');
+    q_err = rotation2quaternion_casadi( R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))');
+    Q_ori = Q_ori + Q_norm_square( q_err(2:4) , pp.Q_y(4:6,4:6)  );
+end
+% Q_ori = Q_norm_square( y_ref(   4:6, 1 + (0:N_MPC) ) - y_d(  4:6, 1 + (0:N_MPC)), pp.Q_y(4:6,4:6)  );
 
-J_yy_ref = Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_y_ref, e), blkdiag(eye(3), 1*eye(3))); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROBLEM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%J_yt = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_ref(1:3, 1 + (1:N_MPC-1)), pp.Q_y(1:3,1:3)  );
+J_yt = Q_norm_square( y(1:3, 1 + (1:N_MPC-1+1) ) - y_d(1:3, 1 + (1:N_MPC-1+1)), pp.Q_y(1:3,1:3)  );
+J_yr = Q_ori;
+%J_yy_ref = 0*Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_y_ref, e), blkdiag(eye(3), 1*eye(3))); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROBLEM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 J_q_pp = Q_norm_square(q_pp, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
 
-cost_vars_names = '{J_y, J_yy_ref, J_q_pp}';
+%cost_vars_names = '{J_yt, J_yr, J_yy_ref, J_q_pp}';
+cost_vars_names = '{J_yr, J_yt, J_q_pp}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 

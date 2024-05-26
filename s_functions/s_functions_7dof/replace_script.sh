@@ -67,9 +67,9 @@ if [[ $variant == "opti" ]]; then
    idx_val=3
 else
    input="./templates/template_offline_MCP_s_fun_nlpsol_shared_subsystem.slx"
-   MPC_string="MPC1"
+   MPC_string="MPC6"
    solver_string="ipopt"
-   idx_val=2
+   idx_val=7
 fi
 tmp_dir="tmp_slx"
 mkdir $tmp_dir
