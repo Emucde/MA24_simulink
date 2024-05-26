@@ -3,6 +3,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
     xe0 = param_init_pose.xe0;
     xeT = param_init_pose.xeT;
     R_init = param_init_pose.R_init;
+    R_target = param_init_pose.R_target;
     rot_ax = param_init_pose.rot_ax;
     rot_alpha_scale = param_init_pose.rot_alpha_scale;
     T_start = param_init_pose.T_start;
@@ -69,7 +70,10 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
                 temp = xe0;
                 xe0 = xeT;
                 xeT = temp;
-
+                R_init = R_target;
+                rot_alpha_scale=-rot_alpha_scale;
+                Phi_init = Phi_init + delta_Phi;
+                delta_Phi = -delta_Phi;
                 t_offset = t_offset + T_switch;
             end
         end
@@ -93,6 +97,10 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
                 temp = xe0;
                 xe0 = xeT;
                 xeT = temp;
+                R_init = R_target;
+                rot_alpha_scale=-rot_alpha_scale;
+                Phi_init = Phi_init + delta_Phi;
+                delta_Phi = -delta_Phi;
                 T_start = T_start_end;
                 flag = 1;
             end

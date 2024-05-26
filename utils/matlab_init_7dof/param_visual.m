@@ -33,7 +33,7 @@ green = [0 1 0];
 light_blue = [0.039216 0.541176 0.780392];
 
 fr3_base_opacity = 1;
-rpy2rotm = @(rpy) eul2rotm(rpy, "XYZ");
+% rpy2rotm = @(rpy) eul2rotm(rpy, "XYZ"); % defined in matlab function
 
 %% FR Robot
 fr3.robot = struct;
