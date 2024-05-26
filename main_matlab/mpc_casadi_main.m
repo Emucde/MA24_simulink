@@ -45,7 +45,7 @@ param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC1;
+param_casadi_fun_struct = param_casadi_fun_name.MPC6;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -115,6 +115,7 @@ if(traj_not_exist_flag || T_horizon_MPC > T_horizon_max_old)
         param_traj_data.R_d(     :, :, :, i) = param_trajectory.R_d;
         param_traj_data.q_d(     :, :, i) = param_trajectory.q_d;
         param_traj_data.q_d_p(     :, :, i) = param_trajectory.q_d_p;
+        param_traj_data.q_d_pp(    :, :, i) = param_trajectory.q_d_pp;
         param_traj_data.omega_d( :, :, i) = param_trajectory.omega_d;
         param_traj_data.omega_d_p(:, :, i) = param_trajectory.omega_d_p;
     end
@@ -133,6 +134,7 @@ param_trajectory.Phi_d_pp  = param_traj_data.Phi_d_pp( :, :, traj_select_mpc);
 param_trajectory.R_d       = param_traj_data.R_d(      :, :, :, traj_select_mpc);
 param_trajectory.q_d       = param_traj_data.q_d(      :, :, traj_select_mpc);
 param_trajectory.q_d_p     = param_traj_data.q_d_p(    :, :, traj_select_mpc);
+param_trajectory.q_d_pp    = param_traj_data.q_d_pp(   :, :, traj_select_mpc);
 param_trajectory.omega_d   = param_traj_data.omega_d(  :, :, traj_select_mpc);
 param_trajectory.omega_d_p = param_traj_data.omega_d_p(:, :, traj_select_mpc);
 

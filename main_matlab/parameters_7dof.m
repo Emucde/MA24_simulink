@@ -286,6 +286,7 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
     param_traj_data.R_d       = zeros(3, 3,      N_traj, traj_select.traj_amount);
     param_traj_data.q_d       = zeros(4, N_traj,         traj_select.traj_amount);
     param_traj_data.q_d_p     = zeros(4, N_traj,         traj_select.traj_amount);
+    param_traj_data.q_d_pp    = zeros(4, N_traj,         traj_select.traj_amount);
     param_traj_data.omega_d   = zeros(3, N_traj,         traj_select.traj_amount);
     param_traj_data.omega_d_p = zeros(3, N_traj,         traj_select.traj_amount);
     
@@ -305,6 +306,7 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
         param_traj_data.R_d(      :, :, :, i) = param_trajectory.R_d;
         param_traj_data.q_d(      :, :, i   ) = param_trajectory.q_d;
         param_traj_data.q_d_p(    :, :, i   ) = param_trajectory.q_d_p;
+        param_traj_data.q_d_pp(   :, :, i   ) = param_trajectory.q_d_pp;
         param_traj_data.omega_d(  :, :, i   ) = param_trajectory.omega_d;
         param_traj_data.omega_d_p(:, :, i   ) = param_trajectory.omega_d_p;
     end
@@ -376,6 +378,7 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
             param_trajectory.R_d       = param_traj_data.R_d(      :, :, :, ii);
             param_trajectory.q_d       = param_traj_data.q_d(      :, :, ii   );
             param_trajectory.q_d_p     = param_traj_data.q_d_p(    :, :, ii   );
+            param_trajectory.q_d_pp    = param_traj_data.q_d_pp(   :, :, ii   );
             param_trajectory.omega_d   = param_traj_data.omega_d(  :, :, ii   );
             param_trajectory.omega_d_p = param_traj_data.omega_d_p(:, :, ii   );
 %{

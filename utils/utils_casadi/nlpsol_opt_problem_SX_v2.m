@@ -214,7 +214,7 @@ end
 
 u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
 x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
-z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z)), size(z)));
+%z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z)), size(z)));
 %z_d_init_guess_0; % vs z_full?
 
 % set init guess
