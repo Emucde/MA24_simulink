@@ -35,7 +35,8 @@ bus_temp_struct.Phi_d_p   = [0; 0; 0];
 bus_temp_struct.Phi_d_pp  = [0; 0; 0];
 bus_temp_struct.R_d       = eye(3);
 bus_temp_struct.q_d       = [0; 0; 0; 0]; % quaternion
-bus_temp_struct.q_d_p     = [0; 0; 0; 0]; 
+bus_temp_struct.q_d_p     = [0; 0; 0; 0];
+bus_temp_struct.q_d_pp    = [0; 0; 0; 0];
 bus_temp_struct.omega_d   = [0; 0; 0];
 bus_temp_struct.omega_d_p = [0; 0; 0];
 

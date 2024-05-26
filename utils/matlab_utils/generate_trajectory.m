@@ -26,6 +26,8 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
 
     flag=0;
 
+    % [TODO: ineffizient - sollte in einer Schleife gemacht werden]
+
     if(modus == 1) % stabilize equilibrium
         for i=1:N
             x_d = create_equilibrium_traj(xeT, Phi_target);
@@ -38,6 +40,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
             R_d(:,:,i)     = x_d.R_d;
             q_d(:,i)       = x_d.q_d;
             q_d_p(:,i)     = x_d.q_d_p;
+            q_d_pp(:,i)    = x_d.q_d_pp;
             omega_d(:,i)   = x_d.omega_d;
             omega_d_p(:,i) = x_d.omega_d_p;
             if(t(i) >= T_start && flag == 0)
@@ -62,6 +65,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
             R_d(:,:,i)     = x_d.R_d;
             q_d(:,i)       = x_d.q_d;
             q_d_p(:,i)     = x_d.q_d_p;
+            q_d_pp(:,i)    = x_d.q_d_pp;
             omega_d(:,i)   = x_d.omega_d;
             omega_d_p(:,i) = x_d.omega_d_p;
             x_k = x_kp1;
@@ -91,6 +95,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
             R_d(:,:,i)     = x_d.R_d;
             q_d(:,i)       = x_d.q_d;
             q_d_p(:,i)     = x_d.q_d_p;
+            q_d_pp(:,i)    = x_d.q_d_pp;
             omega_d(:,i)   = x_d.omega_d;
             omega_d_p(:,i) = x_d.omega_d_p;
             if(t(i) >= T_start_end && flag == 0)
@@ -105,7 +110,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
                 flag = 1;
             end
         end
-    elseif(modus == 4) % smooth sinus
+    elseif(modus == 4) % smooth sinus [ Orientation: TODO ]
         for i=1:N
             x_d = create_sinus_traj(xeT, xe0, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_sin_poly);
             p_d(:,i)       = x_d.p_d;
@@ -117,6 +122,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
             R_d(:,:,i)     = x_d.R_d;
             q_d(:,i)       = x_d.q_d;
             q_d_p(:,i)     = x_d.q_d_p;
+            q_d_pp(:,i)    = x_d.q_d_pp;
             omega_d(:,i)   = x_d.omega_d;
             omega_d_p(:,i) = x_d.omega_d_p;
         end
@@ -146,6 +152,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
     param_trajectory.R_d       = R_d;
     param_trajectory.q_d       = q_d;
     param_trajectory.q_d_p     = q_d_p;
+    param_trajectory.q_d_pp    = q_d_pp;
     param_trajectory.omega_d   = omega_d;
     param_trajectory.omega_d_p = omega_d_p;
 

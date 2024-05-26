@@ -20,7 +20,7 @@ function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, R_init, rot_ax, r
     omega_d_p = alpha_pp*rot_ax;
     q_d   = rotation2quaternion(R_act);
     %q_d   = rotm2quat_v3(R_act);
-    q_d_p = quat_deriv(q_d, omega_d);
+    [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);
 
     Phi_act    = Phi_init + alpha*delta_Phi;
     Phi_act_p  = alpha_p*delta_Phi;
@@ -35,6 +35,7 @@ function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, R_init, rot_ax, r
     x_d.R_d       = R_act;
     x_d.q_d       = q_d;
     x_d.q_d_p     = q_d_p;
+    x_d.q_d_pp    = q_d_pp;
     x_d.omega_d   = omega_d;
     x_d.omega_d_p = omega_d_p;
 end
