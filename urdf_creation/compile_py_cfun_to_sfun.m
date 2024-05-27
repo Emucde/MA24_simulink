@@ -30,12 +30,13 @@ fun_arr = { ...
 % fun_arr = {'sys_fun_qpp_py'};
 
 compile_mode = 2;
-output_dir = '../s_functions/s_functions_7dof/';
+output_dir = './s_functions/s_functions_7dof/';
 
 try
 
     for i = 1:length(fun_arr)
         fun_name = fun_arr{i};
+        
         sys_fun = Function.load([output_dir, fun_name '.casadi']);
         if(compile_mode == 1)
             tic;
