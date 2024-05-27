@@ -157,7 +157,7 @@ if(start_in_singularity)
 end
 
 C_matlab = casadi.Function.load(['./', s_fun_path, '/C_fun.casadi']); % matlab
-
+compute_tau_fun = Function.load(['./', s_fun_path, '/compute_tau_py.casadi']);
 g      = casadi.Function.load(['./', s_fun_path, '/gravitational_forces_py.casadi']); % g(q) invertiert im vgl. zu matlab
 M      = casadi.Function.load(['./', s_fun_path, '/inertia_matrix_py.casadi']); % ok, rundungsfehler +- 0.003
 C_rnea = casadi.Function.load(['./', s_fun_path, '/n_q_coriols_qp_plus_g_py.casadi']);
@@ -166,6 +166,9 @@ J      = casadi.Function.load(['./', s_fun_path, '/geo_jacobian_endeffector_py.c
 J_p    = casadi.Function.load(['./', s_fun_path, '/geo_jacobian_endeffector_p_py.casadi']); % perfekt
 H      = casadi.Function.load(['./', s_fun_path, '/hom_transform_endeffector_py.casadi']); % perfect
 quat   = casadi.Function.load(['./', s_fun_path, '/quat_endeffector_py.casadi']); % passt, aber achtung: Reihenfolge ist [eps, eta] = [q2, q3, q4, q1]
+sys_fun_qpp = casadi.Function.load(['./', s_fun_path, '/sys_fun_qpp_py.casadi']);
+
+qpp_fun = @(q, q_p, tau) M(q)\(tau - C_rnea(q, q_p));
 robot_model_bus_fun = casadi.Function.load(['./', s_fun_path, '/robot_model_bus_fun_py.casadi']);
 
 % tests;
@@ -325,7 +328,6 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
     % separat getan werden, d. h. eig das If von nlpsol_opt_problem_v2
     
     tic
-    %compute_tau_fun = Function.load([s_fun_path, '/', 'compute_tau_py.casadi']);
     %f = Function.load([s_fun_path, '/', 'sys_fun_x_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
     for name={files.name}
         name_mat_file    = name{1};
