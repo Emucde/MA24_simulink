@@ -1,3 +1,5 @@
+# Bitte conda 'mpc' env verwenden, dort ist urdf2casadi installiert.
+
 import casadi as cs
 import os
 from urdf2casadi import urdfparser as u2c
@@ -43,7 +45,13 @@ tau = cs.SX.sym('tau', n, 1)
 S = cs.SX.sym('S', 3, 3)
 
 gravity = [0, 0, -9.81]
-gravity = [-1*el for el in gravity] # *(-1): scheinbar haben sie die Z-achse nach unten zeigend angenommen!!!
+#gravity = [-1*el for el in gravity] # *(-1): scheinbar haben sie die Z-achse nach unten zeigend angenommen!!!
+# Update: Das ist nicht mehr notwendig, da ich in fr3.urdf ein Inertialsystem eingeführt ist und den 0ten link die
+# x-Achse um 180° verdreht habe. Damit zeigt die Z-Achse nach oben und die Gravitation ist -9.81 m/s^2 in Z-Richtung.
+# Update: das hat komischerweise gar nichts bewirkt, bei darli hingegen hat es geklapt???????
+# Update: Scheinbar ist es korrekt wie es hier berchnet wird, ich habe in Maple einen Fehler gemacht. Dort darf
+# scheinbar nicht g = [0,0,-9.81] gewählt werden (warum auch immer). Es lässt sich schnell zeigen, da der Roboter bei
+# tau=0 sonst nach oben gezogen wird, als würde er nach unten hängen.
 
 inv_dyn = robot_parser.get_inverse_dynamics_rnea(root_link, end_link, gravity) # Achtung berechnet tau!
 inv_dyn_tau = cs.Function('inv_dyn', [q, q_p, q_pp], [inv_dyn(q, q_p, q_pp)], ['q', 'q_p', 'q_pp'], ['tau(q, q_p, q_pp)'])
@@ -102,8 +110,8 @@ J_r = cs.Function('J_r', [q], [domega], ['q'], ['J_r(q)']) # rotational jacobian
 J = cs.Function('J', [q], [cs.vertcat(J_t(q), J_r(q))], ['q'], ['J(q)']) # geometric jacobian
 J_p = cs.Function('J_p', [q, q_p], [cs.reshape(  cs.jacobian(J(q), q) @ q_p  ,m ,n)], ['q', 'q_p'], ['J_p(q, q_p)']) # derivative of geometric jacobian
 
-quat = fk_dict["quaternion_fk"] # dual_quaternion_fk, order is quat = [q2,q3,q4,q1]
-quat_e = cs.Function('quat_e', [q], [cs.vertcat(quat(q)[3], quat(q)[0:3])], ['q'], ['quat_e(q)']) # order is quat_e(q) = [q1, q2, q3, q4]
+quat_q4123 = fk_dict["quaternion_fk"] # dual_quaternion_fk, order is quat = [q2,q3,q4,q1]
+quat_e = cs.Function('quat_e', [q], [cs.vertcat(quat_q4123(q)[3], quat_q4123(q)[0:3])], ['q'], ['quat_e(q)']) # order is quat_e(q) = [q1, q2, q3, q4]
 
 # print(H([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5]))
 # print(quat([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5]))
@@ -146,7 +154,7 @@ M.save('./s_functions/s_functions_7dof/inertia_matrix_py.casadi')
 C_nq.save('./s_functions/s_functions_7dof/n_q_coriols_qp_plus_g_py.casadi')
 g.save('./s_functions/s_functions_7dof/gravitational_forces_py.casadi')
 H.save('./s_functions/s_functions_7dof/hom_transform_endeffector_py.casadi')
-quat.save('./s_functions/s_functions_7dof/quat_endeffector_py.casadi')
+quat_e.save('./s_functions/s_functions_7dof/quat_endeffector_py.casadi')
 J.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_py.casadi')
 J_p.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_p_py.casadi')
 
