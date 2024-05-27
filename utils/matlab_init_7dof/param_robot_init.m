@@ -6,7 +6,10 @@ param_robot.m_t   = 3; % Translational task space
 param_robot.m_r   = 3; % Rotational task space
 param_robot.m     = param_robot.m_t + param_robot.m_r; % Task space dimension
 
-param_robot.g = [0;0;-9.81]; %m/s
+param_robot.g = [0;0;9.81]; %m/s
+% Update: Scheinbar habe ich in Maple einen Fehler gemacht. Dort darf
+% scheinbar nicht g = [0,0,-9.81] gewählt werden (warum auch immer). Es lässt sich schnell zeigen, da der Roboter bei
+% tau=0 sonst nach oben gezogen wird, als würde er nach unten hängen.
 param_robot.g_x = param_robot.g(1);
 param_robot.g_y = param_robot.g(2);
 param_robot.g_z = param_robot.g(3);
