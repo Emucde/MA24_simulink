@@ -6,6 +6,12 @@
 <!-- =================================================================================== -->
 <robot name="fr3">
   <!-- sub-link defining detailed meshes for collision with environment -->
+  <link name="world"/>
+  <joint name="arm_to_world_fixed" type="fixed">
+    <parent link="world"/>
+    <child link="fr3_link0"/>
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
   <link name="fr3_link0">
     <visual>
       <geometry>
@@ -80,7 +86,7 @@
   </link>
 
   <joint name="fr3_joint2" type="revolute">
-    <origin rpy="-1.5707963267948966 0 0" xyz="0 0 0"/>
+    <origin rpy="-1.57079632679489661923132169163975 0 0" xyz="0 0 0"/>
     <parent link="fr3_link1"/>
     <child link="fr3_link2"/>
     <axis xyz="0 0 1"/>
@@ -111,7 +117,7 @@
   </link>
   
   <joint name="fr3_joint3" type="revolute">
-    <origin rpy="1.5707963267948966 0 0" xyz="0 -0.316 0"/>
+    <origin rpy="1.57079632679489661923132169163975 0 0" xyz="0 -0.316 0"/>
     <parent link="fr3_link2"/>
     <child link="fr3_link3"/>
     <axis xyz="0 0 1"/>
@@ -142,7 +148,7 @@
   </link>
 
   <joint name="fr3_joint4" type="revolute">
-    <origin rpy="1.5707963267948966 0 0" xyz="0.0825 0 0"/>
+    <origin rpy="1.57079632679489661923132169163975 0 0" xyz="0.0825 0 0"/>
     <parent link="fr3_link3"/>
     <child link="fr3_link4"/>
     <axis xyz="0 0 1"/>
@@ -173,7 +179,7 @@
   </link>
   
   <joint name="fr3_joint5" type="revolute">
-    <origin rpy="-1.5707963267948966 0 0" xyz="-0.0825 0.384 0"/>
+    <origin rpy="-1.57079632679489661923132169163975 0 0" xyz="-0.0825 0.384 0"/>
     <parent link="fr3_link4"/>
     <child link="fr3_link5"/>
     <axis xyz="0 0 1"/>
@@ -204,7 +210,7 @@
   </link>
   
   <joint name="fr3_joint6" type="revolute">
-    <origin rpy="1.5707963267948966 0 0" xyz="0 0 0"/>
+    <origin rpy="1.57079632679489661923132169163975 0 0" xyz="0 0 0"/>
     <parent link="fr3_link5"/>
     <child link="fr3_link6"/>
     <axis xyz="0 0 1"/>
@@ -235,7 +241,7 @@
   </link>
   
   <joint name="fr3_joint7" type="revolute">
-    <origin rpy="1.5707963267948966 0 0" xyz="0.088 0 0"/>
+    <origin rpy="1.57079632679489661923132169163975 0 0" xyz="0.088 0 0"/>
     <parent link="fr3_link6"/>
     <child link="fr3_link7"/>
     <axis xyz="0 0 1"/>
@@ -261,7 +267,7 @@
   <joint name="fr3_hand_joint" type="fixed">
     <parent link="fr3_link8"/>
     <child link="fr3_hand"/>
-    <origin rpy="0 0 -0.7853981633974483" xyz="0 0 0"/>
+    <origin rpy="0 0 -0.78539816339744830961566084581988" xyz="0 0 0"/>
   </joint>
   
   <link name="fr3_hand">
@@ -325,7 +331,7 @@
     </collision>
     <!-- diagonal finger -->
     <collision>
-      <origin rpy="0.5235987755982988 0 0" xyz="0 15.9e-3 28.35e-3"/>
+      <origin rpy="0.52359877559829887307710723054658 0 0" xyz="0 15.9e-3 28.35e-3"/>
       <geometry>
         <box size="17.5e-3 7e-3 23.5e-3"/>
       </geometry>
@@ -346,7 +352,7 @@
 
   <link name="fr3_rightfinger">
     <visual>
-      <origin rpy="0 0 3.141592653589793" xyz="0 0 0"/>
+      <origin rpy="0 0 3.1415926535897932384626433832795" xyz="0 0 0"/>
       <geometry>
         <mesh filename="package://robots/meshes/visual/finger.obj"/>
       </geometry>
