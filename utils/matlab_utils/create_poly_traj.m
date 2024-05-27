@@ -3,8 +3,8 @@ function [x_d] = create_poly_traj(x_target, x0_target, T_start, t, R_init, rot_a
     T = param_traj_poly.T;
     if(t-T_start > T)
         p_d =    [x_target(1:3); 1];
-        p_d_p =  [zeros(3,1); 1];
-        p_d_pp = [zeros(3,1); 1];
+        p_d_p =  [zeros(3,1); 0];
+        p_d_pp = [zeros(3,1); 0];
     else
         yT = [x_target(1:3); 1]; % poly contains [x,y,z,alpha]
         y0 = [x0_target(1:3); 0];
@@ -17,8 +17,8 @@ function [x_d] = create_poly_traj(x_target, x0_target, T_start, t, R_init, rot_a
     skew_ew  = skew(rot_ax);
     R_act    = R_init*(eye(3) + sin(rot_alpha_scale*alpha)*skew_ew + (1-cos(rot_alpha_scale*alpha))*skew_ew^2);
     
-    omega_d   = alpha_p*rot_ax;
-    omega_d_p = alpha_pp*rot_ax;
+    omega_d   = alpha_p*rot_ax*sign(rot_alpha_scale);
+    omega_d_p = alpha_pp*rot_ax*sign(rot_alpha_scale);
     q_d   = rotation2quaternion(R_act);
     %q_d   = rotm2quat_v3(R_act);
     [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);
