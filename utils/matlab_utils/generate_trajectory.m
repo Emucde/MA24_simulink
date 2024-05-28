@@ -21,8 +21,11 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
     R_d       = zeros(3, 3, N);
     q_d       = zeros(4, N);
     q_d_p     = zeros(4, N);
+    q_d_pp    = zeros(4, N);
     omega_d   = zeros(3, N);
     omega_d_p = zeros(3, N);
+
+    alpha_arr_all = zeros(3,N);
 
     flag=0;
 
@@ -70,22 +73,26 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
             omega_d_p(:,i) = x_d.omega_d_p;
             x_k = x_kp1;
 
-            if(t(i) >= (t_offset + T_switch))
+            if(t(i) >= (t_offset + T_switch) && flag == 0)
                 temp = xe0;
                 xe0 = xeT;
                 xeT = temp;
+                temp = R_init;
                 R_init = R_target;
-                rot_alpha_scale=-rot_alpha_scale;
+                R_target = temp;
+                [rot_ax, rot_alpha_scale] = find_rotation_axis(R_init, R_target);
                 Phi_init = Phi_init + delta_Phi;
                 delta_Phi = -delta_Phi;
                 t_offset = t_offset + T_switch;
+                flag = 1;
             end
         end
     elseif(modus == 3) % 5th order polynomial
         T_start_end = T_start;
         T_start = 0;
         for i=1:N
-            x_d = create_poly_traj(xeT, xe0, T_start, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly);
+            [x_d, alpha_arr] = create_poly_traj(xeT, xe0, T_start, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly);
+            alpha_arr_all(:,i) = alpha_arr;
             p_d(:,i)       = x_d.p_d;
             p_d_p(:,i)     = x_d.p_d_p;
             p_d_pp(:,i)    = x_d.p_d_pp;
@@ -102,14 +109,20 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
                 temp = xe0;
                 xe0 = xeT;
                 xeT = temp;
+                temp = R_init;
                 R_init = R_target;
-                rot_alpha_scale=-rot_alpha_scale;
+                R_target = temp;
+                [rot_ax, rot_alpha_scale] = find_rotation_axis(R_init, R_target);
                 Phi_init = Phi_init + delta_Phi;
                 delta_Phi = -delta_Phi;
                 T_start = T_start_end;
                 flag = 1;
             end
         end
+        disp('end')
+        %plot(alpha_arr_all')
+        %plot(1/1e-3*diff(alpha_arr_all(1,:))' - alpha_arr_all(2,1:end-1)')
+        %plot(1/1e-3*diff(alpha_arr_all(2,:))' - alpha_arr_all(3,1:end-1)')
     elseif(modus == 4) % smooth sinus [ Orientation: TODO ]
         for i=1:N
             x_d = create_sinus_traj(xeT, xe0, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_sin_poly);

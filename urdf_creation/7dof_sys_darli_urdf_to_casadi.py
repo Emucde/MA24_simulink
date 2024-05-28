@@ -71,7 +71,7 @@ M_SX = casadi_model.inertia()
 g_SX = casadi_model.gravity()
 #bias_force = casadi_model.bias_force
 #C_SX = casadi_model.coriolis_matrix() # not implemented!
-C_rnea_SX = casadi_model.coriolis()
+C_rnea_SX = - casadi_model.coriolis() + g_SX # Nur so stimmt es mit Maple überein!
 
 casadi_model.add_body([end_link])
 # casadi_model.bodies # show models

@@ -46,7 +46,19 @@ m_t = 3;%param_robot.m_t; % Translational part of Task Space
 m_r = 3;%param_robot.m_r; % Rotational part of Task Space 
 
 % Model equations
-f = Function.load([output_dir, 'sys_fun_x_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
+% Forward Dynamics: d/dt x = f(x, u)
+use_aba = false;
+if(use_aba)
+    f = Function.load([output_dir, 'sys_fun_x_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
+else
+    M      = casadi.Function.load(['./', s_fun_path, '/inertia_matrix_py.casadi']); % ok, rundungsfehler +- 0.003
+    C_rnea = casadi.Function.load(['./', s_fun_path, '/n_q_coriols_qp_plus_g_py.casadi']);
+    % hilfsvariablen, werden unten überschrieben
+    x = SX.sym('x', 2*n, 1); % x = [q; dq]
+    u = SX.sym('u', n, 1); % u = [tau]
+    f = Function('f', {x, u}, {vertcat(x(n+1:2*n), solve( M(x(1:n)), u - C_rnea(x(1:n), x(n+1:2*n)) ))}, {'x', 'u'}, {'dx'});
+end
+
 compute_tau_fun = Function.load([output_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
 hom_transform_endeffector_py_fun = Function.load([output_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([output_dir, 'quat_endeffector_py.casadi']);
@@ -243,6 +255,7 @@ for i=0:N_MPC
     %e(m_t+1:m, 1 + (i)) = rotm2rpy_casadi( rpy2rotm_casadi(y_ref(m_t+1:m, 1 + (i))) * R_e_arr{1 + (i)}');
     %e(m_t+1:m, 1 + (i)) = rotm2rpy_casadi( R_e_arr{1 + (i)} * rpy2rotm_casadi(y_ref(m_t+1:m, 1 + (i)))');
     q_err = rotation2quaternion_casadi( R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))');
+    %q_err = rotm2quat_v3_casadi( R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))');
     Q_ori = Q_ori + Q_norm_square( q_err(2:4) , pp.Q_y(4:6,4:6)  );
 end
 % Q_ori = Q_norm_square( y_ref(   4:6, 1 + (0:N_MPC) ) - y_d(  4:6, 1 + (0:N_MPC)), pp.Q_y(4:6,4:6)  );

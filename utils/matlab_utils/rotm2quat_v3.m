@@ -1,10 +1,6 @@
 function q = rotm2quat_v3(R)
     % Converts a rotation matrix R into a quaternion q
-    % without using any if-else constructs.
 
-    %my_sign = @(x) sign(x) + (x == 0);
-    %my_sign = @(x) 2*(x >= 0) - 1;
-    
     % Extract the elements of the rotation matrix
     r11 = R(1,1); r12 = R(1,2); r13 = R(1,3);
     r21 = R(2,1); r22 = R(2,2); r23 = R(2,3);

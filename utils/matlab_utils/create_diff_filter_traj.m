@@ -9,9 +9,9 @@ function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, R_init, rot_ax, r
     dxd  = x_kp1(param_traj_filter.p_d_p_index);
     ddxd = x_kp1(param_traj_filter.p_d_pp_index);
     
-    alpha    =   xd(4);
-    alpha_p  =  dxd(4);
-    alpha_pp = ddxd(4);
+    alpha    =   xd(4)*rot_alpha_scale;
+    alpha_p  =  dxd(4)*rot_alpha_scale;
+    alpha_pp = ddxd(4)*rot_alpha_scale;
     
     skew_ew = skew(rot_ax);
     R_act = R_init*(eye(3) + sin(rot_alpha_scale*alpha)*skew_ew + (1-cos(rot_alpha_scale*alpha))*skew_ew^2);    
