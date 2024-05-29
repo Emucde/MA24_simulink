@@ -1,8 +1,8 @@
-function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_filter)
+function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, alpha_T, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_filter)
     
     Phi = param_traj_filter.Phi;
     Gamma = param_traj_filter.Gamma;
-    alpha_T = 1; % die idee ist, dass alpha \in [0,1] ist, da man die Drehung normiert durchführt.
+    %alpha_T = 1; % die idee ist, dass alpha \in [0,1] ist, da man die Drehung normiert durchführt.
     x_kp1 = Phi*x_k + Gamma*[x_target(1:3);alpha_T];
     
     xd   = x_kp1(param_traj_filter.p_d_index);
@@ -14,7 +14,10 @@ function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, R_init, rot_ax, r
     alpha_pp = ddxd(4)*rot_alpha_scale;
     
     skew_ew = skew(rot_ax);
-    R_act = R_init*(eye(3) + sin(rot_alpha_scale*alpha)*skew_ew + (1-cos(rot_alpha_scale*alpha))*skew_ew^2);    
+    RR = (eye(3) + sin(alpha)*skew_ew + (1-cos(alpha))*skew_ew^2);
+    
+    % R_act    = R_init*RR; % Nachmultiplikation
+    R_act    = RR*R_init; % Vormultiplikation (in find_rotation_axis wird Vormultiplikation für RR verwendet!!)
 
     omega_d   = alpha_p*rot_ax;
     omega_d_p = alpha_pp*rot_ax;

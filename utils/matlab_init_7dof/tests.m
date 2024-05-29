@@ -90,3 +90,32 @@ for i=78:85
     j=j+1;
 end
 %}
+
+figure;
+hold on;
+
+% Plotte die erste Rotationsmatrix R_init
+quiver3(0, 0, 0, R_init(1,1), R_init(2,1), R_init(3,1), 'r', 'LineWidth', 2, 'DisplayName', 'R_{init}');
+quiver3(0, 0, 0, R_init(1,2), R_init(2,2), R_init(3,2), 'g', 'LineWidth', 2);
+quiver3(0, 0, 0, R_init(1,3), R_init(2,3), R_init(3,3), 'b', 'LineWidth', 2);
+
+% Plotte die zweite Rotationsmatrix R_target
+quiver3(0, 0, 0, R_target(1,1), R_target(2,1), R_target(3,1), 'm', 'LineWidth', 2, 'DisplayName', 'R_{target}');
+quiver3(0, 0, 0, R_target(1,2), R_target(2,2), R_target(3,2), 'c', 'LineWidth', 2);
+quiver3(0, 0, 0, R_target(1,3), R_target(2,3), R_target(3,3), 'y', 'LineWidth', 2);
+
+% Setze die Achsenbeschriftungen
+xlabel('X');
+ylabel('Y');
+zlabel('Z');
+
+% Füge eine Legende hinzu
+legend('R_init_x', 'R_init_y', 'R_init_z', 'R_target_x', 'R_target_y', 'R_target_z', 'Location', 'best');
+
+% Setze das Seitenverhältnis der Achsen auf gleich
+axis equal;
+xlim([-2,2])
+ylim([-2,2])
+zlim([-2,2])
+
+hold off;

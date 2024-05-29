@@ -15,7 +15,7 @@ trajectory_out_of_workspace = false; % TODO: einfach offset 0 setzten
 x_traj_out_of_workspace_value = 0.1;
 
 plot_trajectory = ~true;
-overwrite_offline_traj = ~false;
+overwrite_offline_traj = false;
 
 % (turn off profiler when not needed anymore)
 % set_param(gcs,'Profile','off');
@@ -147,8 +147,9 @@ rotq_fun = @(x1, x2) [x1(1:3) + x2(1:3); quat_mult(x1(4:7), x2(4:7))]; % multipl
 %xeT = xe0;
 %xeT = rotq_fun(xe0, [0; 0; -0.5; 1; 0; 0; 0]); % correct addition of quaternions
 %xeT = [xe0(1:3,1); rotation2quaternion(Rz(pi/4)*R_init)]; % correct addition of quaternions
-xeT = [xe0(1:3,1) + [0; 0; -0.5]; rotation2quaternion(Rz(pi/4)*R_init)]; % correct addition of quaternions
-R_target = quaternion2rotation(xeT(4:7));%R_init;% quat2rotm_v2(xeT(4:7));
+%R_target = R_init*Rz(pi/4); % Nachmultiplikation: Drehung erfolgt in Bezu auf körperfestes System d. h. hier R_init
+R_target = Rz(pi/4)*R_init; % Vormultiplikation: Drehung erfolgt in Bezug auf Inertialsystem
+xeT = [xe0(1:3,1) + [0; 0; -0.5]; rotation2quaternion(R_target)]; % correct addition of quaternions
 
 if(start_in_singularity)
     % set xe0 to xeT and xeT to xe0;

@@ -1,4 +1,4 @@
-function [x_d, alpha_arr] = create_poly_traj(x_target, x0_target, T_start, t, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly)
+function [x_d] = create_poly_traj(x_target, x0_target, T_start, t, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly)
 
     T = param_traj_poly.T;
     if(t-T_start > T)
@@ -14,17 +14,21 @@ function [x_d, alpha_arr] = create_poly_traj(x_target, x0_target, T_start, t, R_
     alpha    = rot_alpha_scale*p_d(4);
     alpha_p  = rot_alpha_scale*p_d_p(4);
     alpha_pp = rot_alpha_scale*p_d_pp(4);
-    alpha_arr = [alpha; alpha_p; alpha_pp];
+
     skew_ew  = skew(rot_ax);
-    R_act    = R_init*(eye(3) + sin(alpha)*skew_ew + (1-cos(alpha))*skew_ew^2);
+
+    RR = (eye(3) + sin(alpha)*skew_ew + (1-cos(alpha))*skew_ew^2);
     
-    omega_d   = alpha_p*rot_ax;%*sign(rot_alpha_scale);
-    omega_d_p = alpha_pp*rot_ax;%*sign(rot_alpha_scale);
+    % R_act    = R_init*RR; % Nachmultiplikation
+    R_act    = RR*R_init; % Vormultiplikation (in find_rotation_axis wird Vormultiplikation für RR verwendet!!)
+
+    omega_d   = alpha_p*rot_ax;
+    omega_d_p = alpha_pp*rot_ax;
 
     % Korrektes Quaternion wählen, dass zu R_act passt:
     %q_err = [cos(alpha/2); rot_ax*sin(alpha/2)];
     %q_d = quat_mult(rotation2quaternion(R_init), q_err);
-    q_d   = -rotation2quaternion(R_act);
+    q_d   = rotation2quaternion(R_act);
     %q_d   = rotm2quat_v3(R_act);
     [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);
 

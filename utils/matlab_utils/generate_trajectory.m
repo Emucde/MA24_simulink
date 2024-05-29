@@ -25,8 +25,6 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
     omega_d   = zeros(3, N);
     omega_d_p = zeros(3, N);
 
-    alpha_arr_all = zeros(3,N);
-
     flag=0;
 
     % [TODO: ineffizient - sollte in einer Schleife gemacht werden]
@@ -57,8 +55,9 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
         x_k = [xe0(1);0;0;0;0;0; xe0(2);0;0;0;0;0; xe0(3);0;0;0;0;0; 0;0;0;0;0;0];
         t_offset = 0;
         T_switch = param_traj_allg.T_switch;
+        alpha_T = 1;
         for i=1:N
-            [x_d, x_kp1] = create_diff_filter_traj(xeT, x_k, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_filter);
+            [x_d, x_kp1] = create_diff_filter_traj(xeT, x_k, alpha_T, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_filter);
             p_d(:,i)       = x_d.p_d;
             p_d_p(:,i)     = x_d.p_d_p;
             p_d_pp(:,i)    = x_d.p_d_pp;
@@ -81,6 +80,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
                 R_init = R_target;
                 R_target = temp;
                 [rot_ax, rot_alpha_scale] = find_rotation_axis(R_init, R_target);
+                alpha_T = 0;
                 Phi_init = Phi_init + delta_Phi;
                 delta_Phi = -delta_Phi;
                 t_offset = t_offset + T_switch;
@@ -91,8 +91,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
         T_start_end = T_start;
         T_start = 0;
         for i=1:N
-            [x_d, alpha_arr] = create_poly_traj(xeT, xe0, T_start, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly);
-            alpha_arr_all(:,i) = alpha_arr;
+            [x_d] = create_poly_traj(xeT, xe0, T_start, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly);
             p_d(:,i)       = x_d.p_d;
             p_d_p(:,i)     = x_d.p_d_p;
             p_d_pp(:,i)    = x_d.p_d_pp;
@@ -119,10 +118,6 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
                 flag = 1;
             end
         end
-        disp('end')
-        %plot(alpha_arr_all')
-        %plot(1/1e-3*diff(alpha_arr_all(1,:))' - alpha_arr_all(2,1:end-1)')
-        %plot(1/1e-3*diff(alpha_arr_all(2,:))' - alpha_arr_all(3,1:end-1)')
     elseif(modus == 4) % smooth sinus [ Orientation: TODO ]
         for i=1:N
             x_d = create_sinus_traj(xeT, xe0, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_sin_poly);

@@ -18,11 +18,22 @@ function [rot_ax_o, rot_alpha_scale_o] = find_rotation_axis(R_init, R_target)
 %   rotation distance only the angle with the smaller magnitude is returned 
 %   with its corresponding rotation axis
 
-    % Difference of rotation: R_2_0 = R_2_1*R_1_0 => R_1_0 = R_2_1^(-1) * R_2_0 = R_2_1' * R_2_0 = R_1_2 * R_2_0
-    % R_target = RR * R_init => RR = R_target*R_init'
+    % Nachmultiplikation: R_2_0 = R_1_0*R_2_1 => R_2_1 = R_1_0^(-1) * R_2_0 = R_1_0' * R_2_0 = R_0_1 * R_2_0
+    %   mit R_2_0 = R_target_0 und R_1_0 = R_init_0
+    %   Drehung um körperfestes KOS, d. h. im Bezug auf R_init
+    % Vormultiplikation: R_2_0 = R_1_0*R_2_1 => R_2_1 = R_1_0^(-1) * R_2_0 = R_1_0' * R_2_0 = R_0_1 * R_2_0
+    %   mit R_2_0 = R_target_0 und R_2_1 = R_init_0, da die
+    %   Vormultipklikationsvarianteverwendet wird. D. h. wir möchten
+    %   Drehungen um ein Bezugsfestes Inertialsystem ausführen und das ist
+    %   eben dann möglich, wenn man die Drehoperation zur
+    %   Anfangsrotationsmatrix R_init von links multipliziert. Damit ist die
+    %   gesuchte Fehlerrotationsmatrix RR = R_1_0.
+    %   D.h. es gilt
+    %   R_1_0 = R_2_0 * R_2_1' = R_target * R_init'
+
     % Compute the difference rotation matrix
-    %RR = R_init'*R_target;
-    RR = R_target*R_init';
+    %RR = R_init'*R_target; % Im Fall der Nachmulitplikation (drehung um bezugsfestes KOS) korrekt.
+    RR = R_target * R_init'; % Im Fall der Vormultiplikation korrekt.
 
     % Extract the rotation angle from the trace of RR
     rot_alpha_scale = acos((trace(RR) - 1) / 2);
