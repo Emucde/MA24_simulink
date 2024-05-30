@@ -15,7 +15,7 @@
   <link name="fr3_link0">
     <visual>
       <geometry>
-        <mesh filename="package://robots/meshes/visual/link0.obj"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/visual/link0.obj"/>
       </geometry>
       <material name="panda_white">
         <color rgba="1. 1. 1. 1."/>
@@ -23,7 +23,7 @@
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://robots/meshes/collision/link0.stl"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/collision/link0.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -36,7 +36,7 @@
   <link name="fr3_link1">
     <visual>
       <geometry>
-        <mesh filename="package://robots/meshes/visual/link1.obj"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/visual/link1.obj"/>
       </geometry>
       <material name="panda_white">
         <color rgba="1. 1. 1. 1."/>
@@ -44,7 +44,7 @@
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://robots/meshes/collision/link1.stl"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/collision/link1.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -67,7 +67,7 @@
   <link name="fr3_link2">
     <visual>
       <geometry>
-        <mesh filename="package://robots/meshes/visual/link2.obj"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/visual/link2.obj"/>
       </geometry>
       <material name="panda_white">
         <color rgba="1. 1. 1. 1."/>
@@ -75,7 +75,7 @@
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://robots/meshes/collision/link2.stl"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/collision/link2.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -98,7 +98,7 @@
   <link name="fr3_link3">
     <visual>
       <geometry>
-        <mesh filename="package://robots/meshes/visual/link3.obj"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/visual/link3.obj"/>
       </geometry>
       <material name="panda_white">
         <color rgba="1. 1. 1. 1."/>
@@ -106,7 +106,7 @@
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://robots/meshes/collision/link3.stl"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/collision/link3.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -129,7 +129,7 @@
   <link name="fr3_link4">
     <visual>
       <geometry>
-        <mesh filename="package://robots/meshes/visual/link4.obj"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/visual/link4.obj"/>
       </geometry>
       <material name="panda_white">
         <color rgba="1. 1. 1. 1."/>
@@ -137,7 +137,7 @@
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://robots/meshes/collision/link4.stl"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/collision/link4.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -160,7 +160,7 @@
   <link name="fr3_link5">
     <visual>
       <geometry>
-        <mesh filename="package://robots/meshes/visual/link5.obj"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/visual/link5.obj"/>
       </geometry>
       <material name="panda_white">
         <color rgba="1. 1. 1. 1."/>
@@ -168,7 +168,7 @@
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://robots/meshes/collision/link5.stl"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/collision/link5.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -191,7 +191,7 @@
   <link name="fr3_link6">
     <visual>
       <geometry>
-        <mesh filename="package://robots/meshes/visual/link6.obj"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/visual/link6.obj"/>
       </geometry>
       <material name="panda_white">
         <color rgba="1. 1. 1. 1."/>
@@ -199,7 +199,7 @@
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://robots/meshes/collision/link6.stl"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/collision/link6.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -222,7 +222,7 @@
   <link name="fr3_link7">
     <visual>
       <geometry>
-        <mesh filename="package://robots/meshes/visual/link7.obj"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/visual/link7.obj"/>
       </geometry>
       <material name="panda_white">
         <color rgba="1. 1. 1. 1."/>
@@ -230,7 +230,7 @@
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://robots/meshes/collision/link7.stl"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/collision/link7.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -273,7 +273,7 @@
   <link name="fr3_hand">
     <visual>
       <geometry>
-        <mesh filename="package://robots/meshes/visual/hand.obj"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/visual/hand.obj"/>
       </geometry>
       <material name="panda_white">
         <color rgba="1. 1. 1. 1."/>
@@ -281,7 +281,7 @@
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://robots/meshes/collision/hand.stl"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/collision/hand.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -309,7 +309,7 @@
   <link name="fr3_leftfinger">
     <visual>
       <geometry>
-        <mesh filename="package://robots/meshes/visual/finger.obj"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/visual/finger.obj"/>
       </geometry>
       <material name="panda_white">
         <color rgba="1. 1. 1. 1."/>
@@ -354,7 +354,7 @@
     <visual>
       <origin rpy="0 0 3.1415926535897932384626433832795" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robots/meshes/visual/finger.obj"/>
+        <mesh filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/visual/finger.obj"/>
       </geometry>
       <material name="panda_white">
         <color rgba="1. 1. 1. 1."/>
