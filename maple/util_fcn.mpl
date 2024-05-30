@@ -29,7 +29,7 @@ sym),array); else m := convert(sym,array); end if; if 0 < numelems(s) then tmp
 := codegen[makeproc](m,parameters = [op(parameterlist), param]); else tmp := 
 codegen[makeproc](m,parameters = parameterlist); end if; tmp := codegen[
 optimize](tmp); tmp := CodeGeneration[Matlab](tmp,output = string,optimize = 
-false); for i to numelems(s) do tmp := StringTools[RegSubs](cat("([ \\(\\-])(",
+true); for i to numelems(s) do tmp := StringTools[RegSubs](cat("([ \\(\\-])(",
 convert(s[i],string),")([; \\(\\)])") = "\\1param.\\2\\3",tmp); end do; tmp :=
 StringTools[SubstituteAll](tmp,"function tmpreturn = tmp(",cat(
 "function tmpreturn = ",name,"(")); if columns < rows then tmp := StringTools[

@@ -136,10 +136,15 @@ zr_init_guess_kp1_0 = Hr_sim(zr_0_0, alpha_r_init_guess_0);
 zr_init_guess_0     = [zr_0_0 full(zr_init_guess_kp1_0)];
 zr_d_init_guess_0   = [y_d_0(4:7, :); y_d_p_0(4:7, :)]; % init for zr_d
 
-lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(zt_init_guess_0)+numel(alpha_t_init_guess_0) + numel(alpha_t_N_0), 1);
-lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(zt_init_guess_0)+1, 1); % + 1 wegen eps
+z_init_guess_0 = zt_init_guess_0;
+alpha_init_guess_0 = alpha_t_init_guess_0;
+alpha_N_0 = alpha_t_N_0;
+z_0_0 = zt_0_0;
 
-init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); zt_init_guess_0(:); alpha_t_init_guess_0(:); alpha_t_N_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0)+numel(alpha_init_guess_0) + numel(alpha_N_0), 1);
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(z_init_guess_0)+1, 1); % + 1 wegen eps
+
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 % get weights from "init_MPC_weight.m"
 param_weight_init = param_weight.(casadi_func_name);
@@ -157,26 +162,34 @@ end
 u     = SX.sym( 'u',       n, N_MPC   );
 x     = SX.sym( 'x',     2*n, N_MPC+1 );
 zt     = SX.sym( 'zt',     m,   N_MPC+1 );
+zr     = SX.sym( 'zt',     8,   N_MPC+1 );
 alpha_t = SX.sym( 'alpha_t', 3,   N_MPC+1 );
+alpha_r = SX.sym( 'alpha_r', 4,   N_MPC+1 );
 
-mpc_opt_var_inputs = {u, x, zt, alpha_t};
+z = zt;
+alpha = alpha_t;
+
+mpc_opt_var_inputs = {u, x, zt, alpha};
 
 u_opt_indices = 1:n;
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(zt(:))); -Inf(size(alpha_t(:)))];
-ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(zt(:)));  Inf(size(alpha_t(:)))];
+lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
+ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
 
 % input parameter
 x_k    = SX.sym( 'x_k',    2*n, 1       ); % current x state
 zt_0    = SX.sym( 'zt_0',    m,   1       ); % initial z state
+zr_0    = SX.sym( 'zt_0',    8,   1       ); % initial z state
 y_d    = SX.sym( 'y_d',    m+1, N_MPC+1 ); % (y_d_0 ... y_d_N)
 y_p_d  = SX.sym( 'y_p_d',  m+1, N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
 y_pp_d = SX.sym( 'y_pp_d', m+1, N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
 
-mpc_parameter_inputs = {x_k, zt_0, y_d, y_p_d, y_pp_d};
-mpc_init_reference_values = [x_0_0(:); zt_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:)];
+z_0 = zt_0;
+
+mpc_parameter_inputs = {x_k, z_0, y_d, y_p_d, y_pp_d};
+mpc_init_reference_values = [x_0_0(:); z_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -187,10 +200,11 @@ end
 % constraints conditions cellarray g
 g_x = cell(1, N_MPC+1); % for F
 g_zt = cell(1, N_MPC+1); % for H
+g_zr = cell(1, N_MPC+1); % for H
 g_eps = cell(1, 1);
 
-lbg = SX(numel(x)+numel(zt)+1, 1);
-ubg = SX(numel(x)+numel(zt)+1, 1);
+lbg = SX(numel(x)+numel(z)+1, 1);
+ubg = SX(numel(x)+numel(z)+1, 1);
 
 lbg(end) = 0;
 ubg(end) = pp.epsilon;
@@ -200,18 +214,23 @@ lambda_x0 = SX.sym('lambda_x0', size(w));
 lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
-y    = SX( 3, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
+y    = SX( 3, N_MPC+1 ); % transl. TCP position:      (y_0 ... y_N)
 q_pp = SX( n,   N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
 
 % reference trajectory values
-y_ref    = SX( 3, N_MPC+1 ); % TCP position:      (y_ref_0 ... y_ref_N)
-y_p_ref  = SX( 3, N_MPC+1 ); % TCP velocity:      (y_p_ref_0 ... y_p_ref_N)
-y_pp_ref = SX( 3, N_MPC+1 ); % TCP acceleration:  (y_pp_ref_0 ... y_pp_ref_N)
+yt_ref    = SX( 3, N_MPC+1 ); % TCP position:      (yt_ref_0 ... yt_ref_N)
+yt_p_ref  = SX( 3, N_MPC+1 ); % TCP velocity:      (yt_p_ref_0 ... yt_p_ref_N)
+yt_pp_ref = SX( 3, N_MPC+1 ); % TCP acceleration:  (yt_pp_ref_0 ... yt_pp_ref_N)
+
+yr_ref    = SX( 4, N_MPC+1 ); % TCP position:      (yr_ref_0 ... yr_ref_N)
+yr_p_ref  = SX( 4, N_MPC+1 ); % TCP velocity:      (yr_p_ref_0 ... yr_p_ref_N)
+yr_pp_ref = SX( 4, N_MPC+1 ); % TCP acceleration:  (yr_pp_ref_0 ... yr_pp_ref_N)
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 g_zt(1, 1 + (0)) = {zt_0 - zt(:, 1 + (0))}; % z0 = zk
+g_zr(1, 1 + (0)) = {zr_0 - zr(:, 1 + (0))}; % z0 = zk
 for i=0:N_MPC
     % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
     q = x(1:n, 1 + (i));
@@ -223,14 +242,21 @@ for i=0:N_MPC
     %y(4:m+1, 1 + (i)) = rotation2quaternion_casadi(R_e); %y_r_0 wird nicht verwendet
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
-    y_ref(   1:3, 1 + (i)) = zt(     1:3, 1 + (i));
-    y_p_ref( 1:3, 1 + (i)) = zt(     4:6, 1 + (i));
-    y_pp_ref(1:3, 1 + (i)) = alpha_t( 1:3, 1 + (i));
+    yt_ref(   1:3, 1 + (i)) = zt(     1:3, 1 + (i));
+    yt_p_ref( 1:3, 1 + (i)) = zt(     4:6, 1 + (i));
+    yt_pp_ref(1:3, 1 + (i)) = alpha_t( 1:3, 1 + (i));
+
+    yr_ref(   1:4, 1 + (i)) = zr(     1:4, 1 + (i));
+    yr_p_ref( 1:4, 1 + (i)) = zr(     5:8, 1 + (i));
+    yr_pp_ref(1:4, 1 + (i)) = alpha_r( 1:4, 1 + (i));
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
         g_x(1, 1 + (i+1)) = {F(x(:, 1 + (i)), u(    :, 1 + (i))) - x(:, 1 + (i+1))}; % Set the state dynamics constraints
+        
         g_zt(1, 1 + (i+1)) = {Ht(zt(:, 1 + (i)), alpha_t(:, 1 + (i))) - zt(:, 1 + (i+1))}; % Set the state dynamics constraints
+
+        g_zr(1, 1 + (i+1)) = {Hr(zr(:, 1 + (i)), alpha_r(:, 1 + (i))) - zr(:, 1 + (i+1))}; % Set the state dynamics constraints
 
         dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
         q_pp(:, 1 + (i)) = dx(n+1:2*n, 1);
@@ -238,37 +264,63 @@ for i=0:N_MPC
 end
 
 % g_eps(1, 1) = {norm_2(  sub_fun_y( y(1:m+1, end),  z(1:m+1, end) )  )}; % for pp.epsilon
-%g_eps(1, 1) = {norm_2( blkdiag(0*eye(3), 0*eye(4)) * (y(:,end)-y_ref(:,end)) )}; % for pp.epsilon %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROBLEM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-g_eps(1, 1) = {norm_2( (y(1:3,end) - y_ref(1:3,end)) )};
-g = [g_x, g_zt, g_eps]; % merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
+%g_eps(1, 1) = {norm_2( blkdiag(0*eye(3), 0*eye(4)) * (y(:,end)-yt_ref(:,end)) )}; % for pp.epsilon %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROBLEM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+gt_eps = norm_2( (y(1:3,end) - yt_ref(1:3,end)) );
+%gr_eps = norm_2( quat_mult_vec(rotation2quaternion_casadi(R_e_arr{end}), quat_inv(yr_ref(1:4,end))) );
+quat_err = rotation2quaternion_casadi(R_e_arr{end} * quat2rotm_v2(yr_ref(1:4,end))');
+gr_eps = norm_2( quat_err(2:4) );
+
+g_eps(1, 1) = {gt_eps};
+g_z = g_zt;
+g = [g_x, g_z, g_eps]; % merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
 
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-e_pp = y_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( 1:3, 1 + (0:N_MPC) );
-e_p  = y_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  1:3, 1 + (0:N_MPC) );
-e    = y_ref(    :, 1 + (0:N_MPC) ) - y_d(    1:3, 1 + (0:N_MPC) );
+et_pp = yt_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( 1:3, 1 + (0:N_MPC) );
+et_p  = yt_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  1:3, 1 + (0:N_MPC) );
+et    = yt_ref(    :, 1 + (0:N_MPC) ) - y_d(    1:3, 1 + (0:N_MPC) );
+
+%er_pp = yr_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( 4:7, 1 + (0:N_MPC) );
+%er_p  = yr_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  4:7, 1 + (0:N_MPC) );
+%er    = yr_ref(    :, 1 + (0:N_MPC) ) - y_d(    4:7, 1 + (0:N_MPC) );
+er_pp = SX(3, N_MPC+1);
+er_p  = SX(3, N_MPC+1);
+er    = SX(3, N_MPC+1);
+for i=0:N_MPC
+    quat_err_pp = rotation2quaternion_casadi( quat2rotm_v2( yr_pp_ref( :, 1 + (0:N_MPC) ) ) * quat2rotm_v2( y_pp_d( 4:7, 1 + (i) ) )' );
+    quat_err_p  = rotation2quaternion_casadi( quat2rotm_v2( yr_p_ref(  :, 1 + (0:N_MPC) ) ) * quat2rotm_v2( y_p_d(  4:7, 1 + (i) ) )' );
+    quat_err    = rotation2quaternion_casadi( quat2rotm_v2( yr_ref(    :, 1 + (0:N_MPC) ) ) * quat2rotm_v2( y_d(    4:7, 1 + (i) ) )' );
+    % alternative with quat_mult
+    % quat_err_pp = quat_mult(  yr_pp_ref( :, 1 + (i) ), quat_inv( y_pp_d(4:7, 1 + (i)) )  );
+    % quat_err_p  = quat_mult(  yr_p_ref(  :, 1 + (i) ), quat_inv( y_p_d(  4:7, 1 + (i)) )  );
+    % quat_err    = quat_mult(  yr_ref(    :, 1 + (i) ), quat_inv( y_d(    4:7, 1 + (i)) )  );
+    er_pp(:, 1 + (i)) = quat_err_pp(2:4);
+    er_p( :, 1 + (i)) = quat_err_p( 2:4);
+    er(   :, 1 + (i)) = quat_err(   2:4);
+end
 
 %e = SX(m, N_MPC+1);
 Q_ori = SX(1,1);
-%e(1:m_t, :) = y_ref(   1:m_t, 1 + (0:N_MPC) ) - y_d(  1:m_t, 1 + (0:N_MPC));
+%e(1:m_t, :) = yt_ref(   1:m_t, 1 + (0:N_MPC) ) - y_d(  1:m_t, 1 + (0:N_MPC));
 for i=0:N_MPC
-    %e(m_t+1:m, 1 + (i)) = rotm2rpy_casadi( rpy2rotm_casadi(y_ref(m_t+1:m, 1 + (i))) * R_e_arr{1 + (i)}');
-    %e(m_t+1:m, 1 + (i)) = rotm2rpy_casadi( R_e_arr{1 + (i)} * rpy2rotm_casadi(y_ref(m_t+1:m, 1 + (i)))');
+    %e(m_t+1:m, 1 + (i)) = rotm2rpy_casadi( rpy2rotm_casadi(yt_ref(m_t+1:m, 1 + (i))) * R_e_arr{1 + (i)}');
+    %e(m_t+1:m, 1 + (i)) = rotm2rpy_casadi( R_e_arr{1 + (i)} * rpy2rotm_casadi(yt_ref(m_t+1:m, 1 + (i)))');
     q_err = rotation2quaternion_casadi( R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))');
     %q_err = rotm2quat_v3_casadi( R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))');
     Q_ori = Q_ori + Q_norm_square( q_err(2:4) , pp.Q_y(4:6,4:6)  );
 end
-% Q_ori = Q_norm_square( y_ref(   4:6, 1 + (0:N_MPC) ) - y_d(  4:6, 1 + (0:N_MPC)), pp.Q_y(4:6,4:6)  );
+% Q_ori = Q_norm_square( yt_ref(   4:6, 1 + (0:N_MPC) ) - y_d(  4:6, 1 + (0:N_MPC)), pp.Q_y(4:6,4:6)  );
 
-%J_yt = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_ref(1:3, 1 + (1:N_MPC-1)), pp.Q_y(1:3,1:3)  );
+%J_yt = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - yt_ref(1:3, 1 + (1:N_MPC-1)), pp.Q_y(1:3,1:3)  );
 J_yt = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_d(1:3, 1 + (1:N_MPC-1)), pp.Q_y(1:3,1:3)  );
 J_yr = Q_ori;
-%J_yy_ref = 0*Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_y_ref, e), blkdiag(eye(3), 1*eye(3))); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROBLEM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-J_yy_ref = Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref(1:3, 1:3), e_p) + mtimes(pp.Q_y_ref(1:3, 1:3), e), eye(3));
+%J_yy_ref = 0*Q_norm_square(e_pp + mtimes(pp.Q_y_p_ref, e_p) + mtimes(pp.Q_yt_ref, e), blkdiag(eye(3), 1*eye(3))); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROBLEM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Jt_yy_ref = Q_norm_square(et_pp + mtimes(pp.Q_y_p_ref(1:3, 1:3), et_p) + mtimes(pp.Q_y_ref(1:3, 1:3), et), eye(3));
+%Jr_yy_ref = Q_norm_square(er_pp + mtimes(pp.Q_y_p_ref(4:6, 4:6), er_p) + mtimes(pp.Q_y_ref(4:6, 4:6), er), eye(3));
 J_q_pp = Q_norm_square(q_pp, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
 
-%cost_vars_names = '{J_yt, J_yr, J_yy_ref, J_q_pp}';
-cost_vars_names = '{J_yr, J_yt, J_yy_ref, J_q_pp}';
+%cost_vars_names = '{J_yt, J_yr, Jt_yy_ref, J_q_pp}';
+cost_vars_names = '{J_yr, J_yt, Jt_yy_ref, J_q_pp}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 

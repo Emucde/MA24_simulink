@@ -44,7 +44,7 @@ param_robot.I0_yz = 8.2299e-06; % kgm^2
 param_robot.I0_zz = 0.004285; % kgm^2
 
 % LINK 1
-param_robot.l1 = 0.333; % m
+param_robot.l1 = 0.333; % m joint1: link0 to link1
 param_robot.sp1_x = 0.003875; % m
 param_robot.sp1_y = 0.002081; % m
 param_robot.sp1_z = -0.04762; % m
@@ -57,7 +57,7 @@ param_robot.I1_yz = 0.019169; % kgm^2
 param_robot.I1_zz = 0.009117; % kgm^2
 
 % LINK 2
-param_robot.l2 = 0.316; % m
+param_robot.l2 = 0.316; % m, joint 3: link2 to link3
 param_robot.sp2_x = -0.003141; % m
 param_robot.sp2_y = -0.02872; % m
 param_robot.sp2_z = 0.003495; % m
@@ -70,7 +70,7 @@ param_robot.I2_yz = 0.000704; % kgm^2
 param_robot.I2_zz = 0.025995; % kgm^2
 
 % LINK 3
-param_robot.l3 = 0.0825; % m
+param_robot.l3 = 0.0825; % m, joint 4, link3 to link4
 param_robot.sp3_x = 0.027518; % m
 param_robot.sp3_y = 0.039252; % m
 param_robot.sp3_z = -0.066502; % m
@@ -83,7 +83,7 @@ param_robot.I3_yz = -0.012805; % kgm^2
 param_robot.I3_zz = 0.01083; % kgm^2
 
 % LINK 4
-param_robot.l4 = 0.384; % m
+param_robot.l4 = 0.384; % m, joint 5, link4 to link5
 param_robot.sp4_x = -0.05317; % m
 param_robot.sp4_y = 0.104419; % m
 param_robot.sp4_z = 0.027454; % m
@@ -96,7 +96,7 @@ param_robot.I4_yz = 0.008641; % kgm^2
 param_robot.I4_zz = 0.028323; % kgm^2
 
 % LINK 5
-param_robot.l5 = 0.088; % m
+param_robot.l5 = 0.088; % m, joint7, link6 to link7
 param_robot.sp5_x = -0.011953; % m
 param_robot.sp5_y = 0.041065; % m
 param_robot.sp5_z = -0.038437; % m
@@ -109,7 +109,7 @@ param_robot.I5_yz = 0.000229; % kgm^2
 param_robot.I5_zz = 0.008627; % kgm^2
 
 % LINK 6
-param_robot.l6 = 0.107; % m
+param_robot.l6 = 0.107; % m, fixed joint 8, link7 to link8
 param_robot.sp6_x = 0.060149; % m
 param_robot.sp6_y = -0.014117; % m
 param_robot.sp6_z = -0.010517; % m
@@ -122,7 +122,7 @@ param_robot.I6_yz = 0.000341; % kgm^2
 param_robot.I6_zz = 0.005433; % kgm^2
 
 % LINK 7
-param_robot.l7 = 0.1034; % m
+param_robot.l7 = 0.1034; % m, fr3_hand_tcp_joint, fr3_hand to fr3_hand_tcp
 param_robot.sp7_x = 0.010517; % m
 param_robot.sp7_y = -0.004252; % m
 param_robot.sp7_z = 0.061597; % m
@@ -134,7 +134,10 @@ param_robot.I7_yy = 0.010027; % kgm^2
 param_robot.I7_yz = -0.000741; % kgm^2
 param_robot.I7_zz = 0.004815; % kgm^2
 
-% LINK 8 (HAND)
+% LINK 8
+param_robot.sp8_x = 0; % m
+param_robot.sp8_y = 0; % m
+param_robot.sp8_z = 0; % m
 param_robot.m8 = 1e-5; % kg
 param_robot.I8_xx = 1e-6; % kgm^2
 param_robot.I8_xy = 0; % kgm^2
@@ -147,6 +150,9 @@ param_robot.sp8_y = 0.0; % m
 param_robot.sp8_z = 0.0; % m
 
 % HAND
+param_robot.sp9_x = -0.01; % m
+param_robot.sp9_y = 0.0; % m
+param_robot.sp9_z = 0.03; % m
 param_robot.m9 = 0.73; % kg
 param_robot.I9_xx = 0.001; % kgm^2
 param_robot.I9_xy = 0; % kgm^2
@@ -154,13 +160,25 @@ param_robot.I9_xz = 0; % kgm^2
 param_robot.I9_yy = 0.0025; % kgm^2
 param_robot.I9_yz = 0; % kgm^2
 param_robot.I9_zz = 0.0017; % kgm^2
-param_robot.sp9_x = -0.01; % m
-param_robot.sp9_y = 0.0; % m
-param_robot.sp9_z = 0.03; % m
+
+% HAND TCP
+param_robot.spe_x = 0.0; % m
+param_robot.spe_y = 0.0; % m
+param_robot.spe_z = 0.0; % m
+param_robot.me = 1e-5; % kg
+param_robot.Ie_xx = 1e-6; % kgm^2
+param_robot.Ie_xy = 0; % kgm^2
+param_robot.Ie_xz = 0; % kgm^2
+param_robot.Ie_yy = 1e-6; % kgm^2
+param_robot.Ie_yz = 0; % kgm^2
+param_robot.Ie_zz = 1e-6; % kgm^2
 
 % FINGER
-param_robot.w_finger = 0.1; % m
-param_robot.l_finger = 0.0584; % m
+param_robot.w_finger = 0.1*0; % m
+param_robot.l_finger = 0.0584; % m, fixed fr3_finger_joint1, fr3_hand_tcp to (fr3_leftfinger, fr3_rightfinger)
+param_robot.sp_finger_x = 0.0; % m
+param_robot.sp_finger_y = 0.0; % m
+param_robot.sp_finger_z = 0.0; % m
 param_robot.m_finger = 0.015; % kg
 param_robot.I_finger_xx = 2.375e-06; % kgm^2
 param_robot.I_finger_xy = 0; % kgm^2
@@ -168,6 +186,3 @@ param_robot.I_finger_xz = 0; % kgm^2
 param_robot.I_finger_yy = 2.375e-06; % kgm^2
 param_robot.I_finger_yz = 0; % kgm^2
 param_robot.I_finger_zz = 7.5e-07; % kgm^2
-param_robot.sp_finger_x = 0.0; % m
-param_robot.sp_finger_y = 0.0; % m
-param_robot.sp_finger_z = 0.0; % m
