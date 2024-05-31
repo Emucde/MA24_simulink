@@ -161,18 +161,6 @@ param_robot.I9_yy = 0.0025; % kgm^2
 param_robot.I9_yz = 0; % kgm^2
 param_robot.I9_zz = 0.0017; % kgm^2
 
-% HAND TCP
-param_robot.spe_x = 0.0; % m
-param_robot.spe_y = 0.0; % m
-param_robot.spe_z = 0.0; % m
-param_robot.me = 1e-5; % kg
-param_robot.Ie_xx = 1e-6; % kgm^2
-param_robot.Ie_xy = 0; % kgm^2
-param_robot.Ie_xz = 0; % kgm^2
-param_robot.Ie_yy = 1e-6; % kgm^2
-param_robot.Ie_yz = 0; % kgm^2
-param_robot.Ie_zz = 1e-6; % kgm^2
-
 % FINGER
 param_robot.w_finger = 0.1*0; % m
 param_robot.l_finger = 0.0584; % m, fixed fr3_finger_joint1, fr3_hand_tcp to (fr3_leftfinger, fr3_rightfinger)

@@ -1,0 +1,17 @@
+function tmpreturn = T_eul(Phi)
+  m = [0 0 0; 0 0 0; 0 0 0;];
+  m(1,1) = 0;
+  t1 = Phi(1);
+  t2 = sin(t1);
+  m(1,2) = -t2;
+  t3 = cos(t1);
+  t4 = Phi(2);
+  t5 = sin(t4);
+  m(1,3) = (t3 * t5);
+  m(2,1) = 0;
+  m(2,2) = t3;
+  m(2,3) = (t5 * t2);
+  m(3,1) = 1;
+  m(3,2) = 0;
+  m(3,3) = cos(t4);
+  tmpreturn = m;

@@ -171,6 +171,7 @@ quat   = casadi.Function.load(['./', s_fun_path, '/quat_endeffector_py.casadi'])
 sys_fun_qpp = casadi.Function.load(['./', s_fun_path, '/sys_fun_qpp_py.casadi']);
 
 qpp_fun = @(q, q_p, tau) M(q)\(tau - C_rnea(q, q_p));
+qpp_fun_maple = @(q, q_p, tau, param) inertia_matrix(q, param)\(tau - coriolis_matrix(q, q_p, param)*q_p - gravitational_forces(q, param));
 robot_model_bus_fun = casadi.Function.load(['./', s_fun_path, '/robot_model_bus_fun_py.casadi']);
 
 % tests;

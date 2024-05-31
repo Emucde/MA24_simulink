@@ -123,7 +123,7 @@ for i in range(n):
     M_mat[:, i] = inv_dyn_tau(q, cs.SX(n,1), q_pp_vec) - g(q) # methode nach ott
 M_v2 = cs.Function('M', [q], [M_mat], ['q'], ['M(q)']) # inertia matrix
 
-# M_v2 dauert ca. doppelt so lang (0.297 s vs 0.160 s)
+# M_v2 dauert ca. doppelt so lang (0.297 s vs 0.160 s) bzw. (0.997, 0.177)
 tic = time.time()
 for _ in range(10000):
     M_v2(q_0)
@@ -143,8 +143,6 @@ sys_fun_qpp = cs.Function('sys_fun_qpp', [q, q_p, u], [q_pp_aba_SX], ['q', 'q_p'
 u_new = sys_fun_qpp.free_sx() # achtung tau0, tau6, tau5, tau4, tau3, tau2, tau1
 u_new = cs.vertcat(u_new[0], u_new[6], u_new[5], u_new[4], u_new[3], u_new[2], u_new[1])
 sys_fun_qpp = cs.Function('sys_fun_qpp', [q, q_p, u_new], [q_pp_aba_SX], ['q', 'q_p', 'tau'], ['q_pp'])
-print(sys_fun_qpp(q_0, q_0, q_0))
-print([-21.0914, -2.73093, 18.9557, 12.8435, 9.98295, 44.4745, 9.12496]) # aus Maple
 
 x = cs.vertcat(q, q_p)
 
