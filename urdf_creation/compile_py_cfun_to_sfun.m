@@ -27,7 +27,7 @@ fun_arr = { ...
     'geo_jacobian_endeffector_p_py' ...
 };
 
-% fun_arr = {'sys_fun_qpp_py', robot_model_bus_fun_py};
+%fun_arr = {'sys_fun_qpp_py', 'robot_model_bus_fun_py'};
 
 compile_mode = 2;
 output_dir = './s_functions/s_functions_7dof/';

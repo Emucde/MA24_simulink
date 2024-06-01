@@ -66,16 +66,20 @@ int_method       = param_casadi_fun_struct.int_method;
 if mod(Ts_MPC, param_global.Ta) ~= 0
     error('Error: Result is not an integer.');
 end
+
 %% Convert Maple Functions to casadi functions
 if(convert_maple_to_casadi)
+    %rmpath('./maple/maple_generated/7_dof_system_fr3');
+    %addpath('./maple/maple_generated/7_dof_system_fr3_MW19');
     maple_fun_arr = {"inertia_matrix.m", "coriolis_matrix.m", ...
         "gravitational_forces.m", "forward_kinematics_endeffector.m"...
         "hom_transform_endeffector.m", "geo_jacobian_endeffector.m", ...
-        "geo_jacobian_endeffector_p.m"};
-    maple_path = "maple/maple_generated/7_dof_system_fr3/"
-    create_casadi_functions('SX', "maple/maple_generated/7_dof_system_fr3/", maple_fun_arr); %  script for matlab to casadi conversion
+        "geo_jacobian_endeffector_p.m", "coriolis_rnea.m"};
+    maple_path = "maple/maple_generated/7_dof_system_fr3/";
+    %maple_path = "maple/maple_generated/7_dof_system_fr3_MW19/";
+    create_casadi_functions('SX', maple_path, maple_fun_arr); %  script for matlab to casadi conversion
+    return
 end
-
 %% path for init guess
 mpc_settings_path                = ['./', s_fun_path, '/mpc_settings/'];%todo:  UP
 mpc_settings_struct_name         = "param_"+casadi_func_name;

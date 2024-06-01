@@ -63,11 +63,13 @@ cpin.updateFramePlacements(casadi_model, cdata)
 q_pp_aba_SX = cpin.aba(casadi_model, cdata, q, q_p, u)
 sys_fun_qpp = cs.Function('sys_fun_qpp', [q, q_p, u], [q_pp_aba_SX], ['q', 'q_p', 'tau'], ['q_pp'])
 
-C_SX = cpin.computeCoriolisMatrix(casadi_model, cdata, q, q_p) # echte 7x7 Coriolismatrix
+C_SX = cpin.computeCoriolisMatrix(casadi_model, cdata, q, q_p) # echte 7x7 Coriolismatrix, cbra
 C = cs.Function('C', [q, q_p], [C_SX], ['q', 'q_p'], ['C(q, q_p)']) # coriolis matrix
 
-g_SX = cpin.computeGeneralizedGravity(casadi_model, cdata, q)
-g = cs.Function('g', [q], [g_SX], ['q'], ['g(q)'])
+g_SX_g = cpin.computeGeneralizedGravity(casadi_model, cdata, q)
+g_v2 = cs.Function('g', [q], [g_SX_g], ['q'], ['g(q)']) 
+g_SX = cpin.rnea(casadi_model, cdata, q, cs.SX(n,1), cs.SX(n,1)) # tau = M*0 + C*0 + g = g
+g = cs.Function('g', [q], [g_SX], ['q'], ['g(q)']) # ist beides rnea, siehe pin doku
 
 M_SX = cpin.crba(casadi_model, cdata, q)
 M = cs.Function('M', [q], [M_SX], ['q'], ['M(q)']) # inertia matrix
@@ -86,13 +88,14 @@ for i in range(n):
     M_mat[:, i] = inv_dyn_tau(q, cs.SX(n,1), q_pp_vec) - g(q) # methode nach ott
 M_v2 = cs.Function('M', [q], [cs.simplify(M_mat)], ['q'], ['M(q)']) # inertia matrix
 
-#tic = time.time()
-#for _ in range(10000): 
-#    #M_v2(q_0)
+tic = time.time()
+for _ in range(10000): 
+#    M_v2(q_0)
 #    C_rnea(q_0, q_0) # C_rnea: 0.22s, C_rnea_v2 (cbra): 0.39s
-#toc = time.time()
-#runtime = toc - tic
-#print(runtime)
+     g_v2(q_0)
+toc = time.time()
+runtime = toc - tic
+print(runtime)
 # Wieso ist M(q) mit cbra schneller als M_v2(q) mit rnea? (M: 0.177s, M_v2: 0.288s)
 
 

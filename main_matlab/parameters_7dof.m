@@ -172,9 +172,13 @@ sys_fun_qpp = casadi.Function.load(['./', s_fun_path, '/sys_fun_qpp_py.casadi'])
 
 qpp_fun = @(q, q_p, tau) M(q)\(tau - C_rnea(q, q_p));
 qpp_fun_maple = @(q, q_p, tau, param) inertia_matrix(q, param)\(tau - coriolis_matrix(q, q_p, param)*q_p - gravitational_forces(q, param));
+qpp_fun_maple_casadi_SX = @(q, q_p, tau, param) inertia_matrix_casadi_SX(q, param)\(tau - coriolis_matrix_casadi_SX(q, q_p, param)*q_p - gravitational_forces_casadi_SX(q, param));
+% qpp_fun_maple_casadi_SX_fun = casadi.Function('qpp_fun_maple_casadi_SX_fun', {sys_fun_qpp.sx_in{1}, sys_fun_qpp.sx_in{2}, sys_fun_qpp.sx_in{3}}, {qpp_fun_maple_casadi_SX(sys_fun_qpp.sx_in{1}, sys_fun_qpp.sx_in{2}, sys_fun_qpp.sx_in{3}, param_robot)}, {'q', 'q_p', 'tau'}, {'qpp'});
+% C_rnea_maple = casadi.Function('C_rnea', {sys_fun_qpp.sx_in{1}, sys_fun_qpp.sx_in{2}}, {coriolis_matrix_casadi_SX(sys_fun_qpp.sx_in{1}, sys_fun_qpp.sx_in{2}, param_robot)*sys_fun_qpp.sx_in{2} + gravitational_forces_casadi_SX(sys_fun_qpp.sx_in{1}, param_robot)}, {'q', 'q_p'}, {'C_rnea'});
+
 robot_model_bus_fun = casadi.Function.load(['./', s_fun_path, '/robot_model_bus_fun_py.casadi']);
 
-% tests;
+tests;
 
 %% Inverse Kin (Zum Prüfen ob Endwert im Aufgabenraum ist.)
 calc_inverse_kin = false;

@@ -1,4 +1,4 @@
-function mex_name = casadi_fun_to_mex(casadi_fun, dir, opt_flag)
+function mex_name = casadi_fun_to_mex(casadi_fun, dir, mex_name, opt_flag)
     % src: https://github.com/casadi/casadi/discussions/3337
     % Optimization options for MATLAB compilation
     
@@ -13,12 +13,12 @@ function mex_name = casadi_fun_to_mex(casadi_fun, dir, opt_flag)
     arguments
         casadi_fun (1,1) casadi.Function
         dir char
+        mex_name = casadi_fun.name;
         opt_flag = '-O3'
     end
 
     disp(['Compiling Matlab s-function ', casadi_fun.name, ' with ',opt_flag])
     
-    mex_name = casadi_fun.name;
     full_name = [dir, '/', mex_name, '.c'];
     opts = struct('main', true, ...
         'mex', true);
