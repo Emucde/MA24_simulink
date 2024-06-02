@@ -178,7 +178,7 @@ qpp_fun_maple_casadi_SX = @(q, q_p, tau, param) inertia_matrix_casadi_SX(q, para
 
 robot_model_bus_fun = casadi.Function.load(['./', s_fun_path, '/robot_model_bus_fun_py.casadi']);
 
-tests;
+%tests;
 
 %% Inverse Kin (Zum Prüfen ob Endwert im Aufgabenraum ist.)
 calc_inverse_kin = false;

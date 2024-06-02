@@ -134,8 +134,8 @@ if(test_val == 1)
     
     hold off;
 elseif(test_val == 2) % casadi python vs Maple 23
-    rmpath('./maple/maple_generated/7_dof_system_fr3_MW19');
-    addpath('./maple/maple_generated/7_dof_system_fr3');
+    %rmpath('./maple/maple_generated/7_dof_system_fr3_MW19');
+    %addpath('./maple/maple_generated/7_dof_system_fr3');
     qpp_fun_maple = @(q, q_p, tau, param) inertia_matrix(q, param)\(tau - coriolis_matrix(q, q_p, param)*q_p - gravitational_forces(q, param));
     qpp_fun_maple_casadi_SX = @(q, q_p, tau, param) inertia_matrix_casadi_SX(q, param)\(tau - coriolis_matrix_casadi_SX(q, q_p, param)*q_p - gravitational_forces_casadi_SX(q, param));
 
@@ -298,8 +298,8 @@ elseif(test_val == 2) % casadi python vs Maple 23
     
     return
 elseif(test_val == 3) % casadi python vs Maple 23
-    rmpath('./maple/maple_generated/7_dof_system_fr3');
-    addpath('./maple/maple_generated/7_dof_system_fr3_MW19');
+    %rmpath('./maple/maple_generated/7_dof_system_fr3');
+    %addpath('./maple/maple_generated/7_dof_system_fr3_MW19');
     qpp_fun_maple = @(q, q_p, tau, param) inertia_matrix(q, param)\(tau - coriolis_matrix(q, q_p, param)*q_p - gravitational_forces(q, param));
     qpp_fun_maple_casadi_SX = @(q, q_p, tau, param) inertia_matrix_casadi_SX(q, param)\(tau - coriolis_matrix_casadi_SX(q, q_p, param)*q_p - gravitational_forces_casadi_SX(q, param));
 
@@ -462,8 +462,8 @@ elseif(test_val == 3) % casadi python vs Maple 23
     
     return
 elseif(test_val == 4) % casadi python vs Maple 23 casadi
-    rmpath('./maple/maple_generated/7_dof_system_fr3_MW19');
-    addpath('./maple/maple_generated/7_dof_system_fr3');
+    %rmpath('./maple/maple_generated/7_dof_system_fr3_MW19');
+    %addpath('./maple/maple_generated/7_dof_system_fr3');
     qpp_fun_maple = @(q, q_p, tau, param) inertia_matrix(q, param)\(tau - coriolis_matrix(q, q_p, param)*q_p - gravitational_forces(q, param));
     qpp_fun_maple_casadi_SX = @(q, q_p, tau, param) inertia_matrix_casadi_SX(q, param)\(tau - coriolis_matrix_casadi_SX(q, q_p, param)*q_p - gravitational_forces_casadi_SX(q, param));
 
@@ -626,8 +626,8 @@ elseif(test_val == 4) % casadi python vs Maple 23 casadi
     
     return
 elseif(test_val == 5) % casadi python vs Maple 19 casadi
-    rmpath('./maple/maple_generated/7_dof_system_fr3');
-    addpath('./maple/maple_generated/7_dof_system_fr3_MW19');
+    %rmpath('./maple/maple_generated/7_dof_system_fr3');
+    %addpath('./maple/maple_generated/7_dof_system_fr3_MW19');
     qpp_fun_maple = @(q, q_p, tau, param) inertia_matrix(q, param)\(tau - coriolis_matrix(q, q_p, param)*q_p - gravitational_forces(q, param));
     qpp_fun_maple_casadi_SX = @(q, q_p, tau, param) inertia_matrix_casadi_SX(q, param)\(tau - coriolis_matrix_casadi_SX(q, q_p, param)*q_p - gravitational_forces_casadi_SX(q, param));
 
@@ -790,8 +790,8 @@ elseif(test_val == 5) % casadi python vs Maple 19 casadi
     
     return
 elseif(test_val == 6)
-    rmpath('./maple/maple_generated/7_dof_system_fr3_MW19');
-    addpath('./maple/maple_generated/7_dof_system_fr3');
+    %rmpath('./maple/maple_generated/7_dof_system_fr3_MW19');
+    %addpath('./maple/maple_generated/7_dof_system_fr3');
 
     output_dir = './s_functions/s_functions_7dof/maple_msfun/';
     fun_dir1 = './s_functions/s_functions_7dof/';
@@ -800,8 +800,8 @@ elseif(test_val == 6)
 
     return
 elseif(test_val == 7)
-    rmpath('./maple/maple_generated/7_dof_system_fr3');
-    addpath('./maple/maple_generated/7_dof_system_fr3_MW19');
+    %rmpath('./maple/maple_generated/7_dof_system_fr3');
+    %addpath('./maple/maple_generated/7_dof_system_fr3_MW19');
 
     output_dir = './s_functions/s_functions_7dof/maple_msfun/';
     fun_dir1 = './s_functions/s_functions_7dof/';
@@ -810,8 +810,8 @@ elseif(test_val == 7)
 
     return
 elseif(test_val == 8)
-    rmpath('./maple/maple_generated/7_dof_system_fr3_MW19');
-    addpath('./maple/maple_generated/7_dof_system_fr3');
+    %rmpath('./maple/maple_generated/7_dof_system_fr3_MW19');
+    %addpath('./maple/maple_generated/7_dof_system_fr3');
     disp('dont forget to compile (test_val = 6)');
 
     qpp_fun_compiled = @(q, q_p, tau) inertia_matrix_py(q)\(tau - n_q_coriols_qp_plus_g_py(q, q_p));
@@ -1000,8 +1000,8 @@ elseif(test_val == 8)
 
     return
 elseif(test_val == 9)
-    rmpath('./maple/maple_generated/7_dof_system_fr3');
-    addpath('./maple/maple_generated/7_dof_system_fr3_MW19');
+    %rmpath('./maple/maple_generated/7_dof_system_fr3');
+    %addpath('./maple/maple_generated/7_dof_system_fr3_MW19');
     disp('dont forget to compile (test_val = 7)');
 
     qpp_fun_compiled = @(q, q_p, tau) inertia_matrix_py(q)\(tau - n_q_coriols_qp_plus_g_py(q, q_p));
