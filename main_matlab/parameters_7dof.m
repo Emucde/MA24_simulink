@@ -50,7 +50,8 @@ import casadi.*;
 simulink_main_model_name = 'sim_discrete_7dof';
 open_simulink_on_start = true;
 %if(~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && sum(strfind([getenv().keys{:}], 'VSCODE')) == 0)
-if( ~isSimulinkStarted && open_simulink_on_start && desktop('-inuse') == 1) % in vscode inuse delivers 0 (running in background)
+% && ~isSimulinkStarted funktioniert einfach nicht.
+if( ~contains([license('inuse').feature], 'simulink') && open_simulink_on_start && desktop('-inuse') == 1) % in vscode inuse delivers 0 (running in background)
     tic
     fprintf(['open simulink model \"' simulink_main_model_name, '\" ...'])
     open_system([simulink_main_model_name '.slx'])
@@ -79,7 +80,7 @@ traj_select.traj_amount = 4; % anzahl der trajektorien
 traj_select_fin = 4;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-param_traj_allg.T_switch = 2;%T_sim/2; % ab dem zeitpunkt schält xe0 in xeT um und umgekehrt (only for differential filter)
+param_traj_allg.T_switch = T_sim/2; % ab dem zeitpunkt schält xe0 in xeT um und umgekehrt (only for differential filter)
 %% Param CT Controller
 
 K_d_t = 1e3*diag([1 1 1]);
@@ -109,11 +110,11 @@ ct_ctrl_param.eps  = 1e-1;
 
 % nullspace for CT controller
 ct_ctrl_param.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;
-%ct_ctrl_param.K_n = 1e2*eye(n);
-%ct_ctrl_param.D_n = sqrt(4*ct_ctrl_param.K_n) + 0*50 * eye(n);
+ct_ctrl_param.K_n = 1e-2*eye(n);
+ct_ctrl_param.D_n = sqrt(4*ct_ctrl_param.K_n) + 1 * eye(n);
 
-ct_ctrl_param.K_n = 64*eye(n);
-ct_ctrl_param.D_n = 16*eye(n);
+%ct_ctrl_param.K_n = 64*eye(n);
+%ct_ctrl_param.D_n = 16*eye(n);
 
 ct_ctrl_param.k_n_nl = 10*eye(n);
 ct_ctrl_param.nl_spring_threshold = [0.2; 0.2; 0.2; 0.2; 0.2; 0.2; 0.2];
@@ -137,6 +138,7 @@ q_0 = [0; 0; pi/4; -pi/2; 0*pi/4; pi/2; 0];
 %q_0 = [-1.081, -1.035, 1.231, -1.778, 0.967, 1.394, -0.652]';
 q_0_p = zeros(n, 1);
 q_0_pp = zeros(n, 1);
+%q_0_pp = sys_fun_qpp_py(q_0, q_0_p, zeros(7,1)); % wg gravitation nicht 0
 
 H_0_init = hom_transform_endeffector(q_0, param_robot); % singular pose
 R_init = H_0_init(1:3, 1:3);
@@ -160,14 +162,15 @@ end
 
 C_matlab = casadi.Function.load(['./', s_fun_path, '/C_fun.casadi']); % matlab
 compute_tau_fun = Function.load(['./', s_fun_path, '/compute_tau_py.casadi']);
-g      = casadi.Function.load(['./', s_fun_path, '/gravitational_forces_py.casadi']); % g(q) invertiert im vgl. zu matlab
-M      = casadi.Function.load(['./', s_fun_path, '/inertia_matrix_py.casadi']); % ok, rundungsfehler +- 0.003
+g      = casadi.Function.load(['./', s_fun_path, '/gravitational_forces_py.casadi']);
+M      = casadi.Function.load(['./', s_fun_path, '/inertia_matrix_py.casadi']); %
+M_inv  = casadi.Function.load(['./', s_fun_path, '/inverse_inertia_matrix_py.casadi']); %
 C_rnea = casadi.Function.load(['./', s_fun_path, '/n_q_coriols_qp_plus_g_py.casadi']);
-% invertiert im vgl. zu matlab (wegen C_rnea a C(q,qp)qp + g(q)): Extrem ungenau wenn q_p nicht 0 ist.
+
 J      = casadi.Function.load(['./', s_fun_path, '/geo_jacobian_endeffector_py.casadi']); % perfekt
 J_p    = casadi.Function.load(['./', s_fun_path, '/geo_jacobian_endeffector_p_py.casadi']); % perfekt
 H      = casadi.Function.load(['./', s_fun_path, '/hom_transform_endeffector_py.casadi']); % perfect
-quat   = casadi.Function.load(['./', s_fun_path, '/quat_endeffector_py.casadi']); % passt, aber achtung: Reihenfolge ist [eps, eta] = [q2, q3, q4, q1]
+quat   = casadi.Function.load(['./', s_fun_path, '/quat_endeffector_py.casadi']);
 sys_fun_qpp = casadi.Function.load(['./', s_fun_path, '/sys_fun_qpp_py.casadi']);
 
 qpp_fun = @(q, q_p, tau) M(q)\(tau - C_rnea(q, q_p));

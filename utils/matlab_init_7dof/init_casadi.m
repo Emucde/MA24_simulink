@@ -1,6 +1,7 @@
-addpath('/media/daten/Anwendungen/casadi-3.6.4-linux64-matlab2018b/')
+% addpath('/media/daten/Anwendungen/casadi-3.6.4-linux64-matlab2018b/')
+addpath('/media/daten/Anwendungen/casadi-3.6.5-linux64-matlab2018b/')
 import casadi.*
-warning('TODO: auf casadi 3.6.5 umsteigen')
+% warning('TODO: auf casadi 3.6.5 umsteigen')
 
 %script_path = matlab.desktop.editor.getActiveFilename; % Get the path of the current script
 %parts = split(script_path, "/"); % Split the path into its parts
