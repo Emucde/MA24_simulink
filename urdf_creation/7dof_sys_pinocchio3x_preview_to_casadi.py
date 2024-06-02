@@ -98,7 +98,8 @@ runtime = toc - tic
 print(runtime)
 # Wieso ist M(q) mit cbra schneller als M_v2(q) mit rnea? (M: 0.177s, M_v2: 0.288s)
 
-
+M_inv_SX = cpin.computeMinverse(casadi_model, cdata, q)
+M_inv = cs.Function('M_inv', [q], [M_inv_SX], ['q'], ['M_inv(q)']) # inverse inertia matrix
 
 J_SX = cpin.computeFrameJacobian(casadi_model, cdata, q, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
 J = cs.Function('J', [q], [J_SX], ['q'], ['J(q)'])
@@ -118,6 +119,7 @@ sys_fun_x = cs.Function('sys_fun_x', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp(x
 robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'g(q)'])
 
 M.save('./s_functions/s_functions_7dof/inertia_matrix_py.casadi')
+M_inv.save('./s_functions/s_functions_7dof/inverse_inertia_matrix_py.casadi')
 C_rnea.save('./s_functions/s_functions_7dof/n_q_coriols_qp_plus_g_py.casadi')
 g.save('./s_functions/s_functions_7dof/gravitational_forces_py.casadi')
 H.save('./s_functions/s_functions_7dof/hom_transform_endeffector_py.casadi')

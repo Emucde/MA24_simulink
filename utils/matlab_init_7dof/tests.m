@@ -1189,6 +1189,27 @@ elseif(test_val == 9)
     disp(['   ', num2str(toc), 's']);
 
     return
+elseif(test_val == 10)
+    MC=eye(7);tic;
+    for i=1:1:1000
+        MM=inertia_matrix_py(pi*rand(7,1))\eye(7); MC = (MC + MM.*rand(1,1))/2;
+    end
+    disp('Time for 1000 runs of inertia_matrix_py\E python compiled:'); disp(['   ', num2str(toc), 's']);
+    MC=eye(7);tic;
+    for i=1:1:1000
+        MM=inertia_matrix_py(pi*rand(7,1))\eye(7); MC = (MC + MM.*rand(1,1))/2;
+    end
+    disp('Time for 1000 runs of inverse_inertia_matrix_py python compiled:'); disp(['   ', num2str(toc), 's']);
+    tic;
+    for i=1:1:1000
+        MM=inertia_matrix(pi*rand(7,1), param_robot)\eye(7); MC = (MC + MM.*rand(1,1))/2;
+    end
+    disp('Time for 1000 runs of inertia_matrix\E (maple):'); disp(['   ', num2str(toc), 's']);
+     tic;
+    for i=1:1:1000
+        MM=M_inv(pi*rand(7,1)); MC = (MC + MM.*rand(1,1))/2;
+    end
+    disp('Time for 1000 runs of M_inv (python):'); disp(['   ', num2str(toc), 's']);
 else
     disp('tests.m does nothing')
 end
@@ -1219,6 +1240,7 @@ function compile_msfunctions(sys_fun_qpp, fun_dir1, fun_dir2, output_dir, param_
     fun_arr = { ...
         'sys_fun_qpp_py', ...
         'inertia_matrix_py', ...
+        'inverse_inertia_matrix_py', ...
         'n_q_coriols_qp_plus_g_py', ...
         'gravitational_forces_py', ...
         'hom_transform_endeffector_py', ...
