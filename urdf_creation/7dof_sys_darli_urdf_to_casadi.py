@@ -63,6 +63,7 @@ u = casadi_model._u
 q = casadi_model.q
 q_p = casadi_model.v
 q_pp = casadi_model.dv
+x = cs.vertcat(q, q_p)
 
 joint_names = casadi_model.joint_names  # names of the joints
 print(joint_names)
@@ -143,12 +144,15 @@ opt = dict({'allow_free': True})
 sys_fun_qpp = cs.Function('sys_fun_qpp', [q, q_p, u], [q_pp_aba_SX], ['q', 'q_p', 'tau'], ['q_pp'], opt)
 u_new = sys_fun_qpp.free_sx() # achtung tau0, tau6, tau5, tau4, tau3, tau2, tau1
 u_new = cs.vertcat(u_new[0], u_new[6], u_new[5], u_new[4], u_new[3], u_new[2], u_new[1])
-sys_fun_qpp = cs.Function('sys_fun_qpp', [q, q_p, u_new], [q_pp_aba_SX], ['q', 'q_p', 'tau'], ['q_pp'])
+q_pp_aba_SX = cs.Function('sys_fun_qpp', [q, q_p, u_new], [q_pp_aba_SX], ['q', 'q_p', 'tau'], ['q_pp'])
 
-x = cs.vertcat(q, q_p)
+q_pp_sol_SX = cs.solve( M(q), u - C_rnea(q, q_p) ) # q_pp_aba leads to error of 1e-13, sol to 0
 
-#sys_fun_x = cs.Function('sys_fun_x', [x, u], [cs.vertcat(q_p, sys_fun_qpp(q, q_p, u))], ['x', 'u'], ['d/dt x = f(x, u)'])
-sys_fun_x = cs.Function('sys_fun_x', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u)'])
+sys_fun_qpp_aba = cs.Function('sys_fun_qpp_aba', [q, q_p, u], [q_pp_aba_SX], ['q', 'q_p', 'tau'], ['q_pp'])
+sys_fun_qpp_sol = cs.Function('sys_fun_qpp_sol', [q, q_p, u], [q_pp_sol_SX], ['q', 'q_p', 'tau'], ['q_pp'])
+
+sys_fun_x_aba = cs.Function('sys_fun_x_aba', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp_aba(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u) (aba)'])
+sys_fun_x_sol = cs.Function('sys_fun_x_sol', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp_sol(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u) (sol)'])
 
 robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'g(q)'])
 
@@ -160,8 +164,11 @@ quat_e.save('./s_functions/s_functions_7dof/quat_endeffector_py.casadi')
 J.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_py.casadi')
 J_p.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_p_py.casadi')
 
-sys_fun_qpp.save('./s_functions/s_functions_7dof/sys_fun_qpp_py.casadi')
-sys_fun_x.save('./s_functions/s_functions_7dof/sys_fun_x_py.casadi')
+sys_fun_qpp_aba.save('./s_functions/s_functions_7dof/sys_fun_qpp_aba_py.casadi')
+sys_fun_qpp_sol.save('./s_functions/s_functions_7dof/sys_fun_qpp_sol_py.casadi')
+sys_fun_x_aba.save('./s_functions/s_functions_7dof/sys_fun_x_aba_py.casadi')
+sys_fun_x_sol.save('./s_functions/s_functions_7dof/sys_fun_x_sol_py.casadi')
+
 inv_dyn_tau.save('./s_functions/s_functions_7dof/compute_tau_py.casadi')
 robot_model_bus_fun.save('./s_functions/s_functions_7dof/robot_model_bus_fun_py.casadi')
 

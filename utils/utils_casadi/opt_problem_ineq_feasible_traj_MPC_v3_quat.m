@@ -47,16 +47,17 @@ m_r = 3;%param_robot.m_r; % Rotational part of Task Space
 
 % Model equations
 % Forward Dynamics: d/dt x = f(x, u)
-use_aba = false;
+use_aba = true;
 if(use_aba)
-    f = Function.load([output_dir, 'sys_fun_x_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
+    f = Function.load([output_dir, 'sys_fun_x_aba_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
 else
     M      = casadi.Function.load(['./', s_fun_path, '/inertia_matrix_py.casadi']); % ok, rundungsfehler +- 0.003
     C_rnea = casadi.Function.load(['./', s_fun_path, '/n_q_coriols_qp_plus_g_py.casadi']);
     % hilfsvariablen, werden unten überschrieben
     x = SX.sym('x', 2*n, 1); % x = [q; dq]
     u = SX.sym('u', n, 1); % u = [tau]
-    f = Function('f', {x, u}, {vertcat(x(n+1:2*n), solve( M(x(1:n)), u - C_rnea(x(1:n), x(n+1:2*n)) ))}, {'x', 'u'}, {'dx'});
+    %f = Function('f', {x, u}, {vertcat(x(n+1:2*n), solve( M(x(1:n)), u - C_rnea(x(1:n), x(n+1:2*n)) ))}, {'x', 'u'}, {'dx'});
+    f = Function.load([output_dir, 'sys_fun_x_sol_py.casadi']); % equivalent as above
 end
 
 compute_tau_fun = Function.load([output_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)

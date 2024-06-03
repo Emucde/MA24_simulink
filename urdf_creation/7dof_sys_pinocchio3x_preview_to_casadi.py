@@ -61,8 +61,6 @@ quat = cs.Function('quat', [q], [quat_SX], ['q'], ['quat(q)'])
 cpin.forwardKinematics(casadi_model, cdata, q, q_p, q_pp)
 # cpin.forwardDynamics(casadi_model, cdata, q, q_p, u)
 cpin.updateFramePlacements(casadi_model, cdata)
-q_pp_aba_SX = cpin.aba(casadi_model, cdata, q, q_p, u)
-sys_fun_qpp = cs.Function('sys_fun_qpp', [q, q_p, u], [q_pp_aba_SX], ['q', 'q_p', 'tau'], ['q_pp'])
 
 C_SX = cpin.computeCoriolisMatrix(casadi_model, cdata, q, q_p) # echte 7x7 Coriolismatrix, cbra
 C = cs.Function('C', [q, q_p], [C_SX], ['q', 'q_p'], ['C(q, q_p)']) # coriolis matrix
@@ -114,8 +112,14 @@ J_p_SX = cs.reshape(  cs.jacobian(J(q), q) @ q_p, 6 ,n)
 J_p = cs.Function('J_p', [q, q_p], [J_p_SX], ['q', 'q_p'], ['J_p(q, q_p)'])
 J_p = SX00_to_SX0(J_p, q, q_p)
 
+q_pp_aba_SX = cpin.aba(casadi_model, cdata, q, q_p, u)
+q_pp_sol_SX = cs.solve( M(q), u - C_rnea(q, q_p) ) # q_pp_aba leads to error of 1e-13, sol to 0
 
-sys_fun_x = cs.Function('sys_fun_x', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u)'])
+sys_fun_qpp_aba = cs.Function('sys_fun_qpp_aba', [q, q_p, u], [q_pp_aba_SX], ['q', 'q_p', 'tau'], ['q_pp'])
+sys_fun_qpp_sol = cs.Function('sys_fun_qpp_sol', [q, q_p, u], [q_pp_sol_SX], ['q', 'q_p', 'tau'], ['q_pp'])
+
+sys_fun_x_aba = cs.Function('sys_fun_x_aba', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp_aba(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u) (aba)'])
+sys_fun_x_sol = cs.Function('sys_fun_x_sol', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp_sol(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u) (sol)'])
 
 robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'g(q)'])
 
@@ -128,7 +132,10 @@ quat.save('./s_functions/s_functions_7dof/quat_endeffector_py.casadi')
 J.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_py.casadi')
 J_p.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_p_py.casadi')
 
-sys_fun_qpp.save('./s_functions/s_functions_7dof/sys_fun_qpp_py.casadi')
-sys_fun_x.save('./s_functions/s_functions_7dof/sys_fun_x_py.casadi')
+sys_fun_qpp_aba.save('./s_functions/s_functions_7dof/sys_fun_qpp_aba_py.casadi')
+sys_fun_qpp_sol.save('./s_functions/s_functions_7dof/sys_fun_qpp_sol_py.casadi')
+sys_fun_x_aba.save('./s_functions/s_functions_7dof/sys_fun_x_aba_py.casadi')
+sys_fun_x_sol.save('./s_functions/s_functions_7dof/sys_fun_x_sol_py.casadi')
+
 inv_dyn_tau.save('./s_functions/s_functions_7dof/compute_tau_py.casadi')
 robot_model_bus_fun.save('./s_functions/s_functions_7dof/robot_model_bus_fun_py.casadi')

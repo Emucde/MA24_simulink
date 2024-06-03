@@ -19,7 +19,7 @@
 % test_val=8; % Speed test casadi python compiled vs Maple23 casadi compiled
 % test_val=9; % Speed test casadi python compiled vs Maple19 casadi compiled
 
-test_val=10;
+test_val=7;
 compile = false;
 if(test_val == 1)
     
@@ -796,7 +796,7 @@ elseif(test_val == 6)
     output_dir = './s_functions/s_functions_7dof/maple_msfun/';
     fun_dir1 = './s_functions/s_functions_7dof/';
     fun_dir2 = './s_functions/s_functions_7dof/maple_msfun/';
-    compile_msfunctions(sys_fun_qpp, fun_dir1, fun_dir2, output_dir, param_robot);
+    compile_msfunctions(sys_fun_qpp, fun_dir1, fun_dir2, output_dir, param_robot, param_init_pose);
 
     return
 elseif(test_val == 7)
@@ -806,7 +806,7 @@ elseif(test_val == 7)
     output_dir = './s_functions/s_functions_7dof/maple_msfun/';
     fun_dir1 = './s_functions/s_functions_7dof/';
     fun_dir2 = './s_functions/s_functions_7dof/maple_msfun/';
-    compile_msfunctions(sys_fun_qpp, fun_dir1, fun_dir2, output_dir, param_robot);
+    compile_msfunctions(sys_fun_qpp, fun_dir1, fun_dir2, output_dir, param_robot, param_init_pose);
 
     return
 elseif(test_val == 8)
@@ -992,10 +992,18 @@ elseif(test_val == 8)
     
     tic;
     for i=1:1:1000
-        qqpp = sys_fun_qpp_py(pi*rand(7,1), pi*rand(7,1), pi*rand(7,1));
+        qqpp = sys_fun_qpp_aba_py(pi*rand(7,1), pi*rand(7,1), pi*rand(7,1));
         qqppc = qqpp.*rand(1,1);
     end
     disp('Time for 1000 runs of sys_fun_qpp (Aba)');
+    disp(['   ', num2str(toc), 's']);
+
+    tic;
+    for i=1:1:1000
+        qqpp = sys_fun_qpp_sol_py(pi*rand(7,1), pi*rand(7,1), pi*rand(7,1));
+        qqppc = qqpp.*rand(1,1);
+    end
+    disp('Time for 1000 runs of sys_fun_qpp (sol)');
     disp(['   ', num2str(toc), 's']);
 
     return
@@ -1182,10 +1190,18 @@ elseif(test_val == 9)
     
     tic;
     for i=1:1:1000
-        qqpp = sys_fun_qpp_py(pi*rand(7,1), pi*rand(7,1), pi*rand(7,1));
+        qqpp = sys_fun_qpp_aba_py(pi*rand(7,1), pi*rand(7,1), pi*rand(7,1));
         qqppc = qqpp.*rand(1,1);
     end
     disp('Time for 1000 runs of sys_fun_qpp (Aba)');
+    disp(['   ', num2str(toc), 's']);
+
+    tic;
+    for i=1:1:1000
+        qqpp = sys_fun_qpp_sol_py(pi*rand(7,1), pi*rand(7,1), pi*rand(7,1));
+        qqppc = qqpp.*rand(1,1);
+    end
+    disp('Time for 1000 runs of sys_fun_qpp (sol)');
     disp(['   ', num2str(toc), 's']);
 
     return
@@ -1214,20 +1230,27 @@ else
     disp('tests.m does nothing')
 end
 
-function compile_msfunctions(sys_fun_qpp, fun_dir1, fun_dir2, output_dir, param_robot)
+function compile_msfunctions(sys_fun_qpp, fun_dir1, fun_dir2, output_dir, param_robot, param_init_pose)
     qc = sys_fun_qpp.sx_in{1};
     qc_p = sys_fun_qpp.sx_in{2};
     tau = sys_fun_qpp.sx_in{3};
 
-    inertia_matrix_maple_casadi = casadi.Function('inertia_matrix_maple', {qc}, {inertia_matrix_casadi_SX(qc, param_robot)});
+    % Idee: Wenn n < 7 ist dann ersetzt man die joint winkel die nicht im urdf file fixed sind!
+    q_SX   = casadi.SX(param_init_pose.q_0_init);
+    q_p_SX = casadi.SX(param_init_pose.q_0_p_init);
+
+    q_SX(param_robot.n_indices) = qc;
+    q_p_SX(param_robot.n_indices) = qc_p;
+
+    inertia_matrix_maple_casadi = casadi.Function('inertia_matrix_maple', {qc}, {inertia_matrix_casadi_SX(q_SX, param_robot)});
     % Die coriolis matrix is einfach zu groß für casadi, ließe sich
     % höchstens als nlpsol sfunktion kompilieren.
-    %coriolis_rnea_maple_casadi = casadi.Function('C_rnea_maple', {qc, qc_p}, {coriolis_rnea_casadi_SX(qc, qc_p, param_robot)});
-    %coriolis_rnea_maple_casadi_v2 = casadi.Function('C_rnea_maple_v2', {qc, qc_p}, {coriolis_rnea_casadi_SX(qc, qc_p, param_robot)});
-    gravitational_forces_maple_casadi = casadi.Function('g_maple', {qc}, {gravitational_forces_casadi_SX(qc, param_robot)});
-    hom_transform_endeffector_maple_casadi = casadi.Function('H_maple', {qc}, {hom_transform_endeffector_casadi_SX(qc, param_robot)});
-    geo_jacobian_endeffector_maple_casadi = casadi.Function('J_maple', {qc}, {geo_jacobian_endeffector_casadi_SX(qc, param_robot)});
-    geo_jacobian_endeffector_p_maple_casadi = casadi.Function('J_p_maple', {qc, qc_p}, {geo_jacobian_endeffector_p_casadi_SX(qc, qc_p, param_robot)});
+    %coriolis_rnea_maple_casadi = casadi.Function('C_rnea_maple', {qc, qc_p}, {coriolis_rnea_casadi_SX(q_SX, qc_p, param_robot)});
+    %coriolis_rnea_maple_casadi_v2 = casadi.Function('C_rnea_maple_v2', {qc, qc_p}, {coriolis_rnea_casadi_SX(q_SX, qc_p, param_robot)});
+    gravitational_forces_maple_casadi = casadi.Function('g_maple', {qc}, {gravitational_forces_casadi_SX(q_SX, param_robot)});
+    hom_transform_endeffector_maple_casadi = casadi.Function('H_maple', {qc}, {hom_transform_endeffector_casadi_SX(q_SX, param_robot)});
+    geo_jacobian_endeffector_maple_casadi = casadi.Function('J_maple', {qc}, {geo_jacobian_endeffector_casadi_SX(q_SX, param_robot)});
+    geo_jacobian_endeffector_p_maple_casadi = casadi.Function('J_p_maple', {qc, qc_p}, {geo_jacobian_endeffector_p_casadi_SX(q_SX, q_p_SX, param_robot)});
 
     inertia_matrix_maple_casadi.save([output_dir, 'inertia_matrix_maple.casadi']);
     %coriolis_rnea_maple_casadi.save([output_dir, 'coriolis_rnea_maple.casadi']);
@@ -1238,7 +1261,8 @@ function compile_msfunctions(sys_fun_qpp, fun_dir1, fun_dir2, output_dir, param_
     geo_jacobian_endeffector_p_maple_casadi.save([output_dir, 'geo_jacobian_endeffector_p_maple.casadi']);
 
     fun_arr = { ...
-        'sys_fun_qpp_py', ...
+        'sys_fun_qpp_aba_py', ...
+        'sys_fun_qpp_sol_py', ...
         'inertia_matrix_py', ...
         'inverse_inertia_matrix_py', ...
         'n_q_coriols_qp_plus_g_py', ...

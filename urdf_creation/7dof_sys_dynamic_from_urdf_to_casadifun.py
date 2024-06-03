@@ -1,5 +1,5 @@
 # Bitte conda 'mpc' env verwenden, dort ist urdf2casadi installiert.
-
+print('Bitte nicht verwenden ist sehr ungenau!')
 import casadi as cs
 import os
 from urdf2casadi import urdfparser as u2c
@@ -34,8 +34,8 @@ print(fk_dict.keys())
 # should give ['q', 'upper', 'lower', 'dual_quaternion_fk', 'joint_names', 'T_fk', 'joint_list', 'quaternion_fk']
 #forward_kinematics = fk_dict["T_fk"]
 
-m=6
-n = 7
+m = 6
+n = fk_dict["q"].shape[0]
 u = cs.SX.sym('u', n, 1)
 q = cs.SX.sym('q', n, 1)
 q_p = cs.SX.sym('q_p', n, 1)
@@ -63,7 +63,7 @@ print('qa = [1,2,3,4,5,6,7], qpa = [1,2,3,4,5,6,7]', '\n')
 
 g1 = robot_parser.get_gravity_rnea(root_link, end_link, gravity)
 g = cs.Function('g', [q], [inv_dyn_tau(q, cs.SX(n,1), cs.SX(n,1))], ['q'], ['g(q)']) # gravitational forces
-print('g1(qa) - g(qa):', g1(qa) - g(qa), '\n') # sollte 0 sein
+# print('g1(qa) - g(qa):', g1(qa) - g(qa), '\n') # sollte 0 sein
 
 M_mat = cs.SX(n,n)
 
@@ -75,13 +75,13 @@ for i in range(n):
 M1 = robot_parser.get_inertia_matrix_crba(root_link, end_link) # sind casadi SX functions! Ineffizient, siehe paper
 M = cs.Function('M', [q], [M_mat], ['q'], ['M(q)']) # inertia matrix
 
-print('M1(qa) - M(qa):', M1(qa) - M(qa), '\n') # sollte 0 sein
-print('M(qa) - M(qa).T:', M(qa) - M(qa).T, '\n') # sollte 0 sein
+# print('M1(qa) - M(qa):', M1(qa) - M(qa), '\n') # sollte 0 sein
+# print('M(qa) - M(qa).T:', M(qa) - M(qa).T, '\n') # sollte 0 sein
 
 C_rnea_wog = robot_parser.get_coriolis_rnea(root_link, end_link) # rnea algorithm!! (man erhält nur einen nx1 vektor d. h. C(q, q_p) * q_p)
 C_rnea1 = cs.Function('C_rnea1', [q, q_p], [C_rnea_wog(q, q_p) + g(q)], ['q', 'q_p'], ['C_rnea1(q, q_p)']) # = C(q, q_p)q_p + g(q)
 C_rnea = cs.Function('C_rnea', [q, q_p], [inv_dyn_tau(q, q_p, cs.SX(n,1))], ['q', 'q_p'], ['C(q, q_p) = tau(q, q_p, 0)']) # = n(q, q_p) = C(q, q_p)q_p + g(q)
-print('C_rnea1(qa, qpa) - C_rnea(qa, qpa):', C_rnea1(qa, qpa) - C_rnea(qa, qpa)) # sollte 0 sein
+# print('C_rnea1(qa, qpa) - C_rnea(qa, qpa):', C_rnea1(qa, qpa) - C_rnea(qa, qpa)) # sollte 0 sein
 
 C_nq = cs.Function('C_nq', [q, q_p], [C_rnea(q, q_p)], ['q', 'q_p'], ['n(q, q_p) = C(q, q_p)q_p+g(q)']) # coriolis matrix
 
@@ -119,20 +119,18 @@ quat_e = cs.Function('quat_e', [q], [cs.vertcat(quat_q4123(q)[3], quat_q4123(q)[
 # solve Ax = b with
 # A = M(x1), b = u-C(x)*x2-g(x1)
 # Achtung: C(q,q_p)*q_p + g(q) = C_rnea(q, q_p) = C_nq(q, q_p)
-q_pp_crba = cs.solve( M(q), tau - C_nq(q,q_p)) # = d^2/dt^2 q, ineffizient, vgl. robot_parser.get_forward_dynamics_crba
+q_pp_sol_SX = cs.solve( M(q), tau - C_nq(q,q_p)) # = d^2/dt^2 q, ineffizient, vgl. robot_parser.get_forward_dynamics_crba
 q_pp_aba_fun = robot_parser.get_forward_dynamics_aba(root_link, end_link, gravity) # = d^2/dt^2 q über aba berechnet
 
-# q_pp_alg = q_pp_crba
-q_pp_alg = q_pp_aba_fun(q, q_p, tau)
-sys_fun_qpp = cs.Function('sys_fun_qpp', [q, q_p, tau], [q_pp_alg], ['q', 'q_p', 'tau'], ['q_pp'])
+sys_fun_qpp_aba = cs.Function('sys_fun_qpp_aba', [q, q_p, tau], [q_pp_aba_fun(q, q_p, tau)], ['q', 'q_p', 'tau'], ['q_pp'])
+sys_fun_qpp_sol = cs.Function('sys_fun_qpp_sol', [q, q_p, tau], [q_pp_sol_SX], ['q', 'q_p', 'tau'], ['q_pp'])
 
-#sys_fun_x = cs.Function('sys_fun_x', [x, u], [cs.vertcat(q_p, sys_fun_qpp(q, q_p, u))], ['x', 'u'], ['d/dt x = f(x, u)'])
-sys_fun_x = cs.Function('sys_fun_x', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u)'])
+sys_fun_x_aba = cs.Function('sys_fun_x_aba', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp_aba(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u) (aba)'])
+sys_fun_x_sol = cs.Function('sys_fun_x_sol', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp_sol(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u) (sol)'])
 
+# q_pp_tst = sys_fun_qpp_aba([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
 
-q_pp_tst = sys_fun_qpp([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
-
-tau = inv_dyn([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
+# tau = inv_dyn([0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.3, 0.3, 0.3, 0., 0.3, 0.7, 0.5], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
 
 ## Update: Es kam zu großen Problemen, wenn SX(00) in Casadi Funktionen vorkamen. Dann waren die Reihenfolge der
 ## Spalten und Zeilen völlig durcheinander. Deshalb habe ich die Funktion SX00_to_SX0(J_fun, q, q_p=None), die alle
@@ -158,8 +156,11 @@ quat_e.save('./s_functions/s_functions_7dof/quat_endeffector_py.casadi')
 J.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_py.casadi')
 J_p.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_p_py.casadi')
 
-sys_fun_qpp.save('./s_functions/s_functions_7dof/sys_fun_qpp_py.casadi')
-sys_fun_x.save('./s_functions/s_functions_7dof/sys_fun_x_py.casadi')
+sys_fun_qpp_aba.save('./s_functions/s_functions_7dof/sys_fun_qpp_aba_py.casadi')
+sys_fun_qpp_sol.save('./s_functions/s_functions_7dof/sys_fun_qpp_sol_py.casadi')
+sys_fun_x_aba.save('./s_functions/s_functions_7dof/sys_fun_x_aba_py.casadi')
+sys_fun_x_sol.save('./s_functions/s_functions_7dof/sys_fun_x_sol_py.casadi')
+
 inv_dyn_tau.save('./s_functions/s_functions_7dof/compute_tau_py.casadi')
 robot_model_bus_fun.save('./s_functions/s_functions_7dof/robot_model_bus_fun_py.casadi')
 
