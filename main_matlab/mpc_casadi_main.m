@@ -45,7 +45,7 @@ param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC6;
+param_casadi_fun_struct = param_casadi_fun_name.MPC1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -282,8 +282,8 @@ eval(mpc_settings_struct_name+"=param_MPC;"); % set new struct name
 save(""+mpc_settings_path+mpc_settings_struct_name+'.mat', mpc_settings_struct_name);
 
 % save old data %TODO: Struct speichern
-q_0_old = q_0;
-q_0_p_old = q_0_p;
+q_0_old = q_0_init;
+q_0_p_old = q_0_p_init;
 xe0_old = xe0;
 xeT_old = xeT;
 T_sim_old = T_sim;
@@ -296,7 +296,7 @@ omega_traj_sin_poly_old = omega_traj_sin_poly;
 phi_traj_sin_poly_old   = phi_traj_sin_poly  ;
 T_switch_old = T_switch;
 T_horizon_max_old = T_horizon_max;
-overwrite_offline_traj = true;
+
 %N_sum_old = -1;
 
 save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
@@ -304,6 +304,23 @@ save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
      'Ta_old', 'T_traj_poly_old', ...
      'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
      'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old', 'overwrite_offline_traj');
+
+% compare mexa bytes with old version:
+sfun_mex_path = [s_fun_path, s_fun_name(1:end-2), '_', casadi_fun_c_header_str(1:end-2), '.mexa64'];
+s = dir(sfun_mex_path);
+file_size_bytes = s.bytes;
+
+mpc_byteslen_path = [s_fun_path, casadi_func_name, '_bytes.mat'];
+try
+    load(mpc_byteslen_path)
+catch
+    file_size_bytes_old = -1;
+    save(mpc_byteslen_path, 'file_size_bytes_old');
+end
+
+if(file_size_bytes ~= file_size_bytes_old)
+    overwrite_offline_traj = true;
+end
 
 %% COMPILE matlab s_function (can be used as normal function in matlab)
 if(compile_matlab_sfunction)
