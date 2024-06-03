@@ -21,7 +21,7 @@ param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 6) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MPC='MPC6';
-m = 6;
+%m = 6;
 %param_weight.(MPC).Q_y        = 1e5*diag([1 1 1]);  % d_kpn
 param_weight.(MPC).Q_y        = diag([1e3*ones(3,1); 1e3*ones(3,1)]);  % d_kpn
 

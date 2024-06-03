@@ -1,7 +1,25 @@
 %% PARAM ROBOT FR3
 param_robot = struct;
 
-param_robot.n_DOF = 7; % DOF
+param_robot.n_DOF = 6; % DOF
+% TODO after nDOF change:
+% Matlab:
+% 1. unfix or fix joints in fr3.urdf
+% 2. generate and recompile python Pincchio 3xx casadi functions,
+%    adapt q_0 for that in py files.
+% Simulink:
+% 3. Controller: comment in or uncomment nullspace control in CT Controller Subsystem
+% 4. Debug Subsystem: comment in or comment out code in "manipulability and collinearity" matlab function
+% 5. Debug Subsystem: update bus selector block
+
+if(param_robot.n_DOF == 7)
+    param_robot.n_indices = [1:7]; % 7 DOF
+elseif(param_robot.n_DOF == 6)
+    param_robot.n_indices = [1:2, 4:7]; % 6 DOF, joint indices that are used
+else
+    error('n_indices not correct defined for n = %d', param_robot.n_DOF);
+end
+
 param_robot.m_t   = 3; % Translational task space
 param_robot.m_r   = 3; % Rotational task space
 param_robot.m     = param_robot.m_t + param_robot.m_r; % Task space dimension
@@ -16,16 +34,16 @@ param_robot.g_z = param_robot.g(3);
 %% Robot gravity
 param_robot.g_vis=param_robot.g;
 
-param_robot.q_limit_upper = q_max;
-param_robot.q_limit_lower = q_min;
+param_robot.q_limit_upper = q_max(param_robot.n_indices);
+param_robot.q_limit_lower = q_min(param_robot.n_indices);
 
-param_robot.q_p_limit_upper = q_dot_max;
-param_robot.q_p_limit_lower = q_dot_min;
+param_robot.q_p_limit_upper = q_dot_max(param_robot.n_indices);
+param_robot.q_p_limit_lower = q_dot_min(param_robot.n_indices);
 
 param_robot.q_n = (q_max + q_min) / 2;
 
-param_robot.torque_limit_lower = tau_min;
-param_robot.torque_limit_upper = tau_max;
+param_robot.torque_limit_lower = tau_min(param_robot.n_indices);
+param_robot.torque_limit_upper = tau_max(param_robot.n_indices);
 
 % Inertial System
 param_robot.p_0 = [0; 0; 0]; % m

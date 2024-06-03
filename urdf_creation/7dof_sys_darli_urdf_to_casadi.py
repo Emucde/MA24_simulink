@@ -91,7 +91,8 @@ H = cs.Function('H', [q], [cs.vertcat(cs.horzcat(R_e_SX, p_e_SX), cs.horzcat(0, 
 quat_q4123_SX = casadi_model.body(end_link).quaternion
 quat_e = cs.Function('quat_e', [q], [cs.vertcat(quat_q4123_SX[3], quat_q4123_SX[0:3])], ['q'], ['quat_e(q)']) # order is quat_e(q) = [q1, q2, q3, q4]
 
-q_0 = [0, 0, np.pi/4, -np.pi/2, 0, np.pi/2, 0]
+# q_0 = [0, 0, np.pi/4, -np.pi/2, 0, np.pi/2, 0] # 7 DOF
+q_0 = [0, 0, -np.pi/2, 0, np.pi/2, 0] # joint q3 fixed at pi/4
 
 com_position = casadi_model.com().position
 com_velocity = casadi_model.com().velocity

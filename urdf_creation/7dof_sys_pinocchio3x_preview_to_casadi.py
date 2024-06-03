@@ -29,7 +29,8 @@ urdf_path = os.path.join(os.path.dirname(__file__), 'fr3.urdf')
 
 mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files')
 
-q_0 = [0, 0, np.pi/4, -np.pi/2, 0, np.pi/2, 0]
+# q_0 = [0, 0, np.pi/4, -np.pi/2, 0, np.pi/2, 0] # 7 DOF
+q_0 = [0, 0, -np.pi/2, 0, np.pi/2, 0] # joint q3 fixed at pi/4
 robot = pin.robot_wrapper.RobotWrapper.BuildFromURDF(str(urdf_path))
 pin_model = robot.model
 

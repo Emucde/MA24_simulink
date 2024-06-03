@@ -109,9 +109,9 @@ ct_ctrl_param.W_E = 1e0 * eye(6); %ct_ctrl_param.w_bar_N;
 ct_ctrl_param.eps  = 1e-1;
 
 % nullspace for CT controller
-ct_ctrl_param.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;
-ct_ctrl_param.K_n = 1e-2*eye(n);
-ct_ctrl_param.D_n = sqrt(4*ct_ctrl_param.K_n) + 1 * eye(n);
+%ct_ctrl_param.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;
+%ct_ctrl_param.K_n = 1e-2*eye(n);
+%ct_ctrl_param.D_n = sqrt(4*ct_ctrl_param.K_n) + 1 * eye(n);
 
 %ct_ctrl_param.K_n = 64*eye(n);
 %ct_ctrl_param.D_n = 16*eye(n);
@@ -133,14 +133,23 @@ param_traj_sin_poly.phi   = 0; % in rad
 
 %% Calculate target positions
 
-q_0 = [0; 0; pi/4; -pi/2; 0*pi/4; pi/2; 0];
-%q_0 = [0; -pi/4; 0; -3*pi/4; pi/4; pi/2; pi/4];
-%q_0 = [-1.081, -1.035, 1.231, -1.778, 0.967, 1.394, -0.652]';
-q_0_p = zeros(n, 1);
-q_0_pp = zeros(n, 1);
-%q_0_pp = sys_fun_qpp_py(q_0, q_0_p, zeros(7,1)); % wg gravitation nicht 0
+n_indices = param_robot.n_indices;
+n_indices_fixed = setdiff(1:n, n_indices);
+disp(['Fixed joint: ', num2str(n_indices_fixed'), ', nDOF = ', num2str(n), ', see param_robot_init.m']);
 
-H_0_init = hom_transform_endeffector(q_0, param_robot); % singular pose
+q_0_init = [0; 0; pi/4; -pi/2; 0*pi/4; pi/2; 0];
+% q_0 = [0; -pi/4; 0; -3*pi/4; pi/4; pi/2; pi/4];
+% q_0 = [-1.081, -1.035, 1.231, -1.778, 0.967, 1.394, -0.652]';
+q_0_p_init = zeros(7, 1);
+q_0_pp_init = zeros(7, 1);
+
+% 6 DOF Case
+q_0 = q_0_init(n_indices);
+q_0_p = q_0_p_init(n_indices);
+q_0_pp = q_0_pp_init(n_indices);
+
+H_0_init = hom_transform_endeffector(q_0_init, param_robot);
+
 R_init = H_0_init(1:3, 1:3);
 quat_init = rotation2quaternion(R_init);
 xe0 = [H_0_init(1:3,4); quat_init]; % xe0 = [x,y,z,q1,q2,q3,q4]
@@ -219,8 +228,12 @@ param_init_pose = struct;
 param_init_pose.T_start = T_sim/2;
 param_init_pose.xe0 = xe0;
 param_init_pose.xeT = xeT;
-param_init_pose.q_0 = q_0;
-param_init_pose.q_0_p = q_0_p;
+param_init_pose.q_0_init = q_0_init;       % 7DOF q_0
+param_init_pose.q_0_p_init = q_0_p_init;   % 7DOF q_0
+param_init_pose.q_0_pp_init = q_0_pp_init; % 7DOF q_0
+param_init_pose.q_0 = q_0;       % nDOF q_0
+param_init_pose.q_0_p = q_0_p;   % nDOF q_0_p
+param_init_pose.q_0_pp = q_0_pp; % nDOF q_0_pp
 param_init_pose.R_init = R_init;
 param_init_pose.R_target = R_target;
 param_init_pose.rot_alpha_scale = rot_alpha_scale;
@@ -269,7 +282,7 @@ t = 0 : param_global.Ta : T_sim + T_horizon_max;
 
 try
 
-if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
+if(any(q_0_init ~= q_0_old) || ...
         any(xe0 ~= xe0_old) || any(xeT ~= xeT_old) || ...
         lamda_alpha ~= lamda_alpha_old || lamda_xyz ~= lamda_xyz_old || ...
         T_sim ~= T_sim_old || ...
@@ -444,8 +457,8 @@ if(any(q_0 ~= q_0_old) || any(q_0_p ~= q_0_p_old) || ...
     disp(['parameter.m: Execution Time for Init guess Calculation: ', sprintf('%f', toc), 's']);
     
     % save old data
-    q_0_old                 = q_0;
-    q_0_p_old               = q_0_p;
+    q_0_old                 = q_0_init;
+    q_0_p_old               = q_0_p_init;
     xe0_old                 = xe0;
     xeT_old                 = xeT;
     T_sim_old               = T_sim;
