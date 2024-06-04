@@ -27,6 +27,7 @@ overwrite_offline_traj_forced = false;
 
 %closeAllSimulinkModels('./MPC_shared_subsystems')
 %closeAllSimulinkModels('.')
+close_system('./main_simulink/controller_ref_subsys.slx')
 
 parameter_str = "parameters_7dof";
 s_fun_path = 's_functions/s_functions_7dof';
@@ -313,7 +314,7 @@ if(any(q_0_init ~= q_0_old) || ...
     
     for i=1:traj_select.traj_amount
         tic;
-        
+        % TODO: Create function for that!!!!!
         param_trajectory = generate_trajectory(t, i, param_init_pose, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
         disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
     
@@ -474,12 +475,13 @@ if(any(q_0_init ~= q_0_old) || ...
     T_horizon_max_old       = T_horizon_max;
     N_sum_old               = N_sum;
     Ts_sum_old              = Ts_sum;
+    overwrite_offline_traj  = false;
 
     save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
          'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
          'Ta_old', 'T_traj_poly_old', ...
          'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
-         'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old');
+         'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old', 'overwrite_offline_traj');
 
     init_MPC_weights; % why necessary?
 else

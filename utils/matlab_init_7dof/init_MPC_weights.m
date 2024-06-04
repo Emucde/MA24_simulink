@@ -6,9 +6,9 @@ u_max = [param_robot.torque_limit_upper];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 1) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MPC='MPC1';
-param_weight.(MPC).Q_y      = 1e5*diag(ones(m,1));  % d_kpn
-param_weight.(MPC).Q_yN     = 1e5*diag(ones(m,1));  % D_N
-param_weight.(MPC).R_q_pp   = 1e-5*diag(ones(n,1));  % c_kpn
+param_weight.(MPC).Q_y      = 1e3*diag(ones(m,1));  % d_kpn
+param_weight.(MPC).Q_yN     = 1e3*diag(ones(m,1));  % D_N
+param_weight.(MPC).R_q_pp   = 1e-10*diag(ones(n,1));  % c_kpn
 
 %param_weight.(MPC).x_min    = x_min; 
 %param_weight.(MPC).x_max    = x_max; 

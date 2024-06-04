@@ -45,7 +45,7 @@ param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC6;
+param_casadi_fun_struct = param_casadi_fun_name.MPC1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -105,8 +105,7 @@ if(traj_not_exist_flag || T_horizon_MPC > T_horizon_max_old)
     
     for i=1:traj_select.traj_amount % defined in parameters_xdof, x = 2, 7
         tic;
-        
-        param_trajectory = generate_trajectory(t, i, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
+        param_trajectory = generate_trajectory(t, i, param_init_pose, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
         disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
     
         param_traj_data.t(       :, :   ) = param_trajectory.t;
