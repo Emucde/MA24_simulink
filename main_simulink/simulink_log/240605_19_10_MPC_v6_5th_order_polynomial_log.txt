@@ -1,0 +1,12 @@
+Fixed joint: 3, nDOF = 6, see param_robot_init.m
+
+   | Eigenvalues CT Ctrl                 | 
+λ+ | -500  -500  -500  -500  -500  -500  | 0  0  0  0  0  0  
+λ- | -500  -500  -500  -500  -500  -500  | 0  0  0  0  0  0  
+Loading file 's_functions/s_functions_7dof/MPC1.casadi'...success
+Locating function 'MPC1'...success
+Loading file 's_functions/s_functions_7dof/MPC6.casadi'...success
+Error: Error while obtaining sizes from MEX S-function 's_function_nlpsol_MPC6' in 'sim_discrete_7dof/Simulation models/Controller/MPC6 offline controller nlpsolve (qrqp, nlpsol_sfun)/S-Function'.
+Caused by:
+    Failed to locate function in loaded file.
+Locating function 'MPC6'...

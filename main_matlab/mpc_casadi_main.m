@@ -45,7 +45,7 @@ param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC1;
+param_casadi_fun_struct = param_casadi_fun_name.MPC6;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -61,6 +61,8 @@ MPC_solver       = param_casadi_fun_struct.solver;
 MPC_version      = param_casadi_fun_struct.version;
 compile_mode     = param_casadi_fun_struct.compile_mode;
 int_method       = param_casadi_fun_struct.int_method;
+
+disp(['Selected: ', casadi_func_name])
 
 % checks
 if mod(Ts_MPC, param_global.Ta) ~= 0

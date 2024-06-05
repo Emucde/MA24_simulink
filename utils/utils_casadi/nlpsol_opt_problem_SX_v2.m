@@ -61,7 +61,7 @@ if(strcmp(MPC_solver, 'qrqp'))
     
     opts.print_header = false; % Disable printing of solver header
     opts.print_iteration = false; % Disable printing of solver iterations
-    opts.print_time = false; % Disable printing of solver time
+    opts.print_time = true; % Disable printing of solver time
     opts.print_status = false;
     opts.error_on_fail = false;
     opts.hessian_approximation = 'exact';
@@ -69,9 +69,11 @@ if(strcmp(MPC_solver, 'qrqp'))
     % opts.elastic_mode = true;
     % opts.regularity_check = false;
     opts.show_eval_warnings = false;
-    % opts.max_iter = 1000;
+
     opts.tol_du=1e-6;
     opts.tol_pr=1e-6;
+
+    %opts.max_iter = 1500;
 
     solver = nlpsol('solver', 'sqpmethod', prob, opts);
 
@@ -127,6 +129,8 @@ elseif(strcmp(MPC_solver, 'ipopt'))
     opts.show_eval_warnings = false;
     opts.error_on_fail = false;
     opts.print_time = 0;
+
+    opts.fast_step_computation = 'yes';
     %opts.jit = true;
     %opts.compiler = 'shell';
     %opts.jit_options.flags = {'-O3'};
@@ -201,7 +205,6 @@ input_vars_MX = horzcat(merge_cell_arrays({input_vars_MX{1:input_parameter_len}}
 
 %% Define f_opt and calculate final initial guess values
 f_opt = Function(casadi_func_name, input_vars_MX, output_vars_MX);
-% 
 
 %init_MPC_weights;
 param_weight_init = param_weight.(casadi_func_name);
@@ -216,7 +219,8 @@ u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
 x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
 %z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z)), size(z)));
 %z_d_init_guess_0; % vs z_full?
-
+disp(solver.stats())
+df
 % set init guess
 init_guess = full(xx_full_opt_sol);
 
