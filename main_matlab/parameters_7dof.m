@@ -27,7 +27,6 @@ overwrite_offline_traj_forced = false;
 
 %closeAllSimulinkModels('./MPC_shared_subsystems')
 %closeAllSimulinkModels('.')
-close_system('./main_simulink/controller_ref_subsys.slx')
 
 parameter_str = "parameters_7dof";
 s_fun_path = 's_functions/s_functions_7dof';
@@ -58,7 +57,28 @@ if( ~contains([license('inuse').feature], 'simulink') && open_simulink_on_start 
     open_system([simulink_main_model_name '.slx'])
     fprintf([' finished! (Loading time: ' num2str(toc) ' s)\n']);
 end
+% get_param(blk_name, 'ObjectParameters');
+if(contains([license('inuse').feature], 'simulink'))
+    blk_name = [simulink_main_model_name, '/trajectory combo box'];
+    combo_states = get_param(blk_name, 'States');
+    combo_states_name = {combo_states.Label};
+    current_value = str2double(get_param(blk_name, 'Value'));
+    idx = find(current_value == [combo_states.Value]);
+    selected_box_label = combo_states_name{idx};
+    split_label = strsplit(selected_box_label, ' ');
+    fin_label_traj = strjoin([split_label(2:end)], '_');
 
+    blk_name = [simulink_main_model_name, '/controller combo box'];
+    combo_states = get_param(blk_name, 'States');
+    combo_states_name = {combo_states.Label};
+    current_value = str2double(get_param(blk_name, 'Value'));
+    idx = find(current_value == [combo_states.Value]);
+    selected_box_label = combo_states_name{idx};
+    split_label = strsplit(selected_box_label, ' ');
+    fin_label_ctrl = strjoin(split_label, '_');
+
+    sldiagviewer.diary(['./main_simulink/simulink_log/', datestr(now, 'yymmdd_HH_MM'), '_', fin_label_ctrl, '_', fin_label_traj, '_log.txt']); % enable logger for simulink
+end
 %% Other init scripts
 T_sim = 10; % = param_vis.T (see init_visual.m)
 param_global.Ta = 1e-3;
