@@ -1,7 +1,10 @@
 % Open the file for reading
 %fid = fopen(getlatestfile('./main_simulink/simulink_log'), 'r');
-fid = fopen('240604_20_07_MPC_v3_5th_order_polynomial_log.txt', 'r');
 %fid = fopen('240605_18_08_MPC_v1_5th_order_polynomial_log.txt', 'r');
+%fid = fopen('240604_20_07_MPC_v3_5th_order_polynomial_log.txt', 'r');
+
+%fid = fopen('240606_12_29_MPC_v1_5th_order_polynomial_log.txt', 'r');
+fid = fopen('240606_12_30_MPC_v3_5th_order_polynomial_log.txt', 'r');
 
 file_contents_orig = fscanf(fid, '%c');
 
@@ -285,8 +288,25 @@ plot(t_log(2:end), n_total);
 title([data_init{i}, ': n_eval/(sampling step)'], 'Interpreter', 'none');
 xlabel('Sim time t (s)');
 
+% total_t_proc = data_log.nlp_fg.t_proc(end) + data_log.nlp_grad.t_proc(end) + ...
+%                data_log.nlp_hess_l.t_proc(end) + data_log.nlp_jac_fg.t_proc(end) + ...
+%                sum(data_log.QP.t_proc) + sum(data_log.linesearch.t_proc);
+% ist fast dasselbe wie
+total_t_proc = sum(data_log.total.t_proc);
 
+% total_t_wall = data_log.nlp_fg.t_wall(end) + data_log.nlp_grad.t_wall(end) + ...
+%                data_log.nlp_hess_l.t_wall(end) + data_log.nlp_jac_fg.t_wall(end)+ ...
+%                sum(data_log.QP.t_wall) + sum(data_log.linesearch.t_wall);
+% ist fast dasselbe wie
+total_t_wall = sum(data_log.total.t_wall);
+%https://groups.google.com/g/casadi-users/c/dMSGV8KII30
 
+fprintf(['Legend:\n"wall time": actual physical time\n"t_proc": ' ...
+    'time measured by number of clock cycles and\n' ...
+    '          the number of clock cycles per second for your system\n\n']);
+disp(['total calc time t_proc: ', num2str(total_t_proc), ' s']);
+disp(['total calc time t_wall: ', num2str(total_t_wall), ' s']);
+fprintf("\n%s", err_data);
 
 function vec_out = intp_data(vec_in)
     N = length(vec_in)-1;

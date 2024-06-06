@@ -77,7 +77,11 @@ if(contains([license('inuse').feature], 'simulink'))
     split_label = strsplit(selected_box_label, ' ');
     fin_label_ctrl = strjoin(split_label, '_');
 
-    sldiagviewer.diary(['./main_simulink/simulink_log/', datestr(now, 'yymmdd_HH_MM'), '_', fin_label_ctrl, '_', fin_label_traj, '_log.txt']); % enable logger for simulink
+    % clear diagnostic window from simulink
+    save_system(simulink_main_model_name)
+    sldiagviewer.diary('off'); % wichtig, sonst loggt er auch in die vorherigen files
+
+    sldiagviewer.diary(['./main_simulink/simulink_log/', char(datetime('now', 'Format', 'yyMMdd_HH_mm')), '_', fin_label_ctrl, '_', fin_label_traj, '_log.txt']); % enable logger for simulink
 end
 %% Other init scripts
 T_sim = 10; % = param_vis.T (see init_visual.m)
