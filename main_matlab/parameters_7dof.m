@@ -28,6 +28,8 @@ overwrite_offline_traj_forced = false;
 %closeAllSimulinkModels('./MPC_shared_subsystems')
 %closeAllSimulinkModels('.')
 
+close_system('./main_simulink/controller_ref_subsys');
+
 parameter_str = "parameters_7dof";
 s_fun_path = 's_functions/s_functions_7dof';
 
@@ -267,6 +269,8 @@ param_init_pose.rot_ax = rot_ax;
 param_init_pose.Phi_init = rotm2rpy(R_init);
 param_init_pose.Phi_target = rotm2rpy(R_target); %rotm2rpy(quaternion2rotation(xeT(4:7)));
 param_init_pose.delta_Phi = param_init_pose.Phi_target - param_init_pose.Phi_init;
+param_init_pose.alpha0 = 0;
+param_init_pose.alphaT = 1;
 
 %% GENERATE OFFLINE TRAJECTORY
 
@@ -335,6 +339,10 @@ if(any(q_0_init ~= q_0_old) || ...
     param_traj_data.q_d_pp    = zeros(4, N_traj,         traj_select.traj_amount);
     param_traj_data.omega_d   = zeros(3, N_traj,         traj_select.traj_amount);
     param_traj_data.omega_d_p = zeros(3, N_traj,         traj_select.traj_amount);
+    param_traj_data.alpha_d   = zeros(1, N_traj,         traj_select.traj_amount);
+    param_traj_data.alpha_d_p = zeros(1, N_traj,         traj_select.traj_amount);
+    param_traj_data.alpha_d_pp= zeros(1, N_traj,         traj_select.traj_amount);
+    param_traj_data.rot_ax_d  = zeros(3, N_traj,         traj_select.traj_amount);
     
     for i=1:traj_select.traj_amount
         tic;
@@ -342,19 +350,23 @@ if(any(q_0_init ~= q_0_old) || ...
         param_trajectory = generate_trajectory(t, i, param_init_pose, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
         disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
     
-        param_traj_data.t(        :, :      ) = param_trajectory.t;
-        param_traj_data.p_d(      :, :, i   ) = param_trajectory.p_d;
-        param_traj_data.p_d_p(    :, :, i   ) = param_trajectory.p_d_p;
-        param_traj_data.p_d_pp(   :, :, i   ) = param_trajectory.p_d_pp;
-        param_traj_data.Phi_d(    :, :, i   ) = param_trajectory.Phi_d;
-        param_traj_data.Phi_d_p(  :, :, i   ) = param_trajectory.Phi_d_p;
-        param_traj_data.Phi_d_pp( :, :, i   ) = param_trajectory.Phi_d_pp;
-        param_traj_data.R_d(      :, :, :, i) = param_trajectory.R_d;
-        param_traj_data.q_d(      :, :, i   ) = param_trajectory.q_d;
-        param_traj_data.q_d_p(    :, :, i   ) = param_trajectory.q_d_p;
-        param_traj_data.q_d_pp(   :, :, i   ) = param_trajectory.q_d_pp;
-        param_traj_data.omega_d(  :, :, i   ) = param_trajectory.omega_d;
-        param_traj_data.omega_d_p(:, :, i   ) = param_trajectory.omega_d_p;
+        param_traj_data.t(         :,  :      ) = param_trajectory.t;
+        param_traj_data.p_d(       :,  :, i   ) = param_trajectory.p_d;
+        param_traj_data.p_d_p(     :,  :, i   ) = param_trajectory.p_d_p;
+        param_traj_data.p_d_pp(    :,  :, i   ) = param_trajectory.p_d_pp;
+        param_traj_data.Phi_d(     :,  :, i   ) = param_trajectory.Phi_d;
+        param_traj_data.Phi_d_p(   :,  :, i   ) = param_trajectory.Phi_d_p;
+        param_traj_data.Phi_d_pp(  :,  :, i   ) = param_trajectory.Phi_d_pp;
+        param_traj_data.R_d(       :,  :, :, i) = param_trajectory.R_d;
+        param_traj_data.q_d(       :,  :, i   ) = param_trajectory.q_d;
+        param_traj_data.q_d_p(     :,  :, i   ) = param_trajectory.q_d_p;
+        param_traj_data.q_d_pp(    :,  :, i   ) = param_trajectory.q_d_pp;
+        param_traj_data.omega_d(   :,  :, i   ) = param_trajectory.omega_d;
+        param_traj_data.omega_d_p( :,  :, i   ) = param_trajectory.omega_d_p;
+        param_traj_data.alpha_d(   :,  :, i   ) = param_trajectory.alpha_d;
+        param_traj_data.alpha_d_p( :,  :, i   ) = param_trajectory.alpha_d_p;
+        param_traj_data.alpha_d_pp(:,  :, i   ) = param_trajectory.alpha_d_pp;
+        param_traj_data.rot_ax_d(  :,  :, i   ) = param_trajectory.rot_ax_d;
     end
     
     save(param_MPC_traj_data_mat_file, 'param_traj_data'); % save struct
@@ -414,18 +426,22 @@ if(any(q_0_init ~= q_0_old) || ...
             
         for ii=1:traj_select.traj_amount
             param_trajectory           = struct;
-            param_trajectory.p_d       = param_traj_data.p_d(      :, :, ii   );
-            param_trajectory.p_d_p     = param_traj_data.p_d_p(    :, :, ii   );
-            param_trajectory.p_d_pp    = param_traj_data.p_d_pp(   :, :, ii   );
-            param_trajectory.Phi_d     = param_traj_data.Phi_d(    :, :, ii   );
-            param_trajectory.Phi_d_p   = param_traj_data.Phi_d_p(  :, :, ii   );
-            param_trajectory.Phi_d_pp  = param_traj_data.Phi_d_pp( :, :, ii   );
-            param_trajectory.R_d       = param_traj_data.R_d(      :, :, :, ii);
-            param_trajectory.q_d       = param_traj_data.q_d(      :, :, ii   );
-            param_trajectory.q_d_p     = param_traj_data.q_d_p(    :, :, ii   );
-            param_trajectory.q_d_pp    = param_traj_data.q_d_pp(   :, :, ii   );
-            param_trajectory.omega_d   = param_traj_data.omega_d(  :, :, ii   );
-            param_trajectory.omega_d_p = param_traj_data.omega_d_p(:, :, ii   );
+            param_trajectory.p_d       = param_traj_data.p_d(       :, :, ii   );
+            param_trajectory.p_d_p     = param_traj_data.p_d_p(     :, :, ii   );
+            param_trajectory.p_d_pp    = param_traj_data.p_d_pp(    :, :, ii   );
+            param_trajectory.Phi_d     = param_traj_data.Phi_d(     :, :, ii   );
+            param_trajectory.Phi_d_p   = param_traj_data.Phi_d_p(   :, :, ii   );
+            param_trajectory.Phi_d_pp  = param_traj_data.Phi_d_pp(  :, :, ii   );
+            param_trajectory.R_d       = param_traj_data.R_d(       :, :, :, ii);
+            param_trajectory.q_d       = param_traj_data.q_d(       :, :, ii   );
+            param_trajectory.q_d_p     = param_traj_data.q_d_p(     :, :, ii   );
+            param_trajectory.q_d_pp    = param_traj_data.q_d_pp(    :, :, ii   );
+            param_trajectory.omega_d   = param_traj_data.omega_d(   :, :, ii   );
+            param_trajectory.omega_d_p = param_traj_data.omega_d_p( :, :, ii   );
+            param_trajectory.alpha_d   = param_traj_data.alpha_d(   :, :, ii   );
+            param_trajectory.alpha_d_p = param_traj_data.alpha_d_p( :, :, ii   );
+            param_trajectory.alpha_d_pp= param_traj_data.alpha_d_pp(:, :, ii   );
+            param_trajectory.rot_ax_d  = param_traj_data.rot_ax_d(  :, :, ii   );
 %{
             p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
             p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)

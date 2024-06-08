@@ -29,6 +29,13 @@ function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, alpha_T, R_init, 
     Phi_act_p  = alpha_p*delta_Phi;
     Phi_act_pp = alpha_pp*delta_Phi;
 
+    %xd_prev   = x_k(param_traj_filter.p_d_index);
+    %alpha_prev = xd_prev(4)*rot_alpha_scale;
+    alpha_d = alpha;% - alpha_prev; % relativ gesehen
+    alpha_d_p = alpha_p;
+    alpha_d_pp = alpha_pp;
+    rot_ax_d = rot_ax; % Darf ich nur, da rotax konstant ist!
+
     x_d.p_d       =   xd(1:3);
     x_d.p_d_p     =  dxd(1:3);
     x_d.p_d_pp    = ddxd(1:3);
@@ -41,4 +48,8 @@ function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, alpha_T, R_init, 
     x_d.q_d_pp    = q_d_pp;
     x_d.omega_d   = omega_d;
     x_d.omega_d_p = omega_d_p;
+    x_d.alpha_d   = alpha_d;
+    x_d.alpha_d_p = alpha_d_p;
+    x_d.alpha_d_pp = alpha_d_pp;
+    x_d.rot_ax_d = rot_ax_d;
 end

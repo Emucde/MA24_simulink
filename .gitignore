@@ -7,6 +7,7 @@ slprj
 *.autosave
 *.casadi
 .tmp
+main_simulink/simulink_log/*.txt
 jit*.c
 tmp_casadi_compiler*.o
 tmp_casadi_compiler*.so

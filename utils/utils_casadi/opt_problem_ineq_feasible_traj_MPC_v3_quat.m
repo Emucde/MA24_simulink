@@ -84,6 +84,13 @@ Ht = integrate_casadi(ht_ref, DT, M, int_method);
 hr_ref = Function('h_ref', {zr, alpha_r}, {[zr(5:8); alpha_r]});
 Hr = integrate_casadi(hr_ref, DT, M, int_method);
 
+% Only angles with fixed rotation axis (in each timestep)
+z_theta = SX.sym('z_theta', 2);
+u_theta = SX.sym('u_theta', 1 );
+
+h_theta_ref = Function('h_theta_ref', {z_theta, u_theta}, {[z_theta(2); u_theta]});
+
+
 %% Calculate Initial Guess
 p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
 p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
@@ -170,7 +177,7 @@ alpha_r = SX.sym( 'alpha_r', 4,   N_MPC+1 );
 z = zt;
 alpha = alpha_t;
 
-mpc_opt_var_inputs = {u, x, zt, alpha};
+mpc_opt_var_inputs = {u, x, z, alpha};
 
 u_opt_indices = 1:n;
 
@@ -273,6 +280,7 @@ gr_eps = norm_2( quat_err(2:4) );
 
 g_eps(1, 1) = {gt_eps};
 g_z = g_zt;
+
 g = [g_x, g_z, g_eps]; % merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
 
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));

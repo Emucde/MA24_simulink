@@ -60,8 +60,8 @@ if(strcmp(MPC_solver, 'qrqp'))
     opts.qpsol_options.error_on_fail = false;
     
     opts.print_header = false; % Disable printing of solver header
-    opts.print_iteration = false; % Disable printing of solver iterations
-    opts.print_time = true; % Disable printing of solver time
+    opts.print_iteration = true; % Disable printing of solver iterations
+    opts.print_time = false; % Disable printing of solver time
     opts.print_status = false;
     opts.error_on_fail = false;
     opts.hessian_approximation = 'exact';
@@ -219,8 +219,8 @@ u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
 x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
 %z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z)), size(z)));
 %z_d_init_guess_0; % vs z_full?
-disp(solver.stats())
-df
+%disp(solver.stats())
+
 % set init guess
 init_guess = full(xx_full_opt_sol);
 
