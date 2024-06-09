@@ -110,19 +110,23 @@ if(traj_not_exist_flag || T_horizon_MPC > T_horizon_max_old)
         param_trajectory = generate_trajectory(t, i, param_init_pose, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
         disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
     
-        param_traj_data.t(       :, :   ) = param_trajectory.t;
-        param_traj_data.p_d(     :, :, i) = param_trajectory.p_d;
-        param_traj_data.p_d_p(   :, :, i) = param_trajectory.p_d_p;
-        param_traj_data.p_d_pp(  :, :, i) = param_trajectory.p_d_pp;
-        param_traj_data.Phi_d(   :, :, i) = param_trajectory.Phi_d;
-        param_traj_data.Phi_d_p( :, :, i) = param_trajectory.Phi_d_p;
-        param_traj_data.Phi_d_pp(:, :, i) = param_trajectory.Phi_d_pp;
-        param_traj_data.R_d(     :, :, :, i) = param_trajectory.R_d;
-        param_traj_data.q_d(     :, :, i) = param_trajectory.q_d;
-        param_traj_data.q_d_p(     :, :, i) = param_trajectory.q_d_p;
-        param_traj_data.q_d_pp(    :, :, i) = param_trajectory.q_d_pp;
-        param_traj_data.omega_d( :, :, i) = param_trajectory.omega_d;
-        param_traj_data.omega_d_p(:, :, i) = param_trajectory.omega_d_p;
+        param_traj_data.t(          :, :      ) = param_trajectory.t;
+        param_traj_data.p_d(        :, :, i   ) = param_trajectory.p_d;
+        param_traj_data.p_d_p(      :, :, i   ) = param_trajectory.p_d_p;
+        param_traj_data.p_d_pp(     :, :, i   ) = param_trajectory.p_d_pp;
+        param_traj_data.Phi_d(      :, :, i   ) = param_trajectory.Phi_d;
+        param_traj_data.Phi_d_p(    :, :, i   ) = param_trajectory.Phi_d_p;
+        param_traj_data.Phi_d_pp(   :, :, i   ) = param_trajectory.Phi_d_pp;
+        param_traj_data.R_d(        :, :, :, i) = param_trajectory.R_d;
+        param_traj_data.q_d(        :, :, i   ) = param_trajectory.q_d;
+        param_traj_data.q_d_p(      :, :, i   ) = param_trajectory.q_d_p;
+        param_traj_data.q_d_pp(     :, :, i   ) = param_trajectory.q_d_pp;
+        param_traj_data.omega_d(    :, :, i   ) = param_trajectory.omega_d;
+        param_traj_data.omega_d_p(  :, :, i   ) = param_trajectory.omega_d_p;
+        param_traj_data.alpha_d(    :, :, i   ) = param_trajectory.alpha_d;
+        param_traj_data.alpha_d_p(  :, :, i   ) = param_trajectory.alpha_d_p;
+        param_traj_data.alpha_d_pp( :, :, i   ) = param_trajectory.alpha_d_pp;
+        param_traj_data.rot_ax_d(   :, :, i   ) = param_trajectory.rot_ax_d;
     end
     
     save(param_MPC_traj_data_mat_file, 'param_traj_data'); % save struct
@@ -130,18 +134,22 @@ end
 
 param_trajectory = struct;
 param_trajectory.t         = param_traj_data.t;
-param_trajectory.p_d       = param_traj_data.p_d(      :, :, traj_select_mpc);
-param_trajectory.p_d_p     = param_traj_data.p_d_p(    :, :, traj_select_mpc);
-param_trajectory.p_d_pp    = param_traj_data.p_d_pp(   :, :, traj_select_mpc);
-param_trajectory.Phi_d     = param_traj_data.Phi_d(    :, :, traj_select_mpc);
-param_trajectory.Phi_d_p   = param_traj_data.Phi_d_p(  :, :, traj_select_mpc);
-param_trajectory.Phi_d_pp  = param_traj_data.Phi_d_pp( :, :, traj_select_mpc);
-param_trajectory.R_d       = param_traj_data.R_d(      :, :, :, traj_select_mpc);
-param_trajectory.q_d       = param_traj_data.q_d(      :, :, traj_select_mpc);
-param_trajectory.q_d_p     = param_traj_data.q_d_p(    :, :, traj_select_mpc);
-param_trajectory.q_d_pp    = param_traj_data.q_d_pp(   :, :, traj_select_mpc);
-param_trajectory.omega_d   = param_traj_data.omega_d(  :, :, traj_select_mpc);
-param_trajectory.omega_d_p = param_traj_data.omega_d_p(:, :, traj_select_mpc);
+param_trajectory.p_d       = param_traj_data.p_d(       :, :,    traj_select_mpc);
+param_trajectory.p_d_p     = param_traj_data.p_d_p(     :, :,    traj_select_mpc);
+param_trajectory.p_d_pp    = param_traj_data.p_d_pp(    :, :,    traj_select_mpc);
+param_trajectory.Phi_d     = param_traj_data.Phi_d(     :, :,    traj_select_mpc);
+param_trajectory.Phi_d_p   = param_traj_data.Phi_d_p(   :, :,    traj_select_mpc);
+param_trajectory.Phi_d_pp  = param_traj_data.Phi_d_pp(  :, :,    traj_select_mpc);
+param_trajectory.R_d       = param_traj_data.R_d(       :, :, :, traj_select_mpc);
+param_trajectory.q_d       = param_traj_data.q_d(       :, :,    traj_select_mpc);
+param_trajectory.q_d_p     = param_traj_data.q_d_p(     :, :,    traj_select_mpc);
+param_trajectory.q_d_pp    = param_traj_data.q_d_pp(    :, :,    traj_select_mpc);
+param_trajectory.omega_d   = param_traj_data.omega_d(   :, :,    traj_select_mpc);
+param_trajectory.omega_d_p = param_traj_data.omega_d_p( :, :,    traj_select_mpc);
+param_trajectory.alpha_d   = param_traj_data.alpha_d(   :, :,    traj_select_mpc);
+param_trajectory.alpha_d_p = param_traj_data.alpha_d_p( :, :,    traj_select_mpc);
+param_trajectory.alpha_d_pp= param_traj_data.alpha_d_pp(:, :,    traj_select_mpc);
+param_trajectory.rot_ax_d  = param_traj_data.rot_ax_d(  :, :,    traj_select_mpc);
 
 %% OPT PROBLEM
 %[TODO: oben init]
@@ -310,11 +318,11 @@ catch
     disp('mpc_byteslen.mat does not exist. Creating...')
 end
 
-if(file_size_bytes ~= file_size_bytes_old)
+%if(file_size_bytes ~= file_size_bytes_old)
     overwrite_offline_traj = true;
-else
-    overwrite_offline_traj = false;
-end
+%else
+%    overwrite_offline_traj = false;
+%end
 
 file_size_bytes_old = file_size_bytes;
 save(mpc_byteslen_path, 'file_size_bytes_old');

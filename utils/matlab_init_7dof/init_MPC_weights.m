@@ -6,9 +6,9 @@ u_max = [param_robot.torque_limit_upper];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 1) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MPC='MPC1';
-param_weight.(MPC).Q_y      = 1e3*diag(ones(m,1));  % d_kpn
-param_weight.(MPC).Q_yN     = 1e3*diag(ones(m,1));  % D_N
-param_weight.(MPC).R_q_pp   = 1e-10*diag(ones(n,1));  % c_kpn
+param_weight.(MPC).Q_y      = 1e3*diag([0*ones(3,1); 1e2*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_yN     = 1e5*diag([0*ones(3,1); 1e2*ones(3,1)]);  % D_N
+param_weight.(MPC).R_q_pp   = 1e-5*diag(ones(n,1));  % c_kpn
 
 %param_weight.(MPC).x_min    = x_min; 
 %param_weight.(MPC).x_max    = x_max; 
@@ -27,11 +27,22 @@ param_weight.(MPC).Q_y        = diag([1e3*ones(3,1); 1e3*ones(3,1)]);  % d_kpn
 
 param_weight.(MPC).R_q_pp     = 1e-10*diag(ones(n,1));  % d_kpn
 
-%param_weight.(MPC).Q_y_p_ref  = 100*diag([1 1 1]);
-param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100*ones(3,1)]);
-param_weight.(MPC).Q_y_ref    = param_weight.(MPC).Q_y_p_ref^2/4;
+alpha_var = 1;
+if(alpha_var == 1)
+    param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100]);
+    param_weight.(MPC).Q_y_ref    = param_weight.(MPC).Q_y_p_ref^2/4;
+elseif(alpha_var == 2)
+    param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100*ones(4,1)]);
+    param_weight.(MPC).Q_y_ref    = param_weight.(MPC).Q_y_p_ref^2/4;
+elseif(alpha_var == 3)
+    param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100*ones(3,1)]);
+    param_weight.(MPC).Q_y_ref    = diag([100*ones(3,1); 100*ones(3,1)]);
+else
+    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
+end
 
-param_weight.(MPC).epsilon    = 1e-5;
+param_weight.(MPC).epsilon_t = 1e-5;
+param_weight.(MPC).epsilon_r = inf;
 
 %param_weight.(MPC).x_min    = x_min; 
 %param_weight.(MPC).x_max    = x_max; 

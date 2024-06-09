@@ -84,6 +84,8 @@ if(contains([license('inuse').feature], 'simulink'))
     sldiagviewer.diary('off'); % wichtig, sonst loggt er auch in die vorherigen files
 
     sldiagviewer.diary(['./main_simulink/simulink_log/', char(datetime('now', 'Format', 'yyMMdd_HH_mm')), '_', fin_label_ctrl, '_', fin_label_traj, '_log.txt']); % enable logger for simulink
+    disp('______________________________________________________________________')
+    disp(['Selected controller: ', fin_label_ctrl, ', Selected trajectory: ', fin_label_traj]);
 end
 %% Other init scripts
 T_sim = 10; % = param_vis.T (see init_visual.m)
