@@ -95,8 +95,6 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
                 R_target = temp;
                 [rot_ax, rot_alpha_scale] = find_rotation_axis(R_init, R_target);
                 alphaT = 1-param_init_pose.alphaT;
-                Phi_init = Phi_init + delta_Phi;
-                delta_Phi = -delta_Phi;
                 t_offset = t_offset + T_switch;
                 flag = 1;
             end
@@ -137,8 +135,6 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
                 %[rot_ax, rot_alpha_scale] = find_rotation_axis(R_init, R_target);
                 alphaT = 1-param_init_pose.alphaT;
                 alpha0 = 1-param_init_pose.alpha0;
-                Phi_init = Phi_init + delta_Phi;
-                delta_Phi = -delta_Phi;
                 T_start = T_start_end;
                 flag = 1;
             end
