@@ -1,4 +1,9 @@
-function [rot_ax_o, rot_alpha_scale_o] = find_rotation_axis(R_init, R_target)
+function [rot_ax_o, rot_alpha_scale_o] = find_rotation_axis(R_init, R_target, mode)
+arguments
+    R_init (3,3) double {mustBeReal, mustBeFinite}
+    R_target (3,3) double {mustBeReal, mustBeFinite}
+    mode char {mustBeMember(mode, ['fast_from_rotm', 'slow_from_quat'])} = 'fast_from_rotm'
+end
 %FIND_ROTATION_AXIS Computes the rotation axis and angle between two rotation matrices
 %
 % Inputs:
@@ -35,13 +40,20 @@ function [rot_ax_o, rot_alpha_scale_o] = find_rotation_axis(R_init, R_target)
     %RR = R_init'*R_target; % Im Fall der Nachmulitplikation (drehung um bezugsfestes KOS) korrekt.
     RR = R_target * R_init'; % Im Fall der Vormultiplikation korrekt.
 
-    % Extract the rotation angle from the trace of RR
-    rot_alpha_scale = acos((trace(RR) - 1) / 2);
-    
-    % Compute the rotation axis from the off-diagonal elements of RR
-    rot_ax = [RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)];
-    rot_ax = rot_ax / (2 * sin(rot_alpha_scale));
-    
+    if mode == "fast_from_rotm"
+        % Have the problem that not always wa rotation axis can be found.
+        % Extract the rotation angle from the trace of RR
+        rot_alpha_scale = acos((trace(RR) - 1) / 2);
+        
+        % Compute the rotation axis from the off-diagonal elements of RR
+        rot_ax = [RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)];
+        rot_ax = rot_ax / (2 * sin(rot_alpha_scale));
+    elseif mode == "slow_from_quat"
+        quat = rotation2quaternion(RR);
+        rot_alpha_scale = 2*acos(quat(1));
+        rot_ax = quat(2:4) / sin(rot_alpha_scale/2);
+    end
+        
     % Ensure the rotation axis points in the positive mathematical direction
     if rot_alpha_scale > pi
         rot_alpha_scale_o = 2*pi - rot_alpha_scale;
