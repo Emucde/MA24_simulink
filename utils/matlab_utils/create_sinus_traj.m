@@ -15,16 +15,20 @@ function [x_d] = create_sinus_traj(x_target, x0_target, t, R_init, rot_ax, rot_a
 
     a = (xT - x0)/2; % width of sinus movement
 
-    sin_t = a*sin(omega*t - phi);
-    cos_t = a*cos(omega*t - phi);
+    sin_t = sin(omega*t - phi);
+    cos_t = cos(omega*t - phi);
 
-    x_ref = x0 + (a + sin_t) * s;
-    x_ref_p =    cos_t * omega * s   + (a + sin_t) * s_p;
-    x_ref_pp =  -sin_t * omega^2 * s + cos_t * s_p * omega * 2 + (a + sin_t) * s_pp;
+    a_sin_t = a*sin_t;
+    a_cos_t = a*cos_t;
 
-    alpha    = s;
-    alpha_p  = s_p;
-    alpha_pp = s_pp;
+    x_ref = x0 + (a + a_sin_t) * s;
+    x_ref_p =    a_cos_t * omega * s   + (a + a_sin_t) * s_p;
+    x_ref_pp =  -a_sin_t * omega^2 * s + a_cos_t * s_p * omega * 2 + (a + a_sin_t) * s_pp;
+
+    sin_t_01 = s*(1 + sin_t)/2;
+    alpha    = s*sin_t_01;
+    alpha_p  = s*omega*cos_t/2 + s_p*sin_t_01;
+    alpha_pp = -s*omega^2*sin_t + 2*s_p*omega*cos_t + s_pp*sin_t_01;
 
     skew_ew  = skew(rot_ax);
     R_act    = R_init*(eye(3) + sin(rot_alpha_scale*alpha)*skew_ew + (1-cos(rot_alpha_scale*alpha))*skew_ew^2);
