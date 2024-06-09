@@ -1,11 +1,10 @@
-function S=skew(v)
-  S = zeros(3,3);
+function S = skew(v)
+  % Calculate the skew symmetric matrix from a 3D vector
+  %   v: 3-element vector
+  %   S: 3x3 skew symmetric matrix
 
-  S(1,2) = -v(3);
-  S(1,3) =  v(2);
-  S(2,3) = -v(1);
+  S = [ 0,    -v(3),  v(2); ...
+        v(3),  0,    -v(1); ...
+       -v(2),  v(1),  0];
 
-  S(2,1) =  v(3);
-  S(3,1) = -v(2);
-  S(3,2) =  v(1);
 end
