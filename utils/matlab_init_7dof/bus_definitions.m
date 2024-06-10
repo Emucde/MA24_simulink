@@ -43,6 +43,8 @@ bus_temp_struct.alpha_d    = 0;
 bus_temp_struct.alpha_d_p  = 0;
 bus_temp_struct.alpha_d_pp = 0;
 bus_temp_struct.rot_ax_d   = [0; 0; 0];
+bus_temp_struct.alpha_d_offset = 0;
+bus_temp_struct.q_d_rel = [0; 0; 0; 0];
 
 init_bus_param.init_x_d_bus = bus_temp_struct;
 x_d = eval(Simulink.Bus.createObject(bus_temp_struct).busName);

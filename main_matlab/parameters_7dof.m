@@ -187,8 +187,8 @@ rotq_fun = @(x1, x2) [x1(1:3) + x2(1:3); quat_mult(x1(4:7), x2(4:7))]; % multipl
 %xeT = xe0;
 %xeT = rotq_fun(xe0, [0; 0; -0.5; 1; 0; 0; 0]); % correct addition of quaternions
 %xeT = [xe0(1:3,1); rotation2quaternion(Rz(pi/4)*R_init)]; % correct addition of quaternions
-%R_target = R_init*Rz(pi/4); % Nachmultiplikation: Drehung erfolgt in Bezu auf körperfestes System d. h. hier R_init
-R_target = Rz(pi/4)*R_init; % Vormultiplikation: Drehung erfolgt in Bezug auf Inertialsystem
+R_target = Rz(pi/4)*R_init; % Vormultiplikation: Drehung erfolgt in Bezug auf Inertialsystem (muss so sein!)
+%R_target = Rz(0)*R_init; % Vormultiplikation: Drehung erfolgt in Bezug auf Inertialsystem
 xeT = [xe0(1:3,1) + [0; 0; -0.5]; rotation2quaternion(R_target)]; % correct addition of quaternions
 
 if(start_in_singularity)
@@ -345,7 +345,9 @@ if(any(q_0_init ~= q_0_old) || ...
     param_traj_data.alpha_d_p = zeros(1, N_traj,         traj_select.traj_amount);
     param_traj_data.alpha_d_pp= zeros(1, N_traj,         traj_select.traj_amount);
     param_traj_data.rot_ax_d  = zeros(3, N_traj,         traj_select.traj_amount);
-    
+    param_traj_data.alpha_d_offset = zeros(1, N_traj, traj_select.traj_amount);
+    param_traj_data.q_d_rel = zeros(4, N_traj, traj_select.traj_amount);
+
     for i=1:traj_select.traj_amount
         tic;
         % TODO: Create function for that!!!!!
@@ -369,6 +371,9 @@ if(any(q_0_init ~= q_0_old) || ...
         param_traj_data.alpha_d_p( :,  :, i   ) = param_trajectory.alpha_d_p;
         param_traj_data.alpha_d_pp(:,  :, i   ) = param_trajectory.alpha_d_pp;
         param_traj_data.rot_ax_d(  :,  :, i   ) = param_trajectory.rot_ax_d;
+        param_traj_data.alpha_d_offset(:, :, i) = param_trajectory.alpha_d_offset;
+        param_traj_data.q_d_rel(   :,  :, i   ) = param_trajectory.q_d_rel;
+
     end
     
     save(param_MPC_traj_data_mat_file, 'param_traj_data'); % save struct
@@ -444,6 +449,8 @@ if(any(q_0_init ~= q_0_old) || ...
             param_trajectory.alpha_d_p = param_traj_data.alpha_d_p( :, :, ii   );
             param_trajectory.alpha_d_pp= param_traj_data.alpha_d_pp(:, :, ii   );
             param_trajectory.rot_ax_d  = param_traj_data.rot_ax_d(  :, :, ii   );
+            param_trajectory.alpha_d_offset = param_traj_data.alpha_d_offset(:, :, ii);
+            param_trajectory.q_d_rel = param_traj_data.q_d_rel(   :, :, ii   );
 %{
             p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
             p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)

@@ -1,4 +1,4 @@
-function [x_d] = create_sinus_traj(x_target, x0_target, t, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_sin_poly)
+function [x_d] = create_sinus_traj(x_target, x0_target, t, R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj_sin_poly)
 
     T = param_traj_sin_poly.T;
     omega = param_traj_sin_poly.omega;
@@ -66,4 +66,6 @@ function [x_d] = create_sinus_traj(x_target, x0_target, t, R_init, rot_ax, rot_a
     x_d.alpha_d_p = alpha_d_p;
     x_d.alpha_d_pp = alpha_d_pp;
     x_d.rot_ax_d = rot_ax_d;
+    x_d.alpha_d_offset = alpha_offset;
+    x_d.q_d_rel = rotation2quaternion(R_init);
 end

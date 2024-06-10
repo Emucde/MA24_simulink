@@ -130,12 +130,13 @@ elseif(strcmp(MPC_solver, 'ipopt'))
     opts.error_on_fail = false;
     opts.print_time = 0;
 
-    opts.fast_step_computation = 'yes';
+    all_ipopt_options;
+    opts.ipopt.print_level = 5;
+    opts.ipopt.fast_step_computation = 'yes';
     %opts.jit = true;
     %opts.compiler = 'shell';
-    %opts.jit_options.flags = {'-O3'};
+    %opts.jit_options.flags = {'-O2'};
     %opts.jit_options.verbose = true;
-    all_ipopt_options;
     solver = nlpsol('solver', 'ipopt', prob, opts);
     %solver.print_options();
 else

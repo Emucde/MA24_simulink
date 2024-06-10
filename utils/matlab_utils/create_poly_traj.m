@@ -1,4 +1,6 @@
-function [x_d] = create_poly_traj(x_target, alphaT, x0_target, alpha0, T_start, t, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly)
+function [x_d] = create_poly_traj(x_target, alphaT, x0_target, alpha0, alpha_offset, T_start, t, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly)
+% alpha_offset: Bei mehreren Drehungen setzt man ihn am Ende auf rot_aplha_scale und addiert diesen wert zu
+% alpha_d um alpha absolut zu erhalten. Für die Rotation zieht man alpha_d_offset wieder ab.
 
     T = param_traj_poly.T;
     if(t-T_start > T)
@@ -38,10 +40,20 @@ function [x_d] = create_poly_traj(x_target, alphaT, x0_target, alpha0, T_start, 
 
     %xd_prev   = x_k(param_traj_filter.p_d_index);
     %alpha_prev = xd_prev(4)*rot_alpha_scale;
+
+    % weg1: rotax konstant, bezugsystem R_int für alle Drehungen
     alpha_d = alpha;% - alpha_prev; % relativ gesehen
     alpha_d_p = alpha_p;
     alpha_d_pp = alpha_pp;
     rot_ax_d = rot_ax; % Darf ich nur, da rotax konstant ist!
+
+    % weg2: rotax nur in Abtastschritt konstant aber dazw. nicht, Winkel absolut
+    % wodurch kein Bezugssystem mehr nötig ist. Problem: Alpha bleibt konst, nur rot ax ändert sich
+    % [rot_ax_abs, alpha_abs] = find_rotation_axis(eye(3), R_act, 'slow_from_quat');
+    % alpha_d = alpha_abs;
+    % alpha_d_p = alpha_p;
+    % alpha_d_pp = alpha_pp;
+    % rot_ax_d = rot_ax_abs;
 
     x_d.p_d       = p_d(1:3);
     x_d.p_d_p     = p_d_p(1:3);
@@ -59,4 +71,6 @@ function [x_d] = create_poly_traj(x_target, alphaT, x0_target, alpha0, T_start, 
     x_d.alpha_d_p = alpha_d_p;
     x_d.alpha_d_pp = alpha_d_pp;
     x_d.rot_ax_d = rot_ax_d;
+    x_d.alpha_d_offset = alpha_offset;
+    x_d.q_d_rel = rotation2quaternion(R_init);
 end

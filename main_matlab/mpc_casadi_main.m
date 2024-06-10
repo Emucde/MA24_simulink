@@ -45,7 +45,7 @@ param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC6;
+param_casadi_fun_struct = param_casadi_fun_name.MPC1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -127,6 +127,8 @@ if(traj_not_exist_flag || T_horizon_MPC > T_horizon_max_old)
         param_traj_data.alpha_d_p(  :, :, i   ) = param_trajectory.alpha_d_p;
         param_traj_data.alpha_d_pp( :, :, i   ) = param_trajectory.alpha_d_pp;
         param_traj_data.rot_ax_d(   :, :, i   ) = param_trajectory.rot_ax_d;
+        param_traj_data.alpha_d_offset(:, :, i) = param_trajectory.alpha_d_offset;
+        param_traj_data.q_d_rel(    :, :, i   ) = param_trajectory.q_d_rel;
     end
     
     save(param_MPC_traj_data_mat_file, 'param_traj_data'); % save struct
@@ -150,6 +152,8 @@ param_trajectory.alpha_d   = param_traj_data.alpha_d(   :, :,    traj_select_mpc
 param_trajectory.alpha_d_p = param_traj_data.alpha_d_p( :, :,    traj_select_mpc);
 param_trajectory.alpha_d_pp= param_traj_data.alpha_d_pp(:, :,    traj_select_mpc);
 param_trajectory.rot_ax_d  = param_traj_data.rot_ax_d(  :, :,    traj_select_mpc);
+param_trajectory.alpha_d_offset = param_traj_data.alpha_d_offset(:, :, traj_select_mpc);
+param_trajectory.q_d_rel   = param_traj_data.q_d_rel(   :, :,    traj_select_mpc);
 
 %% OPT PROBLEM
 %[TODO: oben init]

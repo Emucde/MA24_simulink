@@ -30,6 +30,10 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
     alpha_d_p = zeros(1, N);
     alpha_d_pp= zeros(1, N);
     rot_ax_d  = zeros(3, N);
+    alpha_d_offset = zeros(1, N);
+    q_d_rel = zeros(4, N);
+    
+   
 
     flag=0;
 
@@ -54,6 +58,8 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
             alpha_d_p(:,i) = x_d.alpha_d_p;
             alpha_d_pp(:,i)= x_d.alpha_d_pp;
             rot_ax_d(:,i)  = x_d.rot_ax_d;
+            alpha_d_offset(:,i) = x_d.alpha_d_offset;
+            q_d_rel(:,i) = x_d.q_d_rel;
             if(t(i) >= T_start && flag == 0)
                 temp = xe0;
                 xe0 = xeT;
@@ -64,9 +70,10 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
     elseif(modus == 2) % 5th order differential filter
         x_k = [xe0(1);0;0;0;0;0; xe0(2);0;0;0;0;0; xe0(3);0;0;0;0;0; 0;0;0;0;0;0];
         t_offset = 0;
+        alpha_offset = 0;
         T_switch = param_traj_allg.T_switch;
         for i=1:N
-            [x_d, x_kp1] = create_diff_filter_traj(xeT, x_k, alphaT, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_filter);
+            [x_d, x_kp1] = create_diff_filter_traj(xeT, x_k, alphaT, R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj_filter);
             p_d(:,i)       = x_d.p_d;
             p_d_p(:,i)     = x_d.p_d_p;
             p_d_pp(:,i)    = x_d.p_d_pp;
@@ -83,6 +90,8 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
             alpha_d_p(:,i) = x_d.alpha_d_p;
             alpha_d_pp(:,i)= x_d.alpha_d_pp;
             rot_ax_d(:,i)  = x_d.rot_ax_d;
+            alpha_d_offset(:,i) = x_d.alpha_d_offset;
+            q_d_rel(:,i) = x_d.q_d_rel;
 
             x_k = x_kp1;
 
@@ -102,8 +111,9 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
     elseif(modus == 3) % 5th order polynomial
         T_start_end = T_start;
         T_start = 0;
+        alpha_offset = 0;
         for i=1:N
-            [x_d] = create_poly_traj(xeT, alphaT, xe0, alpha0, T_start, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly);
+            [x_d] = create_poly_traj(xeT, alphaT, xe0, alpha0, alpha_offset, T_start, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly);
             p_d(:,i)       = x_d.p_d;
             p_d_p(:,i)     = x_d.p_d_p;
             p_d_pp(:,i)    = x_d.p_d_pp;
@@ -120,8 +130,10 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
             alpha_d_p(:,i) = x_d.alpha_d_p;
             alpha_d_pp(:,i)= x_d.alpha_d_pp;
             rot_ax_d(:,i)  = x_d.rot_ax_d;
+            alpha_d_offset(:,i) = x_d.alpha_d_offset;
+            q_d_rel(:,i) = x_d.q_d_rel;
 
-            if(i==5000)
+            if(i==1000)
                 disp('jo')
             end
 
@@ -129,10 +141,6 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
                 temp = xe0;
                 xe0 = xeT;
                 xeT = temp;
-                %temp = R_init;
-                %R_init = R_target;
-                %R_target = temp;
-                %[rot_ax, rot_alpha_scale] = find_rotation_axis(R_init, R_target);
                 alphaT = 1-param_init_pose.alphaT;
                 alpha0 = 1-param_init_pose.alpha0;
                 T_start = T_start_end;
@@ -140,8 +148,9 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
             end
         end
     elseif(modus == 4) % smooth sinus [ Orientation: TODO ]
+        alpha_offset = 0;
         for i=1:N
-            x_d = create_sinus_traj(xeT, xe0, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_sin_poly);
+            x_d = create_sinus_traj(xeT, xe0, t(i), R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj_sin_poly);
             p_d(:,i)       = x_d.p_d;
             p_d_p(:,i)     = x_d.p_d_p;
             p_d_pp(:,i)    = x_d.p_d_pp;
@@ -158,21 +167,12 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
             alpha_d_p(:,i) = x_d.alpha_d_p;
             alpha_d_pp(:,i)= x_d.alpha_d_pp;
             rot_ax_d(:,i)  = x_d.rot_ax_d;
+            alpha_d_offset(:,i) = x_d.alpha_d_offset;
+            q_d_rel(:,i) = x_d.q_d_rel;
         end
     else
         error('modus have to be 1 (stabilize equilibrium), 2 (5th order differential filter), 3 (5th order polynomial) or 4 (smooth sinus)');
     end
-
-    % result = arrayfun(@(time) struct2cell(create_sinus_traj(xeT, xe0, time, param_traj_sin_poly)), t, 'UniformOutput', false);
-    % result = cell2mat([result{:}]);
-    % param_trajectory = struct;
-    % param_trajectory.t         = result(1, :);
-    % param_trajectory.p_d       = result( 0 + (1:3), :);
-    % param_trajectory.p_d_p     = result( 3 + (1:3), :);
-    % param_trajectory.p_d_pp    = result( 6 + (1:3), :);
-    % param_trajectory.q_d       = result( 9 + (1:4), :);
-    % param_trajectory.omega_d   = result( 13 + (1:3), :);
-    % param_trajectory.omega_d_p = result( 16 + (1:3), :);
 
     param_trajectory = struct;
     param_trajectory.t         = reshape(t, N, 1);
@@ -192,5 +192,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
     param_trajectory.alpha_d_p = alpha_d_p;
     param_trajectory.alpha_d_pp= alpha_d_pp;
     param_trajectory.rot_ax_d  = rot_ax_d;
+    param_trajectory.alpha_d_offset = alpha_d_offset;
+    param_trajectory.q_d_rel = q_d_rel;
 
 end

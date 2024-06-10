@@ -1,4 +1,4 @@
-function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, alpha_T, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_filter)
+function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, alpha_T, R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj_filter)
     
     Phi = param_traj_filter.Phi;
     Gamma = param_traj_filter.Gamma;
@@ -52,4 +52,6 @@ function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, alpha_T, R_init, 
     x_d.alpha_d_p = alpha_d_p;
     x_d.alpha_d_pp = alpha_d_pp;
     x_d.rot_ax_d = rot_ax_d;
+    x_d.alpha_d_offset = alpha_offset;
+    x_d.q_d_rel = rotation2quaternion(R_init);
 end

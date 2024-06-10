@@ -14,7 +14,7 @@
 % Minimizes the deviation between predicted outputs (y_n) and the desired trajectory (y_d) over a prediction horizon (N)
 % J_d,N(k, x_k, (u_n)) = sum( ...                   % Loop over prediction steps (n=1 to N-1)
 %   [ ||y_n       - y_ref_n ||_2^2 * Q_y; ...       % Deviation between predicted output and desired trajectory
-%     ||alpha_n   - y_pp_d_n||_2^2 * I; ...         % Penalty on difference between acceleration reference (alpha_n) and desired acceleration (y_pp_d_n)
+%     ||alpha_n   - y_d_pp_n||_2^2 * I; ...         % Penalty on difference between acceleration reference (alpha_n) and desired acceleration (y_d_pp_n)
 %     ||y_ref_p,n - y_p,d_n ||_2^2 * Q_y_d_p ] ...  % Deviation between reference velocity and desired velocity
 %     ||y_ref_n   - y_d_n   ||_2^2 * Q_y_d ] ...    % Deviation between reference position and desired position
 % );
@@ -61,6 +61,7 @@ else
 end
 
 alpha_var = 1; % 1=alpha, 2=quaternion, 3=euler angles
+soft_norm = false; % true: normalize quaternion only in cost function, false: normalize quaternion in integration equation
 
 compute_tau_fun = Function.load([output_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
 hom_transform_endeffector_py_fun = Function.load([output_dir, 'hom_transform_endeffector_py.casadi']);
@@ -85,8 +86,12 @@ Ht = integrate_casadi(ht_ref, DT, M, int_method);
 % Rotational part
 hr_ref = Function('h_ref', {zr, alpha_r}, {[zr(5:8); alpha_r]});
 Hr_unorm = integrate_casadi(hr_ref, DT, M, int_method);
-Hr_val = Hr_unorm(zr, alpha_r);
-Hr = Function('Hr', {zr, alpha_r}, {[Hr_val(1:4)/norm_2(Hr_val(1:4)); Hr_val(5:8)]});
+if(soft_norm)
+    Hr = Hr_unorm;
+else
+    Hr_val = Hr_unorm(zr, alpha_r);
+    Hr = Function('Hr', {zr, alpha_r}, {[Hr_val(1:4)/norm_2(Hr_val(1:4)); Hr_val(5:8)]});
+end
 
 % Only angles with fixed rotation axis (in each timestep)
 z_theta = SX.sym('z_theta', 2);
@@ -124,8 +129,11 @@ alpha_d_pp_0 = param_trajectory.alpha_d_pp(:, 1 : N_step_MPC : 1 + (N_MPC) * N_s
 
 rot_ax_d_0 = param_trajectory.rot_ax_d(1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (rot_ax_0 ... rot_ax_N)
 
+alpha_d_offset_0 = param_trajectory.alpha_d_offset(:, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (alpha_offset_0 ... alpha_offset_N)
+q_d_rel_0 = param_trajectory.q_d_rel(1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_rel_0 ... q_rel_N)
+
 if(alpha_var == 1)
-    y_d_0    = [p_d_0;    alpha_d_0; rot_ax_d_0];
+    y_d_0    = [p_d_0;    alpha_d_0; rot_ax_d_0; alpha_d_offset_0; q_d_rel_0];
     y_d_p_0  = [p_d_p_0;  alpha_d_p_0];
     y_d_pp_0 = [p_d_pp_0; alpha_d_pp_0];
 elseif(alpha_var == 2)
@@ -279,25 +287,25 @@ z_theta_0 = SX.sym( 'z_theta_0', 2,   1       ); % initial z state
 z_eul_0   = SX.sym( 'z_eul_0',   m,   1       ); % initial z state
 
 if(alpha_var == 1)
-    y_d    = SX.sym( 'y_d',    3+4, N_MPC+1 ); % (y_d_0 ... y_d_N)
-    y_p_d  = SX.sym( 'y_p_d',  3+1, N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
-    y_pp_d = SX.sym( 'y_pp_d', 3+1, N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
+    y_d    = SX.sym( 'y_d',    3+9, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, alpha_d, rot_ax_d, alpha_d_offset, q_d_rel
+    y_d_p  = SX.sym( 'y_d_p',  3+1, N_MPC+1 ); % (y_d_p_0 ... y_d_p_N)
+    y_d_pp = SX.sym( 'y_d_pp', 3+1, N_MPC+1 ); % (y_d_pp_0 ... y_d_pp_N)
     z_0 = [zt_0; z_theta_0];
 elseif(alpha_var == 2)
-    y_d    = SX.sym( 'y_d',    m+1, N_MPC+1 ); % (y_d_0 ... y_d_N)
-    y_p_d  = SX.sym( 'y_p_d',  m+1, N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
-    y_pp_d = SX.sym( 'y_pp_d', m+1, N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
+    y_d    = SX.sym( 'y_d',    m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
+    y_d_p  = SX.sym( 'y_d_p',  m+1, N_MPC+1 ); % (y_d_p_0 ... y_d_p_N)
+    y_d_pp = SX.sym( 'y_d_pp', m+1, N_MPC+1 ); % (y_d_pp_0 ... y_d_pp_N)
     z_0 = [zt_0; zr_0];
 elseif(alpha_var == 3)
-    y_d    = SX.sym( 'y_d',    m, N_MPC+1 ); % (y_d_0 ... y_d_N)
-    y_p_d  = SX.sym( 'y_p_d',  m, N_MPC+1 ); % (y_p_d_0 ... y_p_d_N)
-    y_pp_d = SX.sym( 'y_pp_d', m, N_MPC+1 ); % (y_pp_d_0 ... y_pp_d_N)
+    y_d    = SX.sym( 'y_d',    m, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, eul_d
+    y_d_p  = SX.sym( 'y_d_p',  m, N_MPC+1 ); % (y_d_p_0 ... y_d_p_N)
+    y_d_pp = SX.sym( 'y_d_pp', m, N_MPC+1 ); % (y_d_pp_0 ... y_d_pp_N)
     z_0 = [zt_0; z_eul_0];
 else
     error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
 end
 
-mpc_parameter_inputs = {x_k, z_0, y_d, y_p_d, y_pp_d};
+mpc_parameter_inputs = {x_k, z_0, y_d, y_d_p, y_d_pp};
 mpc_init_reference_values = [x_0_0(:); z_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:)];
 
 %% set input parameter cellaray p
@@ -345,6 +353,15 @@ y_eul_ref    = SX( 3, N_MPC+1 ); % TCP orientation:                (y_eul_ref_0 
 y_eul_p_ref  = SX( 3, N_MPC+1 ); % TCP orietnation velocity:      (y_eul_p_ref_0 ... y_eul_p_ref_N)
 y_eul_pp_ref = SX( 3, N_MPC+1 ); % TCP orientation acceleration:  (y_eul_pp_ref_0 ... y_eul_pp_ref_N)
 
+[~, ~, Q] = quat_deriv(ones(4,1), ones(3,1), ones(3,1)); % get function handle
+%Q_pinv = @(q)  4*Q(q)'/(q'*q); % i.a. gilt q'q = 1
+Q_pinv = @(q)  4*Q(q)';
+
+% omega_d       = SX(3, N_MPC+1);
+% omega_d_p     = SX(3, N_MPC+1);
+% omega_ref   = SX(3, N_MPC+1);
+% omega_p_ref = SX(3, N_MPC+1);
+
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 g_x(1, 1 + (0))       = {x_k             - x(:,       1 + (0))}; % x0 = xk
@@ -372,6 +389,11 @@ for i=0:N_MPC
     yr_ref(   1:4, 1 + (i)) = zr(     1:4, 1 + (i));
     yr_p_ref( 1:4, 1 + (i)) = zr(     5:8, 1 + (i));
     yr_pp_ref(1:4, 1 + (i)) = alpha_r( 1:4, 1 + (i));
+
+    % omega_d(    :, 1 + (i)) = Q_pinv(y_d(      4:7, 1 + (i))) * y_d_p(    4:7, 1 + (i)); % omega = Q_pinv(quat) * quat_p
+    % omega_d_p(  :, 1 + (i)) = Q_pinv(y_d_p(    4:7, 1 + (i))) * y_d_p(    4:7, 1 + (i)) + Q_pinv(y_d(    4:7, 1 + (i))) * y_d_pp(4:7, 1 + (i)); % omega_p =Q_pinv(quat_p) * quat_p + Q_pinv(quat) * quat_pp
+    % omega_ref(  :, 1 + (i)) = Q_pinv(yr_ref(  1:4, 1 + (i))) * yr_p_ref(1:4, 1 + (i)); % omega = Q_pinv(quat) * quat_p
+    % omega_p_ref(:, 1 + (i)) = Q_pinv(yr_p_ref(1:4, 1 + (i))) * yr_p_ref(1:4, 1 + (i)) + Q_pinv(yr_ref(1:4, 1 + (i))) * yr_pp_ref(1:4, 1 + (i)); % omega_p =Q_pinv(quat_p) * quat_p + Q_pinv(quat) * quat_pp
 
     y_theta_ref(   1, 1 + (i)) = z_theta( 1, 1 + (i));
     y_theta_p_ref( 1, 1 + (i)) = z_theta( 2, 1 + (i));
@@ -410,7 +432,11 @@ else
     g_theta_eps = 0;
 end
 
-RR_r_N = R_e_arr{end} * quat2rotm_v2(yr_ref(1:4,end))';
+if(soft_norm)
+    RR_r_N = R_e_arr{end} * quat2rotm_v2(yr_ref(1:4,end))';
+else
+    RR_r_N = R_e_arr{end} * quat2rotm_v2(yr_ref(1:4,end)/norm_2(yr_ref(1:4, end)))';
+end
 %quat_r_err_N = rotation2quaternion_casadi(R_e_arr{end} * quat2rotm_v2(yr_ref(1:4,end))');
 rot_ax_r_N = [RR_r_N(3,2) - RR_r_N(2,3); RR_r_N(1,3) - RR_r_N(3,1); RR_r_N(2,1) - RR_r_N(1,2)]; 
 gr_eps = norm_2( rot_ax_r_N );
@@ -438,21 +464,25 @@ g = [g_x, g_z, g_eps]; % merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
 
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-et_pp = yt_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( 1:3, 1 + (0:N_MPC) );
-et_p  = yt_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  1:3, 1 + (0:N_MPC) );
+et_pp = yt_pp_ref( :, 1 + (0:N_MPC) ) - y_d_pp( 1:3, 1 + (0:N_MPC) );
+et_p  = yt_p_ref(  :, 1 + (0:N_MPC) ) - y_d_p(  1:3, 1 + (0:N_MPC) );
 et    = yt_ref(    :, 1 + (0:N_MPC) ) - y_d(    1:3, 1 + (0:N_MPC) );
 
 if(alpha_var == 1)
-    e_theta_pp = y_theta_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( 4, 1 + (0:N_MPC) );
-    e_theta_p  = y_theta_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  4, 1 + (0:N_MPC) );
+    e_theta_pp = y_theta_pp_ref( :, 1 + (0:N_MPC) ) - y_d_pp( 4, 1 + (0:N_MPC) );
+    e_theta_p  = y_theta_p_ref(  :, 1 + (0:N_MPC) ) - y_d_p(  4, 1 + (0:N_MPC) );
     e_theta    = y_theta_ref(    :, 1 + (0:N_MPC) ) - y_d(    4, 1 + (0:N_MPC) );
 elseif(alpha_var == 2)
-    er_pp = yr_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( 4:7, 1 + (0:N_MPC) );
-    er_p  = yr_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  4:7, 1 + (0:N_MPC) );
-    er    = yr_ref(    :, 1 + (0:N_MPC) ) - y_d(    4:7, 1 + (0:N_MPC) );
+    er_pp = yr_pp_ref( :, 1 + (0:N_MPC) ) - y_d_pp( 4:7, 1 + (0:N_MPC) );
+    er_p  = yr_p_ref(  :, 1 + (0:N_MPC) ) - y_d_p(  4:7, 1 + (0:N_MPC) );
+    if(soft_norm)
+        er    = yr_ref(    :, 1 + (0:N_MPC) )./norm_2(yr_ref(:, 1 + (0:N_MPC) )) - y_d(    4:7, 1 + (0:N_MPC) );
+    else
+        er    = yr_ref(    :, 1 + (0:N_MPC) ) - y_d(    4:7, 1 + (0:N_MPC) );
+    end
 elseif(alpha_var == 3)
-    e_eul_pp = y_eul_pp_ref( :, 1 + (0:N_MPC) ) - y_pp_d( 4:6, 1 + (0:N_MPC) );
-    e_eul_p  = y_eul_p_ref(  :, 1 + (0:N_MPC) ) - y_p_d(  4:6, 1 + (0:N_MPC) );
+    e_eul_pp = y_eul_pp_ref( :, 1 + (0:N_MPC) ) - y_d_pp( 4:6, 1 + (0:N_MPC) );
+    e_eul_p  = y_eul_p_ref(  :, 1 + (0:N_MPC) ) - y_d_p(  4:6, 1 + (0:N_MPC) );
     e_eul    = y_eul_ref(    :, 1 + (0:N_MPC) ) - y_d(    4:6, 1 + (0:N_MPC) );
 else
     error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
@@ -462,12 +492,12 @@ end
 % er_p  = SX(3, N_MPC+1);
 % er    = SX(3, N_MPC+1);
 % for i=0:N_MPC
-%     quat_err_pp = rotation2quaternion_casadi( quat2rotm_v2( yr_pp_ref( :, 1 + (0:N_MPC) ) ) * quat2rotm_v2( y_pp_d( 4:7, 1 + (i) ) )' );
-%     quat_err_p  = rotation2quaternion_casadi( quat2rotm_v2( yr_p_ref(  :, 1 + (0:N_MPC) ) ) * quat2rotm_v2( y_p_d(  4:7, 1 + (i) ) )' );
+%     quat_err_pp = rotation2quaternion_casadi( quat2rotm_v2( yr_pp_ref( :, 1 + (0:N_MPC) ) ) * quat2rotm_v2( y_d_pp( 4:7, 1 + (i) ) )' );
+%     quat_err_p  = rotation2quaternion_casadi( quat2rotm_v2( yr_p_ref(  :, 1 + (0:N_MPC) ) ) * quat2rotm_v2( y_d_p(  4:7, 1 + (i) ) )' );
 %     quat_err    = rotation2quaternion_casadi( quat2rotm_v2( yr_ref(    :, 1 + (0:N_MPC) ) ) * quat2rotm_v2( y_d(    4:7, 1 + (i) ) )' );
 %     % alternative with quat_mult
-%     % quat_err_pp = quat_mult(  yr_pp_ref( :, 1 + (i) ), quat_inv( y_pp_d(4:7, 1 + (i)) )  );
-%     % quat_err_p  = quat_mult(  yr_p_ref(  :, 1 + (i) ), quat_inv( y_p_d(  4:7, 1 + (i)) )  );
+%     % quat_err_pp = quat_mult(  yr_pp_ref( :, 1 + (i) ), quat_inv( y_d_pp(4:7, 1 + (i)) )  );
+%     % quat_err_p  = quat_mult(  yr_p_ref(  :, 1 + (i) ), quat_inv( y_d_p(  4:7, 1 + (i)) )  );
 %     % quat_err    = quat_mult(  yr_ref(    :, 1 + (i) ), quat_inv( y_d(    4:7, 1 + (i)) )  );
 %     er_pp(:, 1 + (i)) = quat_err_pp(2:4);
 %     er_p( :, 1 + (i)) = quat_err_p( 2:4);
@@ -475,6 +505,7 @@ end
 % end
 
 Q_ori = SX(1,1);
+
 for i=1:N_MPC-1
     %e(m_t+1:m, 1 + (i)) = rotm2rpy_casadi( rpy2rotm_casadi(yt_ref(m_t+1:m, 1 + (i))) * R_e_arr{1 + (i)}');
     %e(m_t+1:m, 1 + (i)) = rotm2rpy_casadi( R_e_arr{1 + (i)} * rpy2rotm_casadi(yt_ref(m_t+1:m, 1 + (i)))');
@@ -482,17 +513,31 @@ for i=1:N_MPC-1
     %q_err = rotm2quat_v3_casadi( R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))');
 
     if(alpha_var == 1)
-        R_init_cs = SX(R_init); %unsauber
+        rot_ax_d = y_d(5:7, 1 + (i));
+        alpha_d_offset = y_d(8, 1 + (i));
+        q_d_rel = y_d(9:12, 1 + (i));
+
+        theta_act = y_theta_ref(1, 1 + (i)) - alpha_d_offset;
+
+        %R_base = ax_ang2rotm(rot_ax_d, theta_0);
+        %dR     = ax_ang2rotm(rot_ax_d, theta_act);
+
+        R_base = quat2rotm_v2(q_d_rel);
+        dR     = quat2rotm_v2(ax_ang2quat(rot_ax_d, theta_act));
         
-        R_ref = quat2rotm_v2([cos(y_theta_ref(1, 1 + (i))/2); y_d(5:7, 1 + (i))*sin(y_theta_ref(1, 1 + (i))/2)])*R_init_cs;
-        %R_ref = ax_ang2rotm(y_d(5:7, 1 + (i)), y_theta_ref(1, 1 + (i)))*R_init_cs;
+        R_ref = dR * R_base;
         
         RR = R_e_arr{1 + (i)} * R_ref';
         
         %q_err = rotation2quaternion_casadi( RR );
         q_err = [1; RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)]; %ungenau aber schneller (flipping?)
     elseif(alpha_var == 2)
-        RR = R_e_arr{1 + (i)} * quat2rotm_v2(yr_ref(1:4, 1 + (i)))';
+        if(soft_norm)
+            RR = R_e_arr{1 + (i)} * quat2rotm_v2(yr_ref(1:4, 1 + (i))/norm_2(yr_ref(1:4, 1 + (i))))';
+        else
+            RR = R_e_arr{1 + (i)} * quat2rotm_v2(yr_ref(1:4, 1 + (i)))';
+        end
+        
         %q_err = rotation2quaternion_casadi( RR );
         q_err = [1; RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)]; %ungenau aber schneller (flipping?)
     elseif(alpha_var == 3)
@@ -516,6 +561,19 @@ if(alpha_var == 1)
     Jr_yy_ref = Q_norm_square( e_theta_pp + pp.Q_y_p_ref(4, 4)*e_theta_p            + pp.Q_y_ref(4, 4) * e_theta,        1);
 elseif(alpha_var == 2)
     Jr_yy_ref = Q_norm_square( er_pp      + mtimes(pp.Q_y_p_ref(4:7, 4:7), er_p)    + mtimes(pp.Q_y_ref(4:7, 4:7),  er), eye(4));
+
+    % q_vec_err_arr = SX(3, N_MPC+1);
+    % for i=0:N_MPC
+        % RR = R_e_arr{1 + (i)} * quat2rotm_v2(yr_ref(1:4, 1 + (i)))';
+        % % q_err = rotation2quaternion_casadi( RR );
+        % % q_vec_err_arr(:, 1 + (i)) = q_err(2:4);
+        % q_vec_err_arr(:, 1 + (i)) = [RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)]; %ungenau aber schneller (flipping?)
+    % end
+    % e_quat = q_vec_err_arr;
+    % e_omega = omega_ref - omega_d;
+    % e_omega_p = omega_p_ref - omega_d_p;
+    % Jr_yy_ref = Q_norm_square( e_omega_p   + mtimes(pp.Q_y_p_ref(4:6, 4:6), e_omega) + mtimes(pp.Q_y_ref(4:6, 4:6),  e_quat), eye(3));
+
 elseif(alpha_var == 3)
     Jr_yy_ref = Q_norm_square( e_eul_pp   + mtimes(pp.Q_y_p_ref(4:6, 4:6), e_eul_p) + mtimes(pp.Q_y_ref(4:6, 4:6),  e_eul), eye(3));
 else

@@ -207,14 +207,16 @@ Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
 Q_ori = SX(1,1);
 for i=1:N_MPC
-    %q_err = rotation2quaternion_casadi( R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))');
     RR = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
-    q_err = [1; RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)]; % get unscaled rotax
-    ang = acos((trace(RR) - 1) / 2);
+    q_err = rotation2quaternion_casadi( RR );
+    %q_err = [1; RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)]; % get unscaled rotax
+    % ang = acos((trace(RR) - 1) / 2);
     if(i < N_MPC)
         Q_ori = Q_ori + Q_norm_square( q_err(2:4) , pp.Q_y(4:6, 4:6)  );
+        % Q_ori = Q_ori + ang^2* pp.Q_y(4, 4 );
     else
         Q_ori_N = Q_norm_square( q_err(2:4) , pp.Q_yN(4:6, 4:6)  );
+        % Q_ori_N = ang^2* pp.Q_yN(4, 4 );
     end
 end
 

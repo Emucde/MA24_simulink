@@ -32,4 +32,7 @@ function [x_d] = create_equilibrium_traj(x_target, R_init, Phi_target)
     x_d.alpha_d_p = 0;
     x_d.alpha_d_pp = 0;
     x_d.rot_ax_d = rot_ax_d;
+    x_d.alpha_d_offset = 0;
+    x_d.q_d_rel = rotation2quaternion(R_init);
+
 end

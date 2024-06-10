@@ -4,7 +4,8 @@
 %fid = fopen('240604_20_07_MPC_v3_5th_order_polynomial_log.txt', 'r');
 
 %fid = fopen('240606_12_29_MPC_v1_5th_order_polynomial_log.txt', 'r');
-fid = fopen('240606_12_30_MPC_v3_5th_order_polynomial_log.txt', 'r');
+% fid = fopen('240606_12_30_MPC_v3_5th_order_polynomial_log.txt', 'r');
+fid = fopen('240610_15_50_MPC_v6_5th_order_polynomial_log.txt', 'r');
 
 file_contents_orig = fscanf(fid, '%c');
 
