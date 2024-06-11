@@ -30,8 +30,8 @@ function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, alpha_T, R_init, 
     % Phi_act_pp = alpha_pp/rot_alpha_scale*delta_Phi;
 
     Phi_act = rotm2rpy(R_act);
-    Phi_act_p = T_eul(Phi_act)*omega_d;
-    Phi_act_pp =T_eul_p(Phi_act, Phi_act_p)*omega_d + T_eul(Phi_act)*omega_d_p;
+    Phi_act_p = T_rpy(Phi_act)*omega_d;
+    Phi_act_pp =T_rpy_p(Phi_act, Phi_act_p)*omega_d + T_rpy(Phi_act)*omega_d_p;
 
     %xd_prev   = x_k(param_traj_filter.p_d_index);
     %alpha_prev = xd_prev(4)*rot_alpha_scale;
