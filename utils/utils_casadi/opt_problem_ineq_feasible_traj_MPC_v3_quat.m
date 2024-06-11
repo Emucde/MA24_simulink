@@ -60,7 +60,7 @@ else
     f = Function.load([output_dir, 'sys_fun_x_sol_py.casadi']); % equivalent as above
 end
 
-alpha_var = 1; % 1=alpha, 2=quaternion, 3=euler angles
+alpha_var = 3; % 1=alpha, 2=quaternion, 3=ypr (ZYX) angles
 soft_norm = false; % true: normalize quaternion only in cost function, false: normalize quaternion in integration equation
 
 compute_tau_fun = Function.load([output_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
@@ -191,7 +191,7 @@ elseif(alpha_var == 2)
     zr_init_guess_0     = [zr_0_0 full(zr_init_guess_kp1_0)];
     zr_d_init_guess_0   = [y_d_0(4:7, :); y_d_p_0(4:7, :)]; % init for zr_d
 elseif(alpha_var == 3)
-    z_eul_0_0              = [y_d_0(4:6,1); y_d_p_0(4:6,1)]; % init for z_eul_ref
+    z_eul_0_0              = [y_d_0(4:6, 1); y_d_p_0(4:6, 1)]; % init for z_eul_ref
     alpha_eul_init_guess_0 = y_d_pp_0(4:6, 1:end-1);
     alpha_eul_N_0          = y_d_pp_0(4:6, end);
 
@@ -276,6 +276,8 @@ u_opt_indices = 1:n;
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
+% lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1); repmat([-inf*ones(6,1);-2*pi;-2*pi;-2*pi;-inf*ones(3,1)], N_MPC + 1, 1); -Inf(size(alpha(:)))]
+% ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1); repmat([inf*ones(6,1);2*pi;2*pi;2*pi;inf*ones(3,1)], N_MPC + 1, 1); Inf(size(alpha(:)))];
 lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
 ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
 
@@ -443,8 +445,10 @@ gr_eps = norm_2( rot_ax_r_N );
 
 %RR_eul_N = R_e_arr{end} * rpy2rotm_casadi(y_eul_ref(:,end))';
 %rot_ax_eul_N = [RR_eul_N(3,2) - RR_eul_N(2,3); RR_eul_N(1,3) - RR_eul_N(3,1); RR_eul_N(2,1) - RR_eul_N(1,2)];
+%q_err = rotation2quaternion_casadi( RR_eul_N );
+%rot_ax_eul_N = q_err(2:4);
 %g_eul_eps = norm_2( rot_ax_eul_N );
-g_eul_eps = norm_2( rotm2rpy_casadi(R_e_arr{end}) - y_eul_ref(:,end) );
+g_eul_eps = norm_2( rotm2rpy_casadi(R_e_arr{end}) - y_eul_ref(:, end) );
 
 g_eps(1, 1) = {gt_eps};
 if(alpha_var == 1)
@@ -541,8 +545,8 @@ for i=1:N_MPC-1
         %q_err = rotation2quaternion_casadi( RR );
         q_err = [1; RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)]; %ungenau aber schneller (flipping?)
     elseif(alpha_var == 3)
-        %RR = R_e_arr{1 + (i)} * rpy2rotm_casadi(y_eul_ref(:, 1 + (i)))';
-        %q_err = rotation2quaternion_casadi( RR );
+        % RR = R_e_arr{1 + (i)} * rpy2rotm_casadi(y_eul_ref(:, 1 + (i)))';
+        % q_err = rotation2quaternion_casadi( RR );
         %q_err = [1; RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)]; %ungenau aber schneller (flipping?)
         q_err = [1; rotm2rpy_casadi(R_e_arr{1 + (i)}) - y_eul_ref(:, 1 + (i))];
     else

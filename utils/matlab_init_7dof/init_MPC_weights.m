@@ -27,7 +27,7 @@ param_weight.(MPC).Q_y        = diag([1e3*ones(3,1); 1e3*ones(3,1)]);  % d_kpn
 
 param_weight.(MPC).R_q_pp     = 1e-10*diag(ones(n,1));  % d_kpn
 
-alpha_var = 1;
+alpha_var = 3;
 if(alpha_var == 1)
     param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100]);
     param_weight.(MPC).Q_y_ref    = param_weight.(MPC).Q_y_p_ref^2/4;

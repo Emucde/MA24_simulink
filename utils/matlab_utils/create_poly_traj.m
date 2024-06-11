@@ -34,9 +34,13 @@ function [x_d] = create_poly_traj(x_target, alphaT, x0_target, alpha0, alpha_off
     %q_d   = rotm2quat_v3(R_act);
     [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);
 
-    Phi_act    = Phi_init + alpha*delta_Phi;
-    Phi_act_p  = alpha_p*delta_Phi;
-    Phi_act_pp = alpha_pp*delta_Phi;
+    % Phi_act    = Phi_init + alpha/rot_alpha_scale*delta_Phi;
+    %R_dot = skew(omega_d)*R_act;
+    %R_ddot = skew(omega_d_p)*R_act + skew(omega_d)*R_dot;
+
+    Phi_act = rotm2rpy(R_act);
+    Phi_act_p = T_eul(Phi_act)*omega_d;
+    Phi_act_pp =T_eul_p(Phi_act, Phi_act_p)*omega_d + T_eul(Phi_act)*omega_d_p;
 
     %xd_prev   = x_k(param_traj_filter.p_d_index);
     %alpha_prev = xd_prev(4)*rot_alpha_scale;

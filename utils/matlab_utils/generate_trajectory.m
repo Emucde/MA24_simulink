@@ -133,10 +133,6 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
             alpha_d_offset(:,i) = x_d.alpha_d_offset;
             q_d_rel(:,i) = x_d.q_d_rel;
 
-            if(i==1000)
-                disp('jo')
-            end
-
             if(t(i) >= T_start_end && flag == 0)
                 temp = xe0;
                 xe0 = xeT;

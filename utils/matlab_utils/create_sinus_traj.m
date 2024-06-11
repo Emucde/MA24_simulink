@@ -39,9 +39,13 @@ function [x_d] = create_sinus_traj(x_target, x0_target, t, R_init, rot_ax, rot_a
     %q_d   = rotm2quat_v3(R_act);
     [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);
 
-    Phi_act    = Phi_init + alpha*delta_Phi;
-    Phi_act_p  = alpha_p*delta_Phi;
-    Phi_act_pp = alpha_pp*delta_Phi;
+    % Phi_act    = Phi_init + alpha/rot_alpha_scale*delta_Phi;
+    % Phi_act_p  = alpha_p/rot_alpha_scale*delta_Phi;
+    % Phi_act_pp = alpha_pp/rot_alpha_scale*delta_Phi;
+
+    Phi_act = rotm2rpy(R_act);
+    Phi_act_p = T_eul(Phi_act)*omega_d;
+    Phi_act_pp =T_eul_p(Phi_act, Phi_act_p)*omega_d + T_eul(Phi_act)*omega_d_p;
 
     %xd_prev   = x_k(param_traj_filter.p_d_index);
     %alpha_prev = xd_prev(4)*rot_alpha_scale;
