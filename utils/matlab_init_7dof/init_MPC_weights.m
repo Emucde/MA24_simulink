@@ -23,7 +23,7 @@ param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max
 MPC='MPC6';
 %m = 6;
 %param_weight.(MPC).Q_y        = 1e5*diag([1 1 1]);  % d_kpn
-param_weight.(MPC).Q_y        = diag([1e3*ones(3,1); 1e3*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_y        = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % d_kpn
 
 param_weight.(MPC).R_q_pp     = 1e-10*diag(ones(n,1));  % d_kpn
 
@@ -41,8 +41,8 @@ else
     error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3 or 4=euler angles or quat omega)']);
 end
 
-param_weight.(MPC).epsilon_t = 1e-5;
-param_weight.(MPC).epsilon_r = inf;
+param_weight.(MPC).epsilon_t = 1e-5;%1e-5;
+param_weight.(MPC).epsilon_r = 1e-5;%inf;
 
 %param_weight.(MPC).x_min    = x_min; 
 %param_weight.(MPC).x_max    = x_max; 

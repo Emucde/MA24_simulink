@@ -367,6 +367,7 @@ g_zt = cell(1, N_MPC+1); % for H
 g_zr = cell(1, N_MPC+1); % for H
 g_z_theta = cell(1, N_MPC+1); % for H_theta
 g_z_eul = cell(1, N_MPC+1); % for H_eul
+g_z_qw = cell(1, N_MPC+1); % for H_qw
 g_eps = cell(1, 2); % separate for transl and rotation
 
 lbg = SX(numel(x)+numel(z)+2, 1);
