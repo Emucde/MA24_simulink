@@ -218,7 +218,33 @@ end
 
 u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
 x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
+
 %z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z)), size(z)));
+% z_t_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(zt)), size(zt)));
+% z_r_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x)+numel(zt):numel(u)+numel(x)+numel(zt)+numel(z_qw)), size(z_qw)));
+% alpha_t = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x)+numel(zt)+numel(z_qw):numel(u)+numel(x)+numel(zt)+numel(z_qw)+numel(zt(1:3,:))), size(zt(1:3,:))));
+% alpha_r = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x)+numel(zt)+numel(z_qw)+numel(zt(1:3,:)):numel(u)+numel(x)+numel(zt)+numel(z_qw)+numel(zt(1:3,:))+numel(z_qw(1:3,:))), size(z_qw(1:3,:))));
+if(exist('alpha_var', 'var') && alpha_var == 4)
+    z_indices = reshape(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z), size(z));
+    alpha_indices = reshape(1+numel(u)+numel(x)+numel(z):numel(u)+numel(x)+numel(z)+numel(alpha), size(alpha));
+
+    pp_indices_arr = [z_indices(1:m, :); alpha_indices(1:3, :)];
+    rr_indices_arr = [z_indices(m+1:end, :); alpha_indices(4:end, :)];
+
+    pp_indices = pp_indices_arr(:)';
+    rr_indices = rr_indices_arr(:)';
+
+    pp_dim = size(pp_indices_arr);
+    rr_dim = size(rr_indices_arr);
+
+    pp_sol = full(reshape(xx_full_opt_sol(pp_indices), pp_dim));
+    rr_sol = full(reshape(xx_full_opt_sol(rr_indices), rr_dim));
+
+    save([output_dir, 'pp_indices.mat'], 'pp_indices', 'pp_dim');
+    save([output_dir, 'rr_indices.mat'], 'rr_indices', 'rr_dim');
+end
+
+
 %z_d_init_guess_0; % vs z_full?
 %disp(solver.stats())
 
@@ -226,7 +252,7 @@ x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
 init_guess = full(xx_full_opt_sol);
 
 if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
-    disp(['J = '      num2str(full( sum([ cost_values_sol{:} ]) )) ]);
+    disp(['J = ', num2str(full( sum([ cost_values_sol{:} ]) )) ]);
     for i=1:length(cost_vars_names_cell)
         disp([cost_vars_names_cell{i}, '= ', num2str(full( cost_values_sol{i} ))])
     end

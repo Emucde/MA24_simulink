@@ -212,6 +212,13 @@ quat   = casadi.Function.load(['./', s_fun_path, '/quat_endeffector_py.casadi'])
 sys_fun_qpp_aba = casadi.Function.load(['./', s_fun_path, '/sys_fun_qpp_aba_py.casadi']);
 sys_fun_qpp_sol = casadi.Function.load(['./', s_fun_path, '/sys_fun_qpp_sol_py.casadi']);
 
+load(['./', s_fun_path, '/pp_indices.mat']);
+load(['./', s_fun_path, '/rr_indices.mat']);
+param_sol.pp.indices = pp_indices;
+param_sol.pp.dim = pp_dim;
+param_sol.rr.indices = rr_indices;
+param_sol.rr.dim = rr_dim;
+
 qpp_fun = @(q, q_p, tau) M(q)\(tau - C_rnea(q, q_p));
 qpp_fun_maple = @(q, q_p, tau, param) inertia_matrix(q, param)\(tau - coriolis_matrix(q, q_p, param)*q_p - gravitational_forces(q, param));
 qpp_fun_maple_casadi_SX = @(q, q_p, tau, param) inertia_matrix_casadi_SX(q, param)\(tau - coriolis_matrix_casadi_SX(q, q_p, param)*q_p - gravitational_forces_casadi_SX(q, param));

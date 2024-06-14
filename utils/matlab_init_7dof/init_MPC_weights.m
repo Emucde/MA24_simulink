@@ -27,18 +27,18 @@ param_weight.(MPC).Q_y        = diag([1e3*ones(3,1); 1e3*ones(3,1)]);  % d_kpn
 
 param_weight.(MPC).R_q_pp     = 1e-10*diag(ones(n,1));  % d_kpn
 
-alpha_var = 3;
+alpha_var = 4;
 if(alpha_var == 1)
     param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100]);
     param_weight.(MPC).Q_y_ref    = param_weight.(MPC).Q_y_p_ref^2/4;
 elseif(alpha_var == 2)
     param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100*ones(4,1)]);
     param_weight.(MPC).Q_y_ref    = param_weight.(MPC).Q_y_p_ref^2/4;
-elseif(alpha_var == 3)
+elseif(alpha_var == 3 || alpha_var == 4)
     param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100*ones(3,1)]);
     param_weight.(MPC).Q_y_ref    = diag([100*ones(3,1); 100*ones(3,1)]);
 else
-    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
+    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3 or 4=euler angles or quat omega)']);
 end
 
 param_weight.(MPC).epsilon_t = 1e-5;

@@ -60,12 +60,16 @@ else
     f = Function.load([output_dir, 'sys_fun_x_sol_py.casadi']); % equivalent as above
 end
 
-alpha_var = 3; % 1=alpha, 2=quaternion, 3=ypr (ZYX) angles
+alpha_var = 4; % 1=alpha, 2=quaternion, 3=ypr (ZYX) angles, 4=omega quat
 soft_norm = false; % true: normalize quaternion only in cost function, false: normalize quaternion in integration equation
 
 compute_tau_fun = Function.load([output_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
 hom_transform_endeffector_py_fun = Function.load([output_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([output_dir, 'quat_endeffector_py.casadi']);
+
+[~, ~, Q] = quat_deriv(ones(4,1), ones(3,1), ones(3,1)); % get function handle
+%Q_pinv = @(q)  4*Q(q)'/(q'*q); % i.a. gilt q'q = 1
+Q_pinv = @(q)  4*Q(q)';
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
@@ -107,6 +111,16 @@ u_eul = SX.sym('u_eul', 3 );
 h_eul_ref = Function('h_eul_ref', {z_eul, u_eul}, {[z_eul(4:6); u_eul]});
 H_eul     = integrate_casadi(h_eul_ref, DT, M, int_method);
 
+% Omega quat
+z_qw = SX.sym('z_qw', 7);
+u_qw = SX.sym('u_qw', 3);
+
+h_qw_ref = Function('h_qw_ref', {z_qw, u_qw}, {[Q(z_qw(1:4)) * z_qw(5:7); u_qw]});
+H_qw_unorm = integrate_casadi(h_qw_ref, DT, M, int_method);
+H_qw_val = H_qw_unorm(z_qw, u_qw);
+H_qw = Function('H_qw', {z_qw, u_qw}, {[H_qw_val(1:4)/norm_2(H_qw_val(1:4)); H_qw_val(5:7)]});
+
+
 %% Calculate Initial Guess
 p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
 p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
@@ -120,8 +134,9 @@ Phi_d_pp_0 = param_trajectory.Phi_d_pp(1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_ste
 q_d_0    = param_trajectory.q_d(    1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
 q_d_p_0  = param_trajectory.q_d_p(  1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_p_0 ... q_p_N)
 q_d_pp_0 = param_trajectory.q_d_pp( 1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_p_0 ... q_p_N)
-% omega_d_0   = param_trajectory.omega_d(   1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
-% omega_d_p_0 = param_trajectory.omega_d_p( 1:m_r,        1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
+
+omega_d_0   = param_trajectory.omega_d(   1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
+omega_d_p_0 = param_trajectory.omega_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
 
 alpha_d_0   = param_trajectory.alpha_d(    :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (alpha_0 ... alpha_N)
 alpha_d_p_0 = param_trajectory.alpha_d_p(  :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (alpha_p_0 ... alpha_p_N)
@@ -144,8 +159,12 @@ elseif(alpha_var == 3)
     y_d_0    = [p_d_0;    Phi_d_0    ];
     y_d_p_0  = [p_d_p_0;  Phi_d_p_0  ];
     y_d_pp_0 = [p_d_pp_0; Phi_d_pp_0 ];
+elseif(alpha_var == 4)
+    y_d_0    = [p_d_0;    q_d_0   ];
+    y_d_p_0  = [p_d_p_0;  omega_d_0 ];
+    y_d_pp_0 = [p_d_pp_0; omega_d_p_0];
 else
-    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
+    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles, 4=omega quat)']);
 end
 
 x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
@@ -199,8 +218,17 @@ elseif(alpha_var == 3)
     z_eul_init_guess_kp1_0 = H_eul_sim(z_eul_0_0, alpha_eul_init_guess_0);
     z_eul_init_guess_0     = [z_eul_0_0 full(z_eul_init_guess_kp1_0)];
     z_eul_d_init_guess_0   = [y_d_0(4:6, :); y_d_p_0(4:6, :)]; % init for z_eul_d
+elseif(alpha_var == 4)
+    z_qw_0               = [y_d_0(4:7,1); y_d_p_0(4:6,1)]; % init for zr_ref
+    alpha_qw_init_guess_0 = y_d_pp_0(4:6, 1:end-1);
+    alpha_qw_N_0          = y_d_pp_0(4:6,end);
+
+    H_qw_sim              = H_qw.mapaccum(N_MPC);
+    z_qw_init_guess_kp1_0 = H_qw_sim(z_qw_0, alpha_qw_init_guess_0);
+    z_qw_init_guess_0     = [z_qw_0 full(z_qw_init_guess_kp1_0)];
+    z_qw_d_init_guess_0   = [y_d_0(4:7, :); y_d_p_0(4:6, :)]; % init for zr_d
 else
-    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
+    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles, 4=omega quat)']);
 end
 %
 
@@ -219,8 +247,13 @@ elseif(alpha_var == 3)
     alpha_init_guess_0 = [alpha_t_init_guess_0; alpha_eul_init_guess_0];
     alpha_N_0 = [alpha_t_N_0; alpha_eul_N_0];
     z_0_0 = [zt_0_0; z_eul_0_0];
+elseif(alpha_var == 4)
+    z_init_guess_0 = [zt_init_guess_0; z_qw_init_guess_0];
+    alpha_init_guess_0 = [alpha_t_init_guess_0; alpha_qw_init_guess_0];
+    alpha_N_0 = [alpha_t_N_0; alpha_qw_N_0];
+    z_0_0 = [zt_0_0; z_qw_0];
 else
-    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
+    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles, 4=omega quat)']);
 end
 
 % z_init_guess_0 = zt_init_guess_0;
@@ -252,10 +285,12 @@ zt     = SX.sym( 'zt',     m,   N_MPC+1 );
 zr     = SX.sym( 'zt',     8,   N_MPC+1 );
 z_theta = SX.sym( 'z_theta', 2,   N_MPC+1 );
 z_eul   = SX.sym( 'z_eul', 6,   N_MPC+1 );
+z_qw    = SX.sym( 'z_qw', 7,   N_MPC+1 );
 alpha_t = SX.sym( 'alpha_t', 3,   N_MPC+1 );
 alpha_r = SX.sym( 'alpha_r', 4,   N_MPC+1 );
 u_theta = SX.sym( 'u_theta', 1,   N_MPC+1 );
 u_eul   = SX.sym( 'u_eul', 3,   N_MPC+1 );
+u_qw    = SX.sym( 'u_qw', 3,   N_MPC+1 );
 
 if(alpha_var == 1)
     z = [ zt; z_theta ];
@@ -266,8 +301,11 @@ elseif(alpha_var == 2)
 elseif(alpha_var == 3)
     z = [ zt; z_eul ];
     alpha = [ alpha_t; u_eul ];
+elseif(alpha_var == 4)
+    z = [ zt; z_qw ];
+    alpha = [ alpha_t; u_qw ];
 else
-    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
+    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles, 4=omega quat)']);
 end
 
 mpc_opt_var_inputs = {u, x, z, alpha};
@@ -287,12 +325,14 @@ zt_0    = SX.sym( 'zt_0',    m,   1       ); % initial z state
 zr_0    = SX.sym( 'zr_0',    8,   1       ); % initial z state
 z_theta_0 = SX.sym( 'z_theta_0', 2,   1       ); % initial z state
 z_eul_0   = SX.sym( 'z_eul_0',   m,   1       ); % initial z state
+z_qw_0    = SX.sym( 'z_qw_0',    7,   1       ); % initial z state
 
 if(alpha_var == 1)
     y_d    = SX.sym( 'y_d',    3+9, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, alpha_d, rot_ax_d, alpha_d_offset, q_d_rel
     y_d_p  = SX.sym( 'y_d_p',  3+1, N_MPC+1 ); % (y_d_p_0 ... y_d_p_N)
     y_d_pp = SX.sym( 'y_d_pp', 3+1, N_MPC+1 ); % (y_d_pp_0 ... y_d_pp_N)
-    z_0 = [zt_0; z_theta_0];
+    z_0 = [zt_0; z_theta_0]; %Wichtig: zt_0 = [y_d_0(1:3,1); y_d_p_0(1:3,1)]; wegen Auftrennung von pos und ori
+    % TODO: zwei parameter für zt0 und z_theta0 damit es klarer ist.
 elseif(alpha_var == 2)
     y_d    = SX.sym( 'y_d',    m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
     y_d_p  = SX.sym( 'y_d_p',  m+1, N_MPC+1 ); % (y_d_p_0 ... y_d_p_N)
@@ -303,8 +343,13 @@ elseif(alpha_var == 3)
     y_d_p  = SX.sym( 'y_d_p',  m, N_MPC+1 ); % (y_d_p_0 ... y_d_p_N)
     y_d_pp = SX.sym( 'y_d_pp', m, N_MPC+1 ); % (y_d_pp_0 ... y_d_pp_N)
     z_0 = [zt_0; z_eul_0];
+elseif(alpha_var == 4)
+    y_d    = SX.sym( 'y_d',    m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
+    y_d_p  = SX.sym( 'y_d_p',  m,   N_MPC+1 ); % (y_d_p_0 ... y_d_p_N)
+    y_d_pp = SX.sym( 'y_d_pp', m,   N_MPC+1 ); % (y_d_pp_0 ... y_d_pp_N)
+    z_0 = [zt_0; z_qw_0];
 else
-    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
+    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles, 4=omega quat)']);
 end
 
 mpc_parameter_inputs = {x_k, z_0, y_d, y_d_p, y_d_pp};
@@ -355,9 +400,9 @@ y_eul_ref    = SX( 3, N_MPC+1 ); % TCP orientation:                (y_eul_ref_0 
 y_eul_p_ref  = SX( 3, N_MPC+1 ); % TCP orietnation velocity:      (y_eul_p_ref_0 ... y_eul_p_ref_N)
 y_eul_pp_ref = SX( 3, N_MPC+1 ); % TCP orientation acceleration:  (y_eul_pp_ref_0 ... y_eul_pp_ref_N)
 
-[~, ~, Q] = quat_deriv(ones(4,1), ones(3,1), ones(3,1)); % get function handle
-%Q_pinv = @(q)  4*Q(q)'/(q'*q); % i.a. gilt q'q = 1
-Q_pinv = @(q)  4*Q(q)';
+y_qw_ref    = SX( 4, N_MPC+1 ); % TCP orientation:                (y_qw_ref_0 ... y_qw_ref_N)
+y_qw_p_ref  = SX( 3, N_MPC+1 ); % TCP orietnation velocity:      (y_qw_p_ref_0 ... y_qw_p_ref_N)
+y_qw_pp_ref = SX( 3, N_MPC+1 ); % TCP orientation acceleration:  (y_qw_pp_ref_0 ... y_qw_pp_ref_N)
 
 % omega_d       = SX(3, N_MPC+1);
 % omega_d_p     = SX(3, N_MPC+1);
@@ -372,6 +417,7 @@ g_zt(1, 1 + (0))      = {z_0(1:m, 1)     - z(1:m,     1 + (0))}; % zt0
 g_zr(1, 1 + (0))      = {z_0(m+1:end, 1) - z(m+1:end, 1 + (0))}; % z0 = zk
 g_z_theta(1, 1 + (0)) = {z_0(m+1:end, 1) - z(m+1:end, 1 + (0))}; % zr0
 g_z_eul(1, 1 + (0))   = {z_0(m+1:end, 1) - z(m+1:end, 1 + (0))}; % zr0
+g_z_qw(1, 1 + (0))    = {z_0(m+1:end, 1) - z(m+1:end, 1 + (0))}; % zr0
 
 for i=0:N_MPC
     % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
@@ -405,6 +451,10 @@ for i=0:N_MPC
     y_eul_p_ref( 1:3, 1 + (i)) = z_eul( 4:6, 1 + (i));
     y_eul_pp_ref(1:3, 1 + (i)) = u_eul( 1:3, 1 + (i));
 
+    y_qw_ref(   1:4, 1 + (i)) = z_qw( 1:4, 1 + (i));
+    y_qw_p_ref( 1:3, 1 + (i)) = z_qw( 5:7, 1 + (i));
+    y_qw_pp_ref(1:3, 1 + (i)) = u_qw( 1:3, 1 + (i));
+
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
         g_x(1, 1 + (i+1)) = {F(x(:, 1 + (i)), u(    :, 1 + (i))) - x(:, 1 + (i+1))}; % Set the state dynamics constraints
@@ -416,6 +466,8 @@ for i=0:N_MPC
         g_z_theta(1, 1 + (i+1)) = {H_theta(z_theta(:, 1 + (i)), u_theta(:, 1 + (i))) - z_theta(:, 1 + (i+1))}; % Set the state dynamics constraints
 
         g_z_eul(1, 1 + (i+1)) = {H_eul(z_eul(:, 1 + (i)), u_eul(:, 1 + (i))) - z_eul(:, 1 + (i+1))}; % Set the state dynamics constraints
+
+        g_z_qw(1, 1 + (i+1)) = {H_qw(z_qw(:, 1 + (i)), u_qw(:, 1 + (i))) - z_qw(:, 1 + (i+1))}; % Set the state dynamics constraints
 
         dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
         q_pp(:, 1 + (i)) = dx(n+1:2*n, 1);
@@ -435,9 +487,9 @@ else
 end
 
 if(soft_norm)
-    RR_r_N = R_e_arr{end} * quat2rotm_v2(yr_ref(1:4,end))';
-else
     RR_r_N = R_e_arr{end} * quat2rotm_v2(yr_ref(1:4,end)/norm_2(yr_ref(1:4, end)))';
+else
+    RR_r_N = R_e_arr{end} * quat2rotm_v2(yr_ref(1:4,end))';
 end
 %quat_r_err_N = rotation2quaternion_casadi(R_e_arr{end} * quat2rotm_v2(yr_ref(1:4,end))');
 rot_ax_r_N = [RR_r_N(3,2) - RR_r_N(2,3); RR_r_N(1,3) - RR_r_N(3,1); RR_r_N(2,1) - RR_r_N(1,2)]; 
@@ -450,6 +502,10 @@ gr_eps = norm_2( rot_ax_r_N );
 %g_eul_eps = norm_2( rot_ax_eul_N );
 g_eul_eps = norm_2( rotm2rpy_casadi(R_e_arr{end}) - y_eul_ref(:, end) );
 
+RR_qw_N = R_e_arr{end} * quat2rotm_v2(y_qw_ref(1:4,end))';
+rot_ax_qw_N = [RR_qw_N(3,2) - RR_qw_N(2,3); RR_qw_N(1,3) - RR_qw_N(3,1); RR_qw_N(2,1) - RR_qw_N(1,2)];
+g_qw_eps = norm_2( rot_ax_qw_N );
+
 g_eps(1, 1) = {gt_eps};
 if(alpha_var == 1)
     g_eps(1, 2) = {g_theta_eps};
@@ -460,8 +516,11 @@ elseif(alpha_var == 2)
 elseif(alpha_var == 3)
     g_eps(1, 2) = {g_eul_eps};
     g_z = [g_zt, g_z_eul];
+elseif(alpha_var == 4)
+    g_eps(1, 2) = {g_qw_eps};
+    g_z = [g_zt, g_z_qw];
 else
-    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
+    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles, 4=omega quat)']);
 end
 
 g = [g_x, g_z, g_eps]; % merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
@@ -488,8 +547,18 @@ elseif(alpha_var == 3)
     e_eul_pp = y_eul_pp_ref( :, 1 + (0:N_MPC) ) - y_d_pp( 4:6, 1 + (0:N_MPC) );
     e_eul_p  = y_eul_p_ref(  :, 1 + (0:N_MPC) ) - y_d_p(  4:6, 1 + (0:N_MPC) );
     e_eul    = y_eul_ref(    :, 1 + (0:N_MPC) ) - y_d(    4:6, 1 + (0:N_MPC) );
+elseif(alpha_var == 4)
+    e_qw_pp = y_qw_pp_ref( :, 1 + (0:N_MPC) ) - y_d_pp( 4:6, 1 + (0:N_MPC) );
+    e_qw_p  = y_qw_p_ref(  :, 1 + (0:N_MPC) ) - y_d_p(  4:6, 1 + (0:N_MPC) );
+    e_qw    = SX(3, N_MPC+1);
+    for i=0:N_MPC
+        RR_qw = quat2rotm_v2(y_qw_ref(:, 1 + (i))) * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+        %q_err = rotation2quaternion_casadi( RR_qw );
+        q_err = [1; RR_qw(3,2) - RR_qw(2,3); RR_qw(1,3) - RR_qw(3,1); RR_qw(2,1) - RR_qw(1,2)];
+        e_qw(:, 1 + (i)) = q_err(2:4);
+    end
 else
-    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
+    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles, 4=omega quat)']);
 end
 
 % er_pp = SX(3, N_MPC+1);
@@ -549,8 +618,12 @@ for i=1:N_MPC-1
         % q_err = rotation2quaternion_casadi( RR );
         %q_err = [1; RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)]; %ungenau aber schneller (flipping?)
         q_err = [1; rotm2rpy_casadi(R_e_arr{1 + (i)}) - y_eul_ref(:, 1 + (i))];
+    elseif(alpha_var == 4)
+        RR = R_e_arr{1 + (i)} * quat2rotm_v2(y_qw_ref(1:4, 1 + (i)))';
+        %q_err = rotation2quaternion_casadi( RR );
+        q_err = [1; RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)]; %ungenau aber schneller (flipping?)
     else
-        error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
+        error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles, 4=omega quat)']);
     end
 
     Q_ori = Q_ori + Q_norm_square( q_err(2:4) , pp.Q_y(4:6,4:6)  );
@@ -580,8 +653,10 @@ elseif(alpha_var == 2)
 
 elseif(alpha_var == 3)
     Jr_yy_ref = Q_norm_square( e_eul_pp   + mtimes(pp.Q_y_p_ref(4:6, 4:6), e_eul_p) + mtimes(pp.Q_y_ref(4:6, 4:6),  e_eul), eye(3));
+elseif(alpha_var == 4)
+    Jr_yy_ref = Q_norm_square( e_qw_pp   + mtimes(pp.Q_y_p_ref(4:6, 4:6), e_qw_p) + mtimes(pp.Q_y_ref(4:6, 4:6),  e_qw), eye(3));
 else
-    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles)']);
+    error(['alpha_var not correct defined: ', num2str(alpha_var), ' (1=alpha, 2=quaternion, 3=euler angles, 4=omega quat)']);
 end
 
 J_q_pp = Q_norm_square(q_pp, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
