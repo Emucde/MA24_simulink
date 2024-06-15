@@ -212,8 +212,8 @@ param_weight_init = param_weight.(casadi_func_name);
 if(weights_and_limits_as_parameter)
     param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init), 'vector');
     [u_opt_sol, xx_full_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
-else  % ohne extra parameter 30-60 % schneller!
-    [u_opt_sol, xx_full_opt_sol] = f_opt(mpc_init_reference_values, u_init_guess_0, x_init_guess_0, lam_x_init_guess_0, lam_g_init_guess_0);
+else  % ohne extra parameter 5 % schneller (319s statt 335s)
+    [u_opt_sol, xx_full_opt_sol] = f_opt(mpc_init_reference_values, init_guess_0);
 end
 
 u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
@@ -224,12 +224,28 @@ x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
 % z_r_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x)+numel(zt):numel(u)+numel(x)+numel(zt)+numel(z_qw)), size(z_qw)));
 % alpha_t = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x)+numel(zt)+numel(z_qw):numel(u)+numel(x)+numel(zt)+numel(z_qw)+numel(zt(1:3,:))), size(zt(1:3,:))));
 % alpha_r = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x)+numel(zt)+numel(z_qw)+numel(zt(1:3,:)):numel(u)+numel(x)+numel(zt)+numel(z_qw)+numel(zt(1:3,:))+numel(z_qw(1:3,:))), size(z_qw(1:3,:))));
-if(exist('alpha_var', 'var') && alpha_var == 4)
+uu_indices = reshape(1:numel(u), size(u));
+xx_indices = reshape(1+numel(u):numel(u)+numel(x), size(x));
+
+qq_indices_arr  = xx_indices(1:n, :);
+qqp_indices_arr = xx_indices(n+1:end, :);
+
+tau_indices = uu_indices(:)';
+qq_indices = qq_indices_arr(:)';
+qqp_indices = qqp_indices_arr(:)';
+
+tau_dim = size(uu_indices);
+qq_dim = size(qq_indices_arr);
+qqp_dim = size(qqp_indices_arr);
+
+if(strcmp(casadi_func_name, 'MPC6') || strcmp(casadi_func_name, 'MPC7'))
+    
     z_indices = reshape(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z), size(z));
     alpha_indices = reshape(1+numel(u)+numel(x)+numel(z):numel(u)+numel(x)+numel(z)+numel(alpha), size(alpha));
 
     pp_indices_arr = [z_indices(1:m, :); alpha_indices(1:3, :)];
     rr_indices_arr = [z_indices(m+1:end, :); alpha_indices(4:end, :)];
+
 
     pp_indices = pp_indices_arr(:)';
     rr_indices = rr_indices_arr(:)';
@@ -237,11 +253,27 @@ if(exist('alpha_var', 'var') && alpha_var == 4)
     pp_dim = size(pp_indices_arr);
     rr_dim = size(rr_indices_arr);
 
-    pp_sol = full(reshape(xx_full_opt_sol(pp_indices), pp_dim));
-    rr_sol = full(reshape(xx_full_opt_sol(rr_indices), rr_dim));
-
-    save([output_dir, 'pp_indices.mat'], 'pp_indices', 'pp_dim');
-    save([output_dir, 'rr_indices.mat'], 'rr_indices', 'rr_dim');
+    sol_indices = struct( ...
+        'tau', tau_indices, ...
+        'tau_dim', tau_dim, ...
+        'qq', qq_indices, ...
+        'qq_dim', qq_dim, ...
+        'qqp', qqp_indices, ...
+        'qqp_dim', qqp_dim, ...
+        'pp', pp_indices, ...
+        'pp_dim', pp_dim, ...
+        'rr', rr_indices, ...
+        'rr_dim', rr_dim ...
+        );
+else
+    sol_indices = struct( ...
+        'tau', tau_indices, ...
+        'tau_dim', tau_dim, ...
+        'qq', qq_indices, ...
+        'qq_dim', qq_dim, ...
+        'qqp', qqp_indices, ...
+        'qqp_dim', qqp_dim ...
+        );
 end
 
 

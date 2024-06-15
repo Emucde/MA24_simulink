@@ -63,22 +63,14 @@
 import casadi.*
 
 n = param_robot.n_DOF; % Dimension of joint space
-m = 6; % Dimension of Task Space
-m_t = 3;%param_robot.m_t; % Translational part of Task Space
-m_r = 3;%param_robot.m_r; % Rotational part of Task Space 
+m = param_robot.m; % Dimension of Task Space
 
 % Model equations
 % Forward Dynamics: d/dt x = f(x, u)
-use_aba = true;
+use_aba = ~true;
 if(use_aba)
     f = Function.load([output_dir, 'sys_fun_x_aba_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
 else
-    % M      = casadi.Function.load(['./', s_fun_path, '/inertia_matrix_py.casadi']); % ok, rundungsfehler +- 0.003
-    % C_rnea = casadi.Function.load(['./', s_fun_path, '/n_q_coriols_qp_plus_g_py.casadi']);
-    % hilfsvariablen, werden unten überschrieben
-    % x = SX.sym('x', 2*n, 1); % x = [q; dq]
-    % u = SX.sym('u', n, 1); % u = [tau]
-    % f = Function('f', {x, u}, {vertcat(x(n+1:2*n), solve( M(x(1:n)), u - C_rnea(x(1:n), x(n+1:2*n)) ))}, {'x', 'u'}, {'dx'});
     f = Function.load([output_dir, 'sys_fun_x_sol_py.casadi']); % equivalent as above
 end
 
@@ -92,16 +84,9 @@ DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 
 F = integrate_casadi(f, DT, M, int_method);
 
-% Discrete y_ref system
-z     = SX.sym('z',     2*m);
-alpha = SX.sym('alpha',   m);
-
-h_ref = Function('h_ref', {z, alpha}, {[z(m+1:2*m); alpha]});
-H = integrate_casadi(h_ref, DT, M, int_method);
-
 %% Calculate Initial Guess
-p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
-q_d_0    = param_trajectory.q_d(       1:4,          1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
+p_d_0    = param_trajectory.p_d( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
+q_d_0    = param_trajectory.q_d( 1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
 
 y_d_0 = [p_d_0; q_d_0];
 
@@ -109,7 +94,7 @@ x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdo
 q_0    = x_0_0(1   :   n); % useless line...
 dq_0   = x_0_0(1+n : 2*n);
 ddq_0  = q_0_pp;
-xe_k_0 = xe0(1:m_t); % x pos, y pos, defined in parameters_xdof.m
+xe_k_0 = xe0(1:3); % x pos, y pos, defined in parameters_xdof.m
 u_k_0  = compute_tau_fun(q_0, dq_0, ddq_0); % much more faster than above command
 
 u_init_guess_0 = ones(n, N_MPC).*u_k_0; % fully actuated
@@ -135,8 +120,6 @@ else % hardcoded weights
     pp = param_weight_init;
 end
 
-%% Start with an empty NLP
-
 % Optimization Variables:
 u     = SX.sym( 'u',       n, N_MPC   );
 x     = SX.sym( 'x',     2*n, N_MPC+1 );
@@ -151,10 +134,9 @@ w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
 lbw = [repmat(pp.u_min, N_MPC, 1); repmat(pp.x_min, N_MPC + 1, 1)];
 ubw = [repmat(pp.u_max, N_MPC, 1); repmat(pp.x_max, N_MPC + 1, 1)];
 
-
 % input parameter
-x_k    = SX.sym( 'x_k',    2*n, 1       ); % current x state
-y_d    = SX.sym( 'y_d',      m+1, N_MPC+1 ); % (y_d_0 ... y_d_N)
+x_k    = SX.sym( 'x_k', 2*n, 1       ); % current x state
+y_d    = SX.sym( 'y_d', m+1, N_MPC+1 ); % (y_d_0 ... y_d_N)
 
 mpc_parameter_inputs = {x_k, y_d};
 mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
@@ -168,8 +150,13 @@ end
 % constraints conditions cellarray g
 g_x = cell(1, N_MPC+1); % for F
 
-lbg = SX(numel(x), 1);
-ubg = SX(numel(x), 1);
+if(weights_and_limits_as_parameter)
+    lbg = SX(numel(x), 1);
+    ubg = SX(numel(x), 1);
+else
+    lbg = zeros(numel(x), 1);
+    ubg = zeros(numel(x), 1);
+end
 
 % lambda_x0, lambda_g0 initial guess
 lambda_x0 = SX.sym('lambda_x0', size(w));
@@ -177,7 +164,7 @@ lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
 y    = SX( 3, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
-q_pp = SX( n, N_MPC     ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
+q_pp = SX( n, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
@@ -188,8 +175,7 @@ for i=0:N_MPC
 
     % calculate trajectory values (y_0 ... y_N)
     H_e = hom_transform_endeffector_py_fun(q);
-    y(1:m_t,   1 + (i)) = H_e(1:m_t, 4);     %y_t_0 wird nicht verwendet
-
+    y(1:3,   1 + (i)) = H_e(1:3, 4);     %y_t_0 wird nicht verwendet
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
     if(i < N_MPC)
@@ -208,8 +194,8 @@ Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 Q_ori = SX(1,1);
 for i=1:N_MPC
     RR = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
-    q_err = rotation2quaternion_casadi( RR );
-    %q_err = [1; RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)]; % get unscaled rotax
+    %q_err = rotation2quaternion_casadi( RR );
+    q_err = [1; RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)]; % get unscaled rotax
     % ang = acos((trace(RR) - 1) / 2);
     if(i < N_MPC)
         Q_ori = Q_ori + Q_norm_square( q_err(2:4) , pp.Q_y(4:6, 4:6)  );

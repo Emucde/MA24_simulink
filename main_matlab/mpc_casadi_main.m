@@ -14,7 +14,6 @@ plot_null_simu                  = false; % plot system simulation for x0 = 0, u0
 convert_maple_to_casadi         = false; % convert maple functions into casadi functions
 fullsimu                        = false; % make full mpc simulation and plot results
 traj_select_mpc                 = 3; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
-weights_and_limits_as_parameter = true; % otherwise minimal set of inputs and parameter is used. Leads to faster run time and compile time.
 compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
 
@@ -22,26 +21,40 @@ compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, file
 % compile_mode = 1 | nlpsol-sfun | fast compile time | very accurate,          | sometimes slower exec
 % compile_mode = 2 | opti-sfun   | slow compile time | sometimes less accurate | sometimes faster exec
 
-MPC='MPC1';
+MPC='MPC01';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version = 'v1'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible)
+param_casadi_fun_name.(MPC).version = 'v1'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat )
 param_casadi_fun_name.(MPC).Ts      = 1e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
 
 MPC='MPC6';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v3_quat'; % (v1: (J(u,y)) | v2: J(y,y_p,y_pp) | v3: ineq & traj feasible)
+param_casadi_fun_name.(MPC).version  = 'v3_quat'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat )
 param_casadi_fun_name.(MPC).Ts      = 1e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
+param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
+
+MPC='MPC7';
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).version  = 'v3_rpy'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat )
+param_casadi_fun_name.(MPC).Ts      = 1e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -61,6 +74,9 @@ MPC_solver       = param_casadi_fun_struct.solver;
 MPC_version      = param_casadi_fun_struct.version;
 compile_mode     = param_casadi_fun_struct.compile_mode;
 int_method       = param_casadi_fun_struct.int_method;
+fixed_parameter  = param_casadi_fun_struct.fixed_parameter;
+weights_and_limits_as_parameter = ~fixed_parameter; %[todo, replace]
+
 
 disp(['Selected: ', casadi_func_name])
 
@@ -288,8 +304,12 @@ param_MPC = struct( ...
   'solver',               MPC_solver, ...
   'version',              MPC_version, ...
   'name',                 param_casadi_fun_struct.name, ...
-  'int_method',           int_method ...
+  'int_method',           int_method, ...
+  'fixed_parameter',      fixed_parameter ...
 );
+
+mergestructs = @(x,y) cell2struct([struct2cell(x);struct2cell(y)],[fieldnames(x);fieldnames(y)]);
+param_MPC = mergestructs(param_MPC, sol_indices);
 
 eval(mpc_settings_struct_name+"=param_MPC;"); % set new struct name
 save(""+mpc_settings_path+mpc_settings_struct_name+'.mat', mpc_settings_struct_name);

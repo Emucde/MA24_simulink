@@ -212,13 +212,6 @@ quat   = casadi.Function.load(['./', s_fun_path, '/quat_endeffector_py.casadi'])
 sys_fun_qpp_aba = casadi.Function.load(['./', s_fun_path, '/sys_fun_qpp_aba_py.casadi']);
 sys_fun_qpp_sol = casadi.Function.load(['./', s_fun_path, '/sys_fun_qpp_sol_py.casadi']);
 
-load(['./', s_fun_path, '/pp_indices.mat']);
-load(['./', s_fun_path, '/rr_indices.mat']);
-param_sol.pp.indices = pp_indices;
-param_sol.pp.dim = pp_dim;
-param_sol.rr.indices = rr_indices;
-param_sol.rr.dim = rr_dim;
-
 qpp_fun = @(q, q_p, tau) M(q)\(tau - C_rnea(q, q_p));
 qpp_fun_maple = @(q, q_p, tau, param) inertia_matrix(q, param)\(tau - coriolis_matrix(q, q_p, param)*q_p - gravitational_forces(q, param));
 qpp_fun_maple_casadi_SX = @(q, q_p, tau, param) inertia_matrix_casadi_SX(q, param)\(tau - coriolis_matrix_casadi_SX(q, q_p, param)*q_p - gravitational_forces_casadi_SX(q, param));
@@ -392,12 +385,7 @@ if(any(q_0_init ~= q_0_old) || ...
     plot_null_simu                  = false;
     print_init_guess_cost_functions = false;
     
-    % [TODO] : Es ist viel einfacher direkt MPC_v3 aufzurufen und sich die
-    % notwendigen daten davon zu holen. Das muss dann eben für jede MPC
-    % separat getan werden, d. h. eig das If von nlpsol_opt_problem_v2
-    
     tic
-    %f = Function.load([s_fun_path, '/', 'sys_fun_x_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
     for name={files.name}
         name_mat_file    = name{1};
         param_MPC_name   = name_mat_file(1:end-4);
@@ -416,22 +404,16 @@ if(any(q_0_init ~= q_0_old) || ...
         N_step_MPC       = param_MPC_struct.N_step;
         MPC_version      = param_MPC_struct.version;
         int_method       = param_MPC_struct.int_method;
+        fixed_parameter  = param_MPC_struct.fixed_parameter;
 
+        weights_and_limits_as_parameter = ~fixed_parameter;
         DT = Ts_MPC;
         M = rk_iter;
 
         output_dir = ['./', s_fun_path,'/'];
 
         f_opt = Function.load([s_fun_path, '/', casadi_func_name, '.casadi']);
-%{
-        F = integrate_casadi(f, DT, M, int_method);
-        m=3; %%%%%% PUFSCH
-        z     = SX.sym('z',     2*m);
-        alpha = SX.sym('alpha',   m);
 
-        h_ref = Function('h_ref', {z, alpha}, {[z(m+1:2*m); alpha]});
-        H = integrate_casadi(h_ref, DT, M, int_method);
-%}
         param_weight_init = param_weight.(casadi_func_name);
         param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init), 'vector');
 
@@ -458,48 +440,13 @@ if(any(q_0_init ~= q_0_old) || ...
             param_trajectory.rot_ax_d  = param_traj_data.rot_ax_d(  :, :, ii   );
             param_trajectory.alpha_d_offset = param_traj_data.alpha_d_offset(:, :, ii);
             param_trajectory.q_d_rel = param_traj_data.q_d_rel(   :, :, ii   );
-%{
-            p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
-            p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
-            p_d_pp_0 = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
 
-            % Phi_d_0 = param_trajectory.Phi_d(     1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_0 ... Phi_N)
-            % Phi_d_p_0 = param_trajectory.Phi_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_p_0 ... Phi_p_N)
-            % Phi_d_pp_0 = param_trajectory.Phi_d_pp(1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_pp_0 ... Phi_pp_N)
-            % 
-            % % PFUSCH [TODO]
-            % p_d_0 = [p_d_0; Phi_d_0];
-            % p_d_p_0 = [p_d_p_0; Phi_d_p_0];
-            % p_d_pp_0 = [p_d_pp_0; Phi_d_pp_0];
-
-            % PFUSCH: [TODO] Duplicat in MPC_V3
-            u_k_0  = compute_tau_fun(q_0, q_0_p, q_0_pp); % much more faster than above command
-            u_init_guess_0 = ones(n, N_MPC).*u_k_0; % fully actuated
-
-            x_0_0  = [q_0; q_0_p];
-            F_sim              = F.mapaccum(N_MPC);
-            x_init_guess_kp1_0 = F_sim(x_0_0, u_init_guess_0);
-            x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
-            u_init_guess_0 = ones(n, N_MPC).*u_k_0; % fully actuated
-
-            z_0_0 = [p_d_0(:,1); p_d_p_0(:,1)]; % init for z_ref
-            alpha_init_guess_0 = p_d_pp_0(:, 1:end-1);
-            alpha_N_0 = p_d_pp_0(:,end);
-            
-            H_sim              = H.mapaccum(N_MPC);
-            z_init_guess_kp1_0 = H_sim(z_0_0, alpha_init_guess_0);
-            z_init_guess_0     = [z_0_0 full(z_init_guess_kp1_0)];
-
-            lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0)+numel(alpha_init_guess_0) + numel(alpha_N_0), 1);
-            lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(z_init_guess_0)+1, 1); % + 1 wegen eps
-            
-            init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
-
-            
-            mpc_init_reference_values = [x_0_0(:); z_0_0(:); p_d_0(:); p_d_p_0(:); p_d_pp_0(:)];
-    %}
             nlpsol_generate_opt_problem;
-            [~, xx_full_opt_sol, ~] = f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
+            if(weights_and_limits_as_parameter)
+                [~, xx_full_opt_sol, ~] = f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
+            else
+                [~, xx_full_opt_sol] = f_opt(mpc_init_reference_values, init_guess_0);
+            end
             init_guess = full(xx_full_opt_sol);
 
             init_guess_cell{ii} = init_guess;
