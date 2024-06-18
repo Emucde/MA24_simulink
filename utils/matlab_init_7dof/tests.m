@@ -19,7 +19,7 @@
 % test_val=8; % Speed test casadi python compiled vs Maple23 casadi compiled
 % test_val=9; % Speed test casadi python compiled vs Maple19 casadi compiled
 
-test_val=7;
+test_val=6;
 compile = false;
 if(test_val == 1)
     
@@ -796,7 +796,7 @@ elseif(test_val == 6)
     output_dir = './s_functions/s_functions_7dof/maple_msfun/';
     fun_dir1 = './s_functions/s_functions_7dof/';
     fun_dir2 = './s_functions/s_functions_7dof/maple_msfun/';
-    compile_msfunctions(sys_fun_qpp, fun_dir1, fun_dir2, output_dir, param_robot, param_init_pose);
+    compile_msfunctions(sys_fun_qpp_aba, fun_dir1, fun_dir2, output_dir, param_robot, param_init_pose);
 
     return
 elseif(test_val == 7)
@@ -806,7 +806,7 @@ elseif(test_val == 7)
     output_dir = './s_functions/s_functions_7dof/maple_msfun/';
     fun_dir1 = './s_functions/s_functions_7dof/';
     fun_dir2 = './s_functions/s_functions_7dof/maple_msfun/';
-    compile_msfunctions(sys_fun_qpp, fun_dir1, fun_dir2, output_dir, param_robot, param_init_pose);
+    compile_msfunctions(sys_fun_qpp_aba, fun_dir1, fun_dir2, output_dir, param_robot, param_init_pose);
 
     return
 elseif(test_val == 8)
@@ -1272,6 +1272,15 @@ function compile_msfunctions(sys_fun_qpp, fun_dir1, fun_dir2, output_dir, param_
         'geo_jacobian_endeffector_py', ...
         'geo_jacobian_endeffector_p_py' ...
     };
+
+    % add hom. transformation of joints
+    joint_arr = cell(1, param_robot.n_DOF);
+    for i = 1:param_robot.n_DOF
+        joint_arr{i} = ['hom_transform_joint_', num2str(i), '_py'];
+    end
+
+    fun_arr = [fun_arr, joint_arr];
+
     compile_to_matlabsfun(fun_dir1, output_dir, fun_arr);
 
     % compile maple19/23

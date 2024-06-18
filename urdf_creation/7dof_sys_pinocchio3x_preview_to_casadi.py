@@ -48,8 +48,9 @@ q_pp = cs.SX.sym('q_pp', n, 1)
 x = cs.vertcat(q, q_p)
 
 cpin.framesForwardKinematics(casadi_model, cdata, q)
-endEffector_ID = casadi_model.getFrameId(end_link)
 
+endEffector_ID = casadi_model.getFrameId(end_link)
+# forward kinematics of TCP
 f_e = cs.Function('f_e', [q], [cdata.oMf[endEffector_ID].translation], ['q'], ['f_e'])
 H_SX = cdata.oMf[endEffector_ID].homogeneous
 H = cs.Function('H', [q], [H_SX], ['q'], ['H(q)'])
@@ -100,6 +101,7 @@ print(runtime)
 M_inv_SX = cpin.computeMinverse(casadi_model, cdata, q)
 M_inv = cs.Function('M_inv', [q], [M_inv_SX], ['q'], ['M_inv(q)']) # inverse inertia matrix
 
+# Jacobian of TCP
 J_SX = cpin.computeFrameJacobian(casadi_model, cdata, q, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
 J = cs.Function('J', [q], [J_SX], ['q'], ['J(q)'])
 
@@ -122,6 +124,15 @@ sys_fun_x_aba = cs.Function('sys_fun_x_aba', [x, u], [cs.vertcat(x[n:2*n], sys_f
 sys_fun_x_sol = cs.Function('sys_fun_x_sol', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp_sol(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u) (sol)'])
 
 robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'g(q)'])
+
+# get hom. transformation matrices of all joints
+joint_names = casadi_model.names.tolist() # first joint is 'universal_joint' (ignore it)
+for i in range(n):
+    print("Joint: ", joint_names[i+1]) # ignore first joint "universal_joint"
+    joint_id = casadi_model.getFrameId(joint_names[i+1])
+    H_qi_SX = cdata.oMf[joint_id].homogeneous
+    H_qi = cs.Function('H_q'+str(i+1), [q], [H_qi_SX], ['q'], ['H_q'+str(i+1)+'(q)'])
+    H_qi.save('./s_functions/s_functions_7dof/hom_transform_joint_'+str(i+1)+'_py.casadi')
 
 M.save('./s_functions/s_functions_7dof/inertia_matrix_py.casadi')
 M_inv.save('./s_functions/s_functions_7dof/inverse_inertia_matrix_py.casadi')
