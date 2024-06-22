@@ -134,6 +134,9 @@ for i in range(n):
     H_qi = cs.Function('H_q'+str(i+1), [q], [H_qi_SX], ['q'], ['H_q'+str(i+1)+'(q)'])
     H_qi.save('./s_functions/s_functions_7dof/hom_transform_joint_'+str(i+1)+'_py.casadi')
 
+    J_qi_SX = cpin.computeFrameJacobian(casadi_model, cdata, q, joint_id, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+    J_qi = cs.Function('J_q'+str(i+1), [q], [J_qi_SX], ['q'], ['J_q'+str(i+1)+'(q)'])
+
 M.save('./s_functions/s_functions_7dof/inertia_matrix_py.casadi')
 M_inv.save('./s_functions/s_functions_7dof/inverse_inertia_matrix_py.casadi')
 C_rnea.save('./s_functions/s_functions_7dof/n_q_coriols_qp_plus_g_py.casadi')
