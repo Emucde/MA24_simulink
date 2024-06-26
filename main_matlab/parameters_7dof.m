@@ -93,6 +93,7 @@ param_global.Ta = 1e-3;
 
 param_visual;
 param_robot_init;
+param_visual_ur5e;
 n = param_robot.n_DOF;
 m = param_robot.m;
 
