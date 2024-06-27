@@ -41,7 +41,7 @@ addpath(genpath('./utils/matlab_utils'));
 addpath(genpath('./utils/matlab_init_general'));
 addpath(genpath('./utils/utils_casadi'));
 addpath(genpath(s_fun_path));
-addpath(genpath('./maple/maple_generated/7_dof_system_fr3'));
+addpath(genpath('./maple/maple_generated/fr3_7dof'));
 addpath(genpath('./urdf_creation'))
 addpath(genpath('./main_simulink'))
 
