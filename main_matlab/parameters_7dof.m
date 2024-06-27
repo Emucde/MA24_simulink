@@ -37,7 +37,7 @@ s_fun_path = 's_functions/s_functions_7dof';
 cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_matlab % [TODO: besser machen]
 addpath(genpath('../main_matlab'));
 addpath(genpath('../utils/matlab_utils'));
-addpath(genpath('../utils/matlab_init_7dof'));
+addpath(genpath('../utils/matlab_init_general'));
 addpath(genpath('../utils/utils_casadi'));
 addpath(genpath(['../', s_fun_path]));
 addpath(genpath('../maple/maple_generated/7_dof_system_fr3'));
