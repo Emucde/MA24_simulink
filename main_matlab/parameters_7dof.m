@@ -1,7 +1,9 @@
+cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/
+
 %% INIT
 if(exist('parameter_str', 'var') && strcmp(parameter_str, "parameters_2dof"))
-    rmpath('../utils/matlab_init_2dof');
-    rmpath('../maple/maple_generated/2_dof_system');
+    rmpath('./utils/matlab_init_2dof');
+    rmpath('./maple/maple_generated/2_dof_system');
 end
 
 %if strcmp(mfilename, 'parameters')
@@ -17,34 +19,31 @@ x_traj_out_of_workspace_value = 0.1;
 plot_trajectory = ~true;
 overwrite_offline_traj_forced = false;
 
-% (turn off profiler when not needed anymore)
-% set_param(gcs,'Profile','off');
+
+% set_param(gcs,'Profile','off'); % turn off profiler when not needed anymore
+
 % measure compile time: 
-%disp('Compile Time:')
-
-%tic;set_param('sim_discrete_planar', 'SimulationCommand', 'update');toc
-%rmpath('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/s_functions')
-
-%closeAllSimulinkModels('./MPC_shared_subsystems')
-%closeAllSimulinkModels('.')
-
-close_system('./main_simulink/controller_ref_subsys');
+% disp('Compile Time:')
+% tic;set_param('sim_discrete_planar', 'SimulationCommand', 'update');
+% toc
 
 parameter_str = "parameters_7dof";
-s_fun_path = 's_functions/s_functions_7dof';
+
+% robot_name = 'fr3_7dof';
+robot_name = 'fr3_6dof';
+% robot_name = 'ur5e';
+
+s_fun_path = ['./s_functions/', robot_name];
 
 %restoredefaultpath
-cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_matlab % [TODO: besser machen]
-addpath(genpath('../main_matlab'));
-addpath(genpath('../utils/matlab_utils'));
-addpath(genpath('../utils/matlab_init_general'));
-addpath(genpath('../utils/utils_casadi'));
-addpath(genpath(['../', s_fun_path]));
-addpath(genpath('../maple/maple_generated/7_dof_system_fr3'));
-addpath(genpath('../urdf_creation'))
-addpath(genpath('../main_simulink'))
-cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink
-set(groot, 'DefaultFigurePosition', [350, -650, 800, 600])
+addpath(genpath('./main_matlab'));
+addpath(genpath('./utils/matlab_utils'));
+addpath(genpath('./utils/matlab_init_general'));
+addpath(genpath('./utils/utils_casadi'));
+addpath(genpath(s_fun_path));
+addpath(genpath('./maple/maple_generated/7_dof_system_fr3'));
+addpath(genpath('./urdf_creation'))
+addpath(genpath('./main_simulink'))
 
 init_casadi;
 import casadi.*;
@@ -53,12 +52,17 @@ simulink_main_model_name = 'sim_discrete_7dof';
 open_simulink_on_start = true;
 %if(~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && sum(strfind([getenv().keys{:}], 'VSCODE')) == 0)
 % && ~isSimulinkStarted funktioniert einfach nicht.
-if( ~contains([license('inuse').feature], 'simulink') && open_simulink_on_start && desktop('-inuse') == 1) % in vscode inuse delivers 0 (running in background)
+if( ~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && desktop('-inuse') == 1) % in vscode inuse delivers 0 (running in background)
     tic
     fprintf(['open simulink model \"' simulink_main_model_name, '\" ...'])
     open_system([simulink_main_model_name '.slx'])
     fprintf([' finished! (Loading time: ' num2str(toc) ' s)\n']);
 end
+
+%closeAllSimulinkModels('./MPC_shared_subsystems')
+%closeAllSimulinkModels('.')
+close_system('./main_simulink/controller_ref_subsys');
+
 % get_param(blk_name, 'ObjectParameters');
 if(contains([license('inuse').feature], 'simulink'))
     blk_name = [simulink_main_model_name, '/trajectory combo box'];
@@ -199,19 +203,19 @@ if(start_in_singularity)
     xe0 = temp;
 end
 
-C_matlab = casadi.Function.load(['./', s_fun_path, '/C_fun.casadi']); % matlab
-compute_tau_fun = Function.load(['./', s_fun_path, '/compute_tau_py.casadi']);
-g      = casadi.Function.load(['./', s_fun_path, '/gravitational_forces_py.casadi']);
-M      = casadi.Function.load(['./', s_fun_path, '/inertia_matrix_py.casadi']); %
-M_inv  = casadi.Function.load(['./', s_fun_path, '/inverse_inertia_matrix_py.casadi']); %
-C_rnea = casadi.Function.load(['./', s_fun_path, '/n_q_coriols_qp_plus_g_py.casadi']);
+C_matlab = casadi.Function.load([s_fun_path, '/C_fun.casadi']); % matlab
+compute_tau_fun = Function.load([s_fun_path, '/compute_tau_py.casadi']);
+g      = casadi.Function.load([s_fun_path, '/gravitational_forces_py.casadi']);
+M      = casadi.Function.load([s_fun_path, '/inertia_matrix_py.casadi']); %
+M_inv  = casadi.Function.load([s_fun_path, '/inverse_inertia_matrix_py.casadi']); %
+C_rnea = casadi.Function.load([s_fun_path, '/n_q_coriols_qp_plus_g_py.casadi']);
 
-J      = casadi.Function.load(['./', s_fun_path, '/geo_jacobian_endeffector_py.casadi']); % perfekt
-J_p    = casadi.Function.load(['./', s_fun_path, '/geo_jacobian_endeffector_p_py.casadi']); % perfekt
-H      = casadi.Function.load(['./', s_fun_path, '/hom_transform_endeffector_py.casadi']); % perfect
-quat   = casadi.Function.load(['./', s_fun_path, '/quat_endeffector_py.casadi']);
-sys_fun_qpp_aba = casadi.Function.load(['./', s_fun_path, '/sys_fun_qpp_aba_py.casadi']);
-sys_fun_qpp_sol = casadi.Function.load(['./', s_fun_path, '/sys_fun_qpp_sol_py.casadi']);
+J      = casadi.Function.load([s_fun_path, '/geo_jacobian_endeffector_py.casadi']); % perfekt
+J_p    = casadi.Function.load([s_fun_path, '/geo_jacobian_endeffector_p_py.casadi']); % perfekt
+H      = casadi.Function.load([s_fun_path, '/hom_transform_endeffector_py.casadi']); % perfect
+quat   = casadi.Function.load([s_fun_path, '/quat_endeffector_py.casadi']);
+sys_fun_qpp_aba = casadi.Function.load([s_fun_path, '/sys_fun_qpp_aba_py.casadi']);
+sys_fun_qpp_sol = casadi.Function.load([s_fun_path, '/sys_fun_qpp_sol_py.casadi']);
 
 qpp_fun = @(q, q_p, tau) M(q)\(tau - C_rnea(q, q_p));
 qpp_fun_maple = @(q, q_p, tau, param) inertia_matrix(q, param)\(tau - coriolis_matrix(q, q_p, param)*q_p - gravitational_forces(q, param));
@@ -219,7 +223,7 @@ qpp_fun_maple_casadi_SX = @(q, q_p, tau, param) inertia_matrix_casadi_SX(q, para
 % qpp_fun_maple_casadi_SX_fun = casadi.Function('qpp_fun_maple_casadi_SX_fun', {sys_fun_qpp.sx_in{1}, sys_fun_qpp.sx_in{2}, sys_fun_qpp.sx_in{3}}, {qpp_fun_maple_casadi_SX(sys_fun_qpp.sx_in{1}, sys_fun_qpp.sx_in{2}, sys_fun_qpp.sx_in{3}, param_robot)}, {'q', 'q_p', 'tau'}, {'qpp'});
 % C_rnea_maple = casadi.Function('C_rnea', {sys_fun_qpp.sx_in{1}, sys_fun_qpp.sx_in{2}}, {coriolis_matrix_casadi_SX(sys_fun_qpp.sx_in{1}, sys_fun_qpp.sx_in{2}, param_robot)*sys_fun_qpp.sx_in{2} + gravitational_forces_casadi_SX(sys_fun_qpp.sx_in{1}, param_robot)}, {'q', 'q_p'}, {'C_rnea'});
 
-robot_model_bus_fun = casadi.Function.load(['./', s_fun_path, '/robot_model_bus_fun_py.casadi']);
+robot_model_bus_fun = casadi.Function.load([s_fun_path, '/robot_model_bus_fun_py.casadi']);
 
 %tests;
 
@@ -277,7 +281,7 @@ param_init_pose.alphaT = 1;
 
 %% GENERATE OFFLINE TRAJECTORY
 
-files = dir(['./', s_fun_path, '/mpc_settings/*.mat']);
+files = dir([s_fun_path, '/mpc_settings/*.mat']);
 cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
 
 % 1. get maximum horizont length of all mpcs:
@@ -298,8 +302,8 @@ for name={files.name}
     end
 end
 
-param_MPC_traj_data_mat_file = ['./', s_fun_path, '/trajectory_data/param_traj_data.mat'];
-param_traj_data_old = ['./', s_fun_path, '/trajectory_data/param_traj_data_old.mat'];
+param_MPC_traj_data_mat_file = [s_fun_path, '/trajectory_data/param_traj_data.mat'];
+param_traj_data_old = [s_fun_path, '/trajectory_data/param_traj_data_old.mat'];
 load(param_traj_data_old);
 
 T_traj_poly         = param_traj_poly.T;
@@ -393,7 +397,7 @@ if(any(q_0_init ~= q_0_old) || ...
         param_MPC_struct = eval(param_MPC_name);
     
         param_MPC_init_guess_name = [param_MPC_name, '_init_guess'];
-        param_MPC_init_guess_mat_file = ['./', s_fun_path, '/initial_guess/', param_MPC_init_guess_name,'.mat'];
+        param_MPC_init_guess_mat_file = [s_fun_path, '/initial_guess/', param_MPC_init_guess_name,'.mat'];
     
         casadi_func_name = param_MPC_struct.name;
         MPC_variant      = param_MPC_struct.variant;
@@ -411,7 +415,7 @@ if(any(q_0_init ~= q_0_old) || ...
         DT = Ts_MPC;
         M = rk_iter;
 
-        output_dir = ['./', s_fun_path,'/'];
+        output_dir = [s_fun_path,'/'];
 
         f_opt = Function.load([s_fun_path, '/', casadi_func_name, '.casadi']);
 
@@ -489,7 +493,7 @@ if(any(q_0_init ~= q_0_old) || ...
 
     init_MPC_weights; % why necessary?
 else
-    files = dir(['./', s_fun_path, '/initial_guess/*.mat']);
+    files = dir([s_fun_path, '/initial_guess/*.mat']);
     cellfun(@load, {files.name});
 
     load(param_MPC_traj_data_mat_file);
