@@ -29,6 +29,7 @@ overwrite_offline_traj_forced = false;
 
 parameter_str = "parameters_7dof";
 
+% valid robot_names: fr3_7dof, fr3_6dof, ur5e
 % robot_name = 'fr3_7dof';
 robot_name = 'fr3_6dof';
 % robot_name = 'ur5e';
@@ -40,8 +41,9 @@ addpath(genpath('./main_matlab'));
 addpath(genpath('./utils/matlab_utils'));
 addpath(genpath('./utils/matlab_init_general'));
 addpath(genpath('./utils/utils_casadi'));
+robot_change;
 addpath(genpath(s_fun_path));
-addpath(genpath('./maple/maple_generated/fr3_7dof'));
+addpath(genpath('./maple/maple_generated/fr3_7dof')); % need it only for T Matrix
 addpath(genpath('./urdf_creation'))
 addpath(genpath('./main_simulink'))
 
@@ -95,11 +97,7 @@ end
 T_sim = 10; % = param_vis.T (see init_visual.m)
 param_global.Ta = 1e-3;
 
-param_visual;
 param_robot_init;
-param_visual_ur5e;
-n = param_robot.n_DOF;
-m = param_robot.m;
 
 bus_definitions;
 init_MPC_weights; %% set MPC weights
@@ -136,8 +134,8 @@ ct_ctrl_param.mode = 0;
 ct_ctrl_param.k = 1e-2;
 
 % 2:
-ct_ctrl_param.w_bar_N = 1e-3*[param_robot.l1^2; param_robot.l2^2; param_robot.l3^2; param_robot.l4^2; param_robot.l5^2; param_robot.l6^2];% ; param_robot.l7^2];
-ct_ctrl_param.W_E = 1e0 * eye(6); %ct_ctrl_param.w_bar_N;
+ct_ctrl_param.w_bar_N = 1e-3*param_robot.sugihara_limb_vector;
+ct_ctrl_param.W_E = 1e0 * eye(n); %ct_ctrl_param.w_bar_N;
 
 % 3:
 ct_ctrl_param.eps  = 1e-1;
@@ -182,10 +180,10 @@ q_0 = q_0_init(n_indices);
 q_0_p = q_0_p_init(n_indices);
 q_0_pp = q_0_pp_init(n_indices);
 
-H_0_init = hom_transform_endeffector(q_0_init, param_robot);
+H_0_init = hom_transform_endeffector_py(q_0);
 
-R_init = H_0_init(1:3, 1:3);
-quat_init = rotation2quaternion(R_init);
+quat_init = rotation2quaternion(H_0_init(1:3, 1:3));
+R_init = quat2rotm_v2(quat_init); % besser numerisch robust
 xe0 = [H_0_init(1:3,4); quat_init]; % xe0 = [x,y,z,q1,q2,q3,q4]
 
 rotq_fun = @(x1, x2) [x1(1:3) + x2(1:3); quat_mult(x1(4:7), x2(4:7))]; % multiplikation von quaternions = rotationen hintereinander ausführen
@@ -203,45 +201,25 @@ if(start_in_singularity)
     xe0 = temp;
 end
 
-C_matlab = casadi.Function.load([s_fun_path, '/C_fun.casadi']); % matlab
-compute_tau_fun = Function.load([s_fun_path, '/compute_tau_py.casadi']);
-g      = casadi.Function.load([s_fun_path, '/gravitational_forces_py.casadi']);
-M      = casadi.Function.load([s_fun_path, '/inertia_matrix_py.casadi']); %
-M_inv  = casadi.Function.load([s_fun_path, '/inverse_inertia_matrix_py.casadi']); %
-C_rnea = casadi.Function.load([s_fun_path, '/n_q_coriols_qp_plus_g_py.casadi']);
-
-J      = casadi.Function.load([s_fun_path, '/geo_jacobian_endeffector_py.casadi']); % perfekt
-J_p    = casadi.Function.load([s_fun_path, '/geo_jacobian_endeffector_p_py.casadi']); % perfekt
-H      = casadi.Function.load([s_fun_path, '/hom_transform_endeffector_py.casadi']); % perfect
-quat   = casadi.Function.load([s_fun_path, '/quat_endeffector_py.casadi']);
-sys_fun_qpp_aba = casadi.Function.load([s_fun_path, '/sys_fun_qpp_aba_py.casadi']);
-sys_fun_qpp_sol = casadi.Function.load([s_fun_path, '/sys_fun_qpp_sol_py.casadi']);
-
-qpp_fun = @(q, q_p, tau) M(q)\(tau - C_rnea(q, q_p));
-qpp_fun_maple = @(q, q_p, tau, param) inertia_matrix(q, param)\(tau - coriolis_matrix(q, q_p, param)*q_p - gravitational_forces(q, param));
-qpp_fun_maple_casadi_SX = @(q, q_p, tau, param) inertia_matrix_casadi_SX(q, param)\(tau - coriolis_matrix_casadi_SX(q, q_p, param)*q_p - gravitational_forces_casadi_SX(q, param));
-% qpp_fun_maple_casadi_SX_fun = casadi.Function('qpp_fun_maple_casadi_SX_fun', {sys_fun_qpp.sx_in{1}, sys_fun_qpp.sx_in{2}, sys_fun_qpp.sx_in{3}}, {qpp_fun_maple_casadi_SX(sys_fun_qpp.sx_in{1}, sys_fun_qpp.sx_in{2}, sys_fun_qpp.sx_in{3}, param_robot)}, {'q', 'q_p', 'tau'}, {'qpp'});
-% C_rnea_maple = casadi.Function('C_rnea', {sys_fun_qpp.sx_in{1}, sys_fun_qpp.sx_in{2}}, {coriolis_matrix_casadi_SX(sys_fun_qpp.sx_in{1}, sys_fun_qpp.sx_in{2}, param_robot)*sys_fun_qpp.sx_in{2} + gravitational_forces_casadi_SX(sys_fun_qpp.sx_in{1}, param_robot)}, {'q', 'q_p'}, {'C_rnea'});
-
-robot_model_bus_fun = casadi.Function.load([s_fun_path, '/robot_model_bus_fun_py.casadi']);
-
 %tests;
 
 %% Inverse Kin (Zum Prüfen ob Endwert im Aufgabenraum ist.)
-calc_inverse_kin = false;
+calc_inverse_kin = ~true;
 if(calc_inverse_kin)
     % Define the cost function.
-    Q1 = 1e10 * eye(6); % Weight for the position error in the cost function.
+    Q1 = 1e10 * eye(m); % Weight for the position error in the cost function.
     Q2 = 0.5; % Weight for the manipulability error in the cost function.
-    Q3 = 1*1e0 * eye(7); % Weight for the deviaton of q_sol to q_d
-    Q4 = 1e-1 * eye(7);% Weight of nl_spring_force(q, ct_ctrl_param, param_robot) -> pose should not start near to limits!
+    Q3 = 1*1e0 * eye(n); % Weight for the deviaton of q_sol to q_d
+    Q4 = 1e-1 * eye(n);% Weight of nl_spring_force(q, ct_ctrl_param, param_robot) -> pose should not start near to limits!
     tolerance = 0.01;
     random_q0_count = 100;
 
     q_d = param_robot.q_n;
     q_d = q_0;
+
+    xeT_in = [xeT(1:3); rotm2eul(R_target, 'XYZ')'];
     
-    [q_sol, ~] = inverse_kinematics(param_robot, xeT, q_d, Q1, Q2, Q3, Q4, tolerance, random_q0_count, ct_ctrl_param);
+    [q_sol, ~] = inverse_kinematics(param_robot, xeT_in, q_d, Q1, Q2, Q3, Q4, tolerance, random_q0_count, ct_ctrl_param);
     %%
 end
 
@@ -353,43 +331,55 @@ if(any(q_0_init ~= q_0_old) || ...
     param_traj_data.alpha_d_offset = zeros(1, N_traj, traj_select.traj_amount);
     param_traj_data.q_d_rel = zeros(4, N_traj, traj_select.traj_amount);
 
-    for i=1:traj_select.traj_amount
-        tic;
-        % TODO: Create function for that!!!!!
-        param_trajectory = generate_trajectory(t, i, param_init_pose, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
-        disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
-    
-        param_traj_data.t(         :,  :      ) = param_trajectory.t;
-        param_traj_data.p_d(       :,  :, i   ) = param_trajectory.p_d;
-        param_traj_data.p_d_p(     :,  :, i   ) = param_trajectory.p_d_p;
-        param_traj_data.p_d_pp(    :,  :, i   ) = param_trajectory.p_d_pp;
-        param_traj_data.Phi_d(     :,  :, i   ) = param_trajectory.Phi_d;
-        param_traj_data.Phi_d_p(   :,  :, i   ) = param_trajectory.Phi_d_p;
-        param_traj_data.Phi_d_pp(  :,  :, i   ) = param_trajectory.Phi_d_pp;
-        param_traj_data.R_d(       :,  :, :, i) = param_trajectory.R_d;
-        param_traj_data.q_d(       :,  :, i   ) = param_trajectory.q_d;
-        param_traj_data.q_d_p(     :,  :, i   ) = param_trajectory.q_d_p;
-        param_traj_data.q_d_pp(    :,  :, i   ) = param_trajectory.q_d_pp;
-        param_traj_data.omega_d(   :,  :, i   ) = param_trajectory.omega_d;
-        param_traj_data.omega_d_p( :,  :, i   ) = param_trajectory.omega_d_p;
-        param_traj_data.alpha_d(   :,  :, i   ) = param_trajectory.alpha_d;
-        param_traj_data.alpha_d_p( :,  :, i   ) = param_trajectory.alpha_d_p;
-        param_traj_data.alpha_d_pp(:,  :, i   ) = param_trajectory.alpha_d_pp;
-        param_traj_data.rot_ax_d(  :,  :, i   ) = param_trajectory.rot_ax_d;
-        param_traj_data.alpha_d_offset(:, :, i) = param_trajectory.alpha_d_offset;
-        param_traj_data.q_d_rel(   :,  :, i   ) = param_trajectory.q_d_rel;
+    % then only create init guess wheN: mpc want it or it is forced by parameters_xdof.m
+    if(overwrite_offline_traj || overwrite_offline_traj_forced)
 
+        for i=1:traj_select.traj_amount
+            tic;
+            % TODO: Create function for that!!!!!
+            param_trajectory = generate_trajectory(t, i, param_init_pose, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
+            disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
+        
+            param_traj_data.t(         :,  :      ) = param_trajectory.t;
+            param_traj_data.p_d(       :,  :, i   ) = param_trajectory.p_d;
+            param_traj_data.p_d_p(     :,  :, i   ) = param_trajectory.p_d_p;
+            param_traj_data.p_d_pp(    :,  :, i   ) = param_trajectory.p_d_pp;
+            param_traj_data.Phi_d(     :,  :, i   ) = param_trajectory.Phi_d;
+            param_traj_data.Phi_d_p(   :,  :, i   ) = param_trajectory.Phi_d_p;
+            param_traj_data.Phi_d_pp(  :,  :, i   ) = param_trajectory.Phi_d_pp;
+            param_traj_data.R_d(       :,  :, :, i) = param_trajectory.R_d;
+            param_traj_data.q_d(       :,  :, i   ) = param_trajectory.q_d;
+            param_traj_data.q_d_p(     :,  :, i   ) = param_trajectory.q_d_p;
+            param_traj_data.q_d_pp(    :,  :, i   ) = param_trajectory.q_d_pp;
+            param_traj_data.omega_d(   :,  :, i   ) = param_trajectory.omega_d;
+            param_traj_data.omega_d_p( :,  :, i   ) = param_trajectory.omega_d_p;
+            param_traj_data.alpha_d(   :,  :, i   ) = param_trajectory.alpha_d;
+            param_traj_data.alpha_d_p( :,  :, i   ) = param_trajectory.alpha_d_p;
+            param_traj_data.alpha_d_pp(:,  :, i   ) = param_trajectory.alpha_d_pp;
+            param_traj_data.rot_ax_d(  :,  :, i   ) = param_trajectory.rot_ax_d;
+            param_traj_data.alpha_d_offset(:, :, i) = param_trajectory.alpha_d_offset;
+            param_traj_data.q_d_rel(   :,  :, i   ) = param_trajectory.q_d_rel;
+
+        end
+
+        save(param_MPC_traj_data_mat_file, 'param_traj_data'); % save struct
+    else
+        load(param_MPC_traj_data_mat_file);
     end
-    
-    save(param_MPC_traj_data_mat_file, 'param_traj_data'); % save struct
-    
     % 3. calculate initial guess for alle trajectories and mpcs
     
     compile_sfun                    = false;
     weights_and_limits_as_parameter = true;
     plot_null_simu                  = false;
     print_init_guess_cost_functions = false;
-    
+
+    if(~overwrite_offline_traj_forced)
+        if(~strcmp(overwrite_init_guess_name, ''))
+            files = struct;
+            files.name = overwrite_init_guess_name;
+        end
+    end
+
     tic
     for name={files.name}
         name_mat_file    = name{1};
@@ -416,6 +406,7 @@ if(any(q_0_init ~= q_0_old) || ...
         M = rk_iter;
 
         output_dir = [s_fun_path,'/'];
+        input_dir = [s_fun_path,'/casadi_functions/'];
 
         f_opt = Function.load([s_fun_path, '/', casadi_func_name, '.casadi']);
 
@@ -483,13 +474,15 @@ if(any(q_0_init ~= q_0_old) || ...
     T_horizon_max_old       = T_horizon_max;
     N_sum_old               = N_sum;
     Ts_sum_old              = Ts_sum;
+    overwrite_init_guess_name = ''; % reset, compare mpc_casadi_main.m
     overwrite_offline_traj  = false;
 
     save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
          'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
          'Ta_old', 'T_traj_poly_old', ...
          'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
-         'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old', 'overwrite_offline_traj');
+         'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old', ... 
+         'overwrite_offline_traj', 'overwrite_init_guess_name');
 
     init_MPC_weights; % why necessary?
 else

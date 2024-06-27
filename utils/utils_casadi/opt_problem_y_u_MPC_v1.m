@@ -69,14 +69,14 @@ m = param_robot.m; % Dimension of Task Space
 % Forward Dynamics: d/dt x = f(x, u)
 use_aba = ~true;
 if(use_aba)
-    f = Function.load([output_dir, 'sys_fun_x_aba_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
+    f = Function.load([input_dir, 'sys_fun_x_aba_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
 else
-    f = Function.load([output_dir, 'sys_fun_x_sol_py.casadi']); % equivalent as above
+    f = Function.load([input_dir, 'sys_fun_x_sol_py.casadi']); % equivalent as above
 end
 
-compute_tau_fun = Function.load([output_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
-hom_transform_endeffector_py_fun = Function.load([output_dir, 'hom_transform_endeffector_py.casadi']);
-quat_endeffector_py_fun = Function.load([output_dir, 'quat_endeffector_py.casadi']);
+compute_tau_fun = Function.load([input_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
+hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
+quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval

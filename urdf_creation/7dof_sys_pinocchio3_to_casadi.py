@@ -24,21 +24,41 @@ def SX00_to_SX0(J_fun, q, q_p=None):
     else:
         return cs.Function(J_fun.name(), [q, q_p], [J_val], J_fun.name_in(), J_fun.name_out())
 
-mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files')
-urdf_path = os.path.join(os.path.dirname(__file__), 'fr3.urdf')
+robot_name = "fr3_7dof"
+# robot_name = "fr3_6dof"
+# robot_name = "ur5e"
 
-mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files')
+if "fr3" in robot_name:
+    mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_FR3')
+    root_link = "fr3_link0"
+    end_link = "fr3_hand_tcp"
+    if "7dof" in robot_name:
+        urdf_path = os.path.join(os.path.dirname(__file__), 'fr3_7dof.urdf')
+        s_functions_path = './s_functions/fr3_7dof/casadi_functions/'
+        q_0 = [0, 0, np.pi/4, -np.pi/2, 0, np.pi/2, 0] # 7 DOF
+    elif "6dof" in robot_name:
+        urdf_path = os.path.join(os.path.dirname(__file__), 'fr3_6dof.urdf')
+        s_functions_path = './s_functions/fr3_6dof/'
+        q_0 = [0, 0, -np.pi/2, 0, np.pi/2, 0] # joint q3 fixed at pi/4
+    else:
+        raise Exception("Unknown robot name '{}'".format(robot_name), "Available robots: 'fr3_7dof', 'fr3_6dof'")
+elif robot_name == "ur5e":
+    s_functions_path = './s_functions/ur5e_6dof/'
+    mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_ur5e')
+    urdf_path = os.path.join(os.path.dirname(__file__), 'ur5e.urdf')
+    root_link = "base_link"
+    end_link = "ur5e_tcp"
+    q_0 = [0, 0, -np.pi/2, 0, -np.pi/2, 0] # standing pose
+else:
+    raise Exception("Unknown robot name '{}'".format(robot_name), "Available robots: 'fr3_7dof', 'fr3_6dof', 'ur5e'")
 
-# q_0 = [0, 0, np.pi/4, -np.pi/2, 0, np.pi/2, 0] # 7 DOF
-q_0 = [0, 0, -np.pi/2, 0, np.pi/2, 0] # joint q3 fixed at pi/4
+# Load robot model
 robot = pin.robot_wrapper.RobotWrapper.BuildFromURDF(str(urdf_path))
 pin_model = robot.model
 
+# Create casadi model and data
 casadi_model = cpin.Model(pin_model)
 cdata = casadi_model.createData()
-
-root_link = "fr3_link0"
-end_link = "fr3_hand_tcp"
 
 n = casadi_model.nq
 u = cs.SX.sym('u', n, 1)
@@ -47,10 +67,12 @@ q_p = cs.SX.sym('q_p', n, 1)
 q_pp = cs.SX.sym('q_pp', n, 1)
 x = cs.vertcat(q, q_p)
 
+# get endeffector id
+endEffector_ID = casadi_model.getFrameId(end_link)
+
+# forward kinematics of TCP
 cpin.framesForwardKinematics(casadi_model, cdata, q)
 
-endEffector_ID = casadi_model.getFrameId(end_link)
-# forward kinematics of TCP
 f_e = cs.Function('f_e', [q], [cdata.oMf[endEffector_ID].translation], ['q'], ['f_e'])
 H_SX = cdata.oMf[endEffector_ID].homogeneous
 H = cs.Function('H', [q], [H_SX], ['q'], ['H(q)'])
@@ -127,29 +149,30 @@ robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), 
 
 # get hom. transformation matrices of all joints
 joint_names = casadi_model.names.tolist() # first joint is 'universal_joint' (ignore it)
+
 for i in range(n):
     print("Joint: ", joint_names[i+1]) # ignore first joint "universal_joint"
     joint_id = casadi_model.getFrameId(joint_names[i+1])
     H_qi_SX = cdata.oMf[joint_id].homogeneous
     H_qi = cs.Function('H_q'+str(i+1), [q], [H_qi_SX], ['q'], ['H_q'+str(i+1)+'(q)'])
-    H_qi.save('./s_functions/s_functions_7dof/hom_transform_joint_'+str(i+1)+'_py.casadi')
+    H_qi.save(s_functions_path + 'hom_transform_joint_'+str(i+1)+'_py.casadi')
 
     J_qi_SX = cpin.computeFrameJacobian(casadi_model, cdata, q, joint_id, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
     J_qi = cs.Function('J_q'+str(i+1), [q], [J_qi_SX], ['q'], ['J_q'+str(i+1)+'(q)'])
 
-M.save('./s_functions/s_functions_7dof/inertia_matrix_py.casadi')
-M_inv.save('./s_functions/s_functions_7dof/inverse_inertia_matrix_py.casadi')
-C_rnea.save('./s_functions/s_functions_7dof/n_q_coriols_qp_plus_g_py.casadi')
-g.save('./s_functions/s_functions_7dof/gravitational_forces_py.casadi')
-H.save('./s_functions/s_functions_7dof/hom_transform_endeffector_py.casadi')
-quat.save('./s_functions/s_functions_7dof/quat_endeffector_py.casadi')
-J.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_py.casadi')
-J_p.save('./s_functions/s_functions_7dof/geo_jacobian_endeffector_p_py.casadi')
+M.save(s_functions_path + 'inertia_matrix_py.casadi')
+M_inv.save(s_functions_path + 'inverse_inertia_matrix_py.casadi')
+C_rnea.save(s_functions_path + 'n_q_coriols_qp_plus_g_py.casadi')
+g.save(s_functions_path + 'gravitational_forces_py.casadi')
+H.save(s_functions_path + 'hom_transform_endeffector_py.casadi')
+quat.save(s_functions_path + 'quat_endeffector_py.casadi')
+J.save(s_functions_path + 'geo_jacobian_endeffector_py.casadi')
+J_p.save(s_functions_path + 'geo_jacobian_endeffector_p_py.casadi')
 
-sys_fun_qpp_aba.save('./s_functions/s_functions_7dof/sys_fun_qpp_aba_py.casadi')
-sys_fun_qpp_sol.save('./s_functions/s_functions_7dof/sys_fun_qpp_sol_py.casadi')
-sys_fun_x_aba.save('./s_functions/s_functions_7dof/sys_fun_x_aba_py.casadi')
-sys_fun_x_sol.save('./s_functions/s_functions_7dof/sys_fun_x_sol_py.casadi')
+sys_fun_qpp_aba.save(s_functions_path + 'sys_fun_qpp_aba_py.casadi')
+sys_fun_qpp_sol.save(s_functions_path + 'sys_fun_qpp_sol_py.casadi')
+sys_fun_x_aba.save(s_functions_path + 'sys_fun_x_aba_py.casadi')
+sys_fun_x_sol.save(s_functions_path + 'sys_fun_x_sol_py.casadi')
 
-inv_dyn_tau.save('./s_functions/s_functions_7dof/compute_tau_py.casadi')
-robot_model_bus_fun.save('./s_functions/s_functions_7dof/robot_model_bus_fun_py.casadi')
+inv_dyn_tau.save(s_functions_path + 'compute_tau_py.casadi')
+robot_model_bus_fun.save(s_functions_path + 'robot_model_bus_fun_py.casadi')

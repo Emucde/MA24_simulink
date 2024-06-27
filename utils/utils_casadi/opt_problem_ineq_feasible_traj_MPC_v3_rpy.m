@@ -45,14 +45,14 @@ m = param_robot.m; % Dimension of Task Space
 % Robot model Forward Dynamics: d/dt x = f(x, u)
 use_aba = false; % aba ist langsamer! (357s vs 335s)
 if(use_aba)
-    f = Function.load([output_dir, 'sys_fun_x_aba_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
+    f = Function.load([input_dir, 'sys_fun_x_aba_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
 else
-    f = Function.load([output_dir, 'sys_fun_x_sol_py.casadi']); % equivalent as above
+    f = Function.load([input_dir, 'sys_fun_x_sol_py.casadi']); % equivalent as above
 end
 
-compute_tau_fun = Function.load([output_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
-hom_transform_endeffector_py_fun = Function.load([output_dir, 'hom_transform_endeffector_py.casadi']);
-quat_endeffector_py_fun = Function.load([output_dir, 'quat_endeffector_py.casadi']);
+compute_tau_fun = Function.load([input_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
+hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
+quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
 [~, ~, Q] = quat_deriv(ones(4,1), ones(3,1), ones(3,1)); % get function handle
 

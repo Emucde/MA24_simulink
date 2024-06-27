@@ -49,10 +49,15 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
         ub = param_robot.q_limit_upper; % Define the upper bounds for the joint angles.
         
         % Define the cost function as a combination of position error and manipulability error.
-        nl_spring = @(q) nl_spring_force(q, ct_ctrl_param, param_robot);
-        x_pos_err = @(q) forward_kinematics(q, param_robot) - xe0;
+        if(n > 6)
+            nl_spring = @(q) nl_spring_force(q, ct_ctrl_param, param_robot);
+        else
+            nl_spring = @(q) zeros(n,1);
+        end
+        
+        x_pos_err = @(q) forward_kinematics(q) - xe0;
         fun = @(q) 1/2*dot(x_pos_err(q), Q1*x_pos_err(q)) ... 
-                 + 1/2*Q2*(1/calc_manipulability(q, param_robot))^2 ...
+                 + 1/2*Q2*(1/calc_manipulability(q))^2 ...
                  + 1/2*dot(q-q_d, Q3*(q-q_d)) ...
                  + 1/2*dot(nl_spring(q), Q4*nl_spring(q));
     
@@ -78,7 +83,7 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
                 best_f_val = f_val; % Update the maximum manipulability value.
                 best_q = q_opt; % Update the joint angles corresponding to the maximum manipulability.
 
-                xe0_act = forward_kinematics(best_q, param_robot);
+                xe0_act = forward_kinematics(best_q);
                 if(norm(xe0_act - xe0) < tolerance) % Check if the position error between the calculated end-effector position and the desired end-effector position is within a tolerance.
                     fprintf(">>Solution found!<<\n"); % Print a message indicating that the desired end-effector position is found.
                     break_flag = 1;
@@ -97,21 +102,26 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
         end
         
     
-        manipulability = calc_manipulability(best_q, param_robot); % Calculate and print the manipulability for the joint angles corresponding to the maximum manipulability.
+        manipulability = calc_manipulability(best_q); % Calculate and print the manipulability for the joint angles corresponding to the maximum manipulability.
         decimalPlaces = 4;
         fprintf('Manipulability for the optimal joint angles:\n\t%.*f\n', decimalPlaces, manipulability);
     
-        xe0_opt = forward_kinematics(best_q, param_robot)';
+        xe0_opt = forward_kinematics(best_q)';
         decimalPlaces = 3;
-        fprintf("Joint angles corresponding to the maximum manipulability:\n\t[%.*f, %.*f, %.*f, %.*f, %.*f, %.*f, %.*f]'\n", decimalPlaces, best_q(1), decimalPlaces, best_q(2), decimalPlaces, best_q(3), decimalPlaces, best_q(4), decimalPlaces, best_q(5), decimalPlaces, best_q(6), decimalPlaces, best_q(7));
+        if(n == 7)
+            fprintf("Joint angles corresponding to the maximum manipulability:\n\t[%.*f, %.*f, %.*f, %.*f, %.*f, %.*f, %.*f]'\n", decimalPlaces, best_q(1), decimalPlaces, best_q(2), decimalPlaces, best_q(3), decimalPlaces, best_q(4), decimalPlaces, best_q(5), decimalPlaces, best_q(6), decimalPlaces, best_q(7));
+        else
+            fprintf("Joint angles corresponding to the maximum manipulability:\n\t[%.*f, %.*f, %.*f, %.*f, %.*f, %.*f]'\n", decimalPlaces, best_q(1), decimalPlaces, best_q(2), decimalPlaces, best_q(3), decimalPlaces, best_q(4), decimalPlaces, best_q(5), decimalPlaces, best_q(6));
+        end
+        
         decimalPlaces = 3;
         fprintf('Optimal end-effector position:\n\t%.*f, %.*f, %.*f, %.*f, %.*f, %.*f\n', decimalPlaces, xe0_opt(1), decimalPlaces, xe0_opt(2), decimalPlaces, xe0_opt(3), decimalPlaces, xe0_opt(4), decimalPlaces, xe0_opt(5), decimalPlaces, xe0_opt(6));
         decimalPlaces = 3;
         fprintf('Desired end-effector position:\n\t%.*f, %.*f, %.*f, %.*f, %.*f, %.*f\n', decimalPlaces, xe0(1), decimalPlaces, xe0(2), decimalPlaces, xe0(3), decimalPlaces, xe0(4), decimalPlaces, xe0(5), decimalPlaces, xe0(6));
     end
     
-    function y_W_E = forward_kinematics(q, param)
-        H = hom_transform_endeffector(q, param);
+    function y_W_E = forward_kinematics(q)
+        H = hom_transform_endeffector_py(q);
         R_W_E = H(1:3,1:3);
         y_t_W_E = H(1:3,4);
         y_W_E = [y_t_W_E; rotm2eul(R_W_E, 'XYZ')'];
@@ -122,7 +132,7 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
         val_out = val_in;
     end
     
-    function [w] = calc_manipulability(q, param)
-        J = geo_jacobian_endeffector(q, param);
+    function [w] = calc_manipulability(q)
+        J = geo_jacobian_endeffector_py(q);
         w = abs(sqrt(det(J*J')));
     end

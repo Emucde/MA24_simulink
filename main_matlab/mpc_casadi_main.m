@@ -99,56 +99,14 @@ if(convert_maple_to_casadi)
     return
 end
 %% path for init guess
-mpc_settings_path                = ['./', s_fun_path, '/mpc_settings/'];%todo:  UP
+mpc_settings_path                = [s_fun_path, '/mpc_settings/'];%todo:  UP
 mpc_settings_struct_name         = "param_"+casadi_func_name;
-param_MPC_traj_data_old_mat_file = ['./', s_fun_path, '/trajectory_data/param_traj_data_old.mat'];
+param_MPC_traj_data_old_mat_file = [s_fun_path, '/trajectory_data/param_traj_data_old.mat'];
 
 %% Create trajectory for y_initial_guess
-param_MPC_traj_data_mat_file = ['./', s_fun_path, '/trajectory_data/param_traj_data.mat'];
+param_MPC_traj_data_mat_file = [s_fun_path, '/trajectory_data/param_traj_data.mat'];
 
-try
-    load(param_MPC_traj_data_mat_file);
-    load(param_MPC_traj_data_old_mat_file)
-    traj_not_exist_flag = 0;
-catch  
-    traj_not_exist_flag = 1;
-end
-
-if(traj_not_exist_flag || T_horizon_MPC > T_horizon_max_old)
-    if(traj_not_exist_flag)
-        disp('mpc_casadi_main.m: Trajectory does not exist: create new trajectory');
-    else
-        disp('mpc_casadi_main.m: T_horizon_MPC > T_horizon_max_old: create new trajectory');
-    end
-    
-    for i=1:traj_select.traj_amount % defined in parameters_xdof, x = 2, 7
-        tic;
-        param_trajectory = generate_trajectory(t, i, param_init_pose, param_traj_filter, param_traj_poly, param_traj_sin_poly, param_traj_allg);
-        disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
-    
-        param_traj_data.t(          :, :      ) = param_trajectory.t;
-        param_traj_data.p_d(        :, :, i   ) = param_trajectory.p_d;
-        param_traj_data.p_d_p(      :, :, i   ) = param_trajectory.p_d_p;
-        param_traj_data.p_d_pp(     :, :, i   ) = param_trajectory.p_d_pp;
-        param_traj_data.Phi_d(      :, :, i   ) = param_trajectory.Phi_d;
-        param_traj_data.Phi_d_p(    :, :, i   ) = param_trajectory.Phi_d_p;
-        param_traj_data.Phi_d_pp(   :, :, i   ) = param_trajectory.Phi_d_pp;
-        param_traj_data.R_d(        :, :, :, i) = param_trajectory.R_d;
-        param_traj_data.q_d(        :, :, i   ) = param_trajectory.q_d;
-        param_traj_data.q_d_p(      :, :, i   ) = param_trajectory.q_d_p;
-        param_traj_data.q_d_pp(     :, :, i   ) = param_trajectory.q_d_pp;
-        param_traj_data.omega_d(    :, :, i   ) = param_trajectory.omega_d;
-        param_traj_data.omega_d_p(  :, :, i   ) = param_trajectory.omega_d_p;
-        param_traj_data.alpha_d(    :, :, i   ) = param_trajectory.alpha_d;
-        param_traj_data.alpha_d_p(  :, :, i   ) = param_trajectory.alpha_d_p;
-        param_traj_data.alpha_d_pp( :, :, i   ) = param_trajectory.alpha_d_pp;
-        param_traj_data.rot_ax_d(   :, :, i   ) = param_trajectory.rot_ax_d;
-        param_traj_data.alpha_d_offset(:, :, i) = param_trajectory.alpha_d_offset;
-        param_traj_data.q_d_rel(    :, :, i   ) = param_trajectory.q_d_rel;
-    end
-    
-    save(param_MPC_traj_data_mat_file, 'param_traj_data'); % save struct
-end
+load(param_MPC_traj_data_mat_file);
 
 param_trajectory = struct;
 param_trajectory.t         = param_traj_data.t;
@@ -173,7 +131,8 @@ param_trajectory.q_d_rel   = param_traj_data.q_d_rel(   :, :,    traj_select_mpc
 
 %% OPT PROBLEM
 %[TODO: oben init]
-s_fun_path               = ['./', s_fun_path,'/']; % slash on end necessary! [TODO: more stable solution]
+s_fun_path               = [s_fun_path,'/']; % slash on end necessary! [TODO: more stable solution]
+input_dir = [s_fun_path, 'casadi_functions/'];
 output_dir = s_fun_path; % needed?
 casadi_fun_c_header_str  = [casadi_func_name, '.c'];
 casadi_fun_h_header_str  = [casadi_func_name, '.h'];
@@ -239,7 +198,7 @@ if(fullsimu)
 
     N_traj          = length(param_trajectory.t);
     N_traj_original = N_traj - N_MPC*N_step_MPC;
-    p_e_act_arr     = zeros(2, N_traj_original);
+    p_e_act_arr     = zeros(m, N_traj_original);
     u_k_new_arr     = zeros(n, N_traj_original);
     x_k_new_arr     = zeros(2*n, N_traj_original);
     x_k_new         = x_0_0;
@@ -248,25 +207,55 @@ if(fullsimu)
     % set additional needed N samples as last sample of trajectory
     % already done (see "parameter.m"):
     % traj_data = [param_trajectory.p_d; repmat(param_trajectory.p_d(end,:), N,1)];
+
+    if(weights_and_limits_as_parameter)
+        f_opt2 = @(mpc_init_reference_values, init_guess_0) f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
+    else
+        f_opt2 = f_opt;
+    end
+
+    yt_d    = param_trajectory.p_d(:, :, traj_select_mpc)
+    yt_d_p  = param_trajectory.p_d_p(:, :, traj_select_mpc)
+    yt_d_pp = param_trajectory.p_d_pp(:, :, traj_select_mpc)
+
+    if(strcmp(MPC_version, 'v3_rpy'))
+        yr_d    = param_trajectory.Phi_d(:, :, traj_select_mpc);
+        yr_d_p  = param_trajectory.Phi_d_p(:, :, traj_select_mpc);
+        yr_d_pp = param_trajectory.Phi_d_pp(:, :, traj_select_mpc);
+    elseif(strcmp(MPC_version, 'v3_quat'))
+        yr_d   = param_trajectory.q_d(:, :, traj_select_mpc);
+        yr_d_p = param_trajectory.omega_d(:, :, traj_select_mpc);
+        yr_d_pp= param_trajectory.omega_d_p(:, :, traj_select_mpc);
+    else
+        error(['Error: MPC_version = ', MPC_version, ' is not valid. Should be (v3_rpy | v3_quat)']);
+    end
     
     tic
     for i=1:1:N_traj_original
-        p_d_traj    = param_trajectory.p_d(   1:3, i : N_step_MPC : i + (N_MPC  )*N_step_MPC);
-        p_d_p_traj  = param_trajectory.p_d_p( 1:3, i : N_step_MPC : i + (N_MPC  )*N_step_MPC);
-        p_d_pp_traj = param_trajectory.p_d_pp(1:3, i : N_step_MPC : i + (N_MPC-1)*N_step_MPC);
+        xk = x_k_new;
+        zk = zeros(n,1);
 
-        y_ref    = p_d_traj(   1:2, 2:N_MPC+1); %       y1,   y2,   ... yN
-        y_ref_p  = p_d_p_traj( 1:2, 2:N_MPC+1); %       y1p,  y2p,  ... yNp
-        y_ref_pp = p_d_pp_traj(1:2, 1:N_MPC);   % y0pp, y1pp, y2pp, ... yN-1pp
-        
+        idx = i : N_step_MPC : i + (N_MPC) * N_step_MPC;
+
+        y_d_0   = [yt_d(   :,idx); yr_d(   :,idx)];
+        y_d_p_0 = [yt_d_p( :,idx); yr_d_p( :,idx)];
+        y_d_pp_0= [yt_d_pp(:,idx); yr_d_pp(:,idx)];
+
+        mpc_init_reference_values = [xk(:); zk(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:)];
         try
-            [u_opt, x_init_guess, u_init_guess, lam_x_init_guess, lam_g_init_guess, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(y_ref, y_ref_p, y_ref_pp, x_k_new, x_init_guess, u_init_guess, lam_x_init_guess, lam_g_init_guess, param_weight_init_cell{:});
+            [u_opt, xx_full_opt_sol] = f_opt(mpc_init_reference_values, init_guess_0);
+            % xx_full_opt_sol = {u, x, z, alpha};
+            % xx_full_opt_sol(1:n) is u
+            % xx_full_opt_sol(n+1:2*n) is tilde x0 = xk
+            % xx_full_opt_sol(2*n+1:3*n) is d/dt tilde x0 = d/dt xk
+            % xx_full_opt_sol(3*n+1:4*n) is tilde x1
+            x_k_new = full( xx_full_opt_sol(:,3*n+1:4*n) ); % = tilde x1 = xk+1
         catch ME
             disp("error at " + (i-1)*param_global.Ta + " s ( i="+i+")")
             disp(ME.message);
         end
     
-        HH_e_act = hom_transform_endeffector(x_k_new, param_robot);
+        HH_e_act = hom_transform_endeffector_py(x_k_new);
         p_e_act  = HH_e_act(1:2,4);
 
         u_k_new     = full(u_opt);
@@ -330,34 +319,16 @@ phi_traj_sin_poly_old   = phi_traj_sin_poly  ;
 T_switch_old = T_switch;
 T_horizon_max_old = T_horizon_max;
 
-% compare mexa bytes with old version:
-sfun_mex_path = [s_fun_path, s_fun_name(1:end-2), '_', casadi_fun_c_header_str(1:end-2), '.mexa64'];
-s = dir(sfun_mex_path);
-file_size_bytes = s.bytes;
-
-mpc_byteslen_path = [s_fun_path, casadi_func_name, '_bytes.mat'];
-try
-    load(mpc_byteslen_path)
-catch
-    disp('mpc_byteslen.mat does not exist. Creating...')
-end
-
-%if(file_size_bytes ~= file_size_bytes_old)
-    overwrite_offline_traj = true;
-%else
-%    overwrite_offline_traj = false;
-%end
-
-file_size_bytes_old = file_size_bytes;
-save(mpc_byteslen_path, 'file_size_bytes_old');
-
-%N_sum_old = -1;
+% [TODO: separate for each MPC]
+overwrite_offline_traj = false;
+overwrite_init_guess_name = ['param_', casadi_func_name, '.mat'];
 
 save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
      'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
      'Ta_old', 'T_traj_poly_old', ...
      'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
-     'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old', 'overwrite_offline_traj');
+     'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old', ... 
+     'overwrite_offline_traj', 'overwrite_init_guess_name');
 
 %% COMPILE matlab s_function (can be used as normal function in matlab)
 if(compile_matlab_sfunction)
@@ -365,10 +336,8 @@ if(compile_matlab_sfunction)
     % Da der Name von f_opt der matlab name ist und im Objekt gespeichert ist verwendet 
     % die Funktion casadi_fun_to_mex ebenfalls diesen Namen und er muss daher nicht
     % übergeben werden.
-    f_opt = Function(MPC_matlab_name, ...
-        {input_vars_MX{:}},...
-        {output_vars_MX{:}});
-    casadi_fun_to_mex(f_opt, 's_functions', '-O2');
+    %f_opt = Function(MPC_matlab_name, input_vars_MX, output_vars_MX);
+    casadi_fun_to_mex(f_opt, [output_dir, 'maple_msfun'], MPC_matlab_name, '-O2');
     disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
 end
 

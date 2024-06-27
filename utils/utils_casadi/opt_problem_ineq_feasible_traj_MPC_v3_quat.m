@@ -45,14 +45,14 @@ m = param_robot.m; % Dimension of Task Space
 % Robot model Forward Dynamics: d/dt x = f(x, u)
 use_aba = false; % aba ist langsamer! (357s vs 335s)
 if(use_aba)
-    f = Function.load([output_dir, 'sys_fun_x_aba_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
+    f = Function.load([input_dir, 'sys_fun_x_aba_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
 else
-    f = Function.load([output_dir, 'sys_fun_x_sol_py.casadi']); % equivalent as above
+    f = Function.load([input_dir, 'sys_fun_x_sol_py.casadi']); % equivalent as above
 end
 
-compute_tau_fun = Function.load([output_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
-hom_transform_endeffector_py_fun = Function.load([output_dir, 'hom_transform_endeffector_py.casadi']);
-quat_endeffector_py_fun = Function.load([output_dir, 'quat_endeffector_py.casadi']);
+compute_tau_fun = Function.load([input_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
+hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
+quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
 [~, ~, Q] = quat_deriv(ones(4,1), ones(3,1), ones(3,1)); % get function handle
 
@@ -87,7 +87,7 @@ p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_M
 p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
 p_d_pp_0 = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
 
-q_d_0    = param_trajectory.q_d(    1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
+q_d_0       = param_trajectory.q_d(       1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
 omega_d_0   = param_trajectory.omega_d(   1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
 omega_d_p_0 = param_trajectory.omega_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
 
@@ -139,6 +139,10 @@ lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_i
 lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(z_init_guess_0)+2, 1); % + 1 wegen eps
 
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+
+if(any(isnan(full(init_guess_0))))
+    error('init_guess_0 contains NaN values!');
+end
 
 % get weights from "init_MPC_weight.m"
 param_weight_init = param_weight.(casadi_func_name);
