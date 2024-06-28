@@ -1,3 +1,5 @@
+% Compiles casadi functions from python to s-functions for simulink
+
 % Alternative: Standalone
 % if(~isdeployed)
 %     cd(fileparts(which(mfilename)));
@@ -13,6 +15,16 @@ if(~exist('parameter_str', 'var'))
     parameters_7dof;
 end
 
+% valid robot_names: fr3_7dof, fr3_6dof, ur5e
+% robot_name = 'fr3_7dof';
+% robot_name = 'fr3_6dof';
+robot_name = 'ur5e_6dof';
+
+compile_mode = 2; % Compile mode: 1 - nlpsol, 2 - opti
+output_dir = ['./s_functions/', robot_name, '/'];
+input_dir = [output_dir, 'casadi_functions/'];
+
+% s functions for matlab only use (not intrinsic functions)
 fun_arr_matlab = { ...
     'sys_fun_qpp_aba_py', ...
     'sys_fun_qpp_sol_py', ...
@@ -30,17 +42,12 @@ fun_arr_matlab = { ...
     'inverse_inertia_matrix_py', ...
 };
 
+% s functions for simulink
 fun_arr_sfun = { ...
     'sys_fun_qpp_aba_py', ...
     'sys_fun_qpp_sol_py', ...
     'robot_model_bus_fun_py' ...
 };
-
-%fun_arr = {'sys_fun_qpp_py', 'robot_model_bus_fun_py'};
-
-compile_mode = 2;
-output_dir = './s_functions/fr3_7dof/';
-input_dir = './s_functions/fr3_7dof/casadi_functions/';
 
 try
 
@@ -63,11 +70,9 @@ try
 catch ME
     disp('Error in compile_py_cfun_to_sfun.m')
     fprintf(2, 'Error: %s\n', getReport(ME));
-    return;
 end
 
-
-output_dir = './s_functions/fr3_7dof/matlab_functions/';
+output_dir = ['./s_functions/', robot_name, '/matlab_functions/'];
 try
     for i = 1:length(fun_arr_matlab)
         fun_name = fun_arr_matlab{i};

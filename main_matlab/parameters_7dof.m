@@ -31,12 +31,13 @@ parameter_str = "parameters_7dof";
 
 % valid robot_names: fr3_7dof, fr3_6dof, ur5e
 % robot_name = 'fr3_7dof';
-robot_name = 'fr3_6dof';
-% robot_name = 'ur5e';
+% robot_name = 'fr3_6dof';
+robot_name = 'ur5e_6dof';
 
-s_fun_path = ['./s_functions/', robot_name];
+
 
 %restoredefaultpath
+s_fun_path = ['./s_functions/', robot_name];
 addpath(genpath('./main_matlab'));
 addpath(genpath('./utils/matlab_utils'));
 addpath(genpath('./utils/matlab_init_general'));
@@ -63,36 +64,10 @@ end
 
 %closeAllSimulinkModels('./MPC_shared_subsystems')
 %closeAllSimulinkModels('.')
-close_system('./main_simulink/controller_ref_subsys');
+close_system('./main_simulink/controller_ref_subsys', 0);
 
-% get_param(blk_name, 'ObjectParameters');
-if(contains([license('inuse').feature], 'simulink'))
-    blk_name = [simulink_main_model_name, '/trajectory combo box'];
-    combo_states = get_param(blk_name, 'States');
-    combo_states_name = {combo_states.Label};
-    current_value = str2double(get_param(blk_name, 'Value'));
-    idx = find(current_value == [combo_states.Value]);
-    selected_box_label = combo_states_name{idx};
-    split_label = strsplit(selected_box_label, ' ');
-    fin_label_traj = strjoin([split_label(2:end)], '_');
+activate_simulink_logs;
 
-    blk_name = [simulink_main_model_name, '/controller combo box'];
-    combo_states = get_param(blk_name, 'States');
-    combo_states_name = {combo_states.Label};
-    current_value = str2double(get_param(blk_name, 'Value'));
-    idx = find(current_value == [combo_states.Value]);
-    selected_box_label = combo_states_name{idx};
-    split_label = strsplit(selected_box_label, ' ');
-    fin_label_ctrl = strjoin(split_label, '_');
-
-    % clear diagnostic window from simulink
-    save_system(simulink_main_model_name)
-    sldiagviewer.diary('off'); % wichtig, sonst loggt er auch in die vorherigen files
-
-    sldiagviewer.diary(['./main_simulink/simulink_log/', char(datetime('now', 'Format', 'yyMMdd_HH_mm')), '_', fin_label_ctrl, '_', fin_label_traj, '_log.txt']); % enable logger for simulink
-    disp('______________________________________________________________________')
-    disp(['Selected controller: ', fin_label_ctrl, ', Selected trajectory: ', fin_label_traj]);
-end
 %% Other init scripts
 T_sim = 10; % = param_vis.T (see init_visual.m)
 param_global.Ta = 1e-3;
@@ -141,9 +116,9 @@ ct_ctrl_param.W_E = 1e0 * eye(n); %ct_ctrl_param.w_bar_N;
 ct_ctrl_param.eps  = 1e-1;
 
 % nullspace for CT controller
-%ct_ctrl_param.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;
-%ct_ctrl_param.K_n = 1e-2*eye(n);
-%ct_ctrl_param.D_n = sqrt(4*ct_ctrl_param.K_n) + 1 * eye(n);
+ct_ctrl_param.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;
+ct_ctrl_param.K_n = 1e-2*eye(n);
+ct_ctrl_param.D_n = sqrt(4*ct_ctrl_param.K_n) + 1 * eye(n);
 
 %ct_ctrl_param.K_n = 64*eye(n);
 %ct_ctrl_param.D_n = 16*eye(n);

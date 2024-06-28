@@ -16,7 +16,7 @@ function closeAllSimulinkModels(folderPath)
       
       % Close the Simulink model
       try
-        close_system(fullPath);
+        close_system(fullPath, 0);
       catch ME
         % Handle any errors that might occur during closing
         warning(['Error closing Simulink model: ', fullPath]);

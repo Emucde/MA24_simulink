@@ -43,7 +43,7 @@ if "fr3" in robot_name:
     else:
         raise Exception("Unknown robot name '{}'".format(robot_name), "Available robots: 'fr3_7dof', 'fr3_6dof'")
 elif robot_name == "ur5e":
-    s_functions_path = './s_functions/ur5e_6dof/'
+    s_functions_path = './s_functions/ur5e_6dof/casadi_functions/'
     mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_ur5e')
     urdf_path = os.path.join(os.path.dirname(__file__), 'ur5e.urdf')
     root_link = "base_link"
@@ -53,7 +53,7 @@ else:
     raise Exception("Unknown robot name '{}'".format(robot_name), "Available robots: 'fr3_7dof', 'fr3_6dof', 'ur5e'")
 
 # Load robot model
-robot = pin.robot_wrapper.RobotWrapper.BuildFromURDF(str(urdf_path))
+robot = pin.robot_wrapper.RobotWrapper.BuildFromURDF(str(urdf_path), package_dirs=[mesh_dir])
 pin_model = robot.model
 
 # Create casadi model and data
@@ -176,3 +176,5 @@ sys_fun_x_sol.save(s_functions_path + 'sys_fun_x_sol_py.casadi')
 
 inv_dyn_tau.save(s_functions_path + 'compute_tau_py.casadi')
 robot_model_bus_fun.save(s_functions_path + 'robot_model_bus_fun_py.casadi')
+
+print('Done! Run \'compile_py_cfun_to_sfun.m\' to generate S-functions.')

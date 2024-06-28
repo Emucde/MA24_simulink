@@ -179,9 +179,9 @@ tau_min = -tau_max;
 ur5e.param = struct;
 
 ur5e.param.n_DOF = n; % Jointspace DOF of the robot
-ur5e.param.m_DOF = m; % Workspace Dimension of the robot
+ur5e.param.m = m; % Workspace Dimension of the robot
 
-fr3.param.g_vis = [0; 0; -9.81]; % m/s^2
+ur5e.param.g_vis = [0; 0; -9.81]; % m/s^2
 
 ur5e.param.q_limit_upper = q_max; % Joint position limits
 ur5e.param.q_limit_lower = q_min;
@@ -193,6 +193,8 @@ ur5e.param.torque_limit_upper = tau_max; % Joint torque limits
 ur5e.param.torque_limit_lower = tau_min;
 
 ur5e.param.q_n = (q_max + q_min) / 2; % not the best reference pose for fr3
+
+ur5e.param.n_indices = 1:n;
 
 % Inertial System
 ur5e.param.p_0 = [0; 0; 0]; % m
