@@ -1,4 +1,4 @@
-function [x_d] = create_sinus_traj(x_target, x0_target, t, R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj_sin_poly)
+function [x_d] = create_sinus_traj(x_target, x0_target, t, R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj_sin_poly, init_bus_param)
 
     T = param_traj_sin_poly.T;
     omega = param_traj_sin_poly.omega;
@@ -36,24 +36,18 @@ function [x_d] = create_sinus_traj(x_target, x0_target, t, R_init, rot_ax, rot_a
     omega_d   = alpha_p*rot_ax;
     omega_d_p = alpha_pp*rot_ax;
     q_d   = rotation2quaternion(R_act);
-    %q_d   = rotm2quat_v3(R_act);
     [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);
-
-    % Phi_act    = Phi_init + alpha/rot_alpha_scale*delta_Phi;
-    % Phi_act_p  = alpha_p/rot_alpha_scale*delta_Phi;
-    % Phi_act_pp = alpha_pp/rot_alpha_scale*delta_Phi;
 
     Phi_act = rotm2rpy(R_act);
     Phi_act_p = T_rpy(Phi_act)*omega_d;
     Phi_act_pp =T_rpy_p(Phi_act, Phi_act_p)*omega_d + T_rpy(Phi_act)*omega_d_p;
 
-    %xd_prev   = x_k(param_traj_filter.p_d_index);
-    %alpha_prev = xd_prev(4)*rot_alpha_scale;
-    alpha_d = alpha;% - alpha_prev; % relativ gesehen
+    alpha_d = alpha;
     alpha_d_p = alpha_p;
     alpha_d_pp = alpha_pp;
-    rot_ax_d = rot_ax; % Darf ich nur, da rotax konstant ist!
+    rot_ax_d = rot_ax;
 
+    x_d = init_bus_param.x_d;
     x_d.p_d       = x_ref;
     x_d.p_d_p     = x_ref_p;
     x_d.p_d_pp    = x_ref_pp;

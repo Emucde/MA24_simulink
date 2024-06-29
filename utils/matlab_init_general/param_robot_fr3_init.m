@@ -347,6 +347,13 @@ else
     error('n_indices not correct defined for n = %d', fr3.param.n_DOF);
 end
 
+% this values are overwritten in parameters_xdof.m. They are only necessary, when
+% less degree of freedom are used as the robot has. Then this values defines which
+% joints are fixed and which are used.
+fr3.param.q_0_init = zeros(7, 1);
+fr3.param.q_0_p_init = zeros(7, 1);
+fr3.param.q_0_pp_init = zeros(7, 1);
+
 fr3.param.m_t   = 3; % Translational task space
 fr3.param.m_r   = 3; % Rotational task space
 fr3.param.m     = 6;

@@ -2,6 +2,7 @@
 % https://de.mathworks.com/matlabcentral/answers/29638-rename-bus
 
 % to check try 'typeeditor'
+init_bus_param = struct;
 
 %% debug data bus
 bus_temp_struct = struct;
@@ -21,7 +22,8 @@ bus_temp_struct.q_err       = [0; 0; 0; 0];
 bus_temp_struct.omega_err   = [0; 0; 0];
 bus_temp_struct.omega_p_err = [0; 0; 0];
 
-init_debug_data_bus = bus_temp_struct;
+init_bus_param.debug_data_bus = bus_temp_struct; %Simulink.Bus.createMATLABStruct('debug_snap_data_bus');
+
 debug_data_bus = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;
 
@@ -46,7 +48,8 @@ bus_temp_struct.rot_ax_d   = [0; 0; 0];
 bus_temp_struct.alpha_d_offset = 0;
 bus_temp_struct.q_d_rel = [0; 0; 0; 0];
 
-init_bus_param.init_x_d_bus = bus_temp_struct;
+init_bus_param.x_d = bus_temp_struct;
+
 x_d = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;
 
@@ -68,7 +71,9 @@ bus_temp_struct.psi_d = 0;
 bus_temp_struct.rot_x_err = 0;
 bus_temp_struct.rot_y_err = 0;
 bus_temp_struct.rot_z_err = 0;
-init_bus_param.init_yy_debug_bus = bus_temp_struct;
+
+init_bus_param.yy_debug = bus_temp_struct;
+
 yy_debug_bus = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;
 
@@ -85,7 +90,9 @@ bus_temp_struct.M = zeros(n);
 %bus_temp_struct.C = zeros(n);
 bus_temp_struct.C_rnea = zeros(n, 1); % = C_rnea(q, q_p) = C(q, q_p)q_p + g(q) = n(q, q_p)
 bus_temp_struct.g = zeros(n,1);
-init_bus_param.init_robot_model = bus_temp_struct;
+
+init_bus_param.robot_model = bus_temp_struct;
+
 robot_model = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;
 
@@ -109,7 +116,8 @@ elseif(n == 6)
 else
     error('n not correct defined');
 end
-init_bus_param.init_collinearity_bus = bus_temp_struct;
+init_bus_param.collinearity_bus = bus_temp_struct;
+
 collinearity_bus = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;
 
@@ -118,11 +126,8 @@ clear -regexp slBus; clear bus_temp_struct;
 bus_temp_struct = struct;
 bus_temp_struct.mat_fun = 0;
 bus_temp_struct.pyt_fun = 0;
-init_bus_param.init_test_bus = bus_temp_struct;
+
+init_bus_param.test_bus = bus_temp_struct;
+
 test_bus = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;
-
-%% Bus init definitions
-% Diese Structs braucht man in den Matlab Funktionen da die Busse
-% initialisiert werden müssen.
-init_bus_param.init_debug_data_bus = init_debug_data_bus; %Simulink.Bus.createMATLABStruct('debug_snap_data_bus');

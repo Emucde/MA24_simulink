@@ -303,32 +303,16 @@ param_MPC = mergestructs(param_MPC, sol_indices);
 eval(mpc_settings_struct_name+"=param_MPC;"); % set new struct name
 save(""+mpc_settings_path+mpc_settings_struct_name+'.mat', mpc_settings_struct_name);
 
-% save old data %TODO: Struct speichern
-q_0_old = q_0_init;
-q_0_p_old = q_0_p_init;
-xe0_old = xe0;
-xeT_old = xeT;
-T_sim_old = T_sim;
-Ta_old = param_global.Ta;
-lamda_xyz_old = lamda_xyz;
-lamda_alpha_old = lamda_alpha;
-T_traj_poly_old         = T_traj_poly        ;
-T_traj_sin_poly_old     = T_traj_sin_poly    ;
-omega_traj_sin_poly_old = omega_traj_sin_poly;
-phi_traj_sin_poly_old   = phi_traj_sin_poly  ;
-T_switch_old = T_switch;
-T_horizon_max_old = T_horizon_max;
-
 % [TODO: separate for each MPC]
 overwrite_offline_traj = false;
 overwrite_init_guess_name = ['param_', casadi_func_name, '.mat'];
 
-save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
-     'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
-     'Ta_old', 'T_traj_poly_old', ...
-     'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
-     'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old', ... 
-     'overwrite_offline_traj', 'overwrite_init_guess_name');
+% save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
+%      'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
+%      'Ta_old', 'T_traj_poly_old', ...
+%      'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
+%      'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old', ... 
+%      'overwrite_offline_traj', 'overwrite_init_guess_name');
 
 %% COMPILE matlab s_function (can be used as normal function in matlab)
 if(compile_matlab_sfunction)

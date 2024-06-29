@@ -1,4 +1,7 @@
-%% Filter für xyz:
+%% Filter für xyz and Orientation:
+
+param_traj_filter.T_switch = T_sim/2; % ab dem zeitpunkt schält xe0 in xeT um und umgekehrt (only for differential filter)
+
 lambda = -10;  %Eigenwert für Sollwertfilter, die Zeitkonstante ist dann
 % ja tau = 1/(abs(lambda)) in Sekunden, d. h. bei schnelleren
 % Trajektorien muss man die Zeitkonstante des Sollwertfilters anpassen,

@@ -1,6 +1,4 @@
-function [x_d] = create_poly_traj(x_target, alphaT, x0_target, alpha0, alpha_offset, T_start, t, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly)
-% alpha_offset: Bei mehreren Drehungen setzt man ihn am Ende auf rot_aplha_scale und addiert diesen wert zu
-% alpha_d um alpha absolut zu erhalten. Für die Rotation zieht man alpha_d_offset wieder ab.
+function [x_d] = create_poly_traj(x_target, alphaT, x0_target, alpha0, alpha_offset, T_start, t, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly, init_bus_param)
 
     T = param_traj_poly.T;
     if(t-T_start > T)
@@ -21,44 +19,24 @@ function [x_d] = create_poly_traj(x_target, alphaT, x0_target, alpha0, alpha_off
 
     RR = (eye(3) + sin(alpha)*skew_ew + (1-cos(alpha))*skew_ew^2);
     
-    % R_act    = R_init*RR; % Nachmultiplikation
     R_act    = RR*R_init; % Vormultiplikation (in find_rotation_axis wird Vormultiplikation für RR verwendet!!)
 
     omega_d   = alpha_p*rot_ax;
     omega_d_p = alpha_pp*rot_ax;
 
-    % Korrektes Quaternion wählen, dass zu R_act passt:
-    %q_err = [cos(alpha/2); rot_ax*sin(alpha/2)];
-    %q_d = quat_mult(rotation2quaternion(R_init), q_err);
     q_d   = rotation2quaternion(R_act);
-    %q_d   = rotm2quat_v3(R_act);
     [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);
-
-    % Phi_act    = Phi_init + alpha/rot_alpha_scale*delta_Phi;
-    %R_dot = skew(omega_d)*R_act;
-    %R_ddot = skew(omega_d_p)*R_act + skew(omega_d)*R_dot;
 
     Phi_act = rotm2rpy(R_act);
     Phi_act_p = T_rpy(Phi_act)*omega_d;
     Phi_act_pp =T_rpy_p(Phi_act, Phi_act_p)*omega_d + T_rpy(Phi_act)*omega_d_p;
 
-    %xd_prev   = x_k(param_traj_filter.p_d_index);
-    %alpha_prev = xd_prev(4)*rot_alpha_scale;
-
-    % weg1: rotax konstant, bezugsystem R_int für alle Drehungen
-    alpha_d = alpha;% - alpha_prev; % relativ gesehen
+    alpha_d = alpha;
     alpha_d_p = alpha_p;
     alpha_d_pp = alpha_pp;
-    rot_ax_d = rot_ax; % Darf ich nur, da rotax konstant ist!
+    rot_ax_d = rot_ax;
 
-    % weg2: rotax nur in Abtastschritt konstant aber dazw. nicht, Winkel absolut
-    % wodurch kein Bezugssystem mehr nötig ist. Problem: Alpha bleibt konst, nur rot ax ändert sich
-    % [rot_ax_abs, alpha_abs] = find_rotation_axis(eye(3), R_act, 'slow_from_quat');
-    % alpha_d = alpha_abs;
-    % alpha_d_p = alpha_p;
-    % alpha_d_pp = alpha_pp;
-    % rot_ax_d = rot_ax_abs;
-
+    x_d = init_bus_param.x_d;
     x_d.p_d       = p_d(1:3);
     x_d.p_d_p     = p_d_p(1:3);
     x_d.p_d_pp    = p_d_pp(1:3);
