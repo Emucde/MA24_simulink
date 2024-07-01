@@ -27,19 +27,30 @@ overwrite_offline_traj_forced = false;
 % tic;set_param('sim_discrete_planar', 'SimulationCommand', 'update');
 % toc
 
+%% Global Parameters
+T_sim = 10; % = param_vis.T (see init_visual.m)
+param_global.T_sim = T_sim;
+param_global.Ta = 1e-3;
+param_global.traj_amount = 4; % number of trajectories
+
 parameter_str = "parameters_7dof";
+simulink_main_model_name = 'sim_discrete_7dof';
 
-% valid robot_names: fr3_7dof, fr3_6dof, ur5e
-robot_name = 'fr3_7dof';
-% robot_name = 'fr3_6dof';
-% robot_name = 'ur5e_6dof';
+% Add paths. The Idea is that for each robot there exists different paths
+% that should be added or removed. So it is possible to use only one main
+% simulink file for all different robots.
+run('./utils/matlab_init_general/add_default_matlab_paths'); % because it is not on path per default
+
+get_robot_name; % set robot_name to active robot from simulink (or default value when simulink is closed)
+
 s_fun_path = ['./s_functions/', robot_name];
-run('./utils/matlab_init_general/add_matlab_paths'); % because it is not on path per default
+add_robot_matlab_paths;
 
+% Init Casadi
 init_casadi;
 import casadi.*;
 
-simulink_main_model_name = 'sim_discrete_7dof';
+% Ensure that Simulink is open!
 open_simulink_on_start = true;
 %if(~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && sum(strfind([getenv().keys{:}], 'VSCODE')) == 0)
 % && ~isSimulinkStarted funktioniert einfach nicht.
@@ -50,19 +61,16 @@ if( ~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && desktop('
     fprintf([' finished! (Loading time: ' num2str(toc) ' s)\n']);
 end
 
-%closeAllSimulinkModels('./MPC_shared_subsystems')
-%closeAllSimulinkModels('.')
-close_system('./main_simulink/controller_ref_subsys', 0);
+%% Init scripts
+
+% This robots initializes the different robot parameters
+param_robot_init;
+
+% combo boxes are trajectory dependent changed for each robot!
+% it has to be ensured that sim_discrete_7dof is open!
+change_simulink_traj_combo_box;
 
 activate_simulink_logs;
-
-%% Other init scripts
-T_sim = 10; % = param_vis.T (see init_visual.m)
-param_global.T_sim = T_sim;
-param_global.Ta = 1e-3;
-param_global.traj_amount = 4; % number of trajectories
-
-param_robot_init;
 
 bus_definitions;
 init_MPC_weights; %% set MPC weights
@@ -111,9 +119,9 @@ q_0_pp = q_0_pp_init(n_indices);
 
 % necessary only for visualization when less degrees of freedom are used than the robot has
 % (only needed for fr3 at this moment, see visualization.slx)
-param_robobt.q_0_init = q_0_init;
-param_robobt.q_0_p_init = q_0_p_init;
-param_robobt.q_0_pp_init = q_0_pp_init;
+param_robot.q_0_init = q_0_init;
+param_robot.q_0_p_init = q_0_p_init;
+param_robot.q_0_pp_init = q_0_pp_init;
 
 H_0_init = hom_transform_endeffector_py(q_0);
 
