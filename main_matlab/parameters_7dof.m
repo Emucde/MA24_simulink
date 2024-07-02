@@ -17,7 +17,7 @@ end
 %x_traj_out_of_workspace_value = 0.1;
 
 plot_trajectory = ~true;
-overwrite_offline_traj_forced = false;
+overwrite_offline_traj_forced = ~false;
 
 
 % set_param(gcs,'Profile','off'); % turn off profiler when not needed anymore
@@ -65,8 +65,7 @@ param_robot_init;
 
 % combo boxes are trajectory dependent changed for each robot!
 % it has to be ensured that sim_discrete_7dof is open!
-change_simulink_traj_combo_box;
-save_system(simulink_main_model_name, 'SaveDirtyReferencedModels','on');
+change_simulink_traj_combo_box; % saves system!
 
 activate_simulink_logs;
 
@@ -93,13 +92,13 @@ param_traj = struct;
 param_diff_filter_traj; % define param_traj.diff_filter
 
 %% Param Trajectory Poly
-param_traj_poly.T = T_sim/2-3; % in s
+param_traj.poly.T = T_sim/2-3; % in s
 
 %% Param sinus poly trajectory
-param_traj_sin_poly.T     = 1; % in s
+param_traj.sin_poly.T     = 1; % in s
 T_period                  = 2; % in s
-param_traj_sin_poly.omega = 2*pi*1/(T_period); % in rad
-param_traj_sin_poly.phi   = 0; % in rad
+param_traj.sin_poly.omega = 2*pi*1/(T_period); % in rad
+param_traj.sin_poly.phi   = 0; % in rad
 
 %% Calculate target positions
 
@@ -189,10 +188,10 @@ param_MPC_file_path = [s_fun_path, '/mpc_settings/'];
 files = dir([param_MPC_file_path, '*.mat']);
 cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
 
-T_traj_poly         = param_traj_poly.T;
-T_traj_sin_poly     = param_traj_sin_poly.T;
-omega_traj_sin_poly = param_traj_sin_poly.omega;
-phi_traj_sin_poly   = param_traj_sin_poly.phi;
+T_traj_poly         = param_traj.poly.T;
+T_traj_sin_poly     = param_traj.sin_poly.T;
+omega_traj_sin_poly = param_traj.sin_poly.omega;
+phi_traj_sin_poly   = param_traj.sin_poly.phi;
 T_switch            = param_traj.diff_filter.T_switch;
 
 overwrite_offline_traj = false;
@@ -233,7 +232,7 @@ try
             for i=1:traj_select.traj_amount
                 tic;
                 % TODO: Create function for that!!!!!
-                new_traj_data = generate_trajectory(t, i, param_init_pose, param_traj, param_traj_poly, param_traj_sin_poly, init_bus_param);
+                new_traj_data = generate_trajectory(t, i, param_init_pose, param_traj, init_bus_param);
                 disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
             
                 param_traj_data = param_traj_data_fun(traj_settings, 'set', i, param_traj_data, new_traj_data);

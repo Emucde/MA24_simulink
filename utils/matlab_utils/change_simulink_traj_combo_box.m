@@ -51,4 +51,5 @@ if(bdIsLoaded(simulink_main_model_name))
         set_param(traj_blk_name, 'States', traj_combo_states_new);
     end
 
+    save_system(simulink_main_model_name, 'SaveDirtyReferencedModels','on');
 end

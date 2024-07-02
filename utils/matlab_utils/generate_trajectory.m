@@ -1,4 +1,4 @@
-function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, param_traj, param_traj_poly, param_traj_sin_poly, init_bus_param)
+function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, param_traj, init_bus_param)
 
     xe0 = param_init_pose.xe0;
     xeT = param_init_pose.xeT;
@@ -111,7 +111,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
         T_start = 0;
         alpha_offset = 0;
         for i=1:N
-            [x_d] = create_poly_traj(xeT, alphaT, xe0, alpha0, alpha_offset, T_start, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly, init_bus_param);
+            [x_d] = create_poly_traj(xeT, alphaT, xe0, alpha0, alpha_offset, T_start, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj.poly, init_bus_param);
             p_d(:,i)       = x_d.p_d;
             p_d_p(:,i)     = x_d.p_d_p;
             p_d_pp(:,i)    = x_d.p_d_pp;
@@ -144,7 +144,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
     elseif(modus == 4) % smooth sinus [ Orientation: TODO ]
         alpha_offset = 0;
         for i=1:N
-            x_d = create_sinus_traj(xeT, xe0, t(i), R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj_sin_poly, init_bus_param);
+            x_d = create_sinus_traj(xeT, xe0, t(i), R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj.sin_poly, init_bus_param);
             p_d(:,i)       = x_d.p_d;
             p_d_p(:,i)     = x_d.p_d_p;
             p_d_pp(:,i)    = x_d.p_d_pp;
