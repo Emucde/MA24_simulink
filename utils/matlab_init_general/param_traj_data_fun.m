@@ -48,4 +48,5 @@ function param_traj_data_out = param_traj_data_fun(traj_settings, method, data_i
         end
     else
         error('method have to be init, set or get');
+    end
 end

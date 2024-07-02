@@ -18,6 +18,23 @@ if(~strcmp(robot_name, robot_name_old))
     % close all scripts due to path changes
     closeAllSimulinkModels('.');
     warning('on', 'MATLAB:rmpath:DirNotFound')
+
+    if(bdIsLoaded(simulink_main_model_name))
+        % reload MPC's if they cannot be found:
+        % 1. get list of all blocks in controller subsystem
+        controller_blocklist = get_param('sim_discrete_7dof/Simulation models/Controller Subsystem/', 'Blocks');
+        
+        % get Names of MPC subsystems
+        mpc_subsys_list = controller_blocklist(cellfun(@(x) contains(x, 'MPC'), controller_blocklist));
+        
+        % reload all MPCs:
+        for i=1:length(mpc_subsys_list)
+            mpc_sfun_string = [simulink_main_model_name, '/Simulation models/Controller Subsystem/', mpc_subsys_list{i}, '/S-Function'];
+            sfun_mpc_parameters = get_param(mpc_sfun_string, 'Parameters');
+            % Setting the same parameter again enforces loading of the mpc!
+            set_param(mpc_sfun_string, 'Parameters', sfun_mpc_parameters);
+        end
+    end
 end
 
 if(contains(robot_name, '6dof'))

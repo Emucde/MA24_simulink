@@ -1,6 +1,6 @@
 %% Filter für xyz and Orientation:
 
-param_traj_filter.T_switch = T_sim/2; % ab dem zeitpunkt schält xe0 in xeT um und umgekehrt (only for differential filter)
+param_traj.diff_filter.T_switch = T_sim/2; % ab dem zeitpunkt schält xe0 in xeT um und umgekehrt (only for differential filter)
 
 lambda = -10;  %Eigenwert für Sollwertfilter, die Zeitkonstante ist dann
 % ja tau = 1/(abs(lambda)) in Sekunden, d. h. bei schnelleren
@@ -53,20 +53,20 @@ D_f = [0; 0; 0; 0; 0; 0];
 Phi_alpha = (eye(6) + A_f*param_global.Ta); % euler vorwärts
 Gamma_alpha = b_f*param_global.Ta;  % euler vorwärts
 
-param_traj_filter.A = blkdiag(A_f, A_f, A_f, A_f);
-param_traj_filter.b = blkdiag(b_f, b_f, b_f, b_f);
-param_traj_filter.Ta = param_global.Ta;
-param_traj_filter.Phi = blkdiag(Phi_yt, Phi_yt, Phi_yt, Phi_alpha);
-param_traj_filter.Gamma = blkdiag(Gamma_yt,Gamma_yt,Gamma_yt,Gamma_alpha);
+param_traj.diff_filter.A = blkdiag(A_f, A_f, A_f, A_f);
+param_traj.diff_filter.b = blkdiag(b_f, b_f, b_f, b_f);
+param_traj.diff_filter.Ta = param_global.Ta;
+param_traj.diff_filter.Phi = blkdiag(Phi_yt, Phi_yt, Phi_yt, Phi_alpha);
+param_traj.diff_filter.Gamma = blkdiag(Gamma_yt,Gamma_yt,Gamma_yt,Gamma_alpha);
 
 % Brauche ich in Simulink:
 selector_index1 = [1 7 13 19];
 selector_index2 = selector_index1+1;
 selector_index3 = selector_index1+2;
 
-param_traj_filter.p_d_index    = selector_index1;
-param_traj_filter.p_d_p_index  = selector_index2;
-param_traj_filter.p_d_pp_index = selector_index3;
+param_traj.diff_filter.p_d_index    = selector_index1;
+param_traj.diff_filter.p_d_p_index  = selector_index2;
+param_traj.diff_filter.p_d_pp_index = selector_index3;
 
 lamda_alpha = lambda;
 %{
@@ -113,11 +113,11 @@ D_f = [0; 0; 0];
 Phi_alpha = (eye(3) + A_f*param_global.Ta); % euler vorwärts
 Gamma_alpha = b_f*param_global.Ta;  % euler vorwärts
 
-param_traj_filter.A = blkdiag(A_f, A_f, A_f, A_f);
-param_traj_filter.b = blkdiag(b_f, b_f, b_f, b_f);
-param_traj_filter.Ta = param_global.Ta;
-param_traj_filter.Phi = blkdiag(Phi_yt, Phi_yt, Phi_yt, Phi_alpha);
-param_traj_filter.Gamma = blkdiag(Gamma_yt,Gamma_yt,Gamma_yt,Gamma_alpha);
+param_traj.diff_filter.A = blkdiag(A_f, A_f, A_f, A_f);
+param_traj.diff_filter.b = blkdiag(b_f, b_f, b_f, b_f);
+param_traj.diff_filter.Ta = param_global.Ta;
+param_traj.diff_filter.Phi = blkdiag(Phi_yt, Phi_yt, Phi_yt, Phi_alpha);
+param_traj.diff_filter.Gamma = blkdiag(Gamma_yt,Gamma_yt,Gamma_yt,Gamma_alpha);
 
 % Brauche ich in Simulink:
 selector_index1 = [1 4 7 10];

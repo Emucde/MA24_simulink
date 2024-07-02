@@ -21,7 +21,6 @@ if(bdIsLoaded(simulink_main_model_name))
     fin_label_ctrl = strjoin(split_label, '_');
 
     % clear diagnostic window from simulink
-    save_system(simulink_main_model_name)
     sldiagviewer.diary('off'); % wichtig, sonst loggt er auch in die vorherigen files
 
     sldiagviewer.diary(['./main_simulink/simulink_log/', char(datetime('now', 'Format', 'yyMMdd_HH_mm')), '_', fin_label_ctrl, '_', fin_label_traj, '_log.txt']); % enable logger for simulink

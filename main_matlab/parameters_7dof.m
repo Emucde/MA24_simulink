@@ -41,25 +41,22 @@ simulink_main_model_name = 'sim_discrete_7dof';
 % simulink file for all different robots.
 run('./utils/matlab_init_general/add_default_matlab_paths'); % because it is not on path per default
 
+% open file defined in simulink_main_model_name
+open_simulink_slx;
+
 get_robot_name; % set robot_name to active robot from simulink (or default value when simulink is closed)
 
 s_fun_path = ['./s_functions/', robot_name];
 add_robot_matlab_paths;
 
+% %%%%%%%%%%%%%%%% SOLVE MPC BUG %%%%%%%%%%%%%%%%
+% do not comment in, this would result in an endless loop!
+% only copy this command into the command window if mpcs are not found!
+% solve_mpc_notfound_bug;
+
 % Init Casadi
 init_casadi;
 import casadi.*;
-
-% Ensure that Simulink is open!
-open_simulink_on_start = true;
-%if(~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && sum(strfind([getenv().keys{:}], 'VSCODE')) == 0)
-% && ~isSimulinkStarted funktioniert einfach nicht.
-if( ~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && desktop('-inuse') == 1) % in vscode inuse delivers 0 (running in background)
-    tic
-    fprintf(['open simulink model \"' simulink_main_model_name, '\" ...'])
-    open_system([simulink_main_model_name '.slx'])
-    fprintf([' finished! (Loading time: ' num2str(toc) ' s)\n']);
-end
 
 %% Init scripts
 
@@ -69,6 +66,7 @@ param_robot_init;
 % combo boxes are trajectory dependent changed for each robot!
 % it has to be ensured that sim_discrete_7dof is open!
 change_simulink_traj_combo_box;
+save_system(simulink_main_model_name, 'SaveDirtyReferencedModels','on');
 
 activate_simulink_logs;
 
@@ -87,9 +85,12 @@ traj_select.sinus = 4;
 traj_select.traj_amount = param_global.traj_amount; % anzahl der trajektorien
 %%%%%%%%%
 traj_select_fin = 4;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% TRAJECTORY 
+
+param_traj = struct;
+
 %% Param Trajektory differential filter 5th order
-param_diff_filter_traj;
+param_diff_filter_traj; % define param_traj.diff_filter
 
 %% Param Trajectory Poly
 param_traj_poly.T = T_sim/2-3; % in s
@@ -192,7 +193,7 @@ T_traj_poly         = param_traj_poly.T;
 T_traj_sin_poly     = param_traj_sin_poly.T;
 omega_traj_sin_poly = param_traj_sin_poly.omega;
 phi_traj_sin_poly   = param_traj_sin_poly.phi;
-T_switch            = param_traj_filter.T_switch;
+T_switch            = param_traj.diff_filter.T_switch;
 
 overwrite_offline_traj = false;
 
@@ -232,7 +233,7 @@ try
             for i=1:traj_select.traj_amount
                 tic;
                 % TODO: Create function for that!!!!!
-                new_traj_data = generate_trajectory(t, i, param_init_pose, param_traj_filter, param_traj_poly, param_traj_sin_poly, init_bus_param);
+                new_traj_data = generate_trajectory(t, i, param_init_pose, param_traj, param_traj_poly, param_traj_sin_poly, init_bus_param);
                 disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
             
                 param_traj_data = param_traj_data_fun(traj_settings, 'set', i, param_traj_data, new_traj_data);

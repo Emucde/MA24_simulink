@@ -1,4 +1,4 @@
-function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, param_traj_filter, param_traj_poly, param_traj_sin_poly, init_bus_param)
+function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, param_traj, param_traj_poly, param_traj_sin_poly, init_bus_param)
 
     xe0 = param_init_pose.xe0;
     xeT = param_init_pose.xeT;
@@ -69,9 +69,9 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
         x_k = [xe0(1);0;0;0;0;0; xe0(2);0;0;0;0;0; xe0(3);0;0;0;0;0; 0;0;0;0;0;0];
         t_offset = 0;
         alpha_offset = 0;
-        T_switch = param_traj_filter.T_switch;
+        T_switch = param_traj.diff_filter.T_switch;
         for i=1:N
-            [x_d, x_kp1] = create_diff_filter_traj(xeT, x_k, alphaT, R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj_filter, init_bus_param);
+            [x_d, x_kp1] = create_diff_filter_traj(xeT, x_k, alphaT, R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj.diff_filter , init_bus_param);
             p_d(:,i)       = x_d.p_d;
             p_d_p(:,i)     = x_d.p_d_p;
             p_d_pp(:,i)    = x_d.p_d_pp;
