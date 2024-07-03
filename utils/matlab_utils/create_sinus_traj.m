@@ -1,8 +1,14 @@
-function [x_d] = create_sinus_traj(x_target, x0_target, t, R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj_sin_poly, init_bus_param)
+function [x_d] = create_sinus_traj(t, param_traj, init_bus_param)
 
-    T = param_traj_sin_poly.T;
-    omega = param_traj_sin_poly.omega;
-    phi = param_traj_sin_poly.phi;
+    T =  param_traj.sin_poly.T;
+    omega =  param_traj.sin_poly.omega;
+    phi =  param_traj.sin_poly.phi;
+
+    rot_ax =  param_traj.pose.rot_ax;
+    rot_alpha_scale =  param_traj.pose.rot_alpha_scale;
+    R_init =  param_traj.pose.R_init;
+    alpha_offset = param_traj.pose.alpha_offset;
+
     if(t > T)
         s    = 1;
         s_p  = 0;
@@ -10,8 +16,8 @@ function [x_d] = create_sinus_traj(x_target, x0_target, t, R_init, rot_ax, rot_a
     else
         [s, s_p, s_pp] = trajectory_poly(t, 0, 1, T);
     end
-    xT = x_target(1:3);
-    x0 = x0_target(1:3);
+    xT = param_traj.pose.xeT(1:3);
+    x0 = param_traj.pose.xe0(1:3);
 
     a = (xT - x0)/2; % width of sinus movement
 

@@ -1,13 +1,27 @@
-function [x_d] = create_poly_traj(x_target, alphaT, x0_target, alpha0, alpha_offset, T_start, t, R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj_poly, init_bus_param)
+function [x_d] = create_poly_traj(t, param_traj, init_bus_param)
 
-    T = param_traj_poly.T;
+    T = param_traj.poly.T;
+    T_start = param_traj.pose.T_start;
+
+    xe0 = param_traj.pose.xe0(1:3);
+    xeT = param_traj.pose.xeT(1:3);
+
+    alpha0 = param_traj.pose.alpha0;
+    alphaT = param_traj.pose.alphaT;
+    alpha_offset = param_traj.pose.alpha_offset;
+
+    rot_ax = param_traj.pose.rot_ax;
+    rot_alpha_scale = param_traj.pose.rot_alpha_scale;
+
+    R_init = param_traj.pose.R_init;
+
     if(t-T_start > T)
-        p_d =    [x_target(1:3); alphaT]; % abhängig vom akt. target
+        p_d =    [xeT(1:3); alphaT]; % abhängig vom akt. target
         p_d_p =  [zeros(3,1); 0];% müssen 0 sein, weil änderungsraten
         p_d_pp = [zeros(3,1); 0];% am Ende sicher 0 sind.
     else
-        yT = [x_target(1:3); alphaT]; % poly contains [x,y,z,alpha]
-        y0 = [x0_target(1:3); alpha0];
+        yT = [xeT(1:3); alphaT]; % poly contains [x,y,z,alpha]
+        y0 = [xe0(1:3); alpha0];
         [p_d, p_d_p, p_d_pp] = trajectory_poly(t-T_start, y0, yT, T);
     end
     

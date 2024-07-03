@@ -1,17 +1,4 @@
-function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, param_traj, init_bus_param)
-
-    xe0 = param_init_pose.xe0;
-    xeT = param_init_pose.xeT;
-    alpha0 = param_init_pose.alpha0;
-    alphaT = param_init_pose.alphaT;
-    R_init = param_init_pose.R_init;
-    R_target = param_init_pose.R_target;
-    rot_ax = param_init_pose.rot_ax;
-    rot_alpha_scale = param_init_pose.rot_alpha_scale;
-    T_start = param_init_pose.T_start;
-    Phi_init = param_init_pose.Phi_init;
-    Phi_target = param_init_pose.Phi_target;
-    delta_Phi = param_init_pose.delta_Phi;
+function [param_trajectory] = generate_trajectory(t, modus, param_traj, init_bus_param)
 
     N = length(t);
     p_d       = zeros(3, N);
@@ -37,135 +24,81 @@ function [param_trajectory] = generate_trajectory(t, modus, param_init_pose, par
 
     % [TODO: ineffizient - sollte in einer Schleife gemacht werden]
 
-    if(modus == 1) % stabilize equilibrium
+    x_d_cell = cell(1, N);
+    if(modus == 1) % stabilize equilibrium´
         for i=1:N
-            x_d = create_equilibrium_traj(xeT, R_init, Phi_target, init_bus_param);
-            p_d(:,i)       = x_d.p_d;
-            p_d_p(:,i)     = x_d.p_d_p;
-            p_d_pp(:,i)    = x_d.p_d_pp;
-            Phi_d(:,i)     = x_d.Phi_d;
-            Phi_d_p(:,i)   = x_d.Phi_d_p;
-            Phi_d_pp(:,i)  = x_d.Phi_d_pp;
-            R_d(:,:,i)     = x_d.R_d;
-            q_d(:,i)       = x_d.q_d;
-            q_d_p(:,i)     = x_d.q_d_p;
-            q_d_pp(:,i)    = x_d.q_d_pp;
-            omega_d(:,i)   = x_d.omega_d;
-            omega_d_p(:,i) = x_d.omega_d_p;
-            alpha_d(:,i)   = x_d.alpha_d;
-            alpha_d_p(:,i) = x_d.alpha_d_p;
-            alpha_d_pp(:,i)= x_d.alpha_d_pp;
-            rot_ax_d(:,i)  = x_d.rot_ax_d;
-            alpha_d_offset(:,i) = x_d.alpha_d_offset;
-            q_d_rel(:,i) = x_d.q_d_rel;
-            if(t(i) >= T_start && flag == 0)
-                temp = xe0;
-                xe0 = xeT;
-                xeT = temp;
+            x_d_cell{i} = create_equilibrium_traj(param_traj, init_bus_param);
+            if(t(i) >= param_traj.pose.T_start && flag == 0)
+                temp = param_traj.pose.xe0;
+                param_traj.pose.xe0 = param_traj.pose.xeT;
+                param_traj.pose.xeT = temp;
                 flag = 1;
             end
         end
     elseif(modus == 2) % 5th order differential filter
-        x_k = [xe0(1);0;0;0;0;0; xe0(2);0;0;0;0;0; xe0(3);0;0;0;0;0; 0;0;0;0;0;0];
+        x_k = [ param_traj.pose.xe0(1); 0; 0; 0; 0; 0; ...
+                param_traj.pose.xe0(2); 0; 0; 0; 0; 0; ...
+                param_traj.pose.xe0(3); 0; 0; 0; 0; 0; ...
+                param_traj.pose.alpha0; 0; 0; 0; 0; 0 ];
         t_offset = 0;
-        alpha_offset = 0;
-        T_switch = param_traj.diff_filter.T_switch;
         for i=1:N
-            [x_d, x_kp1] = create_diff_filter_traj(xeT, x_k, alphaT, R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj.diff_filter , init_bus_param);
-            p_d(:,i)       = x_d.p_d;
-            p_d_p(:,i)     = x_d.p_d_p;
-            p_d_pp(:,i)    = x_d.p_d_pp;
-            Phi_d(:,i)     = x_d.Phi_d;
-            Phi_d_p(:,i)   = x_d.Phi_d_p;
-            Phi_d_pp(:,i)  = x_d.Phi_d_pp;
-            R_d(:,:,i)     = x_d.R_d;
-            q_d(:,i)       = x_d.q_d;
-            q_d_p(:,i)     = x_d.q_d_p;
-            q_d_pp(:,i)    = x_d.q_d_pp;
-            omega_d(:,i)   = x_d.omega_d;
-            omega_d_p(:,i) = x_d.omega_d_p;
-            alpha_d(:,i)   = x_d.alpha_d;
-            alpha_d_p(:,i) = x_d.alpha_d_p;
-            alpha_d_pp(:,i)= x_d.alpha_d_pp;
-            rot_ax_d(:,i)  = x_d.rot_ax_d;
-            alpha_d_offset(:,i) = x_d.alpha_d_offset;
-            q_d_rel(:,i) = x_d.q_d_rel;
-
+            [x_d_cell{i}, x_kp1] = create_diff_filter_traj(x_k, param_traj, init_bus_param);
             x_k = x_kp1;
 
-            if(t(i) >= (t_offset + T_switch) && flag == 0)
-                temp = xe0;
-                xe0 = xeT;
-                xeT = temp;
-                temp = R_init;
-                R_init = R_target;
-                R_target = temp;
-                [rot_ax, rot_alpha_scale] = find_rotation_axis(R_init, R_target);
-                alphaT = 1-param_init_pose.alphaT;
-                t_offset = t_offset + T_switch;
+            if(t(i) >= (t_offset + param_traj.diff_filter.T_switch) && flag == 0)
+                temp = param_traj.pose.xe0;
+                param_traj.pose.xe0 = param_traj.pose.xeT;
+                param_traj.pose.xeT = temp;
+
+                param_traj.pose.alphaT = 1-param_traj.pose.alphaT;
+                t_offset = t_offset + param_traj.diff_filter.T_switch;
                 flag = 1;
             end
         end
     elseif(modus == 3) % 5th order polynomial
-        T_start_end = T_start;
-        T_start = 0;
-        alpha_offset = 0;
+        T_start_end = param_traj.pose.T_start;
+        param_traj.pose.T_start = 0;
         for i=1:N
-            [x_d] = create_poly_traj(xeT, alphaT, xe0, alpha0, alpha_offset, T_start, t(i), R_init, rot_ax, rot_alpha_scale, Phi_init, delta_Phi, param_traj.poly, init_bus_param);
-            p_d(:,i)       = x_d.p_d;
-            p_d_p(:,i)     = x_d.p_d_p;
-            p_d_pp(:,i)    = x_d.p_d_pp;
-            Phi_d(:,i)     = x_d.Phi_d;
-            Phi_d_p(:,i)   = x_d.Phi_d_p;
-            Phi_d_pp(:,i)  = x_d.Phi_d_pp;
-            R_d(:,:,i)     = x_d.R_d;
-            q_d(:,i)       = x_d.q_d;
-            q_d_p(:,i)     = x_d.q_d_p;
-            q_d_pp(:,i)    = x_d.q_d_pp;
-            omega_d(:,i)   = x_d.omega_d;
-            omega_d_p(:,i) = x_d.omega_d_p;
-            alpha_d(:,i)   = x_d.alpha_d;
-            alpha_d_p(:,i) = x_d.alpha_d_p;
-            alpha_d_pp(:,i)= x_d.alpha_d_pp;
-            rot_ax_d(:,i)  = x_d.rot_ax_d;
-            alpha_d_offset(:,i) = x_d.alpha_d_offset;
-            q_d_rel(:,i) = x_d.q_d_rel;
+            x_d_cell{i} = create_poly_traj(t(i), param_traj, init_bus_param);
 
             if(t(i) >= T_start_end && flag == 0)
-                temp = xe0;
-                xe0 = xeT;
-                xeT = temp;
-                alphaT = 1-param_init_pose.alphaT;
-                alpha0 = 1-param_init_pose.alpha0;
-                T_start = T_start_end;
+                temp = param_traj.pose.xe0;
+                param_traj.pose.xe0 = param_traj.pose.xeT;
+                param_traj.pose.xeT = temp;
+                param_traj.pose.alphaT = 1-param_traj.pose.alphaT;
+                param_traj.pose.alpha0 = 1-param_traj.pose.alpha0;
+                param_traj.pose.T_start = T_start_end;
                 flag = 1;
             end
         end
     elseif(modus == 4) % smooth sinus [ Orientation: TODO ]
-        alpha_offset = 0;
         for i=1:N
-            x_d = create_sinus_traj(xeT, xe0, t(i), R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj.sin_poly, init_bus_param);
-            p_d(:,i)       = x_d.p_d;
-            p_d_p(:,i)     = x_d.p_d_p;
-            p_d_pp(:,i)    = x_d.p_d_pp;
-            Phi_d(:,i)     = x_d.Phi_d;
-            Phi_d_p(:,i)   = x_d.Phi_d_p;
-            Phi_d_pp(:,i)  = x_d.Phi_d_pp;
-            R_d(:,:,i)     = x_d.R_d;
-            q_d(:,i)       = x_d.q_d;
-            q_d_p(:,i)     = x_d.q_d_p;
-            q_d_pp(:,i)    = x_d.q_d_pp;
-            omega_d(:,i)   = x_d.omega_d;
-            omega_d_p(:,i) = x_d.omega_d_p;
-            alpha_d(:,i)   = x_d.alpha_d;
-            alpha_d_p(:,i) = x_d.alpha_d_p;
-            alpha_d_pp(:,i)= x_d.alpha_d_pp;
-            rot_ax_d(:,i)  = x_d.rot_ax_d;
-            alpha_d_offset(:,i) = x_d.alpha_d_offset;
-            q_d_rel(:,i) = x_d.q_d_rel;
+            x_d_cell{i} = create_sinus_traj(t(i), param_traj, init_bus_param);
         end
     else
         error('modus have to be 1 (stabilize equilibrium), 2 (5th order differential filter), 3 (5th order polynomial) or 4 (smooth sinus)');
+    end
+
+    for i=1:N
+        x_d = x_d_cell{i};
+        p_d(:,i)       = x_d.p_d;
+        p_d_p(:,i)     = x_d.p_d_p;
+        p_d_pp(:,i)    = x_d.p_d_pp;
+        Phi_d(:,i)     = x_d.Phi_d;
+        Phi_d_p(:,i)   = x_d.Phi_d_p;
+        Phi_d_pp(:,i)  = x_d.Phi_d_pp;
+        R_d(:,:,i)     = x_d.R_d;
+        q_d(:,i)       = x_d.q_d;
+        q_d_p(:,i)     = x_d.q_d_p;
+        q_d_pp(:,i)    = x_d.q_d_pp;
+        omega_d(:,i)   = x_d.omega_d;
+        omega_d_p(:,i) = x_d.omega_d_p;
+        alpha_d(:,i)   = x_d.alpha_d;
+        alpha_d_p(:,i) = x_d.alpha_d_p;
+        alpha_d_pp(:,i)= x_d.alpha_d_pp;
+        rot_ax_d(:,i)  = x_d.rot_ax_d;
+        alpha_d_offset(:,i) = x_d.alpha_d_offset;
+        q_d_rel(:,i) = x_d.q_d_rel;
     end
 
     param_trajectory = struct;

@@ -1,12 +1,23 @@
-function [x_d, x_kp1] = create_diff_filter_traj(x_target, x_k, alpha_T, R_init, rot_ax, rot_alpha_scale, alpha_offset, Phi_init, delta_Phi, param_traj_filter, init_bus_param)
+function [x_d, x_kp1] = create_diff_filter_traj(x_k, param_traj, init_bus_param)
+    xe0 = param_traj.pose.xe0(1:3);
+    xeT = param_traj.pose.xeT(1:3);
+
+    alpha0 = param_traj.pose.alpha0;
+    alphaT = param_traj.pose.alphaT;
+    alpha_offset = param_traj.pose.alpha_offset;
+
+    rot_ax = param_traj.pose.rot_ax;
+    rot_alpha_scale = param_traj.pose.rot_alpha_scale;
+
+    R_init = param_traj.pose.R_init;
+
+    Phi = param_traj.diff_filter.Phi;
+    Gamma = param_traj.diff_filter.Gamma;
+    x_kp1 = Phi*x_k + Gamma*[xeT(1:3);alphaT];
     
-    Phi = param_traj_filter.Phi;
-    Gamma = param_traj_filter.Gamma;
-    x_kp1 = Phi*x_k + Gamma*[x_target(1:3);alpha_T];
-    
-    xd   = x_kp1(param_traj_filter.p_d_index);
-    dxd  = x_kp1(param_traj_filter.p_d_p_index);
-    ddxd = x_kp1(param_traj_filter.p_d_pp_index);
+    xd   = x_kp1(param_traj.diff_filter.p_d_index);
+    dxd  = x_kp1(param_traj.diff_filter.p_d_p_index);
+    ddxd = x_kp1(param_traj.diff_filter.p_d_pp_index);
     
     alpha    =   xd(4)*rot_alpha_scale;
     alpha_p  =  dxd(4)*rot_alpha_scale;

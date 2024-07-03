@@ -163,24 +163,25 @@ end
 [rot_ax, rot_alpha_scale] = find_rotation_axis(R_init, R_target);
 
 % Achtung: Hier wird angenommen, dass um eine feste Achse rotiert wird.
-param_init_pose.T_start = T_sim/2;
+param_traj.pose.T_start = T_sim/2;
 
-param_init_pose.xe0 = xe0;
-param_init_pose.xeT = xeT;
+param_traj.pose.xe0 = xe0;
+param_traj.pose.xeT = xeT;
 
-param_init_pose.q_0    = q_0;       % nDOF q_0
-param_init_pose.q_0_p  = q_0_p;   % nDOF q_0_p
-param_init_pose.q_0_pp = q_0_pp; % nDOF q_0_pp
+param_traj.pose.q_0    = q_0;       % nDOF q_0
+param_traj.pose.q_0_p  = q_0_p;   % nDOF q_0_p
+param_traj.pose.q_0_pp = q_0_pp; % nDOF q_0_pp
 
-param_init_pose.R_init          = R_init;
-param_init_pose.R_target        = R_target;
-param_init_pose.rot_alpha_scale = rot_alpha_scale;
-param_init_pose.rot_ax          = rot_ax;
-param_init_pose.Phi_init        = rotm2rpy(R_init);
-param_init_pose.Phi_target      = rotm2rpy(R_target);
-param_init_pose.delta_Phi       = param_init_pose.Phi_target - param_init_pose.Phi_init;
-param_init_pose.alpha0          = 0;
-param_init_pose.alphaT          = 1;
+param_traj.pose.R_init          = R_init;
+param_traj.pose.R_target        = R_target;
+param_traj.pose.rot_alpha_scale = rot_alpha_scale;
+param_traj.pose.rot_ax          = rot_ax;
+param_traj.pose.Phi_init        = rotm2rpy(R_init);
+param_traj.pose.Phi_target      = rotm2rpy(R_target);
+param_traj.pose.delta_Phi       = param_traj.pose.Phi_target - param_traj.pose.Phi_init;
+param_traj.pose.alpha0          = 0;
+param_traj.pose.alphaT          = 1;
+param_traj.pose.alpha_offset    = 0;
 
 %% GENERATE OFFLINE TRAJECTORY
 param_MPC_traj_data_mat_file = [s_fun_path, '/trajectory_data/param_traj_data.mat'];
@@ -232,7 +233,7 @@ try
             for i=1:traj_select.traj_amount
                 tic;
                 % TODO: Create function for that!!!!!
-                new_traj_data = generate_trajectory(t, i, param_init_pose, param_traj, init_bus_param);
+                new_traj_data = generate_trajectory(t, i, param_traj, init_bus_param);
                 disp(['parameter.m: Execution Time for Trajectory Calculation: ', sprintf('%f', toc), 's']);
             
                 param_traj_data = param_traj_data_fun(traj_settings, 'set', i, param_traj_data, new_traj_data);
