@@ -5,6 +5,7 @@
 folder_add_to_path = {
     'main_matlab'
     'utils/matlab_utils'
+    'utils/matlab_utils/trajectory_utils'
     'utils/matlab_init_general'
     'utils/utils_casadi'
     'maple/maple_generated/fr3_7dof'  % yes this too, because I need T matrix from it for trajectory generation
