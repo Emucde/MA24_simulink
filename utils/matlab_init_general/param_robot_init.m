@@ -18,3 +18,7 @@ elseif(strcmp(robot_name, 'ur5e_6dof'))
 else
     error('Only robot_name ( fr3_7dof | fr3_6dof | ur5e_6dof ) implemented!');
 end
+
+n_indices = param_robot.n_indices;
+n_indices_fixed = setdiff(1:n, n_indices);
+disp(['Fixed joint: ', num2str(n_indices_fixed'), ', nDOF = ', num2str(n), ', see param_robot_init.m']);

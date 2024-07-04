@@ -27,62 +27,67 @@ param_traj.sin_poly.phi   = 0; % in rad
 
 %% Calculate target positions
 
-n_indices = param_robot.n_indices;
-n_indices_fixed = setdiff(1:n, n_indices);
-disp(['Fixed joint: ', num2str(n_indices_fixed'), ', nDOF = ', num2str(n), ', see param_robot_init.m']);
+Q_pos = 1e0 * eye(m);  % Weight for the position error in the cost function.
+Q_m = 0.5;             % Weight for the manipulability error in the cost function.
+Q_q = 1e5 * eye(n);    % Weight for the deviaton of q_sol to q_d
+Q_nl = 1e-1 * eye(n);  % Weight of nl_spring_force(q, ct_ctrl_param, param_robot) -> pose should not start near to limits!
+q_d = param_robot.q_0_ref(n_indices);
 
-q_0_init = [0; 0; pi/4; -pi/2; 0*pi/4; pi/2; 0];
-q_0_p_init = zeros(7, 1);
-q_0_pp_init = zeros(7, 1);
+xe0 = [0.3921; 0.3921; 0.5211; 0; 1/sqrt(2); 1/sqrt(2); 0];
+xeT = [xe0(1:3,1) + [0; 0; -0.5]; rotm2quat_v4( Rz(pi/4)*quat2rotm_v2(xe0(4:7)) )]; % rotm2quat (from matlab) is very precise but slow
 
-% 6 DOF Case
-q_0 = q_0_init(n_indices);
-q_0_p = q_0_p_init(n_indices);
-q_0_pp = q_0_pp_init(n_indices);
-
-% necessary only for visualization when less degrees of freedom are used than the robot has
-% (only needed for fr3 at this moment, see visualization.slx)
-param_robot.q_0_init = q_0_init;
-param_robot.q_0_p_init = q_0_p_init;
-param_robot.q_0_pp_init = q_0_pp_init;
-
-H_0_init = hom_transform_endeffector_py(q_0);
-
-quat_init = rotation2quaternion(H_0_init(1:3, 1:3));
-R_init = quat2rotm_v2(quat_init); % besser numerisch robust
-xe0 = [H_0_init(1:3,4); quat_init]; % xe0 = [x,y,z,q1,q2,q3,q4]
-
-rotq_fun = @(x1, x2) [x1(1:3) + x2(1:3); quat_mult(x1(4:7), x2(4:7))]; % multiplikation von quaternions = rotationen hintereinander ausführen
-%xeT = xe0;
-%xeT = rotq_fun(xe0, [0; 0; -0.5; 1; 0; 0; 0]); % correct addition of quaternions
-%xeT = [xe0(1:3,1); rotation2quaternion(Rz(pi/4)*R_init)]; % correct addition of quaternions
-R_target = Rz(pi/4)*R_init; % Vormultiplikation: Drehung erfolgt in Bezug auf Inertialsystem (muss so sein!)
-%R_target = Rz(0)*R_init; % Vormultiplikation: Drehung erfolgt in Bezug auf Inertialsystem
-xeT = [xe0(1:3,1) + [0; 0; -0.5]; rotation2quaternion(R_target)]; % correct addition of quaternions
+q_0 = fsolve(@(q) kin_fun(xe0, q), q_d); % test if the function works
+%[q_0, ~] = inverse_kinematics(param_robot, xe0, q_d, Q_pos, Q_m, Q_q, Q_nl,  1e-2, 100, ct_ctrl_param);
+H_0 = hom_transform_endeffector_py(q_0);
+xe0 = [H_0(1:3,4); rotm2quat_v4(H_0(1:3,1:3))]; % better to exact start in point
+q_0_p = zeros(n, 1);
+q_0_pp = zeros(n, 1);
 
 %tests;
+R_init = quat2rotm_v2(xe0(4:7));
+R_target = quat2rotm_v2(xeT(4:7));
 
-%% Inverse Kin (Zum Prüfen ob Endwert im Aufgabenraum ist.)
-calc_inverse_kin = ~true;
-if(calc_inverse_kin)
-    % Define the cost function.
-    Q1 = 1e10 * eye(m); % Weight for the position error in the cost function.
-    Q2 = 0.5; % Weight for the manipulability error in the cost function.
-    Q3 = 1*1e0 * eye(n); % Weight for the deviaton of q_sol to q_d
-    Q4 = 1e-1 * eye(n);% Weight of nl_spring_force(q, ct_ctrl_param, param_robot) -> pose should not start near to limits!
-    tolerance = 0.01;
-    random_q0_count = 100;
+traj_cell = cell(1, 4);
+% Trajectory 1:
+traj_struct = struct;
+traj_struct.pose = [xe0, xeT, xe0];
+traj_struct.rotation = cat(3, R_init, R_target, R_init);
+traj_struct.time = [0; T_sim/2; T_sim];
+traj_struct.traj_type = [traj_select.equilibrium_traj];
+traj_struct.N = 3;
+traj_cell{1} = traj_struct;
 
-    q_d = param_robot.q_n;
-    q_d = q_0;
+% Trajectory 2:
+traj_struct = struct;
+traj_struct.pose = [xe0, xeT, xe0];
+traj_struct.rotation = cat(3, R_init, R_target, R_init);
+traj_struct.time = [0; T_sim/2; T_sim];
+traj_struct.traj_type = [traj_select.differential_filter];
+traj_struct.N = 3;
+traj_cell{2} = traj_struct;
 
-    xeT_in = [xeT(1:3); rotm2eul(R_target, 'XYZ')'];
-    
-    [q_sol, ~] = inverse_kinematics(param_robot, xeT_in, q_d, Q1, Q2, Q3, Q4, tolerance, random_q0_count, ct_ctrl_param);
-    %%
-end
+% Trajectory 3:
+traj_struct = struct;
+traj_struct.pose = [xe0, xeT, xe0];
+traj_struct.rotation = cat(3, R_init, R_target, R_init);
+traj_struct.time = [0; T_sim/2; T_sim];
+traj_struct.traj_type = [traj_select.polynomial];
+traj_struct.N = 3;
+traj_cell{3} = traj_struct;
 
-% kürzeste Rotationsachse und winkel zwischen R_init und R_target berechnen.
+% Trajectory 4:
+traj_struct = struct;
+traj_struct.pose = [xe0, xeT, xe0];
+traj_struct.rotation = cat(3, R_init, R_target, R_init);
+traj_struct.time = [0; T_sim/2; T_sim];
+traj_struct.traj_type = [traj_select.sinus];
+traj_struct.N = 3;
+traj_cell{4} = traj_struct;
+
+traj_struct_combined = combine_trajectories(traj_cell);
+param_traj.traj_init = traj_struct_combined;
+
+% kürzeste rotationachse und winkel zwischen R_init und R_target berechnen.
 [rot_ax, rot_alpha_scale] = find_rotation_axis(R_init, R_target);
 
 % Achtung: Hier wird angenommen, dass um eine feste Achse rotiert wird.
@@ -99,9 +104,6 @@ param_traj.pose.R_init          = R_init;
 param_traj.pose.R_target        = R_target;
 param_traj.pose.rot_alpha_scale = rot_alpha_scale;
 param_traj.pose.rot_ax          = rot_ax;
-param_traj.pose.Phi_init        = rotm2rpy(R_init);
-param_traj.pose.Phi_target      = rotm2rpy(R_target);
-param_traj.pose.delta_Phi       = param_traj.pose.Phi_target - param_traj.pose.Phi_init;
 param_traj.pose.alpha0          = 0;
 param_traj.pose.alphaT          = 1;
 param_traj.pose.alpha_offset    = 0;
@@ -321,3 +323,16 @@ if(plot_trajectory)
 end
 
 %% DEBUG
+
+
+function out = kin_fun(xe, q)
+    H = hom_transform_endeffector_py(q);
+    
+    RR = H(1:3,1:3)*quat2rotm_v2(xe(4:7))';
+    p_err = H(1:3,4) - xe(1:3);
+    r_err = [RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)];
+    out = r_err'*r_err + p_err'*p_err;
+
+    % He = [quat2rotm_v2(xe(4:7)), xe(1:3); 0 0 0 1];
+    % out = sum((H - He).^2, 'all');
+end

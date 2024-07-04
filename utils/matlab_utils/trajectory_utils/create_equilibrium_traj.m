@@ -1,15 +1,20 @@
-function [x_d] = create_equilibrium_traj(param_traj, init_bus_param)
+function [x_d] = create_equilibrium_traj(traj_select, t, param_traj, init_bus_param)
+    traj_init = param_traj.traj_init;
 
-    xeT = param_traj.pose.xeT;
-    Phi_d = param_traj.pose.Phi_target;
-    R_init = param_traj.pose.R_init;
-    alpha_offset = param_traj.pose.alpha_offset;
+    start_index = traj_init.start_index(traj_select);
+    stop_index  = traj_init.stop_index(traj_select);
+    t_val       = traj_init.time(start_index:stop_index);
+    i = sum(t >= t_val);
+    
+    xeT    = traj_init.pose(:, i);
+    R_init = traj_init.rotation(:, :, i);
+    alpha_offset = 0; % TODO DELETE
 
     R_act = quat2rotm_v2(xeT(4:7));
 
     omega_d   = zeros(3,1);
     omega_d_p = zeros(3,1);
-    q_d   = rotation2quaternion(R_act);
+    q_d   = rotm2quat_v4(R_act);
     q_d_p = zeros(4,1);
     q_d_pp = zeros(4,1);
 
@@ -19,7 +24,7 @@ function [x_d] = create_equilibrium_traj(param_traj, init_bus_param)
     x_d.p_d       = xeT(1:3);
     x_d.p_d_p     = zeros(3,1);
     x_d.p_d_pp    = zeros(3,1);
-    x_d.Phi_d     = Phi_d;
+    x_d.Phi_d     = rotm2rpy(R_act);
     x_d.Phi_d_p   = zeros(3,1);
     x_d.Phi_d_pp  = zeros(3,1);
     x_d.R_d       = R_act;
@@ -33,5 +38,5 @@ function [x_d] = create_equilibrium_traj(param_traj, init_bus_param)
     x_d.alpha_d_pp = 0;
     x_d.rot_ax_d = rot_ax_d;
     x_d.alpha_d_offset = alpha_offset;
-    x_d.q_d_rel = rotation2quaternion(R_init);
+    x_d.q_d_rel = rotm2quat_v4(R_init);
 end

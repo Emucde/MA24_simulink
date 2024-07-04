@@ -53,7 +53,7 @@ end
             rot_ax = rot_ax / (2 * sin(rot_alpha_scale));
         end
     elseif mode == "slow_from_quat"
-        quat = rotation2quaternion(RR);
+        quat = rotm2quat_v4(RR);
         rot_alpha_scale = 2*acos(quat(1));
         if(rot_alpha_scale == 0)
             rot_ax = [0; 0; 0];

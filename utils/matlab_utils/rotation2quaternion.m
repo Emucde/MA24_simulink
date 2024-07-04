@@ -3,6 +3,8 @@
 function eout = rotation2quaternion( R )
   % function eout = RotMat2e( R )
   % One Rotation Matrix -> one quaternion
+  warning('rotation2quaternion is not robust enought for numbers < 2.2204e-16 = eps. Use rotm2quat_v4 instead.');
+
   eout = zeros( 4, 1 );
   if ~all( abs( R(:) ) <= eps(16) )
       eout(1) = 0.5 * sqrt( max( 0, 1 + R(1,1) + R(2,2) + R(3,3) ));

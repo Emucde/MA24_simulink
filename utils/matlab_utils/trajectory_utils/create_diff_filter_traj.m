@@ -1,27 +1,41 @@
-function [x_d, x_kp1] = create_diff_filter_traj(x_k, param_traj, init_bus_param)
-    xe0 = param_traj.pose.xe0(1:3);
-    xeT = param_traj.pose.xeT(1:3);
+function [x_d, x_kp1] = create_diff_filter_traj(traj_select, t, x_k, param_traj, init_bus_param)
+    traj_init = param_traj.traj_init;
 
-    alpha0 = param_traj.pose.alpha0;
-    alphaT = param_traj.pose.alphaT;
-    alpha_offset = param_traj.pose.alpha_offset;
+    start_index = traj_init.start_index(traj_select);
+    stop_index  = traj_init.stop_index(traj_select);
+    t_val       = traj_init.time(start_index:stop_index);
+    i = sum(t >= t_val);
 
-    rot_ax = param_traj.pose.rot_ax;
-    rot_alpha_scale = param_traj.pose.rot_alpha_scale;
+    if( i == length(t_val) )
+        i = length(t_val)-1; % TODO
+    end
+    if( i == 2)
+        disp('jo')
+    end
 
-    R_init = param_traj.pose.R_init;
+    alpha0 = traj_init.alpha(i);
+    
+    xeT    = traj_init.pose(1:3, i+1);
+    alphaT = traj_init.alpha(i+1) - alpha0;
+
+    R_init = traj_init.rotation(:, :, i);
+    rot_ax = traj_init.rot_ax(:, i+1);
+
+    alpha_offset = 0; % TODO DELETE
+
+    yT = [xeT; alphaT];
 
     Phi = param_traj.diff_filter.Phi;
     Gamma = param_traj.diff_filter.Gamma;
-    x_kp1 = Phi*x_k + Gamma*[xeT(1:3);alphaT];
+    x_kp1 = Phi*x_k + Gamma*yT;
     
     xd   = x_kp1(param_traj.diff_filter.p_d_index);
     dxd  = x_kp1(param_traj.diff_filter.p_d_p_index);
     ddxd = x_kp1(param_traj.diff_filter.p_d_pp_index);
     
-    alpha    =   xd(4)*rot_alpha_scale;
-    alpha_p  =  dxd(4)*rot_alpha_scale;
-    alpha_pp = ddxd(4)*rot_alpha_scale;
+    alpha    =   xd(4);
+    alpha_p  =  dxd(4);
+    alpha_pp = ddxd(4);
     
     skew_ew = skew(rot_ax);
     RR = (eye(3) + sin(alpha)*skew_ew + (1-cos(alpha))*skew_ew^2);
@@ -30,7 +44,7 @@ function [x_d, x_kp1] = create_diff_filter_traj(x_k, param_traj, init_bus_param)
 
     omega_d   = alpha_p*rot_ax;
     omega_d_p = alpha_pp*rot_ax;
-    q_d   = rotation2quaternion(R_act);
+    q_d   = rotm2quat_v4(R_act);
     [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);
 
     Phi_act = rotm2rpy(R_act);
@@ -60,5 +74,5 @@ function [x_d, x_kp1] = create_diff_filter_traj(x_k, param_traj, init_bus_param)
     x_d.alpha_d_pp = alpha_d_pp;
     x_d.rot_ax_d = rot_ax_d;
     x_d.alpha_d_offset = alpha_offset;
-    x_d.q_d_rel = rotation2quaternion(R_init);
+    x_d.q_d_rel = rotm2quat_v4(R_init);
 end

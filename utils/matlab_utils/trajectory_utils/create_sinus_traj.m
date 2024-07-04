@@ -1,13 +1,18 @@
-function [x_d] = create_sinus_traj(t, param_traj, init_bus_param)
+function [x_d] = create_sinus_traj(traj_select, t, param_traj, init_bus_param)
+    traj_init = param_traj.traj_init;
+
+    x0    = traj_init.pose(1:3, 1);
+    xT    = traj_init.pose(1:3, 2);
+    alphaT = traj_init.alpha(2);
+
+    R_init = traj_init.rotation(:, :, 1);
+    rot_ax = traj_init.rot_ax(:, 2);
+
+    alpha_offset = 0; % TODO DELETE
 
     T =  param_traj.sin_poly.T;
     omega =  param_traj.sin_poly.omega;
     phi =  param_traj.sin_poly.phi;
-
-    rot_ax =  param_traj.pose.rot_ax;
-    rot_alpha_scale =  param_traj.pose.rot_alpha_scale;
-    R_init =  param_traj.pose.R_init;
-    alpha_offset = param_traj.pose.alpha_offset;
 
     if(t > T)
         s    = 1;
@@ -16,8 +21,6 @@ function [x_d] = create_sinus_traj(t, param_traj, init_bus_param)
     else
         [s, s_p, s_pp] = trajectory_poly(t, 0, 1, T);
     end
-    xT = param_traj.pose.xeT(1:3);
-    x0 = param_traj.pose.xe0(1:3);
 
     a = (xT - x0)/2; % width of sinus movement
 
@@ -37,11 +40,11 @@ function [x_d] = create_sinus_traj(t, param_traj, init_bus_param)
     alpha_pp = -s*omega^2*sin_t + 2*s_p*omega*cos_t + s_pp*sin_t_01;
 
     skew_ew  = skew(rot_ax);
-    R_act    = R_init*(eye(3) + sin(rot_alpha_scale*alpha)*skew_ew + (1-cos(rot_alpha_scale*alpha))*skew_ew^2);
+    R_act    = R_init*(eye(3) + sin(alphaT*alpha)*skew_ew + (1-cos(alphaT*alpha))*skew_ew^2);
 
     omega_d   = alpha_p*rot_ax;
     omega_d_p = alpha_pp*rot_ax;
-    q_d   = rotation2quaternion(R_act);
+    q_d   = rotm2quat_v4(R_act);
     [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);
 
     Phi_act = rotm2rpy(R_act);
@@ -71,5 +74,5 @@ function [x_d] = create_sinus_traj(t, param_traj, init_bus_param)
     x_d.alpha_d_pp = alpha_d_pp;
     x_d.rot_ax_d = rot_ax_d;
     x_d.alpha_d_offset = alpha_offset;
-    x_d.q_d_rel = rotation2quaternion(R_init);
+    x_d.q_d_rel = rotm2quat_v4(R_init);
 end

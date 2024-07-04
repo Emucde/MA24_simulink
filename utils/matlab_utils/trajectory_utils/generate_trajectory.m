@@ -20,9 +20,38 @@ function [param_trajectory] = generate_trajectory(t, modus, param_traj, init_bus
     alpha_d_offset = zeros(1, N);
     q_d_rel = zeros(4, N);
 
-    flag=0;
+    traj_init = param_traj.traj_init;
+    N_traj = traj_init.N_traj;
+    
+    x_d_cell = cell(1, N);
+    %for i = 1:N_traj
+    i = modus;
+        for j=1:N
+            traj_type = traj_init.traj_type(i);
+            if(traj_type == 1)
+                x_d_cell{j} = create_equilibrium_traj(i, t(j), param_traj, init_bus_param);
+            elseif(traj_type == 2)
+                if(j == 1)
+                    start_index = traj_init.start_index(i);
+                    x_k = [ traj_init.pose(1,start_index); 0; 0; 0; 0; 0; ...
+                            traj_init.pose(2,start_index); 0; 0; 0; 0; 0; ...
+                            traj_init.pose(3,start_index); 0; 0; 0; 0; 0; ...
+                            traj_init.alpha(start_index); 0; 0; 0; 0; 0 ];
+                end
+                [x_d_cell{j}, x_kp1] = create_diff_filter_traj(i, t(j), x_k, param_traj, init_bus_param);
+                x_k = x_kp1;
+            elseif(traj_type == 3)
+                x_d_cell{j} = create_poly_traj(i, t(j), param_traj, init_bus_param);
+            elseif(traj_type == 4)
+                x_d_cell{j} = create_sinus_traj(i, t(j), param_traj, init_bus_param);
+            else
+                error('traj_type have to be 1 (stabilize equilibrium), 2 (5th order differential filter), 3 (5th order polynomial) or 4 (smooth sinus)');
+            end
+        end
+    %end
 
-    % [TODO: ineffizient - sollte in einer Schleife gemacht werden]
+    %{
+    flag=0;
 
     x_d_cell = cell(1, N);
     if(modus == 1) % stabilize equilibrium´
@@ -78,7 +107,7 @@ function [param_trajectory] = generate_trajectory(t, modus, param_traj, init_bus
     else
         error('modus have to be 1 (stabilize equilibrium), 2 (5th order differential filter), 3 (5th order polynomial) or 4 (smooth sinus)');
     end
-
+%}
     for i=1:N
         x_d = x_d_cell{i};
         p_d(:,i)       = x_d.p_d;

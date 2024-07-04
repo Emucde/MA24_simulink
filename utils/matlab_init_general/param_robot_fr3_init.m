@@ -339,6 +339,12 @@ fr3.param = struct;
 
 fr3.param.n_DOF = n; % DOF of the robot
 
+% this values are overwritten in parameters_xdof.m. They are only necessary, when
+% less degree of freedom are used as the robot has. Then this values defines which
+% joints are fixed and which are used.
+% Important: now joint 3 is fixed at q = pi/4. Therefore, when the fixed joint or the
+% fixed joint value is changed, the pinocchio to casadi to simulink scripts have to be
+% rerun.
 if(fr3.param.n_DOF == 7)
     fr3.param.n_indices = [1:7]; % 7 DOF
 elseif(fr3.param.n_DOF == 6)
@@ -347,12 +353,9 @@ else
     error('n_indices not correct defined for n = %d', fr3.param.n_DOF);
 end
 
-% this values are overwritten in parameters_xdof.m. They are only necessary, when
-% less degree of freedom are used as the robot has. Then this values defines which
-% joints are fixed and which are used.
-fr3.param.q_0_init = zeros(7, 1);
-fr3.param.q_0_p_init = zeros(7, 1);
-fr3.param.q_0_pp_init = zeros(7, 1);
+fr3.param.q_0_ref = [0; 0; pi/4; -pi/2; 0; pi/2; 0]; % only q3=pi/4 is fixed
+fr3.param.q_0_p_ref = zeros(7, 1);
+fr3.param.q_0_pp_ref = zeros(7, 1);
 
 fr3.param.m_t   = 3; % Translational task space
 fr3.param.m_r   = 3; % Rotational task space
@@ -527,9 +530,6 @@ fr3.param.I_finger_yy = 2.375e-06; % kgm^2
 fr3.param.I_finger_yz = 0; % kgm^2
 fr3.param.I_finger_zz = 7.5e-07; % kgm^2
 
-% Define sugihara limb vector (unsure for 7dof)
-if(fr3.param.n_DOF == 7)
-    fr3.param.sugihara_limb_vector = [fr3.param.l1^2; fr3.param.l2^2; fr3.param.l3^2; fr3.param.l4^2; fr3.param.l5^2; fr3.param.l6^2; fr3.param.l7^2];
-elseif(fr3.param.n_DOF == 6)
-    fr3.param.sugihara_limb_vector = [fr3.param.l1^2; (fr3.param.l2 + fr3.param.l3)^2; fr3.param.l4^2; fr3.param.l5^2; fr3.param.l6^2; fr3.param.l7^2];
-end
+% Define sugihara limb vector
+sugihara_limb_vector = [fr3.param.l1^2; fr3.param.l2^2; fr3.param.l3^2; fr3.param.l4^2; fr3.param.l5^2; fr3.param.l6^2; fr3.param.l7^2];
+fr3.param.sugihara_limb_vector = sugihara_limb_vector(fr3.param.n_indices);

@@ -37,6 +37,9 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
     %           values q_0_init is returned.
     % - best_f_val: lowest value out of all cost function produced by the
     %               random values q_0_init.
+
+        R_target = quat2rotm_v2(xe0(4:7));
+        xe0 = [xe0(1:3); rotm2eul(R_target, 'XYZ')'];
         
         n = param_robot.n_DOF; % Define the number of degrees of freedom.
 
