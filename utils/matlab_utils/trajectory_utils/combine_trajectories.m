@@ -84,7 +84,7 @@ function traj_struct_combined = combine_trajectories(traj_cell)
             else
                 rotation = traj_struct.rotation;
                 [rot_ax, rot_alpha_scale] = find_rotation_axis(rotation(:, :, j-1), rotation(:, :, j), "slow_from_quat");
-                alpha = rot_alpha_scale;
+                alpha = rot_alpha_scale + alpha;
             end
             traj_struct_combined.rot_ax(:, index) = rot_ax;
             traj_struct_combined.alpha( 1, index) = alpha;

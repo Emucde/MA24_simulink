@@ -9,14 +9,17 @@ function [x_d, x_kp1] = create_diff_filter_traj(traj_select, t, x_k, param_traj,
     if( i == length(t_val) )
         i = length(t_val)-1; % TODO
     end
-    if( i == 2)
-        disp('jo')
-    end
 
     alpha0 = traj_init.alpha(i);
     
     xeT    = traj_init.pose(1:3, i+1);
-    alphaT = traj_init.alpha(i+1) - alpha0;
+    alphaT = traj_init.alpha(i+1);
+
+    if( t == t_val(i))
+        % otherwise we cannot exactly compensate alpha by alpha0.
+        % Here errors in size of 1e-15 can lead to sign jumps in quaternions
+        x_k(param_traj.diff_filter.p_d_index(4)) = alpha0;
+    end
 
     R_init = traj_init.rotation(:, :, i);
     rot_ax = traj_init.rot_ax(:, i+1);
@@ -38,7 +41,7 @@ function [x_d, x_kp1] = create_diff_filter_traj(traj_select, t, x_k, param_traj,
     alpha_pp = ddxd(4);
     
     skew_ew = skew(rot_ax);
-    RR = (eye(3) + sin(alpha)*skew_ew + (1-cos(alpha))*skew_ew^2);
+    RR = (eye(3) + sin(alpha-alpha0)*skew_ew + (1-cos(alpha-alpha0))*skew_ew^2);
     
     R_act    = RR*R_init; % Vormultiplikation (in find_rotation_axis wird Vormultiplikation für RR verwendet!!)
 

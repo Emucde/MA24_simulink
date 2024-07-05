@@ -223,7 +223,8 @@ try
                 % Schleife nicht die Variable i verwenden!!!!
                 nlpsol_generate_opt_problem;
                 if(weights_and_limits_as_parameter)
-                    [~, xx_full_opt_sol, ~] = f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
+                    % TODO - why necessary??
+                    [~, xx_full_opt_sol, ~] = f_opt(mpc_init_reference_values, init_guess_0+1e-15, param_weight_init_cell);
                 else
                     [~, xx_full_opt_sol] = f_opt(mpc_init_reference_values, init_guess_0);
                 end

@@ -24,7 +24,7 @@ function [x_d] = create_poly_traj(traj_select, t, param_traj, init_bus_param)
 
     alpha_offset = 0; % TODO DELETE
 
-    y0 = [xe0; 0];
+    y0 = [xe0; alpha0];
     yT = [xeT; alphaT];
 
     [p_d, p_d_p, p_d_pp] = trajectory_poly(t, y0, yT, t_val(i+1) - t_val(i));
@@ -35,7 +35,7 @@ function [x_d] = create_poly_traj(traj_select, t, param_traj, init_bus_param)
 
     skew_ew  = skew(rot_ax);
 
-    RR = (eye(3) + sin(alpha)*skew_ew + (1-cos(alpha))*skew_ew^2);
+    RR = (eye(3) + sin(alpha-alpha0)*skew_ew + (1-cos(alpha-alpha0))*skew_ew^2);
     
     R_act    = RR*R_init; % Vormultiplikation (in find_rotation_axis wird Vormultiplikation für RR verwendet!!)
 

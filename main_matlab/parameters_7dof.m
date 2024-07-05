@@ -17,7 +17,7 @@ end
 %x_traj_out_of_workspace_value = 0.1;
 
 plot_trajectory = ~true;
-overwrite_offline_traj_forced = ~false;
+overwrite_offline_traj_forced = false;
 
 
 % set_param(gcs,'Profile','off'); % turn off profiler when not needed anymore
