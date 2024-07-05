@@ -1,4 +1,4 @@
-function traj_struct_combined = combine_trajectories(traj_cell, param_global)
+function traj_struct_combined = combine_trajectories(traj_cell, param_global, param_robot)
 %COMBINE_TRAJECTORIES Combines multiple trajectories into a single struct
 %
 % This function takes a cell array of trajectory structs and combines them
@@ -32,6 +32,7 @@ function traj_struct_combined = combine_trajectories(traj_cell, param_global)
 %
 
     % Check each trajectory and calculate total number of pose
+    n = param_robot.n_DOF;
     N_total = 0;
     N_traj = length(traj_cell);
     for i = 1 : N_traj
@@ -55,6 +56,7 @@ function traj_struct_combined = combine_trajectories(traj_cell, param_global)
     traj_struct_combined = struct;
     traj_struct_combined.start_index = zeros(1, N_traj);
     traj_struct_combined.stop_index  = zeros(1, N_traj);
+    traj_struct_combined.q_0         = zeros(n, N_traj);
     traj_struct_combined.pose        = zeros(7, N_total);
     traj_struct_combined.rotation    = zeros(3, 3, N_total);
     traj_struct_combined.rot_ax      = zeros(3, N_total);
@@ -75,6 +77,7 @@ function traj_struct_combined = combine_trajectories(traj_cell, param_global)
 
         traj_struct_combined.start_index(i) = start_index;
         traj_struct_combined.stop_index(i) = stop_index;
+        traj_struct_combined.q_0(:, i) = traj_struct.q_0;
         traj_struct_combined.pose(:, start_index:stop_index) = traj_struct.pose;
         traj_struct_combined.rotation(:, :, start_index:stop_index) = traj_struct.rotation;
         traj_struct_combined.time(start_index:stop_index) = traj_struct.time;

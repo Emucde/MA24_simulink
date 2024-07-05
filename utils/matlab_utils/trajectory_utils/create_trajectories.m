@@ -37,6 +37,7 @@ R_target = quat2rotm_v2(xeT(4:7));
 traj_cell = cell(1, 4);
 % Trajectory 1: Ruhelage
 traj_struct = struct;
+traj_struct.q_0 = q_0;
 traj_struct.pose = [xe0, xeT, xe0];
 traj_struct.rotation = cat(3, R_init, R_target, R_init);
 traj_struct.time = [0; T_sim/2; T_sim];
@@ -52,6 +53,7 @@ traj_cell{1} = traj_struct;
 
 % Trajectory 2: Differential filter 5th order
 traj_struct = struct;
+traj_struct.q_0 = q_0;
 traj_struct.pose = [xe0, xeT, xe0];
 traj_struct.rotation = cat(3, R_init, R_target, R_init);
 traj_struct.time = [0; T_sim/2; T_sim];
@@ -63,6 +65,7 @@ traj_cell{2} = traj_struct;
 
 % Trajectory 3: Polynomial 5th order
 traj_struct = struct;
+traj_struct.q_0 = q_0;
 traj_struct.pose = [xe0, xeT, xe0];
 traj_struct.rotation = cat(3, R_init, R_target, R_init);
 traj_struct.time = [0; T_sim/2; T_sim];
@@ -74,6 +77,7 @@ traj_cell{3} = traj_struct;
 
 % Trajectory 4:
 traj_struct = struct;
+traj_struct.q_0 = q_0;
 traj_struct.pose = [xe0, xeT, xe0];
 traj_struct.rotation = cat(3, R_init, R_target, R_init);
 traj_struct.time = [0; T_sim/2; T_sim];
@@ -83,29 +87,11 @@ traj_struct = create_param_diff_filter(traj_struct, param_global); % Param diffe
 traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
 traj_cell{4} = traj_struct;
 
-traj_struct_combined = combine_trajectories(traj_cell, param_global);
+traj_struct_combined = combine_trajectories(traj_cell, param_global, param_robot);
 param_traj.traj_init = traj_struct_combined;
 
 % kürzeste rotationachse und winkel zwischen R_init und R_target berechnen.
 [rot_ax, rot_alpha_scale] = find_rotation_axis(R_init, R_target);
-
-% Achtung: Hier wird angenommen, dass um eine feste Achse rotiert wird.
-param_traj.pose.T_start = T_sim/2;
-
-param_traj.pose.xe0 = xe0;
-param_traj.pose.xeT = xeT;
-
-param_traj.pose.q_0    = q_0;       % nDOF q_0
-param_traj.pose.q_0_p  = q_0_p;   % nDOF q_0_p
-param_traj.pose.q_0_pp = q_0_pp; % nDOF q_0_pp
-
-param_traj.pose.R_init          = R_init;
-param_traj.pose.R_target        = R_target;
-param_traj.pose.rot_alpha_scale = rot_alpha_scale;
-param_traj.pose.rot_ax          = rot_ax;
-param_traj.pose.alpha0          = 0;
-param_traj.pose.alphaT          = 1;
-param_traj.pose.alpha_offset    = 0;
 
 %% GENERATE OFFLINE TRAJECTORY
 param_MPC_traj_data_mat_file = [s_fun_path, '/trajectory_data/param_traj_data.mat'];
