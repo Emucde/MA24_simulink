@@ -12,19 +12,6 @@ traj_select_fin = 4;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% TRAJECTORY 
 
 param_traj = struct;
-
-%% Param Trajektory differential filter 5th order
-param_diff_filter_traj; % define param_traj.diff_filter
-
-%% Param Trajectory Poly
-param_traj.poly.T = T_sim/2-3; % in s
-
-%% Param sinus poly trajectory
-param_traj.sin_poly.T     = 1; % in s
-T_period                  = 2; % in s
-param_traj.sin_poly.omega = 2*pi*1/(T_period); % in rad
-param_traj.sin_poly.phi   = 0; % in rad
-
 %% Calculate target positions
 
 Q_pos = 1e0 * eye(m);  % Weight for the position error in the cost function.
@@ -48,31 +35,41 @@ R_init = quat2rotm_v2(xe0(4:7));
 R_target = quat2rotm_v2(xeT(4:7));
 
 traj_cell = cell(1, 4);
-% Trajectory 1:
+% Trajectory 1: Ruhelage
 traj_struct = struct;
 traj_struct.pose = [xe0, xeT, xe0];
 traj_struct.rotation = cat(3, R_init, R_target, R_init);
 traj_struct.time = [0; T_sim/2; T_sim];
 traj_struct.traj_type = [traj_select.equilibrium_traj];
 traj_struct.N = 3;
+traj_struct = create_param_diff_filter(traj_struct, param_global); % default settings not used [TODO: Mit extra index arbeiten]tructs ge
+% man prüft beim combine ob diese structs existieren. dann führt man extra indices ein die auf ein struct verweisen das als array
+% die parameter speichert. wenn es nicht exisitert, ist der index -1, exisitiert es wird der index abhängig von der anzahl der
+% structs gesetzt, d. h. er kann sich von trajectory_select unterscheiden, lässt sich aber mit trajectory select ermitteln.
+% aber zuerst muss ich mal prüfen ob in structs arrays von structs stehen dürfen, ich glaube eben nicht.
+traj_struct = create_param_sin_poly(traj_struct, param_global); % default settings not used
 traj_cell{1} = traj_struct;
 
-% Trajectory 2:
+% Trajectory 2: Differential filter 5th order
 traj_struct = struct;
 traj_struct.pose = [xe0, xeT, xe0];
 traj_struct.rotation = cat(3, R_init, R_target, R_init);
 traj_struct.time = [0; T_sim/2; T_sim];
 traj_struct.traj_type = [traj_select.differential_filter];
 traj_struct.N = 3;
+traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -10); % Param differential filter 5th order trajectory
+traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
 traj_cell{2} = traj_struct;
 
-% Trajectory 3:
+% Trajectory 3: Polynomial 5th order
 traj_struct = struct;
 traj_struct.pose = [xe0, xeT, xe0];
 traj_struct.rotation = cat(3, R_init, R_target, R_init);
 traj_struct.time = [0; T_sim/2; T_sim];
 traj_struct.traj_type = [traj_select.polynomial];
 traj_struct.N = 3;
+traj_struct = create_param_diff_filter(traj_struct, param_global); % Param differential filter 5th order trajectory
+traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
 traj_cell{3} = traj_struct;
 
 % Trajectory 4:
@@ -82,9 +79,11 @@ traj_struct.rotation = cat(3, R_init, R_target, R_init);
 traj_struct.time = [0; T_sim/2; T_sim];
 traj_struct.traj_type = [traj_select.sinus];
 traj_struct.N = 3;
+traj_struct = create_param_diff_filter(traj_struct, param_global); % Param differential filter 5th order trajectory
+traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
 traj_cell{4} = traj_struct;
 
-traj_struct_combined = combine_trajectories(traj_cell);
+traj_struct_combined = combine_trajectories(traj_cell, param_global);
 param_traj.traj_init = traj_struct_combined;
 
 % kürzeste rotationachse und winkel zwischen R_init und R_target berechnen.
@@ -113,12 +112,6 @@ param_MPC_traj_data_mat_file = [s_fun_path, '/trajectory_data/param_traj_data.ma
 param_MPC_file_path = [s_fun_path, '/mpc_settings/'];
 files = dir([param_MPC_file_path, '*.mat']);
 cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
-
-T_traj_poly         = param_traj.poly.T;
-T_traj_sin_poly     = param_traj.sin_poly.T;
-omega_traj_sin_poly = param_traj.sin_poly.omega;
-phi_traj_sin_poly   = param_traj.sin_poly.phi;
-T_switch            = param_traj.diff_filter.T_switch;
 
 overwrite_offline_traj = false;
 
@@ -223,7 +216,7 @@ try
                 % Schleife nicht die Variable i verwenden!!!!
                 nlpsol_generate_opt_problem;
                 if(weights_and_limits_as_parameter)
-                    % TODO - why necessary??
+                    % TODO - why +1e-15 necessary??
                     [~, xx_full_opt_sol, ~] = f_opt(mpc_init_reference_values, init_guess_0+1e-15, param_weight_init_cell);
                 else
                     [~, xx_full_opt_sol] = f_opt(mpc_init_reference_values, init_guess_0);

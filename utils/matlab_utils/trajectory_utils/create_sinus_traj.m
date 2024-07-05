@@ -1,5 +1,6 @@
 function [x_d] = create_sinus_traj(traj_select, t, param_traj, init_bus_param)
     traj_init = param_traj.traj_init;
+    param_sin_poly = traj_init.sin_poly(traj_select).sin_poly;
 
     x0    = traj_init.pose(1:3, 1);
     xT    = traj_init.pose(1:3, 2);
@@ -10,9 +11,9 @@ function [x_d] = create_sinus_traj(traj_select, t, param_traj, init_bus_param)
 
     alpha_offset = 0; % TODO DELETE
 
-    T =  param_traj.sin_poly.T;
-    omega =  param_traj.sin_poly.omega;
-    phi =  param_traj.sin_poly.phi;
+    T =  param_sin_poly.T;
+    omega =  param_sin_poly.omega;
+    phi =  param_sin_poly.phi;
 
     if(t > T)
         s    = 1;

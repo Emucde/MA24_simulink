@@ -1,4 +1,4 @@
-function traj_struct_combined = combine_trajectories(traj_cell)
+function traj_struct_combined = combine_trajectories(traj_cell, param_global)
 %COMBINE_TRAJECTORIES Combines multiple trajectories into a single struct
 %
 % This function takes a cell array of trajectory structs and combines them
@@ -48,6 +48,9 @@ function traj_struct_combined = combine_trajectories(traj_cell)
         N_total = N_total + N;
     end
 
+    init_param_diff_filter = create_param_diff_filter(struct, param_global); % Param differential filter 5th order trajectory
+    init_param_sin_poly = create_param_sin_poly(struct, param_global); % Param for sinus poly trajectory
+
     % Initialize arrays
     traj_struct_combined = struct;
     traj_struct_combined.start_index = zeros(1, N_traj);
@@ -58,6 +61,8 @@ function traj_struct_combined = combine_trajectories(traj_cell)
     traj_struct_combined.alpha       = zeros(1, N_total);
     traj_struct_combined.time        = zeros(1, N_total);
     traj_struct_combined.traj_type   = zeros(1, N_traj);
+    traj_struct_combined.diff_filter = repmat(init_param_diff_filter, 1, N_traj);
+    traj_struct_combined.sin_poly = repmat(init_param_sin_poly, 1, N_traj);
     traj_struct_combined.N_traj      = N_traj;
 
     % Combine all trajectories
@@ -74,9 +79,10 @@ function traj_struct_combined = combine_trajectories(traj_cell)
         traj_struct_combined.rotation(:, :, start_index:stop_index) = traj_struct.rotation;
         traj_struct_combined.time(start_index:stop_index) = traj_struct.time;
         traj_struct_combined.traj_type(i) = traj_struct.traj_type;
+        traj_struct_combined.diff_filter(i).diff_filter = traj_struct.diff_filter;
+        traj_struct_combined.sin_poly(i).sin_poly = traj_struct.sin_poly;
 
         for j = 1:N
-            t_val = traj_struct.time;
             index = (start_index - 1) + j;
             if(j == 1)
                 rot_ax = [0; 0; 0];

@@ -1,5 +1,6 @@
 function [x_d, x_kp1] = create_diff_filter_traj(traj_select, t, x_k, param_traj, init_bus_param)
     traj_init = param_traj.traj_init;
+    param_diff_filter = traj_init.diff_filter(traj_select).diff_filter;
 
     start_index = traj_init.start_index(traj_select);
     stop_index  = traj_init.stop_index(traj_select);
@@ -18,7 +19,7 @@ function [x_d, x_kp1] = create_diff_filter_traj(traj_select, t, x_k, param_traj,
     if( t == t_val(i))
         % otherwise we cannot exactly compensate alpha by alpha0.
         % Here errors in size of 1e-15 can lead to sign jumps in quaternions
-        x_k(param_traj.diff_filter.p_d_index(4)) = alpha0;
+        x_k(param_diff_filter.p_d_index(4)) = alpha0;
     end
 
     R_init = traj_init.rotation(:, :, i);
@@ -28,13 +29,13 @@ function [x_d, x_kp1] = create_diff_filter_traj(traj_select, t, x_k, param_traj,
 
     yT = [xeT; alphaT];
 
-    Phi = param_traj.diff_filter.Phi;
-    Gamma = param_traj.diff_filter.Gamma;
+    Phi = param_diff_filter.Phi;
+    Gamma = param_diff_filter.Gamma;
     x_kp1 = Phi*x_k + Gamma*yT;
     
-    xd   = x_kp1(param_traj.diff_filter.p_d_index);
-    dxd  = x_kp1(param_traj.diff_filter.p_d_p_index);
-    ddxd = x_kp1(param_traj.diff_filter.p_d_pp_index);
+    xd   = x_kp1(param_diff_filter.p_d_index);
+    dxd  = x_kp1(param_diff_filter.p_d_p_index);
+    ddxd = x_kp1(param_diff_filter.p_d_pp_index);
     
     alpha    =   xd(4);
     alpha_p  =  dxd(4);
