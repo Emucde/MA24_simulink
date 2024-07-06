@@ -9,8 +9,12 @@ if(bdIsLoaded(simulink_main_model_name))
     idx = find(current_value == [combo_states.Value]);
     robot_name = combo_states_name{idx};
 else % default value (e. g. for mpc compiling when simulink is closed)
+    % use simulink robot name or use default name here defined:
+    load('./utils/matlab_init_general/old_robot_name.mat');
+
+    robot_name = robot_name_old;
     % robot_name = 'fr3_7dof';
-    robot_name = 'fr3_6dof';
+    % robot_name = 'fr3_6dof';
     % robot_name = 'ur5e_6dof';
 end
 

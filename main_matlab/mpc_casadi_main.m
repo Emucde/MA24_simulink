@@ -14,6 +14,7 @@ plot_null_simu                  = false; % plot system simulation for x0 = 0, u0
 convert_maple_to_casadi         = false; % convert maple functions into casadi functions
 fullsimu                        = false; % make full mpc simulation and plot results
 traj_select_mpc                 = 3; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
+create_init_guess_for_all_traj  = true; % create init guess for all trajectories
 compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
 
@@ -26,7 +27,7 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version = 'v1'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat )
-param_casadi_fun_name.(MPC).Ts      = 1e-3;
+param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
@@ -38,7 +39,7 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v3_quat'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat )
-param_casadi_fun_name.(MPC).Ts      = 1e-3;
+param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
@@ -50,7 +51,7 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v3_rpy'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat )
-param_casadi_fun_name.(MPC).Ts      = 1e-3;
+param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
@@ -101,33 +102,8 @@ end
 %% path for init guess
 mpc_settings_path                = [s_fun_path, '/mpc_settings/'];%todo:  UP
 mpc_settings_struct_name         = "param_"+casadi_func_name;
-param_MPC_traj_data_old_mat_file = [s_fun_path, '/trajectory_data/param_traj_data_old.mat'];
 
-%% Create trajectory for y_initial_guess
-param_MPC_traj_data_mat_file = [s_fun_path, '/trajectory_data/param_traj_data.mat'];
-
-load(param_MPC_traj_data_mat_file);
-
-param_trajectory = struct;
-param_trajectory.t         = param_traj_data.t;
-param_trajectory.p_d       = param_traj_data.p_d(       :, :,    traj_select_mpc);
-param_trajectory.p_d_p     = param_traj_data.p_d_p(     :, :,    traj_select_mpc);
-param_trajectory.p_d_pp    = param_traj_data.p_d_pp(    :, :,    traj_select_mpc);
-param_trajectory.Phi_d     = param_traj_data.Phi_d(     :, :,    traj_select_mpc);
-param_trajectory.Phi_d_p   = param_traj_data.Phi_d_p(   :, :,    traj_select_mpc);
-param_trajectory.Phi_d_pp  = param_traj_data.Phi_d_pp(  :, :,    traj_select_mpc);
-param_trajectory.R_d       = param_traj_data.R_d(       :, :, :, traj_select_mpc);
-param_trajectory.q_d       = param_traj_data.q_d(       :, :,    traj_select_mpc);
-param_trajectory.q_d_p     = param_traj_data.q_d_p(     :, :,    traj_select_mpc);
-param_trajectory.q_d_pp    = param_traj_data.q_d_pp(    :, :,    traj_select_mpc);
-param_trajectory.omega_d   = param_traj_data.omega_d(   :, :,    traj_select_mpc);
-param_trajectory.omega_d_p = param_traj_data.omega_d_p( :, :,    traj_select_mpc);
-param_trajectory.alpha_d   = param_traj_data.alpha_d(   :, :,    traj_select_mpc);
-param_trajectory.alpha_d_p = param_traj_data.alpha_d_p( :, :,    traj_select_mpc);
-param_trajectory.alpha_d_pp= param_traj_data.alpha_d_pp(:, :,    traj_select_mpc);
-param_trajectory.rot_ax_d  = param_traj_data.rot_ax_d(  :, :,    traj_select_mpc);
-param_trajectory.alpha_d_offset = param_traj_data.alpha_d_offset(:, :, traj_select_mpc);
-param_trajectory.q_d_rel   = param_traj_data.q_d_rel(   :, :,    traj_select_mpc);
+param_trajectory = param_traj_data_fun(traj_settings, 'get', traj_select_mpc, param_traj_data);
 
 %% OPT PROBLEM
 %[TODO: oben init]
@@ -149,10 +125,7 @@ if(strcmp(MPC_variant, 'opti'))
     error('Error: opti stack version currently not working!');
     opti_opt_problem;
 elseif(strcmp(MPC_variant, 'nlpsol'))
-    %nlpsol_opt_problem;
-    %nlpsol_opt_problem_SX;
     nlpsol_opt_problem_SX_v2;
-    %nlpsol_opt_problem_MX;
 else
     error(['Error: Variant = ', MPC_variant, ' is not valid. Should be (opti | nlpsol)']);
 end
@@ -302,10 +275,6 @@ param_MPC = mergestructs(param_MPC, sol_indices);
 
 eval(mpc_settings_struct_name+"=param_MPC;"); % set new struct name
 save(""+mpc_settings_path+mpc_settings_struct_name+'.mat', mpc_settings_struct_name);
-
-% [TODO: separate for each MPC]
-overwrite_offline_traj = false;
-overwrite_init_guess_name = ['param_', casadi_func_name, '.mat'];
 
 % save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
 %      'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...

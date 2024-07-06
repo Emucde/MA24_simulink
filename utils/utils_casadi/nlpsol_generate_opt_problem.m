@@ -1,5 +1,9 @@
 % wird von nlpsol_opt_problem_SX_v2 aufgerufen und von paramater_7dof.m um den inital guess zu erstellen.
 
+q_0 = param_traj.q_0(:, traj_select_mpc);
+q_0_p = param_traj.q_0_p(:, traj_select_mpc);
+q_0_pp = param_traj.q_0_pp(:, traj_select_mpc);
+
 if(strcmp(MPC_version, "v1"))
     opt_problem_y_u_MPC_v1;
 elseif(strcmp(MPC_version, "v3_rpy"))

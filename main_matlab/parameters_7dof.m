@@ -19,7 +19,6 @@ end
 plot_trajectory = ~true;
 overwrite_offline_traj_forced = false;
 
-
 % set_param(gcs,'Profile','off'); % turn off profiler when not needed anymore
 
 % measure compile time: 
@@ -31,7 +30,6 @@ overwrite_offline_traj_forced = false;
 T_sim = 10; % = param_vis.T (see init_visual.m)
 param_global.T_sim = T_sim;
 param_global.Ta = 1e-3;
-param_global.traj_amount = 4; % number of trajectories
 
 parameter_str = "parameters_7dof";
 simulink_main_model_name = 'sim_discrete_7dof';
@@ -52,7 +50,9 @@ add_robot_matlab_paths;
 % %%%%%%%%%%%%%%%% SOLVE MPC BUG %%%%%%%%%%%%%%%%
 % do not comment in, this would result in an endless loop!
 % only copy this command into the command window if mpcs are not found!
-% solve_mpc_notfound_bug;
+% solve_mpc_notfound_bug(simulink_main_model_name, 'both');
+% solve_mpc_notfound_bug(simulink_main_model_name, 'comment');
+% solve_mpc_notfound_bug(simulink_main_model_name, 'uncomment');
 
 % Init Casadi
 init_casadi;

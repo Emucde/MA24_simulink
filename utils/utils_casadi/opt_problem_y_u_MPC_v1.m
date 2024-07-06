@@ -94,7 +94,7 @@ x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdo
 q_0    = x_0_0(1   :   n); % useless line...
 dq_0   = x_0_0(1+n : 2*n);
 ddq_0  = q_0_pp;
-xe_k_0 = xe0(1:3); % x pos, y pos, defined in parameters_xdof.m
+xe_k_0 = p_d_0(1:3, 1); % x pos, y pos, defined in parameters_xdof.m
 u_k_0  = compute_tau_fun(q_0, dq_0, ddq_0); % much more faster than above command
 
 u_init_guess_0 = ones(n, N_MPC).*u_k_0; % fully actuated

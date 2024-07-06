@@ -1,20 +1,18 @@
 function [x_d] = create_equilibrium_traj(traj_select, t, param_traj, init_bus_param)
-    traj_init = param_traj.traj_init;
-
-    start_index = traj_init.start_index(traj_select);
-    stop_index  = traj_init.stop_index(traj_select);
-    t_val       = traj_init.time(start_index:stop_index);
+    start_index = param_traj.start_index(traj_select);
+    stop_index  = param_traj.stop_index(traj_select);
+    t_val       = param_traj.time(start_index:stop_index);
     i = sum(t >= t_val);
 
     if( i == length(t_val) )
         i = length(t_val)-1; % TODO
     end
     
-    xeT    = traj_init.pose(:, i);
-    R_init = traj_init.rotation(:, :, i);
+    xeT    = param_traj.pose(:, i);
+    R_init = param_traj.rotation(:, :, i);
     alpha_offset = 0; % TODO DELETE
 
-    R_target = traj_init.rotation(:, :, i+1);
+    R_target = param_traj.rotation(:, :, i+1);
 
     omega_d   = zeros(3,1);
     omega_d_p = zeros(3,1);

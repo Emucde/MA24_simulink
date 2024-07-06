@@ -1,20 +1,19 @@
 function [x_d, x_kp1] = create_diff_filter_traj(traj_select, t, x_k, param_traj, init_bus_param)
-    traj_init = param_traj.traj_init;
-    param_diff_filter = traj_init.diff_filter(traj_select).diff_filter;
+    param_diff_filter = param_traj.diff_filter(traj_select).diff_filter;
 
-    start_index = traj_init.start_index(traj_select);
-    stop_index  = traj_init.stop_index(traj_select);
-    t_val       = traj_init.time(start_index:stop_index);
+    start_index = param_traj.start_index(traj_select);
+    stop_index  = param_traj.stop_index(traj_select);
+    t_val       = param_traj.time(start_index:stop_index);
     i = sum(t >= t_val);
 
     if( i == length(t_val) )
         i = length(t_val)-1; % TODO
     end
 
-    alpha0 = traj_init.alpha(i);
+    alpha0 = param_traj.alpha(i);
     
-    xeT    = traj_init.pose(1:3, i+1);
-    alphaT = traj_init.alpha(i+1);
+    xeT    = param_traj.pose(1:3, i+1);
+    alphaT = param_traj.alpha(i+1);
 
     if( t == t_val(i))
         % otherwise we cannot exactly compensate alpha by alpha0.
@@ -22,8 +21,8 @@ function [x_d, x_kp1] = create_diff_filter_traj(traj_select, t, x_k, param_traj,
         x_k(param_diff_filter.p_d_index(4)) = alpha0;
     end
 
-    R_init = traj_init.rotation(:, :, i);
-    rot_ax = traj_init.rot_ax(:, i+1);
+    R_init = param_traj.rotation(:, :, i);
+    rot_ax = param_traj.rot_ax(:, i+1);
 
     alpha_offset = 0; % TODO DELETE
 

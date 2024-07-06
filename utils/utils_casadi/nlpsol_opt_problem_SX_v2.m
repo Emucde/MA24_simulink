@@ -209,15 +209,27 @@ f_opt = Function(casadi_func_name, input_vars_MX, output_vars_MX);
 
 %init_MPC_weights;
 param_weight_init = param_weight.(casadi_func_name);
-if(weights_and_limits_as_parameter)
-    param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init), 'vector');
-    [u_opt_sol, xx_full_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
-else  % ohne extra parameter 5 % schneller (319s statt 335s)
-    [u_opt_sol, xx_full_opt_sol] = f_opt(mpc_init_reference_values, init_guess_0);
+try
+    if(weights_and_limits_as_parameter)
+        % Hint: If the init_guess is already the global minima, the solver
+        % will get an Evaluation Failed because it get's NaN values due to
+        % the perfect zero gradients. Therefore add eps to init_guess to
+        % avoid this problem.
+        init_guess_0 = eps + init_guess_0;
+        param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init), 'vector');
+        [u_opt_sol, xx_full_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
+    else  % ohne extra parameter 5 % schneller (319s statt 335s)
+        [u_opt_sol, xx_full_opt_sol] = f_opt(mpc_init_reference_values, init_guess_0);
+    end
+catch ME
+    solver.stats(1)
+    error(getReport(ME));
 end
 
 u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
 x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
+
+% show stats
 
 %z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z)), size(z)));
 % z_t_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(zt)), size(zt)));
@@ -290,7 +302,14 @@ if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
     end
 end
 
-%asfsadf
+% Im unterschied zu 'overwrite_offline_traj_forced' in parameters_7dof.m werden hier nur
+% die init guess für die gerade zu kompilierende MPC erstellt.
+if(create_init_guess_for_all_traj)
+    files = struct;
+    files.name = ['param_', casadi_func_name, '.mat'];
+    create_mpc_init_guess;
+end
+
 %% COMPILE (nlpsol)
 if(compile_sfun)
     if(compile_mode == 1)

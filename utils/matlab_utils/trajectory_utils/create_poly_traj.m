@@ -1,9 +1,7 @@
-function [x_d] = create_poly_traj(traj_select, t, param_traj, init_bus_param)
-    traj_init = param_traj.traj_init;
-    
-    start_index = traj_init.start_index(traj_select);
-    stop_index  = traj_init.stop_index(traj_select);
-    t_val       = traj_init.time(start_index:stop_index);
+function [x_d] = create_poly_traj(traj_select, t, param_traj, init_bus_param)  
+    start_index = param_traj.start_index(traj_select);
+    stop_index  = param_traj.stop_index(traj_select);
+    t_val       = param_traj.time(start_index:stop_index);
     i = sum(t >= t_val);
 
     if( i == length(t_val) )
@@ -13,14 +11,14 @@ function [x_d] = create_poly_traj(traj_select, t, param_traj, init_bus_param)
         t = t - t_val(i);
     end
     
-    xe0    = traj_init.pose(1:3, i);
-    alpha0 = traj_init.alpha(i);
+    xe0    = param_traj.pose(1:3, i);
+    alpha0 = param_traj.alpha(i);
 
-    xeT    = traj_init.pose(1:3, i+1);
-    alphaT = traj_init.alpha(i+1);
+    xeT    = param_traj.pose(1:3, i+1);
+    alphaT = param_traj.alpha(i+1);
 
-    R_init = traj_init.rotation(:, :, i);
-    rot_ax = traj_init.rot_ax(:, i+1);
+    R_init = param_traj.rotation(:, :, i);
+    rot_ax = param_traj.rot_ax(:, i+1);
 
     alpha_offset = 0; % TODO DELETE
 
