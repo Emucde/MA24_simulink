@@ -70,11 +70,9 @@ change_simulink_traj_combo_box; % saves system!
 activate_simulink_logs;
 
 bus_definitions;
+
 init_MPC_weights; %% set MPC weights
 
 param_ct_control_init;
 
 create_trajectories;
-
-ew_test_CT_CTRL = [diag(-ct_ctrl_param.Kd1/2 + sqrt(ct_ctrl_param.Kd1^2/4 - ct_ctrl_param.Kp1)) diag(-ct_ctrl_param.Kd1/2 - sqrt(ct_ctrl_param.Kd1^2/4 - ct_ctrl_param.Kp1))]';
-plot_eigenvalues_controller_text([ew_test_CT_CTRL ew_test_CT_CTRL*0], 'Eigenvalues CT Ctrl', '');

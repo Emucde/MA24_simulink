@@ -21,12 +21,12 @@ param_weight.(MPC).u_max    = u_max;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 6) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MPC='MPC6';
-param_weight.(MPC).Q_y        = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_y        = diag([1e5*ones(3,1); 1e3*ones(3,1)]);  % d_kpn
 
-param_weight.(MPC).R_q_pp     = 1e-10*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).R_q_pp     = 1e-3*diag(ones(n,1));  % d_kpn
 
-param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100*ones(3,1)]);
-param_weight.(MPC).Q_y_ref    = diag([100*ones(3,1); 100*ones(3,1)]);
+param_weight.(MPC).Q_y_p_ref  = diag([50*ones(3,1); 50*ones(3,1)]);
+param_weight.(MPC).Q_y_ref    = diag([50*ones(3,1); 50*ones(3,1)]);
 
 param_weight.(MPC).epsilon_t = 1e-5;%1e-5;
 param_weight.(MPC).epsilon_r = 1e-5;%inf;

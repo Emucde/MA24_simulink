@@ -39,9 +39,9 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v3_quat'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat )
-param_casadi_fun_name.(MPC).Ts      = 20e-3;
+param_casadi_fun_name.(MPC).Ts      = 1e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).N_MPC   = 10;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
@@ -51,9 +51,9 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v3_rpy'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat )
-param_casadi_fun_name.(MPC).Ts      = 20e-3;
+param_casadi_fun_name.(MPC).Ts      = 1e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).N_MPC   = 10;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
@@ -254,8 +254,9 @@ if(fullsimu)
     title('p_e');
     
 end
-%% TODO: Save data (besser gleich in parameter speichern)
 
+% save mpc param: it is important to do it here because it is important for the trajectory
+% and init guess calculation!
 param_MPC = struct( ...
   'N',                    N_MPC, ...
   'N_step',               N_step_MPC, ...
@@ -276,12 +277,20 @@ param_MPC = mergestructs(param_MPC, sol_indices);
 eval(mpc_settings_struct_name+"=param_MPC;"); % set new struct name
 save(""+mpc_settings_path+mpc_settings_struct_name+'.mat', mpc_settings_struct_name);
 
-% save(param_traj_data_old, 'q_0_old', 'q_0_p_old', 'xe0_old', 'xeT_old', ...
-%      'lamda_alpha_old', 'lamda_xyz_old', 'T_sim_old', ...
-%      'Ta_old', 'T_traj_poly_old', ...
-%      'T_traj_sin_poly_old', 'omega_traj_sin_poly_old', 'phi_traj_sin_poly_old' , ...
-%      'T_switch_old', 'T_horizon_max_old', 'N_sum_old', 'Ts_sum_old', ... 
-%      'overwrite_offline_traj', 'overwrite_init_guess_name');
+% Im unterschied zu 'overwrite_offline_traj_forced' in parameters_7dof.m werden hier nur
+% die init guess für die gerade zu kompilierende MPC erstellt. Update: Wenn der neue Prädiktionshorizont
+% länger ist als die Trajektorie, dann muss die Trajektorie verlängert werden und auch alle init guess
+% erstellt werden. Es müssen aber nur die Init guess für die aktuelle MPC erstellt werden, da alle anderen
+% Init guess für die anderen MPCS ja durch eine Trajektorienverlängerung unverändert bleiben.
+
+if(ceil(1 + (T_horizon_MPC + param_global.T_sim) / param_global.Ta) > traj_settings.N_data )
+    overwrite_offline_traj_forced = true;
+    create_trajectories;
+elseif(create_init_guess_for_all_traj)
+    files = struct;
+    files.name = ['param_', casadi_func_name, '.mat'];
+    create_mpc_init_guess;
+end
 
 %% COMPILE matlab s_function (can be used as normal function in matlab)
 if(compile_matlab_sfunction)

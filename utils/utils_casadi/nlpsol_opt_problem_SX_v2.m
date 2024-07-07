@@ -302,14 +302,6 @@ if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
     end
 end
 
-% Im unterschied zu 'overwrite_offline_traj_forced' in parameters_7dof.m werden hier nur
-% die init guess für die gerade zu kompilierende MPC erstellt.
-if(create_init_guess_for_all_traj)
-    files = struct;
-    files.name = ['param_', casadi_func_name, '.mat'];
-    create_mpc_init_guess;
-end
-
 %% COMPILE (nlpsol)
 if(compile_sfun)
     if(compile_mode == 1)

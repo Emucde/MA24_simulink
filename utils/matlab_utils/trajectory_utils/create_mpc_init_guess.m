@@ -15,6 +15,9 @@ for name={files.name}
     param_MPC_init_guess_name = [param_MPC_name, '_init_guess'];
     param_MPC_init_guess_mat_file = [s_fun_path, '/initial_guess/', param_MPC_init_guess_name,'.mat'];
 
+    fprintf('\n');
+    disp(['Calculating init guess for: ', param_MPC_name]);
+
     casadi_func_name = param_MPC_struct.name;
     MPC_variant      = param_MPC_struct.variant;
     MPC_solver       = param_MPC_struct.solver;

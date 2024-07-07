@@ -16,14 +16,15 @@ ct_ctrl_param.Kp1 = blkdiag(K_p_t, K_p_r);
 ct_ctrl_param.mode = 0;
 
 % 1:
-ct_ctrl_param.k = 1e-2;
+ct_ctrl_param.k = 1e0;
 
 % 2:
-ct_ctrl_param.w_bar_N = 1e-3*param_robot.sugihara_limb_vector;
-ct_ctrl_param.W_E = 1e0 * eye(n); %ct_ctrl_param.w_bar_N;
+ct_ctrl_param.W_bar_N = 1e-1*param_robot.sugihara_limb_vector;
+%ct_ctrl_param.W_bar_N = 1e2*ones(n,1);
+ct_ctrl_param.W_E = 1e2 * eye(n); %ct_ctrl_param.w_bar_N;
 
 % 3:
-ct_ctrl_param.eps  = 1e-1;
+ct_ctrl_param.eps  = 5e0;
 
 %% nullspace for CT controller
 ct_ctrl_param.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;
@@ -35,3 +36,7 @@ ct_ctrl_param.D_n = sqrt(4*ct_ctrl_param.K_n) + 1 * eye(n);
 
 ct_ctrl_param.k_n_nl = 10*eye(n);
 ct_ctrl_param.nl_spring_threshold = [0.2; 0.2; 0.2; 0.2; 0.2; 0.2; 0.2];
+
+% DEBUG
+ew_test_CT_CTRL = [diag(-ct_ctrl_param.Kd1/2 + sqrt(ct_ctrl_param.Kd1^2/4 - ct_ctrl_param.Kp1)) diag(-ct_ctrl_param.Kd1/2 - sqrt(ct_ctrl_param.Kd1^2/4 - ct_ctrl_param.Kp1))]';
+plot_eigenvalues_controller_text([ew_test_CT_CTRL ew_test_CT_CTRL*0], 'Eigenvalues CT Ctrl', '');
