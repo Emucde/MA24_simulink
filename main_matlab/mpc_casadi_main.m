@@ -26,7 +26,7 @@ MPC='MPC01';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version = 'v1'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat )
+param_casadi_fun_name.(MPC).version = 'v1'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat | v4_kin)
 param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -38,7 +38,7 @@ MPC='MPC6';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v3_quat'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat )
+param_casadi_fun_name.(MPC).version  = 'v3_quat'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat | v4_kin)
 param_casadi_fun_name.(MPC).Ts      = 1e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 10;
@@ -50,7 +50,19 @@ MPC='MPC7';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v3_rpy'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat )
+param_casadi_fun_name.(MPC).version  = 'v3_rpy'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat | v4_kin)
+param_casadi_fun_name.(MPC).Ts      = 1e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 10;
+param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
+param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
+
+MPC='MPC8';
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).version  = 'v4_kin'; % (v1: (J(u,y)) | v3_rpy: ineq | v3_quat | v4_kin)
 param_casadi_fun_name.(MPC).Ts      = 1e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 10;
@@ -59,7 +71,7 @@ param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true:
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC6;
+param_casadi_fun_struct = param_casadi_fun_name.MPC8;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
