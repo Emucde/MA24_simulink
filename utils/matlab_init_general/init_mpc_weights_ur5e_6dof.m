@@ -63,9 +63,9 @@ param_weight.(MPC).u_max    = u_max;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 8) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MPC='MPC8';
-param_weight.(MPC).Q_y        = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_y        = diag([1e3*ones(3,1); 1e3*ones(3,1)]);  % d_kpn
 
-param_weight.(MPC).R_q_pp     = 1e-10*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).R_q_pp     = 1e-2*diag(ones(n,1));  % d_kpn
 
 param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100*ones(3,1)]);
 param_weight.(MPC).Q_y_ref    = diag([100*ones(3,1); 100*ones(3,1)]);
@@ -76,14 +76,14 @@ K_P_q = K_D_q^2/4;      param_jointspace_ct.(MPC).K_P_q  = K_P_q;
 param_weight.(MPC).epsilon_t = 1e-5;%1e-5;
 param_weight.(MPC).epsilon_r = 1e-5;%inf;
 
-param_weight.(MPC).x_min    = x_min; 
-param_weight.(MPC).x_max    = x_max; 
-param_weight.(MPC).u_min    = u_min; 
-param_weight.(MPC).u_max    = u_max; 
-% param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
-% param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
-% param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
-% param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
+% param_weight.(MPC).x_min    = x_min; 
+% param_weight.(MPC).x_max    = x_max; 
+% param_weight.(MPC).u_min    = u_min; 
+% param_weight.(MPC).u_max    = u_max; 
+param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
+param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
+param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
+param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
 
 %%%%%%%%%%%%%%%%%%% generate param MPC weights struct %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 names = fieldnames(param_weight)';

@@ -14,10 +14,10 @@ quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi'
 M = rk_iter; % RK4 steps per interval
 DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 
-du = SX.sym('du', 2*n);
-dx = SX.sym('dx', 2*n); % x = [q1, ... qn, dq1, ... dqn]
-f = Function('f', {dx, du}, {dx});
-F = integrate_casadi(f, DT, M, int_method);
+% du = SX.sym('du', 2*n);
+% dx = SX.sym('dx', 2*n); % x = [q1, ... qn, dq1, ... dqn]
+% f = Function('f', {dx, du}, {dx});
+% F = integrate_casadi(f, DT, M, int_method);
 
 % Discrete yt_ref system
 zt = SX.sym('zt', 6);
@@ -66,6 +66,7 @@ u_k_0  = ddq_0;
 
 u_init_guess_0 = u_k_0;
 x_init_guess_0 = [x_0_0 ones(2*n, N_MPC).*x_0_0];
+% x_init_guess_0 = x_0_0;
 
 % Ref System: Translational init guess
 zt_0_0               = [y_d_0(1:3,1); y_d_p_0(1:3,1)]; % init for zt_ref
@@ -92,7 +93,8 @@ alpha_N_0 = [alpha_t_N_0; alpha_r_N_0];
 z_0_0 = [zt_0_0; zr_0_0];
 
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0)+numel(alpha_init_guess_0) + numel(alpha_N_0), 1);
-lam_g_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0)+2, 1); % + 1 wegen eps
+% lam_g_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0)+2, 1); % + 1 wegen eps
+lam_g_init_guess_0 = zeros(numel(u_init_guess_0)+2*numel(x_init_guess_0(n+1:end,1))+numel(x_init_guess_0(n+1:end,:))+numel(z_init_guess_0)+2, 1); % + 1 wegen eps
 
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
@@ -123,14 +125,14 @@ alpha = [ alpha_t; alpha_r ];
 
 mpc_opt_var_inputs = {u, x, z, alpha};
 
-u_opt_indices = [1*n+1:2*n, 2*n+1:3*n, 1:n]; % [q_1, dq_1, ddq_1] needed for joint space CT control
+u_opt_indices = [3*n+1:4*n, 4*n+1:5*n, 1:n]; % [q_1, dq_1, ddq_1] needed for joint space CT control
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
 % TODO: get qpp_max, qpp_min via FD: qpp_max = FD(q_max?, q_pmax?, tau_max?)
 lbw = [-Inf(size(u)); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
 ubw = [ Inf(size(u)); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
- gb
+
 % input parameter
 x_k  = SX.sym( 'x_k',  2*n, 1 ); % current x state = initial x state
 zt_0 = SX.sym( 'zt_0', m,   1 ); % initial zt state
@@ -157,11 +159,15 @@ g_zr = cell(1, N_MPC+1); % for H_qw
 g_eps = cell(1, 2); % separate for transl and rotation
 
 if(weights_and_limits_as_parameter)
-    lbg = SX(numel(u)+numel(x)+numel(z)+2, 1);
-    ubg = SX(numel(u)+numel(x)+numel(z)+2, 1);
+    % lbg = SX(numel(u)+numel(x)+numel(z)+2, 1);
+    % ubg = SX(numel(u)+numel(x)+numel(z)+2, 1);
+    lbg = SX(numel(u)+2*numel(x(n+1:end,1))+numel(x(n+1:end,:))+numel(z)+2, 1);
+    ubg = SX(numel(u)+2*numel(x(n+1:end,1))+numel(x(n+1:end,:))+numel(z)+2, 1);
 else
-    lbg = zeros(numel(x)+numel(z)+3, 1);
-    ubg = zeros(numel(x)+numel(z)+3, 1);
+    % lbg = zeros(numel(x)+numel(z)+3, 1);
+    % ubg = zeros(numel(x)+numel(z)+3, 1);
+    lbg = zeros(numel(x(n+1:end,:))+numel(z)+3, 1);
+    ubg = zeros(numel(x(n+1:end,:))+numel(z)+3, 1);
 end
 
 lbg(end-1:end) = [0; 0];
@@ -184,11 +190,12 @@ yr_pp_ref = SX( 3, N_MPC+1 ); % TCP orientation acceleration:  (y_qw_pp_ref_0 ..
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
-S_v = create_numdiff_matrix(Ts_MPC, n, N_MPC+1); % create the velocity deviation matrix S_v
+S_v = create_numdiff_matrix(DT, n, N_MPC+1); % create the velocity deviation matrix S_v
 
 %      x = [q(t0),   q(t1), ...  q(tN),  dq(t0),  dq(t1), ...  dq(tN)] = [qq;   qq_p ]
 % d/dt x = [dq(t0), dq(t1), ... dq(tN), ddq(t0), ddq(t1), ... ddq(tN)] = [qq_p; qq_pp]
-qq_p  = reshape(x(n+1:end, :), n*(N_MPC+1), 1);
+qq = reshape(x(1:n, :), n*(N_MPC+1), 1);
+qq_p  = S_v * qq;
 qq_pp = S_v * qq_p;
 
 q_p = reshape(qq_p, n, N_MPC+1);
@@ -196,7 +203,7 @@ q_pp = reshape(qq_pp, n, N_MPC+1);
 
 x_p = [q_p; q_pp];
 
-g_x(1, 1 + (0))     = {[x_k             - x(:,      1 + (0)); u - q_pp(:, 2)]}; % x0 = xk, u = qpp1
+g_x(1, 1 + (0))     = {[x_k             - x(:,      1 + (0)); u - q_pp(:, 2); q_p(:, 1) - x(n+1:end, 1 + (0))]}; % x0 = xk, u = qpp1
 g_zt(1, 1 + (0))    = {z_0(1:m, 1)     - z(1:m,     1 + (0))}; % zt0
 g_zr(1, 1 + (0))    = {z_0(m+1:end, 1) - z(m+1:end, 1 + (0))}; % zr0
 
@@ -220,7 +227,8 @@ for i=0:N_MPC
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        g_x(1, 1 + (i+1))  = { F(x_p(:, 1 + (i)), zeros(2*n,1)) - x( :, 1 + (i+1)) }; % Set the state dynamics constraints
+        % g_x(1, 1 + (i+1))  = { F(x_p(:, 1 + (i)), zeros(2*n,1)) - x( :, 1 + (i+1)) }; % Set the state dynamics constraints
+        g_x(1, 1 + (i+1))  = { q_p(:, 1 + (i+1)) - x( n+1:end, 1 + (i+1)) }; % Set the state dynamics constraints
         g_zt(1, 1 + (i+1)) = { Ht(zt(:, 1 + (i)), alpha_t(:, 1 + (i)) ) - zt(:, 1 + (i+1)) }; % Set the yref_t dynamics constraints
         g_zr(1, 1 + (i+1)) = { Hr(zr(:, 1 + (i)), alpha_r(:, 1 + (i)) ) - zr(:, 1 + (i+1)) }; % Set the yref_r dynamics constraints
     end
