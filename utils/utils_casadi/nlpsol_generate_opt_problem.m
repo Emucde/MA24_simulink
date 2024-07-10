@@ -11,7 +11,7 @@ elseif(strcmp(MPC_version, "v3_rpy"))
 elseif(strcmp(MPC_version, "v3_quat"))
     opt_problem_ineq_feasible_traj_MPC_v3_quat;
 elseif(strcmp(MPC_version, "v4_kin"))
-    opt_problem_MPC_v4_kinmpc;
+    opot_problem_MPC_v5_kinmpc_dev_refsys;
 else
     error('Only MPC version ( v1 | v3_rpy | v3_quat | v4_kin) implemented!');
 end
