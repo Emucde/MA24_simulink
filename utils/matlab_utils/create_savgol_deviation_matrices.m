@@ -32,6 +32,10 @@ function [DD] = create_savgol_deviation_matrices(Ta, Nq, d, N)
     H_T = (S' * S) \ S';
     H = H_T';
 
+    %L = chol(S' * S);
+    %H_T = L\(L'\S');
+    %H = H_T';
+
     fact = @(n) factorial(n);
     
     DD = cell(1, d+1);
@@ -39,15 +43,15 @@ function [DD] = create_savgol_deviation_matrices(Ta, Nq, d, N)
         ii = l:d;
         D = zeros(N, N);
         for m = -Nq:-1
-            h_m_i = sum(((m*Ta).^(ii-l) .* fact(ii) ./ fact(ii - l)) .* H(:, ii+1), 2)';
-            D(m+Nq+1, :) = [h_m_i, zeros(1, N-2*Nq-1)];
+            h_m_i = sum(((m*Ta).^(ii-l) .* fact(ii) ./ fact(ii - l)) .* H(:, ii+1), 2);
+            D(m+Nq+1, :) = [h_m_i', zeros(1, N-2*Nq-1)];
         end
         for i = 0:N-2*Nq-1
             D(i+Nq+1, :) = circshift([fact(l) * H(:, l+1)', zeros(1, N-2*Nq-1)], i);
         end
         for m = 1:Nq
-            h_m_i = sum(((m*Ta).^(ii-l) .* fact(ii) ./ fact(ii - l)) .* H(:, ii+1), 2)';
-            D(N - Nq + m, :) = [zeros(1, N-2*Nq-1), h_m_i];
+            h_m_i = sum(((m*Ta).^(ii-l) .* fact(ii) ./ fact(ii - l)) .* H(:, ii+1), 2);
+            D(N - Nq + m, :) = [zeros(1, N-2*Nq-1), h_m_i'];
         end
         DD{l+1} = D;
     end

@@ -2,6 +2,13 @@
 
 import casadi.*
 
+diff_variant_mode = struct;
+diff_variant_mode.numdiff = 1; % default forward, central, backward deviation
+diff_variant_mode.savgol = 2; % savgol filtering and deviation
+
+diff_variant = diff_variant_mode.numdiff;
+%diff_variant = diff_variant_mode.savgol;
+
 n = param_robot.n_DOF; % Dimension of joint space
 m = param_robot.m; % Dimension of Task Space
 
@@ -85,7 +92,15 @@ alpha_N_0 = [alpha_t_N_0; alpha_r_N_0];
 z_0_0 = [zt_0_0; zr_0_0];
 
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0)+numel(alpha_init_guess_0) + numel(alpha_N_0), 1);
-lam_g_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0(:,1))+numel(x_init_guess_0(n+1:end,:))+numel(z_init_guess_0)+2, 1); % + 1 wegen eps
+if(diff_variant == diff_variant_mode.numdiff)
+    % only equation constrained for q_p = S_v q
+    lam_g_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0(:,1))+numel(x_init_guess_0(n+1:end,:))+numel(z_init_guess_0)+2, 1); % + 1 wegen eps
+elseif(diff_variant == diff_variant_mode.savgol)
+    % equation constrained for q_savgol = Q q and q_p_savgol = D q;
+    lam_g_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0(:,1))+numel(x_init_guess_0)+numel(z_init_guess_0)+2, 1); % + 1 wegen eps
+else
+    error('invalid mode');
+end
 
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
@@ -150,11 +165,25 @@ g_zr = cell(1, N_MPC+1); % for H_qw
 g_eps = cell(1, 2); % separate for transl and rotation
 
 if(weights_and_limits_as_parameter)
-    lbg = SX(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:))+numel(z)+2, 1);
-    ubg = SX(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:))+numel(z)+2, 1);
+    if(diff_variant == diff_variant_mode.numdiff)
+        lbg = SX(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:))+numel(z)+2, 1);
+        ubg = SX(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:))+numel(z)+2, 1);
+    elseif(diff_variant == diff_variant_mode.savgol)
+        lbg = SX(numel(u)+numel(x(:, 1))+numel(x)+numel(z)+2, 1);
+        ubg = SX(numel(u)+numel(x(:, 1))+numel(x)+numel(z)+2, 1);
+    else
+        error('invalid mode');
+    end
 else
-    lbg = zeros(numel(x(n+1:end,:))+numel(z)+3, 1);
-    ubg = zeros(numel(x(n+1:end,:))+numel(z)+3, 1);
+    if(diff_variant == diff_variant_mode.numdiff)
+        lbg = zeros(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:))+numel(z)+2, 1);
+        ubg = zeros(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:))+numel(z)+2, 1);
+    elseif(diff_variant == diff_variant_mode.savgol)
+        lbg = zeros(numel(u)+numel(x(:, 1))+numel(x)+numel(z)+2, 1);
+        ubg = zeros(numel(u)+numel(x(:, 1))+numel(x)+numel(z)+2, 1);
+    else
+        error('invalid mode');
+    end
 end
 
 lbg(end-1:end) = [0; 0];
@@ -177,28 +206,51 @@ yr_pp_ref = SX( 3, N_MPC+1 ); % TCP orientation acceleration:  (y_qw_pp_ref_0 ..
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
-S_v = create_numdiff_matrix(DT, n, N_MPC+1); % create the velocity deviation matrix S_v
+if(diff_variant == diff_variant_mode.numdiff)
+    S_v = create_numdiff_matrix(DT, n, N_MPC+1, 'fwdbwdcentral');
+    % S_v = create_numdiff_matrix(DT, n, N_MPC+1, 'bwd');
+    S_a = S_v^2;
 
+    %DD = create_numdiff_matrix(DT, n, N_MPC+1, 'savgol');
+    %S_v = DD{2};
+    %S_a = DD{3};
+elseif(diff_variant == diff_variant_mode.savgol)
+    DD = create_numdiff_matrix(DT, n, N_MPC+1, 'savgol'); % create the velocity deviation matrix S_v
+    %S_q = eye(size(DD{1}));
+    S_q = DD{1};
+    S_v = DD{2};
+    S_a = DD{3};
+end
 %      x = [q(t0),   q(t1), ...  q(tN),  dq(t0),  dq(t1), ...  dq(tN)] = [qq;   qq_p ]
 % d/dt x = [dq(t0), dq(t1), ... dq(tN), ddq(t0), ddq(t1), ... ddq(tN)] = [qq_p; qq_pp]
 qq = reshape(x(1:n, :), n*(N_MPC+1), 1);
 qq_p  = S_v * qq;
-qq_pp = S_v * qq_p;
+qq_pp = S_a * qq;
 
 q_p = reshape(qq_p, n, N_MPC+1);
 q_pp = reshape(qq_pp, n, N_MPC+1);
 
 x_p = [q_p; q_pp];
 
-g_x(1, 1 + (0))     = { [ x_k            - x(   :,    1 + (0)); ... % x_k = x_0 = [q_0; q_p_0]
-                         u               - q_pp(:,    1 + (1)); ... % u = q_pp_1
-                         q_p(:, 1 + (0)) - x(n+1:end, 1 + (0))]};   % q_p_0 = Sv q_0
+g_x(1, 1 + (0))     = { [ x_k            - x(   :,    1 + (0)); ...  % x_k = tilde x_0 = [tilde q_0; tilde q_0_p] = [q_k; q_k_p]
+                        u               - q_pp(:,    1 + (1))]};     % tilde u = tilde q_pp_1
+
+if(diff_variant == diff_variant_mode.numdiff)
+    g_x(1, 1 + (0)) = {[g_x{1, 1 + (0)}; ... 
+                        q_p(:, 1 + (0)) - x(n+1:end, 1 + (0))]}; % tilde q_p_0 = Sv tilde q_0
+elseif(diff_variant == diff_variant_mode.savgol)
+    qq_savgol = S_q * qq;
+    q_savgol = reshape(qq_savgol, n, N_MPC+1);
+    g_x(1, 1 + (0)) = {[g_x{1, 1 + (0)}; ...
+                        x(:, 1 + (0)) - [q_savgol(:, 1 + (0)); q_p(:, 1 + (0))]]}; % [tilde q_0; tilde q_p_0] = [S_q tilde q_0; S_v tilde q_0]
+else
+    error('invalid mode');
+end
 
 g_zt(1, 1 + (0))    = {z_0(1:m, 1)     - z(1:m,     1 + (0))}; % zt0
 g_zr(1, 1 + (0))    = {z_0(m+1:end, 1) - z(m+1:end, 1 + (0))}; % zr0
 
 for i=0:N_MPC
-    % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
     q = x(1:n, 1 + (i));
 
     % calculate trajectory values (y_0 ... y_N)
@@ -216,7 +268,13 @@ for i=0:N_MPC
     yr_pp_ref(1:3, 1 + (i)) = alpha_r( 1:3, 1 + (i));
 
     if(i < N_MPC)
-        g_x(1, 1 + (i+1))  = { q_p(:, 1 + (i+1)) - x( n+1:end, 1 + (i+1)) }; % q_p_i = S_v q_i
+        if(diff_variant == diff_variant_mode.numdiff)
+            g_x(1, 1 + (i+1)) = { x(n+1:end, 1 + (i+1)) - q_p(:, 1 + (i+1))                          }; % q_p_1 = q_p_1
+        elseif(diff_variant == diff_variant_mode.savgol)
+            g_x(1, 1 + (i+1)) = { x(:,       1 + (i+1)) - [q_savgol(:, 1 + (i+1)); q_p(:, 1 + (i+1))]}; % q_savgol = S_q q_1, q_p_1 = q_p_1
+        else
+            error('invalid mode');
+        end
         g_zt(1, 1 + (i+1)) = { Ht(zt(:, 1 + (i)), alpha_t(:, 1 + (i)) ) - zt(:, 1 + (i+1)) }; % Set the yref_t dynamics constraints
         g_zr(1, 1 + (i+1)) = { Hr(zr(:, 1 + (i)), alpha_r(:, 1 + (i)) ) - zr(:, 1 + (i+1)) }; % Set the yref_r dynamics constraints
     end
