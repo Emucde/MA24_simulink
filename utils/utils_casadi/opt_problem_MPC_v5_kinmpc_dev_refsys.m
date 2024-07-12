@@ -135,9 +135,8 @@ u_opt_indices = [3*n+1:4*n, 4*n+1:5*n, 1:n]; % [q_1, dq_1, ddq_1] needed for joi
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-% TODO: get qpp_max, qpp_min via FD: qpp_max = FD(q_max?, q_pmax?, tau_max?)
-lbw = [-Inf(size(u)); repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
-ubw = [ Inf(size(u)); repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
+lbw = [pp.u_min; repmat(pp.x_min, N_MPC + 1, 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
+ubw = [pp.u_max; repmat(pp.x_max, N_MPC + 1, 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
 
 % input parameter
 x_k  = SX.sym( 'x_k',  2*n, 1 ); % current x state = initial x state

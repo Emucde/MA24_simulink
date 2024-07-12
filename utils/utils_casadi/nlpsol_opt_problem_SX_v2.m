@@ -222,7 +222,9 @@ try
         [u_opt_sol, xx_full_opt_sol] = f_opt(mpc_init_reference_values, init_guess_0);
     end
 catch ME
-    solver.stats(1)
+    try
+        solver.stats(1)
+    end
     error(getReport(ME));
 end
 

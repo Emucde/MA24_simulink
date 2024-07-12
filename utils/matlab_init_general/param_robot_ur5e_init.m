@@ -167,6 +167,11 @@ q_min = -q_max;
 q_dot_max = [pi; pi; pi; pi; pi; pi];
 q_dot_min = -q_dot_max;
 
+% Esimated with ben_M_max_qpp_max_estimation.m
+% without couplins: q_pp = diag(M)^(-1) * tau_max
+q_ddot_max = [39; 42; 211; 538; 813; 929];
+q_ddot_min = -q_ddot_max;
+
 % Maximales Drehmoment in Newtonmeter
 % https://www.universal-robots.com/articles/ur/robot-care-maintenance/max-joint-torques-cb3-and-e-series/
 tau_max = [150; 150; 150; 28; 28; 28];
@@ -188,6 +193,9 @@ ur5e.param.q_limit_lower = q_min;
 
 ur5e.param.q_p_limit_upper = q_dot_max; % Joint velocity limits
 ur5e.param.q_p_limit_lower = q_dot_min;
+
+ur5e.param.q_pp_limit_upper = q_ddot_max; % Joint acceleration limits
+ur5e.param.q_pp_limit_lower = q_ddot_min;
 
 ur5e.param.torque_limit_upper = tau_max; % Joint torque limits
 ur5e.param.torque_limit_lower = tau_min;
