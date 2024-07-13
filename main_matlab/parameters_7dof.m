@@ -51,6 +51,7 @@ add_robot_matlab_paths;
 % do not comment in, this would result in an endless loop!
 % only copy this command into the command window if mpcs are not found!
 % solve_mpc_notfound_bug(simulink_main_model_name, 'both');
+% solve_mpc_notfound_bug(simulink_main_model_name, 'reload');
 % solve_mpc_notfound_bug(simulink_main_model_name, 'comment');
 % solve_mpc_notfound_bug(simulink_main_model_name, 'uncomment');
 

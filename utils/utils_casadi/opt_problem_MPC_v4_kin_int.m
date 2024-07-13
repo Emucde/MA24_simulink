@@ -134,7 +134,6 @@ R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 
 for i=0:N_MPC
-    % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
     q = x(1:n, 1 + (i));
 
     % calculate trajectory values (y_0 ... y_N)

@@ -1,7 +1,7 @@
 function solve_mpc_notfound_bug(simulink_main_model_name, mode)
 arguments
     simulink_main_model_name char = 'sim_discrete_7dof'
-    mode char = 'both' % 'both', 'comment', 'uncomment'
+    mode char = 'both' % 'both', 'comment', 'uncomment', 'reload'
 end
 
 % Trick:
@@ -19,7 +19,7 @@ if(bdIsLoaded(simulink_main_model_name))
     % get Names of MPC subsystems
     mpc_subsys_list = controller_blocklist(cellfun(@(x) contains(x, 'MPC'), controller_blocklist));
     
-    if(strcmp(mode, 'comment') || strcmp(mode, 'both'))
+    if(strcmp(mode, 'comment') || strcmp(mode, 'both') || strcmp(mode, 'reload'))
             
         % reload all MPCs:
         for i=1:length(mpc_subsys_list)
@@ -33,8 +33,10 @@ if(bdIsLoaded(simulink_main_model_name))
             % Setting the same parameter again enforces loading of the mpc!
             set_param(mpc_sfun_string, 'SFunctionModules', sfun_mpc_modules);
 
-            % Comment MPC out
-            set_param(mpc_sfun_string, 'Commented', 'on');
+            if(~strcmp(mode, 'reload'))
+                % Comment MPC out
+                set_param(mpc_sfun_string, 'Commented', 'on');
+            end
         end
 
         % save system
