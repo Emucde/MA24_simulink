@@ -252,7 +252,7 @@ tau_dim = size(uu_indices);
 qq_dim = size(qq_indices_arr);
 qqp_dim = size(qqp_indices_arr);
 
-if(strcmp(casadi_func_name, 'MPC6') || strcmp(casadi_func_name, 'MPC7') || strcmp(casadi_func_name, 'MPC9'))
+if(strcmp(casadi_func_name, 'MPC6') || strcmp(casadi_func_name, 'MPC7'))
     
     z_indices = reshape(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z), size(z));
     alpha_indices = reshape(1+numel(u)+numel(x)+numel(z):numel(u)+numel(x)+numel(z)+numel(alpha), size(alpha));

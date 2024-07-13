@@ -5,10 +5,6 @@ function [q_dot, q_ddot, Q] = quat_deriv(q, omega, omega_p)
     %   q_dot: Derivative of the quaternion (1x4)
 
     % Calculate the quaternion's components
-    q1 = q(1); % = eta
-    q2 = q(2); % )
-    q3 = q(3); % } = epsilon
-    q4 = q(4); % )
 
     Q = @(q) 0.5 * [ -q(2) -q(3) -q(4); ...
                       q(1)  q(4) -q(3); ...

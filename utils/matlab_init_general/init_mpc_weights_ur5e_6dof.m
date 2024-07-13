@@ -91,7 +91,7 @@ param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100*ones(3,1)]);
 param_weight.(MPC).Q_y_ref    = diag([100*ones(3,1); 100*ones(3,1)]);
 
 K_D_q = 8*eye(n);     param_jointspace_ct.(MPC).K_D_q  = K_D_q;
-K_P_q = K_D_q^2/4;     param_jointspace_ct.(MPC).K_P_q  = K_P_q;
+K_P_q = K_D_q^2/4;    param_jointspace_ct.(MPC).K_P_q  = K_P_q;
 
 param_weight.(MPC).epsilon_t = 1e-5;%1e-5;
 param_weight.(MPC).epsilon_r = 1e-5;%inf;

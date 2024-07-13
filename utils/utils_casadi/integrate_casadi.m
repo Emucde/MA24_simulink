@@ -36,5 +36,7 @@ function F = integrate_casadi(f, DT, M, method)
         error('Invalid integration method. Please choose either ''RK4'' or ''Euler''.');
     end
     
-    F = casadi.Function('F', {X0, U}, {X});
+    opt = struct;
+    opt.allow_free = true;
+    F = casadi.Function('F', {X0, U}, {X}, opt);
 end

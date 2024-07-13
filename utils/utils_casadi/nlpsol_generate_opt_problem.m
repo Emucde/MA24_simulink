@@ -12,6 +12,8 @@ elseif(strcmp(MPC_version, "v3_quat"))
     opt_problem_ineq_feasible_traj_MPC_v3_quat;
 elseif(strcmp(MPC_version, "v4_kin_thelen"))
     opt_problem_MPC_v4_kin_int;
+elseif(strcmp(MPC_version, "v4_int_ref_dev"))
+    opt_problem_MPC_v4_kin_int_refsys;
 elseif(strcmp(MPC_version, "v4_kin_ref_dev"))
     opt_problem_MPC_v5_kinmpc_dev_refsys;
 else
