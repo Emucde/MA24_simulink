@@ -10,12 +10,14 @@ elseif(strcmp(MPC_version, "v3_rpy"))
     opt_problem_ineq_feasible_traj_MPC_v3_rpy;
 elseif(strcmp(MPC_version, "v3_quat"))
     opt_problem_ineq_feasible_traj_MPC_v3_quat;
-elseif(strcmp(MPC_version, "v4_kin_thelen"))
+elseif(strcmp(MPC_version, "v4_kin_int"))
     opt_problem_MPC_v4_kin_int;
-elseif(strcmp(MPC_version, "v4_int_ref_dev"))
+elseif(strcmp(MPC_version, "v4_kin_int_refsys"))
     opt_problem_MPC_v4_kin_int_refsys;
-elseif(strcmp(MPC_version, "v4_kin_ref_dev"))
-    opt_problem_MPC_v5_kinmpc_dev_refsys;
+elseif(strcmp(MPC_version, "v5_kin_dev"))
+    opt_problem_MPC_v5_kin_dev;
+elseif(strcmp(MPC_version, "v5_kin_dev_refsys"))
+    opt_problem_MPC_v5_kin_dev_refsys;
 else
-    error('Only MPC version ( v1 | v3_rpy | v3_quat | v4_kin) implemented!');
+    error(['MPC_version ''', MPC_version, ''' not found: Only MPC version (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )']);
 end

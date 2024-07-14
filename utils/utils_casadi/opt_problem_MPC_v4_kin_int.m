@@ -32,17 +32,15 @@ F = integrate_casadi(f, DT, M, int_method);
 
 % Get trajectory data for initial guess
 p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
-p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
-p_d_pp_0 = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
+% p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
+% p_d_pp_0 = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
 
 q_d_0       = param_trajectory.q_d(       1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
-omega_d_0   = param_trajectory.omega_d(   1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
-omega_d_p_0 = param_trajectory.omega_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
+% omega_d_0   = param_trajectory.omega_d(   1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
+% omega_d_p_0 = param_trajectory.omega_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
 
 % initial guess for reference trajectory
 y_d_0    = [p_d_0;    q_d_0   ];
-y_d_p_0  = [p_d_p_0;  omega_d_0 ];
-y_d_pp_0 = [p_d_pp_0; omega_d_p_0];
 
 % Robot System: Initial guess
 
@@ -97,13 +95,10 @@ ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max, N_MPC + 1, 1)];
 
 % input parameter
 x_k  = SX.sym( 'x_k',  2*n, 1 ); % current x state = initial x state
+y_d  = SX.sym( 'y_d',    m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
 
-y_d    = SX.sym( 'y_d',    m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
-y_d_p  = SX.sym( 'y_d_p',  m,   N_MPC+1 ); % (y_d_p_0 ... y_d_p_N)
-y_d_pp = SX.sym( 'y_d_pp', m,   N_MPC+1 ); % (y_d_pp_0 ... y_d_pp_N)
-
-mpc_parameter_inputs = {x_k, y_d, y_d_p, y_d_pp};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:)];
+mpc_parameter_inputs = {x_k, y_d};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:);];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -127,7 +122,7 @@ lambda_x0 = SX.sym('lambda_x0', size(w));
 lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
-y    = SX( 3, N_MPC+1 ); % transl. TCP position:      (y_0 ... y_N)
+y       = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
@@ -140,6 +135,7 @@ for i=0:N_MPC
     H_e = hom_transform_endeffector_py_fun(q);
     R_e = H_e(1:3, 1:3);
     y(1:3,   1 + (i)) = H_e(1:3, 4);
+    y(4:7,   1 + (i)) = quat_endeffector_py_fun(q);
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
     if(i < N_MPC)
@@ -151,14 +147,15 @@ end
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-J_yt = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_d(1:3, 1 + (1:N_MPC-1)), pp.Q_y(1:3,1:3)  );
-J_yt_N = Q_norm_square( y(1:3, 1 + (N_MPC) ) - y_d(1:3, 1 + (N_MPC)), pp.Q_yN(1:3,1:3)  );
+J_yt   = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_d(1:3, 1 + (1:N_MPC-1)), pp.Q_y( 1:3,1:3)  );
+J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp.Q_yN(1:3,1:3)  );
 
 J_yr = SX(1,1);
 for i=1:N_MPC
-    R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
-    %q_y_y_err = rotation2quaternion_casadi( R_y_yr );
-    q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
+    % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+    % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
+    % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
+    q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
 
     if(i < N_MPC)
         J_yr = J_yr + Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6,4:6)  );

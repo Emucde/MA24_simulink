@@ -43,7 +43,7 @@ traj_struct.rotation = cat(3, R_init, R_target, R_init);
 traj_struct.time = [0; T_sim/2; T_sim];
 traj_struct.traj_type = [traj_mode.differential_filter];
 traj_struct.N = 3;
-traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -10); % Param differential filter 5th order trajectory
+traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -3.5); % Param differential filter 5th order trajectory
 traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
 traj_cell{2} = traj_struct;
 

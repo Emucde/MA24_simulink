@@ -77,3 +77,5 @@ init_MPC_weights; %% set MPC weights
 param_ct_control_init;
 
 create_trajectories;
+
+param_debug;
