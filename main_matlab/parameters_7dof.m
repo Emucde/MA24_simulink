@@ -68,6 +68,8 @@ param_robot_init;
 % it has to be ensured that sim_discrete_7dof is open!
 change_simulink_traj_combo_box; % saves system!
 
+comment_in_out_mpc_blocks;
+
 activate_simulink_logs;
 
 bus_definitions;

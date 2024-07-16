@@ -27,6 +27,14 @@ function F = integrate_casadi(f, DT, M, method)
             k4 = f(X + DT * k3, U);
             X = X + DT/6 * (k1 + 2*k2 + 2*k3 + k4);
         end
+    elseif strcmp(method, 'SSPRK3')
+        % Euler Method
+        for j = 1:M
+            k1 = f(X, U);
+            k2 = f(X + DT * k1, U);
+            k3 = f(X + DT/4 * k1 + DT/4 * k2, U);
+            X = X + DT/6 * (k1 + k2 + 4*k3);
+        end
     elseif strcmp(method, 'Euler')
         % Euler Method
         for j = 1:M

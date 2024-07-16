@@ -295,7 +295,7 @@ end
 %disp(solver.stats())
 
 % set init guess
-init_guess = full(xx_full_opt_sol);
+init_guess = full(xx_full_opt_sol)+eps;
 
 if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
     disp(['J = ', num2str(full( sum([ cost_values_sol{:} ]) )) ]);

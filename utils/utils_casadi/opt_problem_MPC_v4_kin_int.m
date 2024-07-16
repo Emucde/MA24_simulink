@@ -25,22 +25,32 @@ u = SX.sym('u', n);
 
 % integrator for x
 f = Function('f', {x, u}, {[x(n+1:2*n); u]});
-F = integrate_casadi(f, DT, M, int_method);
+F = integrate_casadi(f, DT, M, int_method); % runs with Ts_MPC
 
+DT_ctl = param_global.Ta/M;
+F_kp1 = integrate_casadi(f, DT_ctl, M, int_method); % runs with Ta from sensors
+
+DT2 = DT - DT_ctl;
+if(DT2 == 0) % special case if Ts_MPC = Ta
+    DT2 = DT_ctl;
+end
+F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-Ta
 
 %% Calculate Initial Guess
 
 % Get trajectory data for initial guess
-p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
-% p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
-% p_d_pp_0 = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
+p_d_0    = param_trajectory.p_d(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
+q_d_0    = param_trajectory.q_d(  1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
 
-q_d_0       = param_trajectory.q_d(       1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
-% omega_d_0   = param_trajectory.omega_d(   1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
-% omega_d_p_0 = param_trajectory.omega_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
+p_d_0_kp1 = param_trajectory.p_d(  1:3, 2 );
+q_d_0_kp1 = param_trajectory.q_d(  1:4, 2 );
 
 % initial guess for reference trajectory
-y_d_0    = [p_d_0;    q_d_0   ];
+if(N_step_MPC == 1)
+    y_d_0    = [p_d_0; q_d_0];
+else
+    y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-1)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-1)]];
+end
 
 % Robot System: Initial guess
 
@@ -83,10 +93,15 @@ mpc_opt_var_inputs = {u, x};
 
 % u = [u0; u1; ... uN-1], x = [x0; x1; ... xN] = [q_0;q_0_p;q_1;q_1_p;...;q_N;q_N_p]
 % xx = [u; x] = [u0; u1; ... uN-1; x0; x1; ... xN]
-%   u1 = q_1_pp = u( n+1:2+n)   |   q_1 = x(     1+2*n:    3*n),  |   q_1_p = x(     1+3*n:    4*n)
-%   u1 = q_1_pp = xx(n+1:2+n)   |   q_1 = xx(N_u+1+2*n:N_u+3*n),  |   q_1_p = xx(N_u+1+3*n:N_u+4*n)
+%   u1 = q_1_pp = u( n+1:2*n)   |   q_1 = x(     1+2*n:    3*n),  |   q_1_p = x(     1+3*n:    4*n)
+%   u1 = q_1_pp = xx(n+1:2*n)   |   q_1 = xx(N_u+1+2*n:N_u+3*n),  |   q_1_p = xx(N_u+1+3*n:N_u+4*n)
 N_u = numel(u);
+% Achtung, das ist nicht korrekt! q1 = q(t+Ts_MPC) != q(t+Ta), wenn Ts_MPC > Ta
 u_opt_indices = [1+2*n+N_u:N_u+3*n, 1+3*n+N_u:N_u+4*n, 1+n:2*n]; % [q_1, q_1_p, q_1_pp] needed for joint space CT control
+
+%   u0 = q_0_pp = u( 1:n)   |   q_0 = x(     1+n:    2*n),  |   q_0_p = x(     1+2*n:    3*n)
+%   u0 = q_0_pp = xx(1:n)   |   q_0 = xx(N_u+1+n:N_u+2*n),  |   q_0_p = xx(N_u+1+2*n:N_u+3*n)
+% u_opt_indices = [N_u+1+n:N_u+2*n, N_u+1+2*n:N_u+3*n, 1:n]; % [q_1, q_1_p, q_1_pp] needed for joint space CT control
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
@@ -140,7 +155,15 @@ for i=0:N_MPC
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state dynamics constraints
+        if(i == 0)
+            g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
+        elseif(i==1)
+            g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
+        else
+            g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
+            % runs only to T_horizon-Ts_MPC, i. e. tilde x_{N-1} = x(t0+Ts_MPC*(N-1)) and x_N doesn't exist
+            % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(N-1))
+        end
     end
 end
 

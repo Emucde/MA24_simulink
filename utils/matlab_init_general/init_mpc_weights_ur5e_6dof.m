@@ -21,24 +21,34 @@ param_weight.(MPC).u_max    = u_max;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 6) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MPC='MPC6';
-param_weight.(MPC).Q_y        = diag([1e5*ones(3,1); 1e3*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_y        = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % d_kpn
 
-param_weight.(MPC).R_q_pp     = 1e-3*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).R_q_pp     = 1e-10*diag(ones(n,1));  % d_kpn
 
-param_weight.(MPC).Q_y_p_ref  = diag([50*ones(3,1); 50*ones(3,1)]);
-param_weight.(MPC).Q_y_ref    = diag([50*ones(3,1); 50*ones(3,1)]);
+param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100*ones(3,1)]);
+param_weight.(MPC).Q_y_ref    = diag([100*ones(3,1); 100*ones(3,1)]);%param_weight.(MPC).Q_y_p_ref^2/4;
+
+% param_weight.(MPC).Q_y_p_ref  = diag([0*ones(3,1); 0*ones(3,1)]);
+% param_weight.(MPC).Q_y_ref    = diag([0*ones(3,1); 0*ones(3,1)]);%param_weight.(MPC).Q_y_p_ref^2/4;
 
 param_weight.(MPC).epsilon_t = 1e-5;%1e-5;
 param_weight.(MPC).epsilon_r = 1e-5;%inf;
 
-param_weight.(MPC).x_min    = x_min; 
-param_weight.(MPC).x_max    = x_max; 
-param_weight.(MPC).u_min    = u_min; 
-param_weight.(MPC).u_max    = u_max; 
-% param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
-% param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
-% param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
-% param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
+% param_weight.(MPC).x_min    = x_min.*[ones(n,1); 0.5*ones(n,1)];
+% param_weight.(MPC).x_max    = x_max.*[ones(n,1); 0.5*ones(n,1)];
+% param_weight.(MPC).u_min    = u_min;
+% param_weight.(MPC).u_max    = u_max;
+param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
+param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
+param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
+param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
+
+% param_weight.(MPC).y_ref_min    = -inf(m+1, 1);
+% param_weight.(MPC).y_ref_max    =  inf(m+1, 1);
+% param_weight.(MPC).y_ref_p_min  = -inf(m, 1);
+% param_weight.(MPC).y_ref_p_max  =  inf(m, 1);
+% param_weight.(MPC).y_ref_pp_min = -inf(m, 1);
+% param_weight.(MPC).y_ref_pp_max =  inf(m, 1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 7) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MPC='MPC7';
@@ -52,10 +62,10 @@ param_weight.(MPC).Q_y_ref    = diag([100*ones(3,1); 100*ones(3,1)]);
 param_weight.(MPC).epsilon_t = 1e-5;%1e-5;
 param_weight.(MPC).epsilon_r = 1e-5;%inf;
 
-param_weight.(MPC).x_min    = x_min; 
-param_weight.(MPC).x_max    = x_max; 
-param_weight.(MPC).u_min    = u_min; 
-param_weight.(MPC).u_max    = u_max; 
+param_weight.(MPC).x_min    = x_min.*[ones(n,1); 0.5*ones(n,1)];
+param_weight.(MPC).x_max    = x_max.*[ones(n,1); 0.5*ones(n,1)];
+param_weight.(MPC).u_min    = param_robot.q_pp_limit_lower*0.1;
+param_weight.(MPC).u_max    = param_robot.q_pp_limit_upper*0.1;
 % param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
 % param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
 % param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
@@ -71,14 +81,14 @@ param_weight.(MPC).R_q_pp = 1e-8*diag(ones(n,1));  % d_kpn
 K_D_q = 8*eye(n);     param_jointspace_ct.(MPC).K_D_q  = K_D_q;
 K_P_q = K_D_q^2/4;    param_jointspace_ct.(MPC).K_P_q  = K_P_q;
 
-param_weight.(MPC).x_min    = x_min.*[ones(n,1); 0.5*ones(n,1)];
-param_weight.(MPC).x_max    = x_max.*[ones(n,1); 0.5*ones(n,1)];
-param_weight.(MPC).u_min    = param_robot.q_pp_limit_lower*0.1;
-param_weight.(MPC).u_max    = param_robot.q_pp_limit_upper*0.1;
-% param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
-% param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
-% param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
-% param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
+% param_weight.(MPC).x_min    = x_min.*[ones(n,1); 1*ones(n,1)];
+% param_weight.(MPC).x_max    = x_max.*[ones(n,1); 1*ones(n,1)];
+% param_weight.(MPC).u_min    = param_robot.q_pp_limit_lower*1;
+% param_weight.(MPC).u_max    = param_robot.q_pp_limit_upper*1;
+param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
+param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
+param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
+param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 9) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % kinematic mpc with integration and refsys
