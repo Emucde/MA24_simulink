@@ -10,22 +10,24 @@ function [x_d] = create_poly_traj(traj_select, t, param_traj, init_bus_param)
     else
         t = t - t_val(i);
     end
+
+    i = i + start_index; % zeigt schon auf target
     
-    xe0    = param_traj.pose(1:3, i);
-    alpha0 = param_traj.alpha(i);
+    xe0    = param_traj.pose(1:3, i-1);
+    alpha0 = param_traj.alpha(i-1);
 
-    xeT    = param_traj.pose(1:3, i+1);
-    alphaT = param_traj.alpha(i+1);
+    xeT    = param_traj.pose(1:3, i);
+    alphaT = param_traj.alpha(i);
 
-    R_init = param_traj.rotation(:, :, i);
-    rot_ax = param_traj.rot_ax(:, i+1);
+    R_init = param_traj.rotation(:, :, i-1);
+    rot_ax = param_traj.rot_ax(:, i);
 
     alpha_offset = 0; % TODO DELETE
 
     y0 = [xe0; alpha0];
     yT = [xeT; alphaT];
 
-    [p_d, p_d_p, p_d_pp] = trajectory_poly(t, y0, yT, t_val(i+1) - t_val(i));
+    [p_d, p_d_p, p_d_pp] = trajectory_poly(t, y0, yT, t_val(i-start_index+1) - t_val(i-start_index));
     
     alpha    = p_d(4);
     alpha_p  = p_d_p(4);

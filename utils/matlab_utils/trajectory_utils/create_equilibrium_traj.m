@@ -7,12 +7,14 @@ function [x_d] = create_equilibrium_traj(traj_select, t, param_traj, init_bus_pa
     if( i == length(t_val) )
         i = length(t_val)-1; % TODO
     end
+
+    i = i + start_index;
     
     xeT    = param_traj.pose(:, i);
-    R_init = param_traj.rotation(:, :, i);
+    R_init = param_traj.rotation(:, :, i-1);
     alpha_offset = 0; % TODO DELETE
 
-    R_target = param_traj.rotation(:, :, i+1);
+    R_target = param_traj.rotation(:, :, i);
 
     omega_d   = zeros(3,1);
     omega_d_p = zeros(3,1);

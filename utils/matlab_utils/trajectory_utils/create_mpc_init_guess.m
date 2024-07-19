@@ -45,7 +45,7 @@ for name={files.name}
     init_guess_cell = cell(1, param_traj.N_traj);            
     for ii=1:param_traj.N_traj
         param_trajectory = param_traj_data_fun(traj_settings, 'get', ii, param_traj_data);
-        traj_select_mpc = param_traj.traj_type(ii);
+        traj_select_mpc = ii;
 
         % Achtung, hier drin werden for loops mit der Variable i verwendet, daher darf die äußere
         % Schleife nicht die Variable i verwenden!!!!

@@ -7,22 +7,26 @@ function [x_d, x_kp1] = create_diff_filter_traj(traj_select, t, x_k, param_traj,
     i = sum(t >= t_val);
 
     if( i == length(t_val) )
-        i = length(t_val)-1; % TODO
+        i = length(t_val)-1; % der 0te wert ist nicht relevant!
     end
 
-    alpha0 = param_traj.alpha(i);
-    
-    xeT    = param_traj.pose(1:3, i+1);
-    alphaT = param_traj.alpha(i+1);
+    i = i + start_index; % zeigt schon auf target
 
-    if( t == t_val(i))
+    % TODO: Das führt zu einen sprung in der Trajektorie, wenn alpha nicht perfekt erreicht wurde...
+    alpha0 = param_traj.alpha(i-1);
+    
+    xeT    = param_traj.pose(1:3, i);
+
+    alphaT = param_traj.alpha(i);
+
+    if( t == t_val(i-start_index))
         % otherwise we cannot exactly compensate alpha by alpha0.
         % Here errors in size of 1e-15 can lead to sign jumps in quaternions
         x_k(param_diff_filter.p_d_index(4)) = alpha0;
     end
 
-    R_init = param_traj.rotation(:, :, i);
-    rot_ax = param_traj.rot_ax(:, i+1);
+    R_init = param_traj.rotation(:, :, i-1);
+    rot_ax = param_traj.rot_ax(:, i);
 
     alpha_offset = 0; % TODO DELETE
 

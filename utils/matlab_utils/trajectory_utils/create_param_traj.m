@@ -15,4 +15,5 @@ else
 end
 
 traj_struct_combined = combine_trajectories(traj_cell, param_global, param_robot);
+param_traj_cell = traj_cell;
 param_traj = traj_struct_combined;

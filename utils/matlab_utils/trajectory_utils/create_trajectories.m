@@ -3,6 +3,7 @@ import casadi.*;
 %% GENERATE OFFLINE TRAJECTORY
 param_MPC_traj_data_mat_file = [s_fun_path, '/trajectory_data/param_traj_data.mat'];
 param_traj_file = [s_fun_path, '/trajectory_data/param_traj.mat'];
+param_traj_cell_file = [s_fun_path, '/trajectory_data/param_traj_cell.mat'];
 param_traj_settings = [s_fun_path, '/trajectory_data/param_traj_settings.mat'];
 param_MPC_file_path = [s_fun_path, '/mpc_settings/'];
 files = dir([param_MPC_file_path, '*.mat']);
@@ -14,7 +15,6 @@ overwrite_offline_traj = false;
 try
     if(overwrite_offline_traj || overwrite_offline_traj_forced)
         create_param_traj; % generate param_traj struct
-
         % Idee: Es müssen nur die Trajektorien für die MPC des längsten Prädiktionshorizonts berechnet werden, da alle anderen
         % kürzeren Prädiktionshorizonte in den längeren enthalten sind.
 
@@ -45,6 +45,7 @@ try
         param_traj_data = generate_trajectory(param_traj, init_bus_param, traj_settings);
         save(param_MPC_traj_data_mat_file, 'param_traj_data'); % save struct
         save(param_traj_file, 'param_traj'); % save struct
+        save(param_traj_cell_file, 'param_traj_cell'); % save struct
         save(param_traj_settings, 'traj_settings'); % save struct
 
         % 3. calculate init guess for all mpcs
@@ -55,6 +56,7 @@ try
 
         load(param_MPC_traj_data_mat_file);
         load(param_traj_file);
+        load(param_traj_cell_file);
         load(param_traj_settings);
     end
 

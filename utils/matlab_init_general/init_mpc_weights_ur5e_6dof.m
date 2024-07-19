@@ -88,7 +88,7 @@ param_weight.(MPC).R_q_pp = 1e-8*diag(ones(n,1));
 if(mpc_mode == kin_int_mode.du0_cost)
     param_weight.(MPC).R0_du  = 1e2*diag(ones(n,1));
 elseif(mpc_mode == kin_int_mode.du_cost_extended)
-    param_weight.(MPC).R_du   = 1e-5*diag(ones(n,1));
+    param_weight.(MPC).R_du   = 0*diag(ones(n,1));
     param_weight.(MPC).R0_du  = 0*diag(ones(n,1));
 end
 

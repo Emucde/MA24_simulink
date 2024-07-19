@@ -66,8 +66,6 @@ param_robot_init;
 
 % combo boxes are trajectory dependent changed for each robot!
 % it has to be ensured that sim_discrete_7dof is open!
-change_simulink_traj_combo_box; % saves system!
-
 comment_in_out_mpc_blocks;
 
 activate_simulink_logs;
@@ -79,5 +77,7 @@ init_MPC_weights; %% set MPC weights
 param_ct_control_init;
 
 create_trajectories;
+
+change_simulink_traj_combo_box; % saves system!
 
 param_debug;

@@ -17,21 +17,27 @@ if(bdIsLoaded(simulink_main_model_name))
         mpc_sfun_string = [simulink_main_model_name, '/Simulation models/Controller Subsystem/', mpc_subsys_list{i}, '/S-Function'];
         sfun_mpc_modules = get_param(mpc_sfun_string, 'SFunctionModules');
 
+        comment_state = get_param(mpc_sfun_string, 'Commented');
+
         if(contains(mpc_subsys_list{i}, selected_mpc_name))
-            for i=1:5
-                try
-                    % unsetting the module enforces reloading of the mpc!
-                    get_param(mpc_sfun_string, 'SFunctionModules');
-                    set_param(mpc_sfun_string, 'SFunctionModules', '''''');
-                    
-                    % Setting the same parameter again enforces loading of the mpc!
-                    set_param(mpc_sfun_string, 'SFunctionModules', sfun_mpc_modules);
-                    break;
+            if(strcmp(comment_state, 'on'))
+                for j=1:5
+                    try
+                        % unsetting the module enforces reloading of the mpc!
+                        get_param(mpc_sfun_string, 'SFunctionModules');
+                        set_param(mpc_sfun_string, 'SFunctionModules', '''''');
+                        
+                        % Setting the same parameter again enforces loading of the mpc!
+                        set_param(mpc_sfun_string, 'SFunctionModules', sfun_mpc_modules);
+                        break;
+                    end
                 end
+                set_param(mpc_sfun_string, 'Commented', 'off');
             end
-            set_param(mpc_sfun_string, 'Commented', 'off');
         else
-            set_param(mpc_sfun_string, 'Commented', 'on');
+            if(strcmp(comment_state, 'off'))
+                set_param(mpc_sfun_string, 'Commented', 'on');
+            end
         end
     end
 end
