@@ -1,8 +1,8 @@
 %% CT Controller Parameters
-K_d_t = 1e3*diag([1 1 1]);
+K_d_t = 16*diag([1 1 1]);
 K_p_t = K_d_t^2/4;
 
-K_d_r = 1e3*diag([1 1 1]);
+K_d_r = 16*diag([1 1 1]);
 K_p_r = K_d_r^2/4;
 
 ct_ctrl_param.Kd1 = blkdiag(K_d_t, K_d_r);
@@ -13,18 +13,25 @@ ct_ctrl_param.Kp1 = blkdiag(K_p_t, K_p_r);
 % 1: simpliy use J_pinv = (J'*J + k*E)^(-1)*J' = (J'*J + k*E)\J'
 % 2: use Sugihara singular robust method: J_pinv = (J'*W_E*J + W_N)^(-1)*J' = (J'*W_E*J + W_N)\J'
 % 3: set sing values sigma_i < eps to sign(sigma_i)/q_i_max
-ct_ctrl_param.mode = 0;
+ct_ctrl_param.mode = 4;
 
 % 1:
-ct_ctrl_param.k = 1e0;
+ct_ctrl_param.k = 1e-3;
 
 % 2:
-ct_ctrl_param.W_bar_N = 1e-1*param_robot.sugihara_limb_vector;
-%ct_ctrl_param.W_bar_N = 1e2*ones(n,1);
-ct_ctrl_param.W_E = 1e2 * eye(n); %ct_ctrl_param.w_bar_N;
+ct_ctrl_param.W_bar_N = 1e-3*param_robot.sugihara_limb_vector;
+% ct_ctrl_param.W_bar_N = 1e-1*ones(n,1);
+ct_ctrl_param.W_E = 1e-1 * eye(n); %ct_ctrl_param.w_bar_N;
 
 % 3:
-ct_ctrl_param.eps  = 5e0;
+ct_ctrl_param.eps  = 1e-1;
+
+% 4:
+ct_ctrl_param.eps_collinear = 0.99;
+%ct_ctrl_param.D_n_colin = 1e0*eye(n);
+%ct_ctrl_param.K_n_colin = ct_ctrl_param.D_n_colin^2/4;
+
+
 
 %% nullspace for CT controller
 ct_ctrl_param.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;

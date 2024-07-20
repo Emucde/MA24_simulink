@@ -6,7 +6,7 @@ kin_int_mode.standard = 1;
 kin_int_mode.du0_cost = 2;
 kin_int_mode.du_cost_extended = 3;
 
-mpc_mode = kin_int_mode.du_cost_extended;
+mpc_mode = kin_int_mode.standard;
 
 n = param_robot.n_DOF; % Dimension of joint space
 m = param_robot.m; % Dimension of Task Space
@@ -84,7 +84,7 @@ if(mpc_mode == kin_int_mode.du0_cost)
     u_prev_0 = zeros(n, 1);
 elseif(mpc_mode == kin_int_mode.du_cost_extended)
     u_prev_0 = zeros(n, N_du);
-else
+elseif(mpc_mode ~= kin_int_mode.standard)
     error(['mpc_mode ', num2str(mpc_mode), ' not implemented']);
 end
 

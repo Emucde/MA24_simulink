@@ -1,14 +1,14 @@
 function [x_d] = create_sinus_traj(traj_select, t, param_traj, init_bus_param)
     param_sin_poly = param_traj.sin_poly(traj_select).sin_poly;
+    start_index = param_traj.start_index(traj_select);
 
-    x0    = param_traj.pose(1:3, 1);
-    xT    = param_traj.pose(1:3, 2);
-    alphaT = param_traj.alpha(2);
+    x0    = param_traj.pose(1:3, start_index);
+    xT    = param_traj.pose(1:3, start_index+1);
+    alpha0 = param_traj.alpha(start_index);
+    alphaT = param_traj.alpha(start_index+1);
 
-    R_init = param_traj.rotation(:, :, 1);
-    rot_ax = param_traj.rot_ax(:, 2);
-
-    alpha_offset = 0; % TODO DELETE
+    R_init = param_traj.rotation(:, :, start_index);
+    rot_ax = param_traj.rot_ax(:, start_index+1);
 
     T =  param_sin_poly.T;
     omega =  param_sin_poly.omega;
@@ -30,31 +30,43 @@ function [x_d] = create_sinus_traj(traj_select, t, param_traj, init_bus_param)
     a_sin_t = a*sin_t;
     a_cos_t = a*cos_t;
 
-    x_ref = x0 + (a + a_sin_t) * s;
-    x_ref_p =    a_cos_t * omega * s   + (a + a_sin_t) * s_p;
-    x_ref_pp =  -a_sin_t * omega^2 * s + a_cos_t * s_p * omega * 2 + (a + a_sin_t) * s_pp;
+    apa_sin_t = (a + a_sin_t);
 
-    sin_t_01 = s*(1 + sin_t)/2;
-    alpha    = s*sin_t_01;
-    alpha_p  = s*omega*cos_t/2 + s_p*sin_t_01;
-    alpha_pp = -s*omega^2*sin_t + 2*s_p*omega*cos_t + s_pp*sin_t_01;
+    x_ref = x0 + apa_sin_t * s;
+    x_ref_p =    a_cos_t * omega * s   + apa_sin_t * s_p;
+    x_ref_pp =  -a_sin_t * omega^2 * s + a_cos_t * s_p * omega * 2 + apa_sin_t * s_pp;
 
-    skew_ew  = skew(rot_ax);
-    R_act    = R_init*(eye(3) + sin(alphaT*alpha)*skew_ew + (1-cos(alphaT*alpha))*skew_ew^2);
+    b = (alphaT - alpha0)/2;
+    b_sin_t = b*sin_t;
+    b_cos_t = b*cos_t;
 
-    omega_d   = alpha_p*rot_ax;
-    omega_d_p = alpha_pp*rot_ax;
+    bpb_sin_t = (b + b_sin_t);
+
+    alpha    =  alpha0 + bpb_sin_t * s;
+    alpha_p  =  b_cos_t * omega * s   + bpb_sin_t * s_p;
+    alpha_pp = -b_sin_t * omega^2 * s + b_cos_t * s_p * omega * 2 + bpb_sin_t * s_pp;
+
+    skew_ew  = -skew(rot_ax); % TODO WARUM NOTWENDIG??
+    R_act    = R_init*(eye(3) + sin(alpha-alpha0)*skew_ew + (1-cos(alpha-alpha0))*skew_ew^2);
+
+    alpha_d = alpha;
+    alpha_d_p = alpha_p;
+    alpha_d_pp = alpha_pp;
+    rot_ax_d = rot_ax;
+
+    omega_d   = alpha_d_p*rot_ax_d;
+    omega_d_p = alpha_d_pp*rot_ax_d;
+
+    %if(t==5)
+    %    disp('no')
+    %end
+
     q_d   = rotm2quat_v4(R_act);
     [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);
 
     Phi_act = rotm2rpy(R_act);
     Phi_act_p = T_rpy(Phi_act)*omega_d;
     Phi_act_pp =T_rpy_p(Phi_act, Phi_act_p)*omega_d + T_rpy(Phi_act)*omega_d_p;
-
-    alpha_d = alpha;
-    alpha_d_p = alpha_p;
-    alpha_d_pp = alpha_pp;
-    rot_ax_d = rot_ax;
 
     x_d = init_bus_param.x_d;
     x_d.p_d       = x_ref;
@@ -73,6 +85,6 @@ function [x_d] = create_sinus_traj(traj_select, t, param_traj, init_bus_param)
     x_d.alpha_d_p = alpha_d_p;
     x_d.alpha_d_pp = alpha_d_pp;
     x_d.rot_ax_d = rot_ax_d;
-    x_d.alpha_d_offset = alpha_offset;
+    x_d.alpha_d_offset = alpha0;
     x_d.q_d_rel = rotm2quat_v4(R_init);
 end

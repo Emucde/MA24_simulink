@@ -79,11 +79,11 @@ kin_int_mode.standard = 1;
 kin_int_mode.du0_cost = 2;
 kin_int_mode.du_cost_extended = 3;
 
-mpc_mode = kin_int_mode.du_cost_extended;
+mpc_mode = kin_int_mode.standard;
 
 param_weight.(MPC).Q_y    = diag([1e0*ones(3,1); 1e0*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_yN   = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % D_N
-param_weight.(MPC).R_q_pp = 1e-8*diag(ones(n,1));
+param_weight.(MPC).R_q_pp = 1e-3*diag(ones(n,1));
 
 if(mpc_mode == kin_int_mode.du0_cost)
     param_weight.(MPC).R0_du  = 1e2*diag(ones(n,1));

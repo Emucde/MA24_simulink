@@ -42,6 +42,7 @@ function traj_struct_combined = combine_trajectories(traj_cell, param_global, pa
         if(size(traj_struct.pose, 2) ~= N)
             error('Number of poses does not match number of poses');
         elseif(size(traj_struct.rotation, 3) ~= N)
+            disp(i)
             error('Number of rotation does not match number of poses');
         elseif(length(traj_struct.time) ~= N)
             error('Number of times does not match number of poses');

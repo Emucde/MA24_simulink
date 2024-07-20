@@ -2,7 +2,7 @@ function traj_struct_out = create_param_sin_poly(traj_struct, param_global, text
     arguments
         traj_struct struct {mustBeNonempty}
         param_global struct {mustBeNonempty}
-        text1 char = 'lambda'
+        text1 char = 'T'
         T double = 1
         text2 char = 'phi'
         phi double = 0
