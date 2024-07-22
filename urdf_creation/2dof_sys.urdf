@@ -9,7 +9,7 @@
   <visual >
    <origin  xyz="0.0 0.0 0.0" />
    <geometry >
-    <mesh  filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/planar_manipulator-holder_fin.stl"  scale="0.001 0.001 0.001" />
+    <mesh  filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_planar_manipulator/planar_manipulator-holder_fin.stl"  scale="0.001 0.001 0.001" />
    </geometry>
    <material  name="Grey" >
     <color  rgba="0.5 0.5 0.5 1" />
@@ -33,7 +33,7 @@
   <visual >
    <origin  xyz="0.115 0.0 0.0" />
    <geometry >
-    <mesh  filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/planar_manipulator-bulk1_fin.stl"  scale="0.001 0.001 0.001" />
+    <mesh  filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_planar_manipulator/planar_manipulator-bulk1_fin.stl"  scale="0.001 0.001 0.001" />
    </geometry>
    <material  name="Orange" >
     <color  rgba="0.97 0.7 0.17 1" />
@@ -57,7 +57,7 @@
   <visual >
    <origin  xyz="0.123039 0.0 0.0" />
    <geometry >
-    <mesh  filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/planar_manipulator-bulk2_fin.stl"  scale="0.001 0.001 0.001" />
+    <mesh  filename="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_planar_manipulator/planar_manipulator-bulk2_fin.stl"  scale="0.001 0.001 0.001" />
    </geometry>
    <material  name="Orange" >
     <color  rgba="0.97 0.7 0.17 1" />
@@ -76,7 +76,7 @@
 
     <mujoco>
             <compiler 
-            meshdir="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/" 
+            meshdir="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_planar_manipulator/" 
             balanceinertia="true" 
             discardvisual="false" />
     </mujoco>

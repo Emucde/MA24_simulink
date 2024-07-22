@@ -11,7 +11,7 @@ from scipy.optimize import minimize
 sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
 from utils_python.utils import *
 
-mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files')
+mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_planar_manipulator')
 urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', '2dof_sys.urdf')
 
 ######################################### Build Robot Model #############################################
@@ -63,14 +63,6 @@ qq0 = [1, 0] # Define the initial guess - avoid to start in singularity!! - Don'
 res = minimize(f_cost_forward, qq0, method='SLSQP', bounds=bounds, options={'ftol': 1e-20, 'disp': False})
 print(res.x)
 
-# Create a multibody state from the pinocchio model.
-state = cro.StateMultibody(robot_model)
-state.lb[0:2] = np.array([-np.pi, -np.pi])
-state.ub[0:2] = np.array([np.pi, np.pi])
-
-state.lb[2:4] = -100 # wird ignored
-state.ub[2:4] = 100
-
 # Init trajectory rotation
 R_init = np.eye(3)# H_0_init[0:3, 0:3]
 R_target = np.eye(3)
@@ -107,22 +99,58 @@ param_traj_poly['T'] = T_end/2-3
 # Ich denke MPC_v3_bounds_yN_ref funktioniert nicht, weil sich diese boundaries nur auf die Inputs beziehen,
 # Nicht aber auf die states. 
 
-opt_type = 'MPC_v3_soft_yN_ref' # 'MPC_v1' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' 
+opt_type = 'MPC_v3_bounds_yN_ref' # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' 
 int_type = 'euler' # 'euler' | 'RK2' | 'RK3' | 'RK4'
 N_solver_steps = 1000
 N_horizon = 5
-N_step = 1
+N_step = 10
 
 param_mpc_weight = {
-    'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
-    'q_terminate_tracking_cost': 1e10,  # penalizes deviations from the trajectory at the end
-    'q_xreg_cost': 0*1e-10,              # penalizes changes from the current state
-    'q_ureg_cost': 0*1e-10,              # penalizes changes from the current input
-    'Kd': 100*np.eye(3),
-    'Kp': 2500*np.eye(3),
+    'q_tracking_cost': 1e0,            # penalizes deviations from the trajectory
+    'q_terminate_tracking_cost': 1e5,  # penalizes deviations from the trajectory at the end
+    'q_xreg_terminate_cost': 1e-1,  # penalizes deviations from the trajectory at the end
+    'q_ureg_terminate_cost': 1e0,  # penalizes deviations from the trajectory at the end
+    'q_xreg_cost': 1e-1,              # penalizes changes from the current state
+    'q_ureg_cost': 1e-1,              # penalizes changes from the current input
+    'q_x_bound_cost': 1e0,              # penalizes ignoring the bounds
+    'q_u_bound_cost': 1e5,              # penalizes ignoring the bounds
+    'Kd': 8*np.eye(3),
+    'Kp': 8**2/4*np.eye(3),
     'lb_y_ref_N': -1e-6*np.ones(3), # only used if MPC_v3_bounds_yN_ref
     'ub_y_ref_N': 1e-6*np.ones(3),
+    'umin': -1.1*np.ones(2),
+    'umax': 1.1*np.ones(2),
+    'xmin': -np.hstack([-np.pi, 0, 5*np.ones(2)]),
+    'xmax': np.hstack([np.pi*np.ones(2), 5*np.ones(2)])
 }
+
+# good for mpcv1 soft terminate:
+# N_horizon = 5
+# N_step = 20
+# param_mpc_weight = {
+    # 'q_tracking_cost': 1e0,            # penalizes deviations from the trajectory
+    # 'q_terminate_tracking_cost': 1e5,  # penalizes deviations from the trajectory at the end
+    # 'q_xreg_terminate_cost': 1e1,  # penalizes deviations from the trajectory at the end
+    # 'q_ureg_terminate_cost': 1e3,  # penalizes deviations from the trajectory at the end
+    # 'q_xreg_cost': 1e1,              # penalizes changes from the current state
+    # 'q_ureg_cost': 1e3,              # penalizes changes from the current input
+    # 'Kd': 8*np.eye(3),
+    # 'Kp': 8**2/4*np.eye(3),
+    # 'lb_y_ref_N': -1e-6*np.ones(3), # only used if MPC_v3_bounds_yN_ref
+    # 'ub_y_ref_N': 1e-6*np.ones(3),
+    # 'umin': -1.5*np.ones(2),
+    # 'umax': 1.5*np.ones(2),
+    # 'xmin': -np.hstack([np.pi*np.ones(2), 5*np.ones(2)]),
+    # 'xmax': np.hstack([np.pi*np.ones(2), 5*np.ones(2)])
+# }
+
+
+
+# Create a multibody state from the pinocchio model.
+state = cro.StateMultibody(robot_model)
+state.lb = param_mpc_weight['xmin']
+state.ub = param_mpc_weight['xmax']
+
 
 #########################################################################################################
 ############################################# INIT MPC ##################################################
@@ -194,6 +222,6 @@ print('Max error: y_pp - y_d_pp = {:.2e}'.format(np.max(np.abs(e_pp))), 'm/s^2')
 #print("\nTotal cost:", ddp.cost)
 print("Minimum Found:", hasConverged)
 
-visualize=False
+visualize=True
 if visualize==True:
     visualize_robot(robot, q, param_trajectory, dt, 3, 1)

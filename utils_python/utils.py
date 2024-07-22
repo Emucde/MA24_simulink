@@ -12,6 +12,7 @@ from pinocchio.visualize import MeshcatVisualizer
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.offline as py
+from typing import overload
 
 def trajectory_poly(t, y0, yT, T):
     # The function plans a trajectory from y0 in R3 to yT in R3 and returns the desired position and velocity on this trajectory at time t.
@@ -423,6 +424,8 @@ class CombinedActionModel(crocoddyl.ActionModelAbstract):
 
         self.dt_int = self.model1.dt
 
+        self.unone = np.zeros(self.m)
+
     def calc(self, data, x, u):
         m1 = self.mu_model1
         m = self.m
@@ -497,89 +500,15 @@ class CombinedActionModel(crocoddyl.ActionModelAbstract):
 
 class CombinedActionModelTerminal(CombinedActionModel):
     def __init__(self, model1, model2):
-        # CombinedActionModel.__init__(self, model1, model2)
-        self.model = CombinedActionModel(model1, model2)
-        crocoddyl.ActionModelAbstract.__init__(self, crocoddyl.StateVector(self.model.state.nx), self.model.nu, self.model.nr)
-        
-        self.data1  = self.model.data1
-        self.data2  = self.model.data2
+        CombinedActionModel.__init__(self, model1, model2)
+        self.combined_action_model = CombinedActionModel(model1, model2)
+        self.unone = self.combined_action_model.unone
 
-        self.TCP_frame_id = self.model.TCP_frame_id
-        self.Q_tracking_cost = self.model.Q_tracking_cost
+    def calc(self, data, x):
+        self.combined_action_model.calc(data, x, self.unone)
 
-        self.m1 = self.model.mu_model1
-        self.m = self.model.m
-
-        self.nq1 = self.model.nq_model1
-        self.n1 = self.model.nx_model1
-        self.n = self.model.n
-
-        self.robot_model = self.model.robot_model
-        self.robot_data = self.model.robot_data
-
-        self.dt_int = self.model.dt_int
-
-    def calc(self, data, x, u):
-        m1 = self.m1
-        m = self.m
-
-        n1 = self.n1
-        n = self.n
-
-        yref = x[:m1]
-        self.model.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = yref
-        self.model.model2.calc(self.data2, x[n1:n], u[m1:m])
-
-        data.cost  = self.data2.cost
-
-    def calcDiff(self, data, x, u):
-        m1 = self.m1
-        m = self.m
-
-        nq1 = self.nq1
-        n1 = self.n1
-        n = self.n
-
-        dt_int = self.dt_int
-
-        yref = x[:m1] # das wird in model1.calc berechnet
-        
-        
-        y = self.data2.differential.pinocchio.oMf[self.TCP_frame_id].translation # GEHT NUR MIT EULER????
-        
-        # robot_data = self.robot_data
-        # robot_model = self.robot_model
-        # pinocchio.forwardKinematics(robot_model, robot_data, x[n1:n1+2])
-        # pinocchio.updateFramePlacements(robot_model, robot_data)
-        # y = robot_data.oMf[self.TCP_frame_id].translation.copy()
-        
-        self.model.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = yref
-        # self.model.model1.calcDiff(self.data1, x[0:n1],  u[0:m1])
-        self.model.model2.calcDiff(self.data2, x[n1:n], u[m1:m])
-
-        # data.Fx[:n1, :n1]    = self.data1.Fx
-        data.Fx[n1:n, n1:n]  = self.data2.Fx
-
-        # data.Fu[:n1, :m1]    = self.data1.Fu
-        data.Fu[n1:n, m1:m]  = self.data2.Fu
-
-        # data.Lx[:n1]       = self.data1.Lx
-        data.Lx[:nq1]         = -dt_int*self.Q_tracking_cost @ (y - yref)
-
-        data.Lx[n1:n]        = self.data2.Lx
-        
-        # data.Lu[:m1]       = self.data1.Lu
-        data.Lu[m1:m]        = self.data2.Lu
-
-        # data.Lxx[:n1, :n1]   = self.data1.Lxx
-        data.Lxx[:nq1, :nq1] = dt_int*self.Q_tracking_cost
-        data.Lxx[n1:n, n1:n] = self.data2.Lxx
-
-        # data.Luu[:m1, :m1]   = self.data1.Luu
-        data.Luu[m1:m, m1:m] = self.data2.Luu
-
-        # data.Lxu[:n1, :m1]   = self.data1.Lxu
-        data.Lxu[n1:n, m1:m] = self.data2.Lxu
+    def calcDiff(self, data, x):
+        self.combined_action_model.calcDiff(data, x, self.unone)
 
 def IntegratedActionModelRK2(DAM, dt):
     return crocoddyl.IntegratedActionModelRK(DAM, crocoddyl.RKType(2), dt)
@@ -602,7 +531,7 @@ def get_int_type(int_type):
     else:
         raise ValueError("int_type must be 'euler', 'RK2', 'RK3' or 'RK4'")
 
-def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type='euler'):
+def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type='euler', use_bounds=False):
     IntegratedActionModel = get_int_type(int_type)
 
     y_d_data    = param_trajectory['p_d'].T
@@ -614,12 +543,19 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
     # weights
     q_tracking_cost = param_mpc_weight['q_tracking_cost']
     q_terminate_tracking_cost = param_mpc_weight['q_terminate_tracking_cost']
+    q_xreg_terminate_cost = param_mpc_weight['q_xreg_terminate_cost']
+    q_ureg_terminate_cost = param_mpc_weight['q_ureg_terminate_cost']
     q_xreg_cost = param_mpc_weight['q_xreg_cost']
     q_ureg_cost = param_mpc_weight['q_ureg_cost']
+    q_x_bound_cost = param_mpc_weight['q_x_bound_cost']
+    q_u_bound_cost = param_mpc_weight['q_u_bound_cost']
+    umin = param_mpc_weight['umin']
+    umax = param_mpc_weight['umax']
+    xmin = param_mpc_weight['xmin']
+    xmax = param_mpc_weight['xmax']
 
     running_cost_models = list()
-    terminate_cost_models = list()
-
+    terminalDifferentialCostModel = crocoddyl.CostModelSum(state) # darf nur eines sein:
     actuationModel = crocoddyl.ActuationModelFull(state)
 
     for i in range(start_index, N, N_step):
@@ -627,10 +563,30 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
         
         runningCostModel = crocoddyl.CostModelSum(state)
 
-        if q_xreg_cost not in [0, None]:
-            xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state))
-        if q_ureg_cost not in [0, None]:
-            uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state))
+        # create bound cost models
+        if use_bounds:
+            if np.sum(q_x_bound_cost) not in [0, None]:
+                bounds = crocoddyl.ActivationBounds(xmin, xmax)
+                activationModel = crocoddyl.ActivationModelQuadraticBarrier(bounds)
+                xRegBoundCost = crocoddyl.CostModelResidual(
+                    state,
+                    activation=activationModel,
+                    residual=crocoddyl.ResidualModelState(state)
+                )
+                runningCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
+            if np.sum(q_u_bound_cost) not in [0, None]:
+                bounds = crocoddyl.ActivationBounds(umin, umax)
+                activationModel = crocoddyl.ActivationModelQuadraticBarrier(bounds)
+                uRegBoundCost = crocoddyl.CostModelResidual(
+                    state,
+                    activation=activationModel,
+                    residual=crocoddyl.ResidualModelControl(state)
+                )
+                runningCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
+
+        # create classic residual cost models
+        xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state))
+        uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state))
 
         goalTrackingCost = crocoddyl.CostModelResidual(
             state,
@@ -641,9 +597,9 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
 
         if i < N-N_step:
             runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
-            if q_xreg_cost not in [0, None]:
+            if np.sum(q_xreg_cost) not in [0, None]:
                 runningCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
-            if q_ureg_cost not in [0, None]:
+            if np.sum(q_ureg_cost) not in [0, None]:
                 runningCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
 
             running_cost_models.append(IntegratedActionModel(
@@ -653,23 +609,23 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                 dt*N_step
             ))
         else: # i == N: # Endkostenterm
-            terminalCostModel = crocoddyl.CostModelSum(state)
-            terminalCostModel.addCost("TCP_pose", goalTrackingCost, q_terminate_tracking_cost)
-            if q_xreg_cost not in [0, None]:
-                terminalCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
-            if q_ureg_cost not in [0, None]:
-                terminalCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
+            terminalDifferentialCostModel.addCost("TCP_pose", goalTrackingCost, q_terminate_tracking_cost)
+            if np.sum(q_xreg_terminate_cost) not in [0, None]:
+                terminalDifferentialCostModel.addCost("stateReg", xRegCost, q_xreg_terminate_cost)
+            if np.sum(q_ureg_terminate_cost) not in [0, None]:
+                terminalDifferentialCostModel.addCost("ctrlReg", uRegCost, q_ureg_terminate_cost)
 
-            terminate_cost_models.append(IntegratedActionModel(
-                crocoddyl.DifferentialActionModelFreeFwdDynamics(
-                    state, actuationModel, terminalCostModel
-                ),
-                dt*N_step
-            ))
+    # integrate terminal cost model (necessary?)
+    terminalCostModel = IntegratedActionModel(
+        crocoddyl.DifferentialActionModelFreeFwdDynamics(
+            state, actuationModel, terminalDifferentialCostModel
+        ),
+        dt*N_step
+    )
 
     # Create the shooting problem
     seq = running_cost_models
-    problem = crocoddyl.ShootingProblem(x0, seq, terminate_cost_models[-1])
+    problem = crocoddyl.ShootingProblem(x0, seq, terminalCostModel)
     return problem
 
 def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type='euler', use_bounds=False):
@@ -690,16 +646,23 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
     # weights
     q_tracking_cost = param_mpc_weight['q_tracking_cost']
     q_terminate_tracking_cost = param_mpc_weight['q_terminate_tracking_cost']
+    q_xreg_terminate_cost = param_mpc_weight['q_xreg_terminate_cost']
+    q_ureg_terminate_cost = param_mpc_weight['q_ureg_terminate_cost']
     q_xreg_cost = param_mpc_weight['q_xreg_cost']
     q_ureg_cost = param_mpc_weight['q_ureg_cost']
+    q_x_bound_cost = param_mpc_weight['q_x_bound_cost']
+    q_u_bound_cost = param_mpc_weight['q_u_bound_cost']
     Kd = param_mpc_weight['Kd']
     Kp = param_mpc_weight['Kp']
     lb_y_ref_N = param_mpc_weight['lb_y_ref_N']
     ub_y_ref_N = param_mpc_weight['ub_y_ref_N']
+    umin = param_mpc_weight['umin']
+    umax = param_mpc_weight['umax']
+    xmin = param_mpc_weight['xmin']
+    xmax = param_mpc_weight['xmax']
 
     running_cost_models = list()
-    terminate_cost_models = list()
-
+    terminalDifferentialCostModel = crocoddyl.CostModelSum(state) # darf nur eines sein:
     actuationModel = crocoddyl.ActuationModelFull(state)
 
     for i in range(start_index, N, N_step):
@@ -718,10 +681,30 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
         
         runningCostModel = crocoddyl.CostModelSum(state)
 
-        if q_xreg_cost not in [0, None]:
-            xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state))
-        if q_ureg_cost not in [0, None]:
-            uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state))
+        # create bound cost models
+        if use_bounds:
+            if np.sum(q_x_bound_cost) not in [0, None]:
+                bounds = crocoddyl.ActivationBounds(xmin, xmax)
+                activationModel = crocoddyl.ActivationModelQuadraticBarrier(bounds)
+                xRegBoundCost = crocoddyl.CostModelResidual(
+                    state,
+                    activation=activationModel,
+                    residual=crocoddyl.ResidualModelState(state)
+                )
+                runningCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
+            if np.sum(q_u_bound_cost) not in [0, None]:
+                bounds = crocoddyl.ActivationBounds(umin, umax)
+                activationModel = crocoddyl.ActivationModelQuadraticBarrier(bounds)
+                uRegBoundCost = crocoddyl.CostModelResidual(
+                    state,
+                    activation=activationModel,
+                    residual=crocoddyl.ResidualModelControl(state)
+                )
+                runningCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
+
+        # create classic residual cost models
+        xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state))
+        uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state))
 
         if i < N-N_step:
             yy_NDIAM = IntegratedActionModel(yy_DAM, dt*N_step)
@@ -733,11 +716,11 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                     ),
                 )
             runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
-            if q_xreg_cost not in [0, None]:
-                runningCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
-            if q_ureg_cost not in [0, None]:
-                runningCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
 
+            if np.sum(q_xreg_cost) not in [0, None]:
+                runningCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
+            if np.sum(q_ureg_cost) not in [0, None]:
+                runningCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
             # running_cost_models.append(
             #     IntegratedActionModel(
             #         CombinedDifferentialActionModel(
@@ -757,11 +740,12 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                 dt*N_step
             )))
         else: # i == N: # Endkostenterm
-            yy_NDIAM = IntegratedActionModel(yy_DAM, 0) # disable integration by dt=0
+            yy_NDIAM = IntegratedActionModel(yy_DAM, dt*N_step)
+            # yy_NDIAM = IntegratedActionModel(yy_DAM, 0) # disable integration by dt=0
             if use_bounds:
                 bounds = crocoddyl.ActivationBounds(lb_y_ref_N, ub_y_ref_N)
                 activationModel = crocoddyl.ActivationModelQuadraticBarrier(bounds)
-                terminalGoalTrackingCost = crocoddyl.CostModelResidual(
+                terminalTrackingCost = crocoddyl.CostModelResidual(
                     state,
                     activation=activationModel,
                     residual=crocoddyl.ResidualModelFrameTranslation(
@@ -769,57 +753,41 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                     ),
                 )
             else:
-                terminalGoalTrackingCost = crocoddyl.CostModelResidual(
+                terminalTrackingCost = crocoddyl.CostModelResidual(
                     state,
                     residual=crocoddyl.ResidualModelFrameTranslation(
                         state, TCP_frame_id, y_d # y_d wird in Klasse CombinedActionModel mit yref überschrieben.
                     ),
                 )
-            terminalCostModel = crocoddyl.CostModelSum(state)
-            terminalCostModel.addCost("TCP_pose", terminalGoalTrackingCost, q_terminate_tracking_cost)
-            if q_xreg_cost not in [0, None]:
-                terminalCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
-            if q_ureg_cost not in [0, None]:
-                terminalCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
+            terminalDifferentialCostModel.addCost("TCP_pose", terminalTrackingCost, q_terminate_tracking_cost)
+            if np.sum(q_xreg_terminate_cost) not in [0, None]:
+                terminalDifferentialCostModel.addCost("stateReg", xRegCost, q_xreg_terminate_cost)
+            if np.sum(q_ureg_terminate_cost) not in [0, None]:
+                terminalDifferentialCostModel.addCost("ctrlReg", uRegCost, q_ureg_terminate_cost)
 
-            if use_bounds:
-                terminate_cost_models.append(CombinedActionModelTerminal(yy_NDIAM, IntegratedActionModel(
-                    crocoddyl.DifferentialActionModelFreeFwdDynamics(
-                        state, actuationModel, terminalCostModel
-                    ),
-                    0*dt*N_step # disable integration: https://github.com/loco-3d/crocoddyl/issues/962 (besser in calc ohne u beruecks.)
-                )))
-            else:
-                # terminate_cost_models.append(
-                #     IntegratedActionModel(
-                #         CombinedDifferentialActionModel(
-                #             yy_DAM, 
-                #             crocoddyl.DifferentialActionModelFreeFwdDynamics(
-                #                 state, actuationModel, terminalCostModel
-                #             )
-                #         ),
-                #         dt*N_step
-                #     )
-                # )
-
-                terminate_cost_models.append(CombinedActionModelTerminal(yy_NDIAM, IntegratedActionModel(
-                    crocoddyl.DifferentialActionModelFreeFwdDynamics(
-                        state, actuationModel, terminalCostModel
-                    ),
-                    0*dt*N_step # (unsicher obt dt=0 zulaessig: besser in calc ohne u beruecks.)
-                )))
+    # integrate terminal cost model (necessary?)
+    terminalCostModel = CombinedActionModelTerminal(yy_NDIAM, IntegratedActionModel(
+            crocoddyl.DifferentialActionModelFreeFwdDynamics(
+                state, actuationModel, terminalDifferentialCostModel
+            ),
+            dt*N_step # (unsicher obt dt=0 zulaessig: besser in calc ohne u beruecks.)
+        ))
 
     # Create the shooting problem
     seq = running_cost_models
-    problem = crocoddyl.ShootingProblem(x0, seq, terminate_cost_models[-1])
+    problem = crocoddyl.ShootingProblem(x0, seq, terminalCostModel)
     return problem
 
 
 #############
 
 def get_mpc_funs(problem_name):
-    if problem_name == 'MPC_v1':
-        return crocoddyl.SolverDDP, first_init_guess_mpc_v1, create_ocp_problem_v1, simulate_model_mpc_v1
+    if problem_name == 'MPC_v1_soft_terminate':
+        return crocoddyl.SolverDDP, first_init_guess_mpc_v1, create_ocp_problem_v1_soft, simulate_model_mpc_v1
+        # return crocoddyl.SolverBoxFDDP, first_init_guess_mpc_v1, create_ocp_problem_v1, simulate_model_mpc_v1
+        # return crocoddyl.SolverFDDP, first_init_guess_mpc_v1, create_ocp_problem_v1, simulate_model_mpc_v1
+    if problem_name == 'MPC_v1_bounds_terminate':
+        return crocoddyl.SolverBoxDDP, first_init_guess_mpc_v1, create_ocp_problem_v1_bounds, simulate_model_mpc_v1
         # return crocoddyl.SolverBoxFDDP, first_init_guess_mpc_v1, create_ocp_problem_v1, simulate_model_mpc_v1
         # return crocoddyl.SolverFDDP, first_init_guess_mpc_v1, create_ocp_problem_v1, simulate_model_mpc_v1
     elif problem_name == 'MPC_v3_soft_yN_ref':
@@ -830,14 +798,17 @@ def get_mpc_funs(problem_name):
     else:
         raise ValueError("problem_name must be 'MPC_v1' | 'MPC_v3_soft_yN_ref' | 'MPC_v3_bounds_yN_ref'")
 
-def create_ocp_problem_v1(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
-    return ocp_problem_v1(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type)
+def create_ocp_problem_v1_soft(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
+    return ocp_problem_v1(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type, use_bounds=False)
 
-def create_ocp_problem_v3_bounds_yN_ref(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
-    return ocp_problem_v3(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type, use_bounds=True)
+def create_ocp_problem_v1_bounds(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
+    return ocp_problem_v1(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type, use_bounds=True)
 
 def create_ocp_problem_v3_soft_yN_ref(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
     return ocp_problem_v3(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type, use_bounds=False)
+
+def create_ocp_problem_v3_bounds_yN_ref(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
+    return ocp_problem_v3(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type, use_bounds=True)
 
 ##############
 
