@@ -96,30 +96,28 @@ param_traj_poly['T'] = T_end/2-3
 ############################################ MPC Settings ###############################################
 #########################################################################################################
 
-# Ich denke MPC_v3_bounds_yN_ref funktioniert nicht, weil sich diese boundaries nur auf die Inputs beziehen,
-# Nicht aber auf die states. 
-
-opt_type = 'MPC_v3_bounds_yN_ref' # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' 
+opt_type = 'MPC_v1_soft_terminate' # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' 
 int_type = 'euler' # 'euler' | 'RK2' | 'RK3' | 'RK4'
 N_solver_steps = 1000
 N_horizon = 5
-N_step = 10
+N_step = 5
 
 param_mpc_weight = {
-    'q_tracking_cost': 1e0,            # penalizes deviations from the trajectory
+    'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
     'q_terminate_tracking_cost': 1e5,  # penalizes deviations from the trajectory at the end
-    'q_xreg_terminate_cost': 1e-1,  # penalizes deviations from the trajectory at the end
-    'q_ureg_terminate_cost': 1e0,  # penalizes deviations from the trajectory at the end
-    'q_xreg_cost': 1e-1,              # penalizes changes from the current state
-    'q_ureg_cost': 1e-1,              # penalizes changes from the current input
-    'q_x_bound_cost': 1e0,              # penalizes ignoring the bounds
+    'q_terminate_tracking_bound_cost': 1e5,  # penalizes deviations from the bounds of | y_N - y_N_ref | < eps
+    'q_xreg_terminate_cost': 1e1,  # penalizes deviations from the trajectory at the end
+    'q_ureg_terminate_cost': 1e1,  # penalizes deviations from the trajectory at the end
+    'q_xreg_cost': 1e0,              # penalizes changes from the current state
+    'q_ureg_cost': 1e0,              # penalizes changes from the current input
+    'q_x_bound_cost': 1e-1,              # penalizes ignoring the bounds
     'q_u_bound_cost': 1e5,              # penalizes ignoring the bounds
-    'Kd': 8*np.eye(3),
-    'Kp': 8**2/4*np.eye(3),
+    'Kd': 100*np.eye(3),
+    'Kp': 100*np.eye(3),
     'lb_y_ref_N': -1e-6*np.ones(3), # only used if MPC_v3_bounds_yN_ref
     'ub_y_ref_N': 1e-6*np.ones(3),
-    'umin': -1.1*np.ones(2),
-    'umax': 1.1*np.ones(2),
+    'umin': -1.5*np.ones(2),
+    'umax': 1.5*np.ones(2),
     'xmin': -np.hstack([-np.pi, 0, 5*np.ones(2)]),
     'xmax': np.hstack([np.pi*np.ones(2), 5*np.ones(2)])
 }

@@ -7,6 +7,8 @@ import pinocchio
 import matplotlib.pyplot as plt
 import meshcat.geometry as g
 import meshcat.transformations as tf
+import webbrowser
+import os
 from meshcat.animation import Animation
 from pinocchio.visualize import MeshcatVisualizer
 import plotly.graph_objects as go
@@ -454,13 +456,13 @@ class CombinedActionModel(crocoddyl.ActionModelAbstract):
         dt_int = self.dt_int
 
         yref = x[:m1]
-        y = self.data2.differential.pinocchio.oMf[self.TCP_frame_id].translation # GEHT NUR MIT EULER????
+        # y = self.data2.differential.pinocchio.oMf[self.TCP_frame_id].translation # only works with euler??
         
-        # robot_data = self.robot_data
-        # robot_model = self.robot_model
-        # pinocchio.forwardKinematics(robot_model, robot_data, x[n1:n1+2])
-        # pinocchio.updateFramePlacements(robot_model, robot_data)
-        # y = robot_data.oMf[self.TCP_frame_id].translation.copy()
+        robot_data = self.robot_data
+        robot_model = self.robot_model
+        pinocchio.forwardKinematics(robot_model, robot_data, x[n1:n1+2])
+        pinocchio.updateFramePlacements(robot_model, robot_data)
+        y = robot_data.oMf[self.TCP_frame_id].translation.copy()
 
         self.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = yref
         
@@ -644,12 +646,13 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
     N = start_index + (end_index-start_index)*N_step
 
     # weights
-    q_tracking_cost = param_mpc_weight['q_tracking_cost']
-    q_terminate_tracking_cost = param_mpc_weight['q_terminate_tracking_cost']
-    q_xreg_terminate_cost = param_mpc_weight['q_xreg_terminate_cost']
-    q_ureg_terminate_cost = param_mpc_weight['q_ureg_terminate_cost']
-    q_xreg_cost = param_mpc_weight['q_xreg_cost']
-    q_ureg_cost = param_mpc_weight['q_ureg_cost']
+    q_tracking_cost                 = param_mpc_weight['q_tracking_cost']
+    q_terminate_tracking_cost       = param_mpc_weight['q_terminate_tracking_cost']
+    q_terminate_tracking_bound_cost = param_mpc_weight['q_terminate_tracking_bound_cost']
+    q_xreg_terminate_cost           = param_mpc_weight['q_xreg_terminate_cost']
+    q_ureg_terminate_cost           = param_mpc_weight['q_ureg_terminate_cost']
+    q_xreg_cost    = param_mpc_weight['q_xreg_cost']
+    q_ureg_cost    = param_mpc_weight['q_ureg_cost']
     q_x_bound_cost = param_mpc_weight['q_x_bound_cost']
     q_u_bound_cost = param_mpc_weight['q_u_bound_cost']
     Kd = param_mpc_weight['Kd']
@@ -743,22 +746,25 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
             yy_NDIAM = IntegratedActionModel(yy_DAM, dt*N_step)
             # yy_NDIAM = IntegratedActionModel(yy_DAM, 0) # disable integration by dt=0
             if use_bounds:
+                # cost for bounds of lb_y_ref_N <= || yref_N - y_N || <= lb_y_ref_N
                 bounds = crocoddyl.ActivationBounds(lb_y_ref_N, ub_y_ref_N)
                 activationModel = crocoddyl.ActivationModelQuadraticBarrier(bounds)
-                terminalTrackingCost = crocoddyl.CostModelResidual(
+                terminalTrackingBoundCost = crocoddyl.CostModelResidual(
                     state,
                     activation=activationModel,
                     residual=crocoddyl.ResidualModelFrameTranslation(
                         state, TCP_frame_id, y_d # y_d wird in Klasse CombinedActionModel mit yref überschrieben.
                     ),
                 )
-            else:
-                terminalTrackingCost = crocoddyl.CostModelResidual(
-                    state,
-                    residual=crocoddyl.ResidualModelFrameTranslation(
-                        state, TCP_frame_id, y_d # y_d wird in Klasse CombinedActionModel mit yref überschrieben.
-                    ),
-                )
+                terminalDifferentialCostModel.addCost("TCP_poseBound", terminalTrackingBoundCost, q_terminate_tracking_bound_cost)
+
+            # cost for tracking, i. e. || y_N - y_ref_N ||^2
+            terminalTrackingCost = crocoddyl.CostModelResidual(
+                state,
+                residual=crocoddyl.ResidualModelFrameTranslation(
+                    state, TCP_frame_id, y_d # y_d wird in Klasse CombinedActionModel mit yref überschrieben.
+                ),
+            )
             terminalDifferentialCostModel.addCost("TCP_pose", terminalTrackingCost, q_terminate_tracking_cost)
             if np.sum(q_xreg_terminate_cost) not in [0, None]:
                 terminalDifferentialCostModel.addCost("stateReg", xRegCost, q_xreg_terminate_cost)
@@ -857,6 +863,7 @@ def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, param_tra
     us_i = uk
     xs_i = xk
 
+    # debug for ref trajectory: show only terminal state
     # us_i = ddp.us[-1]
     # xs_i = ddp.xs[-1]
 
@@ -1245,7 +1252,21 @@ def visualize_robot(robot, q_sol, param_trajectory, dt, rep_cnt = np.inf, rep_de
     vis["testobj2"].set_property('visible', True)
     vis["testobj3"].set_property('visible', True)
 
-    robot_display.viewer.open()
+    download_html=False
+    render_standalone=True
+    if render_standalone or download_html:
+        html_out = vis.static_html()
+        with open('meshcat.html', 'w') as file:
+            file.write(html_out)
+            url = os.path.realpath(file.name)
+        if render_standalone:
+            webbrowser.open(url)
+            time.sleep(1) # othervise visualization don't work
+        #if not download_html:
+            # remove html file
+            #os.remove('meshcat.html')
+    else:
+        robot_display.viewer.open()
 
     # i = 0
     # cnt=rep_cnt
@@ -1256,8 +1277,6 @@ def visualize_robot(robot, q_sol, param_trajectory, dt, rep_cnt = np.inf, rep_de
     #     i = i +1
     # ffmpeg -r 60 -i "%07d.jpg" -vcodec "libx264" -preset "slow" -crf 18 -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2" output.mp4
     # ffmpeg -r 60 -i "%07d.png" -vcodec "libx264" -preset "slow" -crf 18 -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2" output.mp4
-
-    time.sleep(1) # othervise visualization don't work
     
     create_video=False
     if create_video:

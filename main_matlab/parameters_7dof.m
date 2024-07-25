@@ -68,7 +68,7 @@ param_robot_init;
 % it has to be ensured that sim_discrete_7dof is open!
 comment_in_out_mpc_blocks;
 
-activate_simulink_logs;
+% activate_simulink_logs;
 
 bus_definitions;
 

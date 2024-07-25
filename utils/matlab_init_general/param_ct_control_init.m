@@ -16,12 +16,12 @@ ct_ctrl_param.Kp1 = blkdiag(K_p_t, K_p_r);
 ct_ctrl_param.mode = 4;
 
 % 1:
-ct_ctrl_param.k = 1e-3;
+ct_ctrl_param.k = 1e-2;
 
 % 2:
 ct_ctrl_param.W_bar_N = 1e-3*param_robot.sugihara_limb_vector;
 % ct_ctrl_param.W_bar_N = 1e-1*ones(n,1);
-ct_ctrl_param.W_E = 1e-1 * eye(n); %ct_ctrl_param.w_bar_N;
+ct_ctrl_param.W_E = 1e-2 * eye(n); %ct_ctrl_param.w_bar_N;
 
 % 3:
 ct_ctrl_param.eps  = 1e-1;
