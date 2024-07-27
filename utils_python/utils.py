@@ -223,6 +223,7 @@ class DifferentialFwdDynamics(crocoddyl.DifferentialActionModelAbstract):
 
 # Ist 2-3 mal schneller als obige Klasse in der die Crocoddyl Funktionen direkt aufgerufen werden. (50s, (opt problem mit 10000 punkten))
 # Diese Klasse ist identisch schnell wie crocoddyl.DifferentialActionModelFreeFwdDynamics
+# Diese Klasse ist identisch schnell wie crocoddyl.DifferentialActionModelFreeFwdDynamics
 class DifferentialFwdDynamics2(crocoddyl.DifferentialActionModelAbstract):
     def __init__(self, state, actuationModel, costModel):
         crocoddyl.DifferentialActionModelAbstract.__init__( # das wird ein problem sein, da ich so die dimension nicht verändern kann.

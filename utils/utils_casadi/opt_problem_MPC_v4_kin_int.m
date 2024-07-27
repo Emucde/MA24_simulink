@@ -2,11 +2,8 @@
 
 import casadi.*
 
-kin_int_mode.standard = 1;
-kin_int_mode.du0_cost = 2;
-kin_int_mode.du_cost_extended = 3;
-
-mpc_mode = kin_int_mode.standard;
+kin_int_modes = param_mpc_mode.kin_int_modes;
+mpc_mode = param_mpc_mode.mode; % defined in init_mpc_weights(.*).m
 
 n = param_robot.n_DOF; % Dimension of joint space
 m = param_robot.m; % Dimension of Task Space
@@ -50,7 +47,7 @@ p_d_0       = param_trajectory.p_d( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_M
 q_d_0       = param_trajectory.q_d( 1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
 
 % initial guess for reference trajectory parameter
-if(mpc_mode == kin_int_mode.standard || mpc_mode == kin_int_mode.du0_cost)
+if(mpc_mode == kin_int_modes.standard || mpc_mode == kin_int_modes.du0_cost || mpc_mode == kin_int_modes.du_v2 || mpc_mode == kin_int_modes.du_ineq)
     if(N_step_MPC == 1)
         y_d_0    = [p_d_0; q_d_0];
     else
@@ -58,7 +55,7 @@ if(mpc_mode == kin_int_mode.standard || mpc_mode == kin_int_mode.du0_cost)
         q_d_0_kp1 = param_trajectory.q_d(  1:4, 2 );
         y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-1)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-1)]];
     end
-elseif(mpc_mode == kin_int_mode.du_cost_extended)
+elseif(mpc_mode == kin_int_modes.du_cost_extended)
     % N must be odd!
     if(mod(N_MPC, 2) == 0)
         error('N_MPC must be odd for du_cost_extended');
@@ -76,16 +73,18 @@ elseif(mpc_mode == kin_int_mode.du_cost_extended)
 
     y_d_0 = reshape([y_d_k; y_d_kp1], 7, N_MPC+1);
 else
-    error(['mpc_mode ', num2str(mpc_mode), ' not implemented']);
+    error(['81: mpc_mode ', num2str(mpc_mode), ' not implemented']);
 end
 
 % initial guess for previous input
-if(mpc_mode == kin_int_mode.du0_cost)
+if(mpc_mode == kin_int_modes.du0_cost)
     u_prev_0 = zeros(n, 1);
-elseif(mpc_mode == kin_int_mode.du_cost_extended)
+elseif(mpc_mode == kin_int_modes.du_cost_extended)
     u_prev_0 = zeros(n, N_du);
-elseif(mpc_mode ~= kin_int_mode.standard)
-    error(['mpc_mode ', num2str(mpc_mode), ' not implemented']);
+elseif(mpc_mode == kin_int_modes.du_v2)
+    u_prev_0 = zeros(n, N_MPC);
+elseif(mpc_mode ~= kin_int_modes.standard && mpc_mode ~= kin_int_modes.du_ineq)
+    error(['92: mpc_mode ', num2str(mpc_mode), ' not implemented']);
 end
 
 % Robot System: Initial guess
@@ -103,12 +102,16 @@ u_init_guess_0 = ones(n, N_MPC).*u_k_0;
 x_init_guess_0 = [x_0_0 ones(2*n, N_MPC).*x_0_0];
 
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
-lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
+if(mpc_mode == kin_int_modes.du_ineq)
+    lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(u_init_guess_0(:, 2:end)), 1);
+else
+    lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
+end
 
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 if(any(isnan(full(init_guess_0))))
-    error('init_guess_0 contains NaN values!');
+    error('115: init_guess_0 contains NaN values!');
 end
 
 % get weights from "init_MPC_weight.m"
@@ -148,19 +151,23 @@ ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max, N_MPC + 1, 1)];
 x_k  = SX.sym( 'x_k',  2*n, 1 ); % current x state = initial x state
 y_d  = SX.sym( 'y_d',    m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
 
-if(mpc_mode == kin_int_mode.standard)
+if(mpc_mode == kin_int_modes.standard || mpc_mode == kin_int_modes.du_ineq)
     mpc_parameter_inputs = {x_k, y_d};
     mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
-elseif(mpc_mode == kin_int_mode.du0_cost)
+elseif(mpc_mode == kin_int_modes.du0_cost)
     u1_prev = SX.sym( 'u1_prev', size(u,1), 1 ); % previous q_pp = [qpp0, qpp1, qpp2, ... qppN-1]
     mpc_parameter_inputs = {x_k, y_d, u1_prev};
     mpc_init_reference_values = [x_0_0(:); y_d_0(:); u_prev_0(:)];
-elseif(mpc_mode == kin_int_mode.du_cost_extended)
+elseif(mpc_mode == kin_int_modes.du_cost_extended)
     u_prev = SX.sym( 'u_prev', size(u, 1), N_du); % previous q_pp = [qpp1, qpp3, qpp5, ... qppN-1]
     mpc_parameter_inputs = {x_k, y_d, u_prev};
     mpc_init_reference_values = [x_0_0(:); y_d_0(:); u_prev_0(:)];
+elseif(mpc_mode == kin_int_modes.du_v2)
+    u_prev = SX.sym( 'u_prev', size(u)); % previous q_pp
+    mpc_parameter_inputs = {x_k, y_d, u_prev};
+    mpc_init_reference_values = [x_0_0(:); y_d_0(:); u_prev_0(:)];
 else
-    error(['mpc_mode ', num2str(mpc_mode), ' not implemented']);
+    error(['171: mpc_mode ', num2str(mpc_mode), ' not implemented']);
 end
 
 %% set input parameter cellaray p
@@ -172,12 +179,25 @@ end
 % constraints conditions cellarray g
 g_x  = cell(1, N_MPC+1); % for F
 
-if(weights_and_limits_as_parameter)
-    lbg = SX(numel(x), 1);
-    ubg = SX(numel(x), 1);
+if(mpc_mode == kin_int_modes.du_ineq)
+    g_du = cell(1, N_MPC-1);
+    if(weights_and_limits_as_parameter)
+        lbg = SX(numel(x)+numel(u(:, 2:end)), 1);
+        ubg = SX(numel(x)+numel(u(:, 2:end)), 1);
+    else
+        lbg = zeros(numel(x)+numel(u(:, 2:end)), 1);
+        ubg = zeros(numel(x)+numel(u(:, 2:end)), 1);
+    end
+    lbg(numel(x)+1:end) = repmat(pp.du_dt_min, N_MPC-1);
+    ubg(numel(x)+1:end) = repmat(pp.du_dt_max, N_MPC-1);
 else
-    lbg = zeros(numel(x), 1);
-    ubg = zeros(numel(x), 1);
+    if(weights_and_limits_as_parameter)
+        lbg = SX(numel(x), 1);
+        ubg = SX(numel(x), 1);
+    else
+        lbg = zeros(numel(x), 1);
+        ubg = zeros(numel(x), 1);
+    end
 end
 
 % lambda_x0, lambda_g0 initial guess
@@ -202,7 +222,7 @@ for i=0:N_MPC
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
     if(i < N_MPC)
-        if(mpc_mode == kin_int_mode.standard || mpc_mode == kin_int_mode.du0_cost)
+        if(mpc_mode == kin_int_modes.standard || mpc_mode == kin_int_modes.du0_cost || mpc_mode == kin_int_modes.du_v2 || mpc_mode == kin_int_modes.du_ineq)
             % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
             if(i == 0)
                 g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
@@ -213,7 +233,17 @@ for i=0:N_MPC
                 % runs only to T_horizon-Ts_MPC, i. e. tilde x_{N-1} = x(t0+Ts_MPC*(N-1)) and x_N doesn't exist
                 % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(N-1))
             end
-        elseif(mpc_mode == kin_int_mode.du_cost_extended)
+            
+            if(mpc_mode == kin_int_modes.du_ineq)
+                if(i == 0)
+                    g_du(1, 1 + (i)) = {DT*(u(:, 1 + (i+1)) - u(:, 1 + (i)))/DT_ctl};
+                elseif(i == 1)
+                    g_du(1, 1 + (i)) = {DT*(u(:, 1 + (i+1)) - u(:, 1 + (i)))/DT2};
+                elseif(i < N_MPC-1)
+                    g_du(1, 1 + (i)) = {DT*(u(:, 1 + (i+1)) - u(:, 1 + (i)))/DT};
+                end
+            end
+        elseif(mpc_mode == kin_int_modes.du_cost_extended)
             % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
             if(mod(i,2) == 0)
                 g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % x(t0+iTa) = F(x(t0+(i-1)Ta), u(t0+(i-1)Ta)
@@ -260,20 +290,34 @@ for i=1:N_MPC
     end
 end
 
-g = g_x;
+if(mpc_mode == kin_int_modes.du_ineq)
+    g = [g_x, g_du];
+else
+    g = g_x;
+end
 
 J_q_pp = Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
 
-if(mpc_mode == kin_int_mode.standard)
+if(mpc_mode == kin_int_modes.standard || mpc_mode == kin_int_modes.du_ineq)
     cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp}';
-elseif(mpc_mode == kin_int_mode.du0_cost)
+elseif(mpc_mode == kin_int_modes.du0_cost)
     J_du = Q_norm_square((u(:, 1) - u1_prev), pp.R0_du);
     cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_du}';
-elseif(mpc_mode == kin_int_mode.du_cost_extended)
+elseif(mpc_mode == kin_int_modes.du_cost_extended)
     J_du = Q_norm_square((u(:, 1:2:end-1) - u_prev), pp.R_du) + Q_norm_square((u(:, 2) - u(:, 1)), pp.R0_du);
     cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_du}';
+elseif(mpc_mode == kin_int_modes.du_v2)
+    J_du_prev = Q_norm_square((u - u_prev), pp.R_du_prev);
+    if(N_MPC == 1)
+        J_du_act = 0;
+    elseif(N_MPC == 2)
+        J_du_act = Q_norm_square([u(:, 3) - u(:,1)], pp.R_du_act);
+    elseif(N_MPC > 2)
+        J_du_act = Q_norm_square([u(:, 3) - u(:,1), u(:, 4:end) - u(:, 3:end-1)], pp.R_du_act);
+    end
+    cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_du_prev, J_du_act}';
 else
-    error(['mpc_mode ', num2str(mpc_mode), ' not implemented']);
+    error(['320: mpc_mode ', num2str(mpc_mode), ' not implemented']);
 end
 
 

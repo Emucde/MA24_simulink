@@ -75,21 +75,35 @@ param_weight.(MPC).u_max    = param_robot.q_pp_limit_upper*0.1;
 % kinematic mpc with integration without refsys after thelenberg
 MPC='MPC8';
 
-kin_int_mode.standard = 1;
-kin_int_mode.du0_cost = 2;
-kin_int_mode.du_cost_extended = 3;
+kin_int_modes.standard = 1;
+kin_int_modes.du0_cost = 2;
+kin_int_modes.du_cost_extended = 3;
+kin_int_modes.du_v2 = 4;
+kin_int_modes.du_ineq = 5;
 
-mpc_mode = kin_int_mode.standard;
+
+mpc_mode = kin_int_modes.standard;
+
+param_mpc_mode = struct( ...
+    'mode', mpc_mode, ...
+    'kin_int_modes', kin_int_modes ...
+);
 
 param_weight.(MPC).Q_y    = diag([1e0*ones(3,1); 1e0*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_yN   = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % D_N
-param_weight.(MPC).R_q_pp = 1e-3*diag(ones(n,1));
+param_weight.(MPC).R_q_pp = 1e-10*diag(ones(n,1));
 
-if(mpc_mode == kin_int_mode.du0_cost)
+if(mpc_mode == kin_int_modes.du0_cost)
     param_weight.(MPC).R0_du  = 1e2*diag(ones(n,1));
-elseif(mpc_mode == kin_int_mode.du_cost_extended)
-    param_weight.(MPC).R_du   = 0*diag(ones(n,1));
+elseif(mpc_mode == kin_int_modes.du_cost_extended)
+    param_weight.(MPC).R_du   = 1e-2*diag(ones(n,1));
     param_weight.(MPC).R0_du  = 0*diag(ones(n,1));
+elseif(mpc_mode == kin_int_modes.du_v2)
+    param_weight.(MPC).R_du_prev = 1e-4*diag(ones(n,1));
+    param_weight.(MPC).R_du_act  = 1e2*diag(ones(n,1));
+elseif(mpc_mode == kin_int_modes.du_ineq)
+    param_weight.(MPC).du_dt_min = 7*u_min;
+    param_weight.(MPC).du_dt_max = 7*u_max;
 end
 
 K_D_q = 8*eye(n);     param_jointspace_ct.(MPC).K_D_q  = K_D_q;
@@ -105,14 +119,14 @@ param_weight.(MPC).u_max    = param_robot.q_pp_limit_upper*1;
 % param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 9) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% kinematic mpc with integration and refsys
+% kinematic mpc with integration and refsys for u
 MPC='MPC9';
 param_weight.(MPC).Q_y        = diag([1e2*ones(3,1); 1e2*ones(3,1)]);  % d_kpn
-
+param_weight.(MPC).Q_yN   = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % D_N
 param_weight.(MPC).R_q_pp     = 1e-8*diag(ones(n,1));  % d_kpn
 
-param_weight.(MPC).Q_y_p_ref  = diag([100*ones(3,1); 100*ones(3,1)]);
-param_weight.(MPC).Q_y_ref    = diag([100*ones(3,1); 100*ones(3,1)]);
+param_weight.(MPC).K_D_u  = diag([8*ones(3,1); 8*ones(3,1)]);
+param_weight.(MPC).K_P_u  = param_weight.(MPC).K_D_u^2/4;
 
 K_D_q = 8*eye(n);     param_jointspace_ct.(MPC).K_D_q  = K_D_q;
 K_P_q = K_D_q^2/4;    param_jointspace_ct.(MPC).K_P_q  = K_P_q;
@@ -124,6 +138,10 @@ param_weight.(MPC).x_min    = x_min;
 param_weight.(MPC).x_max    = x_max;
 param_weight.(MPC).u_min    = param_robot.q_pp_limit_lower;
 param_weight.(MPC).u_max    = param_robot.q_pp_limit_upper;
+param_weight.(MPC).du_min   = -inf(size(param_robot.q_pp_limit_lower)); %x_min 
+param_weight.(MPC).du_max   = +inf(size(param_robot.q_pp_limit_upper)); %x_min 
+param_weight.(MPC).v_min    = -inf(size(param_robot.q_pp_limit_lower)); %x_min 
+param_weight.(MPC).v_max    = +inf(size(param_robot.q_pp_limit_upper)); %x_min 
 % param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
 % param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
 % param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
