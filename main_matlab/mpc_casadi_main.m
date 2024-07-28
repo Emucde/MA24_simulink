@@ -75,12 +75,12 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v4_kin_int_refsys'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
-param_casadi_fun_name.(MPC).Ts      = 1e-3;
+param_casadi_fun_name.(MPC).Ts      = 20e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
-param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | SSPRK3 | Euler)
+param_casadi_fun_name.(MPC).int_method = 'SSPRK3'; % (RK4 | SSPRK3 | Euler)
 
 MPC='MPC10';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -136,13 +136,15 @@ end
 
 %% Convert Maple Functions to casadi functions
 if(convert_maple_to_casadi)
-    %rmpath('./maple/maple_generated/7_dof_system_fr3');
+    %rmpath('./maple/maple_generated/fr3_7dof');
     %addpath('./maple/maple_generated/7_dof_system_fr3_MW19');
-    maple_fun_arr = {"inertia_matrix.m", "coriolis_matrix.m", ...
-        "gravitational_forces.m", "forward_kinematics_endeffector.m"...
-        "hom_transform_endeffector.m", "geo_jacobian_endeffector.m", ...
-        "geo_jacobian_endeffector_p.m", "coriolis_rnea.m"};
-    maple_path = "maple/maple_generated/7_dof_system_fr3/";
+    %maple_fun_arr = {"inertia_matrix.m", "coriolis_matrix.m", ...
+    %    "gravitational_forces.m", "forward_kinematics_endeffector.m"...
+    %    "hom_transform_endeffector.m", "geo_jacobian_endeffector.m", ...
+    %    "geo_jacobian_endeffector_p.m", "coriolis_rnea.m"};
+
+    maple_fun_arr = {"Gamma_kin.m", "Gamma_kin_aperiod.m", "Phi_kin.m", "Phi_kin_aperiod.m"};
+    maple_path = "maple/maple_generated/fr3_7dof/";
     %maple_path = "maple/maple_generated/7_dof_system_fr3_MW19/";
     create_casadi_functions('SX', maple_path, maple_fun_arr); %  script for matlab to casadi conversion
     return

@@ -41,7 +41,7 @@ function F = integrate_casadi(f, DT, M, method)
             X = X + f(X, U) * DT;
         end
     else
-        error('Invalid integration method. Please choose either ''RK4'' or ''Euler''.');
+        error('Invalid integration method. Please choose either ''RK4'', ''SSPRK3'' or ''Euler''.');
     end
     
     opt = struct;
