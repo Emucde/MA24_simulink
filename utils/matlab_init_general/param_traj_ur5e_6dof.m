@@ -5,7 +5,7 @@ Q_q = 1e0 * eye(n);    % Weight for the deviaton of q_sol to q_d
 Q_nl = 1e-1 * eye(n);  % Weight of nl_spring_force(q, ct_ctrl_param, param_robot) -> pose should not start near to limits!
 q_d = zeros(n,1);
 
-xe0 = [0.3921; 0.3921; 0.5211; 0; 1/sqrt(2); 1/sqrt(2); 0];
+xe0 = [0.3921; 0.3921; 0.5211; 0; 0.9239; 0.3827; 0];
 
 options = optimoptions('fsolve', 'Algorithm', 'levenberg-marquardt', 'MaxFunctionEvaluations', 10000, 'MaxIterations', 10000);
 q_0 = fsolve(@(q) kin_fun(xe0, q), q_d, options); % test if the function works

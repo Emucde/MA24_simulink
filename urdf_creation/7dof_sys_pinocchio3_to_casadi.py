@@ -24,9 +24,9 @@ def SX00_to_SX0(J_fun, q, q_p=None):
     else:
         return cs.Function(J_fun.name(), [q, q_p], [J_val], J_fun.name_in(), J_fun.name_out())
 
-robot_name = "fr3_7dof"
+# robot_name = "fr3_7dof"
 # robot_name = "fr3_6dof"
-# robot_name = "ur5e"
+robot_name = "ur5e"
 
 if "fr3" in robot_name:
     mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_FR3')

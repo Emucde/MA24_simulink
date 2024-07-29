@@ -55,7 +55,10 @@ if(using_exact_kin_system)
     F_kp1 = Function('F_kp1', {x, v, K_d, K_p}, {Phi_Ta*x + Gamma_Ta*v});
     F2 = Function('F2', {x, v, K_d, K_p}, {Phi_Ts_MPC_m_Ta*x + Gamma_Ts_MPC_m_Ta*v});
 else
-    f = Function('f', {x, v}, {[x2; x3; x4; v - K_p*x3 - K_d*x4]}, opt);
+    %f = Function('f', {x, v}, {[x2; x3; x4; K_p*v - K_p*x3 - K_d*x4]}, opt);
+    %f = Function('f', {x, v}, {[x2; K_p*x3; x4; v - K_p*x3 - K_d*x4]}, opt);
+    f = Function('f', {x, v}, {[x2; x3; x4; v]}, opt);
+
     F_int = integrate_casadi(f, DT, M, int_method); % runs with Ts_MPC
     F = Function('F', {x, v, K_d, K_p}, {F_int(x, v)});
 
@@ -221,8 +224,8 @@ g = g_x;
 
 J_q_pp = Q_norm_square(x(2*n+1:3*n, :), pp.R_q_pp);% + Q_norm_square(x(1:n, :), pp.R_q_pp) + Q_norm_square(x(n+1:2*n, :), pp.R_q_pp);
 J_q_ppp = Q_norm_square(x(3*n+1:4*n, :), pp.R_q_ppp);
-% J_v = Q_norm_square(v, pp.R_v);
-J_v = Q_norm_square(v - pp.K_P_u * x(2*n+1:3*n,1:N_MPC ), pp.R_v); % weight in relation to stationary value
+J_v = Q_norm_square(v, pp.R_v);
+%J_v = Q_norm_square(v - pp.K_P_u*x(2*n+1:3*n,1:N_MPC ), pp.R_v); % weight in relation to stationary value: v == K_p*u
 
 cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_q_ppp, J_v}';
 
