@@ -30,6 +30,7 @@ overwrite_offline_traj_forced = false;
 T_sim = 10; % = param_vis.T (see init_visual.m)
 param_global.T_sim = T_sim;
 param_global.Ta = 1e-3;
+param_global.traj_buffer_size = 1000;
 
 parameter_str = "parameters_7dof";
 simulink_main_model_name = 'sim_discrete_7dof';

@@ -5,6 +5,7 @@ param_MPC_traj_data_mat_file = [s_fun_path, '/trajectory_data/param_traj_data.ma
 param_traj_file = [s_fun_path, '/trajectory_data/param_traj.mat'];
 param_traj_cell_file = [s_fun_path, '/trajectory_data/param_traj_cell.mat'];
 param_traj_settings = [s_fun_path, '/trajectory_data/param_traj_settings.mat'];
+param_traj_settings_online_file = [s_fun_path, '/trajectory_data/param_traj_settings_online.mat'];
 param_MPC_file_path = [s_fun_path, '/mpc_settings/'];
 files = dir([param_MPC_file_path, '*.mat']);
 cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
@@ -19,19 +20,47 @@ try
         % kürzeren Prädiktionshorizonte in den längeren enthalten sind.
 
         % 1. get maximum horizont length of all mpcs:
+        T_horizon_struct = struct;
         T_horizon_max = 0;
         for name={files.name}
             name_mat_file    = name{1};
             param_MPC_name   = name_mat_file(1:end-4);
             param_MPC_struct = eval(param_MPC_name);
+            MPC_name = param_MPC_name(7:end);
 
             T_horizon = param_MPC_struct.T_horizon;
+            T_horizon_struct.(MPC_name) = T_horizon; % save for p
 
             if(T_horizon > T_horizon_max)
                 T_horizon_max = T_horizon;
             end
         end
-        
+
+        % create param_traj_settings for simulink (online)
+        % TODO: ist doch komplizierter als gedacht!!!!
+        if(bdIsLoaded(simulink_main_model_name))
+            mpc_amount = length(mpc_list); % variable used from "comment_in_out_mpc_blocks.m"
+
+            param_traj_settings_online = struct;
+            param_traj_settings_online.control_select = [mpc_list.Value];
+            
+            param_traj_settings_online.T_horizon = zeros(1, mpc_amount);
+            mpc_names = fieldnames(T_horizon_struct);
+            for j = 1:mpc_amount
+                for i = 1:length(mpc_names)
+                    name = mpc_names{i};
+                    if(contains(mpc_list(j).Label, name))
+                        T_horizon_tmp = T_horizon_struct.(name);
+                        break
+                    else % then ct control was selected
+                        T_horizon_tmp = param_global.Ta;
+                    end
+                end
+                param_traj_settings_online.T_horizon(j) = T_horizon_tmp;
+            end
+        end
+        param_traj_settings_online.traj_mode = traj_mode;
+
         % 2. calculate all trajectories for max horizon length
         t = 0 : param_global.Ta : T_sim + T_horizon_max;
 
@@ -47,6 +76,7 @@ try
         save(param_traj_file, 'param_traj'); % save struct
         save(param_traj_cell_file, 'param_traj_cell'); % save struct
         save(param_traj_settings, 'traj_settings'); % save struct
+        save(param_traj_settings_online_file, 'param_traj_settings_online')
 
         % 3. calculate init guess for all mpcs
         create_mpc_init_guess;
@@ -58,6 +88,7 @@ try
         load(param_traj_file);
         load(param_traj_cell_file);
         load(param_traj_settings);
+        load(param_traj_settings_online_file);
     end
 
 catch ME

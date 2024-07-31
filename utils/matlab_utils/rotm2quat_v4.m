@@ -1,11 +1,24 @@
 function q = rotm2quat_v4(R)
-    % Converts a rotation matrix R into a quaternion q
-
-    % References:
-    % Sarabandi, Soheil, and Federico Thomas. "Accurate computation of quaternions from rotation matrices." 
-    % International Symposium on Advances in Robot Kinematics.
-    % Cham: Springer International Publishing, 2018.
-    % https://upcommons.upc.edu/bitstream/handle/2117/124384/2068-Accurate-Computation-of-Quaternions-from-Rotation-Matrices.pdf;jsessionid=5C8C0A5CD6FB2B8539665AD53D52EBC0?sequence=1
+% ROTM2QUAT_V4 Convert rotation matrix to quaternion
+%
+% This function converts a 3x3 rotation matrix R into a 4x1 quaternion q
+% using an accurate and numerically stable method.
+%
+% Inputs:
+%   R - 3x3 rotation matrix
+%
+% Outputs:
+%   q - 4x1 quaternion [w; x; y; z]
+%
+% Algorithm:
+%   The function uses a method that avoids numerical instabilities
+%   and singularities by computing all four components of the quaternion
+%   and selecting the most accurate one based on the trace of the matrix.
+%
+% Reference:
+%   Sarabandi, S., & Thomas, F. (2018). Accurate computation of quaternions 
+%   from rotation matrices. In International Symposium on Advances in Robot 
+%   Kinematics. Springer International Publishing.
 
     eta = 0;
 
