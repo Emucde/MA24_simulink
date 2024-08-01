@@ -13,7 +13,7 @@ ct_ctrl_param.Kp1 = blkdiag(K_p_t, K_p_r);
 % 1: simpliy use J_pinv = (J'*J + k*E)^(-1)*J' = (J'*J + k*E)\J'
 % 2: use Sugihara singular robust method: J_pinv = (J'*W_E*J + W_N)^(-1)*J' = (J'*W_E*J + W_N)\J'
 % 3: set sing values sigma_i < eps to sign(sigma_i)/q_i_max
-ct_ctrl_param.mode = 1;
+ct_ctrl_param.mode = 3;
 
 % 1:
 ct_ctrl_param.k = 1e-2;

@@ -54,6 +54,7 @@ end
         end
     elseif mode == "slow_from_quat"
         quat = rotm2quat_v4(RR);
+        quat = quat/norm(quat); % avoids numerical errors
         rot_alpha_scale = 2*acos(quat(1));
         if(rot_alpha_scale == 0)
             rot_ax = [0; 0; 0];
@@ -71,4 +72,7 @@ end
         rot_ax_o = rot_ax;
     end
 
+    if(~isreal(rot_alpha_scale_o))
+        error('Rotation angle is not real');
+    end
 end
