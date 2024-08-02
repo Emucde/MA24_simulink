@@ -1,9 +1,10 @@
-function D = create_numdiff_matrix(T_a, n, N, variant)
+function D = create_numdiff_matrix(T_a, n, N, variant, T_a_MPC)
 arguments
     T_a (1,1) double
     n (1,1) double
     N (1,1) double
-    variant char {mustBeMember(variant, {'fwdbwdcentral', 'bwd', 'savgol'})} = 'fwdbwdcentral'
+    variant char {mustBeMember(variant, {'fwdbwdcentral', 'bwd', 'savgol', 'fwdbwdcentraltwotimes'})} = 'fwdbwdcentral'
+    T_a_MPC (1,1) double = 0.01
 end
 
     if(strcmp(variant, 'fwdbwdcentral'))
@@ -49,6 +50,22 @@ end
             DD_vec{l} = S_v;
         end
         D = DD_vec;
+    elseif(strcmp(variant, 'fwdbwdcentraltwotimes'))
+        E = eye(n);
+        S_v = zeros(n * N, n * N);
+        S_v(1:n, 1:2*n) = [-E E]/T_a;
+
+        for i = 1:N-2
+            if(i == 1)
+                S_v(n+1:2*n, 1:3*n) = [-E zeros(n) E]/T_a_MPC;
+            elseif(i==2)
+                S_v(n+1:2*n, 1:3*n) = [-E zeros(n) E]/(2*T_a_MPC-T_a);
+            else
+                S_v(1+n*i:n*(i+1), 1+n*(i-1):n*(i+2)) = [-E zeros(n) E] / (2*T_a_MPC);
+            end
+        end
+        S_v(1+end-n:end, 1+end-2*n:end) = [-E E]/T_a_MPC;
+        D = S_v;
     else
         error(['Unknown variant: ' variant, ': choose from ''fwdbwdcentral'', ''savgol''']);
 end
