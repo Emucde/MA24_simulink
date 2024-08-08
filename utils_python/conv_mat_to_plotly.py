@@ -82,11 +82,11 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 
 ###################### MAIN ######################
 # Laden der .mat-Datei
-mat_file_path = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240108_ottbespr/wrist_sing/mpc_v5_wristsing.mat"
+mat_file_path = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240108_ottbespr/wrist_sing/test.mat"
 
 data = sio.loadmat(mat_file_path)
 
 subplot_data = data['signals']
 
 # plot_solution(subplot_data)
-plot_solution(subplot_data, plot_fig = False, save_plot=True, file_name='/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240108_ottbespr/wrist_sing/mpc_v5_wristsing.html')
+plot_solution(subplot_data, plot_fig = False, save_plot=True, file_name='/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240108_ottbespr/wrist_sing/jointspace.html')

@@ -51,6 +51,7 @@ function traj_struct_combined = combine_trajectories(traj_cell, param_global, pa
     end
 
     init_param_diff_filter = create_param_diff_filter(struct, param_global); % Param differential filter 5th order trajectory
+    init_param_diff_filter_jointspace = create_param_diff_filter(struct, param_global, 'lambda', 1, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace'); % Param differential filter 5th order trajectory
     init_param_sin_poly = create_param_sin_poly(struct, param_global); % Param for sinus poly trajectory
 
     % Initialize arrays
@@ -60,6 +61,7 @@ function traj_struct_combined = combine_trajectories(traj_cell, param_global, pa
     traj_struct_combined.q_0         = zeros(n, N_traj);
     traj_struct_combined.q_0_p       = zeros(n, N_traj);
     traj_struct_combined.q_0_pp      = zeros(n, N_traj);
+    traj_struct_combined.joint_points = zeros(n, N_total);
     traj_struct_combined.pose        = zeros(7, N_total);
     traj_struct_combined.rotation    = zeros(3, 3, N_total);
     traj_struct_combined.rot_ax      = zeros(3, N_total);
@@ -67,6 +69,7 @@ function traj_struct_combined = combine_trajectories(traj_cell, param_global, pa
     traj_struct_combined.time        = zeros(1, N_total);
     traj_struct_combined.traj_type   = zeros(1, N_traj);
     traj_struct_combined.diff_filter = repmat(init_param_diff_filter, 1, N_traj);
+    traj_struct_combined.diff_filter_jointspace = repmat(init_param_diff_filter_jointspace, 1, N_traj);
     traj_struct_combined.sin_poly = repmat(init_param_sin_poly, 1, N_traj);
     traj_struct_combined.N_traj      = N_traj;
 
@@ -83,11 +86,13 @@ function traj_struct_combined = combine_trajectories(traj_cell, param_global, pa
         traj_struct_combined.q_0(:, i) = traj_struct.q_0;
         traj_struct_combined.q_0_p(:, i) = traj_struct.q_0_p;
         traj_struct_combined.q_0_pp(:, i) = traj_struct.q_0_pp;
+        traj_struct_combined.joint_points(:, start_index:stop_index) = traj_struct.joint_points;
         traj_struct_combined.pose(:, start_index:stop_index) = traj_struct.pose;
         traj_struct_combined.rotation(:, :, start_index:stop_index) = traj_struct.rotation;
         traj_struct_combined.time(start_index:stop_index) = traj_struct.time;
         traj_struct_combined.traj_type(i) = traj_struct.traj_type;
         traj_struct_combined.diff_filter(i).diff_filter = traj_struct.diff_filter;
+        traj_struct_combined.diff_filter_jointspace(i).diff_filter_jointspace = traj_struct.diff_filter_jointspace;
         traj_struct_combined.sin_poly(i).sin_poly = traj_struct.sin_poly;
 
         for j = 1:N

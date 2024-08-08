@@ -23,5 +23,5 @@ for i=1:subplot_number
 end
 
 save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240108_ottbespr/wrist_sing/';
-file_name = 'mpc_v5_wristsing.mat';
+file_name = 'test.mat';
 save([save_path, '/', file_name], 'signals');

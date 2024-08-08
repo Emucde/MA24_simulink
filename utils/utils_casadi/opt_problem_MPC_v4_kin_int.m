@@ -2,9 +2,6 @@
 
 import casadi.*
 
-kin_int_modes = param_mpc_mode.kin_int_modes;
-mpc_mode = param_mpc_mode.mode; % defined in init_mpc_weights(.*).m
-
 n = param_robot.n_DOF; % Dimension of joint space
 m = param_robot.m; % Dimension of Task Space
 
@@ -36,9 +33,9 @@ F_kp1 = integrate_casadi(f, DT_ctl, M, int_method); % runs with Ta from sensors
 if(N_step_MPC == 1)
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
-    DT2 = DT - DT_ctl;
+    DT2 = DT - 2*DT_ctl;
 end
-F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-Ta
+F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 
 %% Calculate Initial Guess
 
@@ -47,44 +44,13 @@ p_d_0       = param_trajectory.p_d( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_M
 q_d_0       = param_trajectory.q_d( 1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
 
 % initial guess for reference trajectory parameter
-if(mpc_mode == kin_int_modes.standard || mpc_mode == kin_int_modes.du0_cost || mpc_mode == kin_int_modes.du_v2 || mpc_mode == kin_int_modes.du_ineq)
-    if(N_step_MPC == 1)
-        y_d_0    = [p_d_0; q_d_0];
-    else
-        p_d_0_kp1 = param_trajectory.p_d(  1:3, 2 );
-        q_d_0_kp1 = param_trajectory.q_d(  1:4, 2 );
-        y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-1)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-1)]];
-    end
-elseif(mpc_mode == kin_int_modes.du_cost_extended)
-    % N must be odd!
-    if(mod(N_MPC, 2) == 0)
-        error('N_MPC must be odd for du_cost_extended');
-    else
-        N_du = round((N_MPC-1)/2);
-    end
-
-    p_d_kp1 = param_trajectory.p_d( 1:3, 2 : N_step_MPC : 2 + (N_MPC) * N_step_MPC );
-    q_d_kp1 = param_trajectory.q_d( 1:4, 2 : N_step_MPC : 2 + (N_MPC) * N_step_MPC );
-
-    N2 = round((N_MPC+1)/2);
-
-    y_d_k   = [p_d_0(  :, 1:1:N2);   q_d_0(:, 1:1:N2)];
-    y_d_kp1 = [p_d_kp1(:, 1:1:N2); q_d_kp1(:, 1:1:N2)];
-
-    y_d_0 = reshape([y_d_k; y_d_kp1], 7, N_MPC+1);
+% [TODO: not all cases implemented]
+if(N_step_MPC == 1)
+    y_d_0    = [p_d_0; q_d_0];
 else
-    error(['81: mpc_mode ', num2str(mpc_mode), ' not implemented']);
-end
-
-% initial guess for previous input
-if(mpc_mode == kin_int_modes.du0_cost)
-    u_prev_0 = zeros(n, 1);
-elseif(mpc_mode == kin_int_modes.du_cost_extended)
-    u_prev_0 = zeros(n, N_du);
-elseif(mpc_mode == kin_int_modes.du_v2)
-    u_prev_0 = zeros(n, N_MPC);
-elseif(mpc_mode ~= kin_int_modes.standard && mpc_mode ~= kin_int_modes.du_ineq)
-    error(['92: mpc_mode ', num2str(mpc_mode), ' not implemented']);
+    p_d_0_k = param_trajectory.p_d(  1:3, 2:3 );
+    q_d_0_k = param_trajectory.q_d(  1:4, 2:3 );
+    y_d_0    = [[p_d_0(:,1), p_d_0_k, p_d_0(:,2:end-2)]; [q_d_0(:,1), q_d_0_k, q_d_0(:,2:end-2)]];
 end
 
 % Robot System: Initial guess
@@ -102,11 +68,7 @@ u_init_guess_0 = ones(n, N_MPC).*u_k_0;
 x_init_guess_0 = [x_0_0 ones(2*n, N_MPC).*x_0_0];
 
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
-if(mpc_mode == kin_int_modes.du_ineq)
-    lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(u_init_guess_0(:, 2:end)), 1);
-else
-    lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
-end
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
 
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
@@ -132,15 +94,15 @@ mpc_opt_var_inputs = {u, x};
 
 % u = [u0; u1; ... uN-1], x = [x0; x1; ... xN] = [q_0;q_0_p;q_1;q_1_p;...;q_N;q_N_p]
 % xx = [u; x] = [u0; u1; ... uN-1; x0; x1; ... xN]
-%   u1 = q_1_pp = u( n+1:2*n)   |   q_1 = x(     1+2*n:    3*n),  |   q_1_p = x(     1+3*n:    4*n)
-%   u1 = q_1_pp = xx(n+1:2*n)   |   q_1 = xx(N_u+1+2*n:N_u+3*n),  |   q_1_p = xx(N_u+1+3*n:N_u+4*n)
+%   u0 = q_0_pp = u(   1 :   n) | q_0 = x(     1     : n      ) | q_0_p = x(     1+  n :     2*n)
+%   u0 = q_0_pp = xx(  1 :   n) | q_0 = xx(N_u+1     : n+N_u  ) | q_0_p = xx(N_u+1+  n : N_u+2*n)
+%   u1 = q_1_pp = u( n+1 : 2*n) | q_1 = x(     1+2*n :     3*n) | q_1_p = x(     1+3*n :     4*n)
+%   u1 = q_1_pp = xx(n+1 : 2*n) | q_1 = xx(N_u+1+2*n : N_u+3*n) | q_1_p = xx(N_u+1+3*n : N_u+4*n)
 N_u = numel(u);
-% Achtung, das ist nicht korrekt! q1 = q(t+Ts_MPC) != q(t+Ta), wenn Ts_MPC > Ta
-u_opt_indices = [1+2*n+N_u:N_u+3*n, 1+3*n+N_u:N_u+4*n, 1+n:2*n]; % [q_1, q_1_p, q_1_pp] needed for joint space CT control
-
-%   u0 = q_0_pp = u( 1:n)   |   q_0 = x(     1+n:    2*n),  |   q_0_p = x(     1+2*n:    3*n)
-%   u0 = q_0_pp = xx(1:n)   |   q_0 = xx(N_u+1+n:N_u+2*n),  |   q_0_p = xx(N_u+1+2*n:N_u+3*n)
-% u_opt_indices = [N_u+1+n:N_u+2*n, N_u+1+2*n:N_u+3*n, 1:n]; % [q_1, q_1_p, q_1_pp] needed for joint space CT control
+q1_idx    = N_u+1+2*n : N_u+3*n;
+q1_p_idx  = N_u+1+3*n : N_u+4*n;
+q1_pp_idx = n+1 : 2*n;
+u_opt_indices = [q1_idx, q1_p_idx, q1_pp_idx]; % [q_1, q_1_p, q_1_pp] needed for joint space CT control
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
@@ -149,26 +111,10 @@ ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max, N_MPC + 1, 1)];
 
 % input parameter
 x_k  = SX.sym( 'x_k',  2*n, 1 ); % current x state = initial x state
-y_d  = SX.sym( 'y_d',    m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
+y_d  = SX.sym( 'y_d',  m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
 
-if(mpc_mode == kin_int_modes.standard || mpc_mode == kin_int_modes.du_ineq)
-    mpc_parameter_inputs = {x_k, y_d};
-    mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
-elseif(mpc_mode == kin_int_modes.du0_cost)
-    u1_prev = SX.sym( 'u1_prev', size(u,1), 1 ); % previous q_pp = [qpp0, qpp1, qpp2, ... qppN-1]
-    mpc_parameter_inputs = {x_k, y_d, u1_prev};
-    mpc_init_reference_values = [x_0_0(:); y_d_0(:); u_prev_0(:)];
-elseif(mpc_mode == kin_int_modes.du_cost_extended)
-    u_prev = SX.sym( 'u_prev', size(u, 1), N_du); % previous q_pp = [qpp1, qpp3, qpp5, ... qppN-1]
-    mpc_parameter_inputs = {x_k, y_d, u_prev};
-    mpc_init_reference_values = [x_0_0(:); y_d_0(:); u_prev_0(:)];
-elseif(mpc_mode == kin_int_modes.du_v2)
-    u_prev = SX.sym( 'u_prev', size(u)); % previous q_pp
-    mpc_parameter_inputs = {x_k, y_d, u_prev};
-    mpc_init_reference_values = [x_0_0(:); y_d_0(:); u_prev_0(:)];
-else
-    error(['171: mpc_mode ', num2str(mpc_mode), ' not implemented']);
-end
+mpc_parameter_inputs = {x_k, y_d};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -179,25 +125,12 @@ end
 % constraints conditions cellarray g
 g_x  = cell(1, N_MPC+1); % for F
 
-if(mpc_mode == kin_int_modes.du_ineq)
-    g_du = cell(1, N_MPC-1);
-    if(weights_and_limits_as_parameter)
-        lbg = SX(numel(x)+numel(u(:, 2:end)), 1);
-        ubg = SX(numel(x)+numel(u(:, 2:end)), 1);
-    else
-        lbg = zeros(numel(x)+numel(u(:, 2:end)), 1);
-        ubg = zeros(numel(x)+numel(u(:, 2:end)), 1);
-    end
-    lbg(numel(x)+1:end) = repmat(pp.du_dt_min, N_MPC-1);
-    ubg(numel(x)+1:end) = repmat(pp.du_dt_max, N_MPC-1);
+if(weights_and_limits_as_parameter)
+    lbg = SX(numel(x), 1);
+    ubg = SX(numel(x), 1);
 else
-    if(weights_and_limits_as_parameter)
-        lbg = SX(numel(x), 1);
-        ubg = SX(numel(x), 1);
-    else
-        lbg = zeros(numel(x), 1);
-        ubg = zeros(numel(x), 1);
-    end
+    lbg = zeros(numel(x), 1);
+    ubg = zeros(numel(x), 1);
 end
 
 % lambda_x0, lambda_g0 initial guess
@@ -222,50 +155,15 @@ for i=0:N_MPC
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
     if(i < N_MPC)
-        if(mpc_mode == kin_int_modes.standard || mpc_mode == kin_int_modes.du0_cost || mpc_mode == kin_int_modes.du_v2 || mpc_mode == kin_int_modes.du_ineq)
-            % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-            if(i == 0)
-                g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
-            elseif(i == 1)
-                g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
-            else
-                g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
-                % runs only to T_horizon-Ts_MPC, i. e. tilde x_{N-1} = x(t0+Ts_MPC*(N-1)) and x_N doesn't exist
-                % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(N-1))
-            end
-            
-            if(mpc_mode == kin_int_modes.du_ineq)
-                if(i == 0)
-                    g_du(1, 1 + (i)) = {DT*(u(:, 1 + (i+1)) - u(:, 1 + (i)))/DT_ctl};
-                elseif(i == 1)
-                    g_du(1, 1 + (i)) = {DT*(u(:, 1 + (i+1)) - u(:, 1 + (i)))/DT2};
-                elseif(i < N_MPC-1)
-                    g_du(1, 1 + (i)) = {DT*(u(:, 1 + (i+1)) - u(:, 1 + (i)))/DT};
-                end
-            end
-        elseif(mpc_mode == kin_int_modes.du_cost_extended)
-            % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-            if(mod(i,2) == 0)
-                g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % x(t0+iTa) = F(x(t0+(i-1)Ta), u(t0+(i-1)Ta)
-            else
-                g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % x(t0+i(Ts_MPC-Ta)) = F(x(t0+(i-1)(Ts_MPC-Ta)), u(t0+(i-1)(Ts_MPC-Ta))
-            end
-            % N must be odd!
-            % so you get the states
-            %   x = [x(t0), x(t0+Ta), x(t0+Ts_MPC), x(t0+Ts_MPC+Ta), ... x(t0+((N-1)/2-1)*Ts_MPC), x(t0+((N-1)/2-1)*Ts_MPC + Ta)]
-            % 
-            % and 
-            % 
-            % g_x = 
-            % {
-            % x0   - xk               = x(t0)                            - xk,
-            % x1   - F (x0, u0)       = x(t0                      + Ta ) - F(  x(t0                             ), u(t0                             )),
-            % x2   - F2(x1, u1)       = x(t0 + (1)       * Ts_MPC      ) - F2( x(t0                        + Ta ), u(t0                        + Ta )),
-            % x3   - F (x2, u2)       = x(t0 + (1)       * Ts_MPC + Ta ) - F(  x(t0 + (1)         * Ts_MPC      ), u(t0 + (1)         * Ts_MPC      )),
-            % ...
-            % xN-1 - F2(x_N-2, u_N-2) = x(t0 + ((N-1)/2) * Ts_MPC      ) - F2( x(t0 + ((N-1)/2-2) * Ts_MPC + Ta ), u(t0 + ((N-1)/2-2) * Ts_MPC + Ta )),
-            % xN   - F (x_N-1, u_N-1) = x(t0 + ((N-1)/2) * Ts_MPC + Ta ) - F(  x(t0 + ((N-1)/2-1) * Ts_MPC      ), u(t0 + ((N-1)/2-1) * Ts_MPC      )),
-            % }
+        % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
+        if(i == 0 || i == 1)
+            g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
+        elseif(i == 2)
+            g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
+        else
+            g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
+            % runs only to T_horizon-Ts_MPC, i. e. tilde x_{N-1} = x(t0+Ts_MPC*(N-1)) and x_N doesn't exist
+            % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(N-1))
         end
     end
 end
@@ -290,35 +188,11 @@ for i=1:N_MPC
     end
 end
 
-if(mpc_mode == kin_int_modes.du_ineq)
-    g = [g_x, g_du];
-else
-    g = g_x;
-end
+g = g_x;
 
 J_q_pp = Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
 
-if(mpc_mode == kin_int_modes.standard || mpc_mode == kin_int_modes.du_ineq)
-    cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp}';
-elseif(mpc_mode == kin_int_modes.du0_cost)
-    J_du = Q_norm_square((u(:, 1) - u1_prev), pp.R0_du);
-    cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_du}';
-elseif(mpc_mode == kin_int_modes.du_cost_extended)
-    J_du = Q_norm_square((u(:, 1:2:end-1) - u_prev), pp.R_du) + Q_norm_square((u(:, 2) - u(:, 1)), pp.R0_du);
-    cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_du}';
-elseif(mpc_mode == kin_int_modes.du_v2)
-    J_du_prev = Q_norm_square((u - u_prev), pp.R_du_prev);
-    if(N_MPC == 1)
-        J_du_act = 0;
-    elseif(N_MPC == 2)
-        J_du_act = Q_norm_square([u(:, 3) - u(:,1)], pp.R_du_act);
-    elseif(N_MPC > 2)
-        J_du_act = Q_norm_square([u(:, 3) - u(:,1), u(:, 4:end) - u(:, 3:end-1)], pp.R_du_act);
-    end
-    cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_du_prev, J_du_act}';
-else
-    error(['320: mpc_mode ', num2str(mpc_mode), ' not implemented']);
-end
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp}';
 
 
 cost_vars_SX = eval(cost_vars_names);

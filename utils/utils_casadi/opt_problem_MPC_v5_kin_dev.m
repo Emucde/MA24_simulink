@@ -12,7 +12,6 @@ diff_variant = diff_variant_mode.numdiff;
 
 is_int_for_xkp1 = (diff_variant == diff_variant_mode.numdiff || diff_variant == diff_variant_mode.savgol_v2 || diff_variant == diff_variant_mode.savgol);
 
-
 n = param_robot.n_DOF; % Dimension of joint space
 m = param_robot.m; % Dimension of Task Space
 
@@ -33,6 +32,10 @@ u = SX.sym('u', n);
 f = Function('f', {x, u}, {[x(n+1:2*n); u]});
 F_kp1 = integrate_casadi(f, DT_ctl, M, int_method); % runs with Ta from sensors
 
+f = Function('f', {x, u}, {[x(n+1:2*n); u]});
+F_2 = integrate_casadi(f, DT-DT_ctl, M, int_method); % runs with Ta from sensors
+
+
 %% Calculate Initial Guess
 
 % Get trajectory data for initial guess
@@ -47,11 +50,15 @@ q_d_0       = param_trajectory.q_d(       1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_
 p_d_0_kp1 = param_trajectory.p_d(1:3, 2);
 q_d_0_kp1 = param_trajectory.q_d(1:4, 2);
 
+p_d_0_kp2 = param_trajectory.p_d(1:3, 3);
+q_d_0_kp2 = param_trajectory.q_d(1:4, 3);
+
 % initial guess for reference trajectory
 
 if(is_int_for_xkp1)
     y_d_0    = [p_d_0;    q_d_0   ];
     y_d_kp1_0  = [p_d_0_kp1;  q_d_0_kp1 ];
+    y_d_kp2_0  = [p_d_0_kp2;  q_d_0_kp2 ];
 else % diff_variant == diff_variant_mode.numdiff_twotimes
     y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-1)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-1)]];
 end
@@ -65,27 +72,29 @@ ddq_0  = q_0_pp;
 xe_k_0 = p_d_0(1:3, 1); % x pos, y pos, defined in parameters_xdof.m
 u_k_0  = ddq_0;
 
-u_init_guess_0 = u_k_0;
+u_init_guess_0 = [u_k_0; u_k_0];
 x_init_guess_0 = [x_0_0 ones(2*n, N_MPC).*x_0_0];
 
 if(is_int_for_xkp1)
     xkp1_init_guess_0 = x_0_0;
+    xkp2_init_guess_0 = x_0_0;
 
-    lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(xkp1_init_guess_0), 1);
+    lam_x_init_guess_0 = zeros(numel(xkp1_init_guess_0)+numel(xkp2_init_guess_0)+numel(u_init_guess_0)+numel(x_init_guess_0), 1);
+
     if(diff_variant == diff_variant_mode.numdiff || diff_variant == diff_variant_mode.savgol_v2)
         % only equation constrained for q_p = S_v q
-        lam_g_init_guess_0 = zeros(numel(xkp1_init_guess_0)+numel(u_init_guess_0)+numel(x_init_guess_0(:,1))+numel(x_init_guess_0(n+1:end,:)), 1); % + 1 wegen eps
+        lam_g_init_guess_0 = zeros(numel(xkp1_init_guess_0)+numel(xkp2_init_guess_0)+numel(x_init_guess_0(:,1))+numel(x_init_guess_0(n+1:end,:)), 1); % + 1 wegen eps
     elseif(diff_variant == diff_variant_mode.savgol)
         % equation constrained for q_savgol = Q q and q_p_savgol = D q;
-        lam_g_init_guess_0 = zeros(numel(xkp1_init_guess_0)+numel(u_init_guess_0)+numel(x_init_guess_0(:,1))+numel(x_init_guess_0), 1); % + 1 wegen eps
+        lam_g_init_guess_0 = zeros(numel(xkp1_init_guess_0)+numel(xkp2_init_guess_0)+numel(x_init_guess_0(:,1))+numel(x_init_guess_0), 1); % + 1 wegen eps
     else
         error('invalid mode');
     end
 
-    init_guess_0 = [xkp1_init_guess_0(:); u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+    init_guess_0 = [xkp1_init_guess_0(:); xkp2_init_guess_0(:); u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 else % diff_variant == diff_variant_mode.numdiff_twotimes
-    lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
-    lam_g_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0(:,1))+numel(x_init_guess_0(n+1:end,:)), 1);
+    lam_x_init_guess_0 = zeros(numel(u_init_guess_0) + numel(x_init_guess_0), 1);
+    lam_g_init_guess_0 = zeros(numel(x_init_guess_0(:,1))+numel(x_init_guess_0(n+1:end,:)), 1);
 
     init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 end
@@ -106,22 +115,23 @@ else % hardcoded weights
 end
 
 % Optimization Variables:
-u     = SX.sym( 'u',    n,       1 ); % u = q_0_pp
+u     = SX.sym( 'u',    n,       2 ); % %u0=q0pp (0 to Ta), u1=q1pp (Ta to TsMPC)
 x     = SX.sym( 'x',  2*n, N_MPC+1 );
 %mpc_opt_var_inputs = {u, x};
 %u_opt_indices = [3*n+1:4*n, 4*n+1:5*n, 1:n]; % [q_1, dq_1, ddq_1] needed for joint space CT control
 
 if(is_int_for_xkp1)
     xkp1 = SX.sym('xkp1', 2*n);
+    xkp2 = SX.sym('xkp2', 2*n);
 
-    mpc_opt_var_inputs = {xkp1, u, x};
+    mpc_opt_var_inputs = {xkp1, xkp2, u, x}; %[ xkp1(1:2n), xkp2(2n+1:4n), uk(4n+1:5n), ukp1(5n+1:6n)]
 
-    u_opt_indices = [1:3*n]; % [q_1, dq_1, ddq_1] needed for joint space CT control
+    u_opt_indices = [1:2*n,  5*n+1:6*n]; %
 
     % optimization variables cellarray w
     w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-    lbw = [pp.x_min; pp.u_min; repmat(pp.x_min, N_MPC + 1, 1);];
-    ubw = [pp.x_max; pp.u_max; repmat(pp.x_max, N_MPC + 1, 1);];
+    lbw = [pp.x_min; pp.x_min; pp.u_min; pp.u_min; repmat(pp.x_min, N_MPC + 1, 1);];
+    ubw = [pp.x_max; pp.x_max; pp.u_max; pp.u_max; repmat(pp.x_max, N_MPC + 1, 1);];
 else % diff_variant == diff_variant_mode.numdiff_twotimes
     mpc_opt_var_inputs = {u, x};
 
@@ -129,8 +139,8 @@ else % diff_variant == diff_variant_mode.numdiff_twotimes
 
     % optimization variables cellarray w
     w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-    lbw = [pp.u_min; repmat(pp.x_min, N_MPC + 1, 1);];
-    ubw = [pp.u_max; repmat(pp.x_max, N_MPC + 1, 1);];
+    lbw = [pp.u_min; pp.u_min; repmat(pp.x_min, N_MPC + 1, 1);];
+    ubw = [pp.u_max; pp.u_max; repmat(pp.x_max, N_MPC + 1, 1);];
 end
 
 
@@ -141,9 +151,10 @@ y_d  = SX.sym( 'y_d',  m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
 
 if(is_int_for_xkp1)
     y_d_kp1 = SX.sym('y_d_kp1', m+1, 1); % y_d_N+1
+    y_d_kp2 = SX.sym('y_d_kp2', m+1, 1); % y_d_N+1
 
-    mpc_parameter_inputs = {x_k, y_d, y_d_kp1};
-    mpc_init_reference_values = [x_0_0(:); y_d_0(:); y_d_kp1_0(:)];
+    mpc_parameter_inputs = {x_k, y_d, y_d_kp1, y_d_kp2};
+    mpc_init_reference_values = [x_0_0(:); y_d_0(:); y_d_kp1_0(:); y_d_kp2_0(:)];
 else % diff_variant == diff_variant_mode.numdiff_twotimes
     mpc_parameter_inputs = {x_k, y_d};
     mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
@@ -162,33 +173,33 @@ g_xkp1 = cell(1, 1); % for Fkp1
 if(weights_and_limits_as_parameter)
     if(is_int_for_xkp1)
         if(diff_variant == diff_variant_mode.numdiff || diff_variant == diff_variant_mode.savgol_v2)
-            lbg = SX(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:))+numel(xkp1), 1);
-            ubg = SX(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:))+numel(xkp1), 1);
+            lbg = SX(numel(x(:, 1))+numel(x(n+1:end,:))+2*numel(xkp1), 1);
+            ubg = SX(numel(x(:, 1))+numel(x(n+1:end,:))+2*numel(xkp1), 1);
         elseif(diff_variant == diff_variant_mode.savgol)
-            lbg = SX(numel(u)+numel(x(:, 1))+numel(x)+numel(xkp1), 1);
-            ubg = SX(numel(u)+numel(x(:, 1))+numel(x)+numel(xkp1), 1);
+            lbg = SX(numel(x(:, 1))+numel(x)+2*numel(xkp1), 1);
+            ubg = SX(numel(x(:, 1))+numel(x)+2*numel(xkp1), 1);
         else
             error('invalid mode');
         end
     else % diff_variant == diff_variant_mode.numdiff_twotimes
-        lbg = SX(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:)), 1);
-        ubg = SX(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:)), 1);
+        lbg = SX(numel(x(:, 1))+numel(x(n+1:end,:)), 1);
+        ubg = SX(numel(x(:, 1))+numel(x(n+1:end,:)), 1);
         % TODO: SAVGOL
     end
 else
     if(is_int_for_xkp1)
         if(diff_variant == diff_variant_mode.numdiff || diff_variant == diff_variant_mode.savgol_v2)
-            lbg = zeros(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:))+numel(xkp1), 1);
-            ubg = zeros(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:))+numel(xkp1), 1);
+            lbg = zeros(numel(x(:, 1))+numel(x(n+1:end,:))+2*numel(xkp1), 1);
+            ubg = zeros(numel(x(:, 1))+numel(x(n+1:end,:))+2*numel(xkp1), 1);
         elseif(diff_variant == diff_variant_mode.savgol)
-            lbg = zeros(numel(u)+numel(x(:, 1))+numel(x)+numel(xkp1), 1);
-            ubg = zeros(numel(u)+numel(x(:, 1))+numel(x)+numel(xkp1), 1);
+            lbg = zeros(numel(x(:, 1))+numel(x)+2*numel(xkp1), 1);
+            ubg = zeros(numel(x(:, 1))+numel(x)+2*numel(xkp1), 1);
         else
             error('invalid mode');
         end
     else % diff_variant == diff_variant_mode.numdiff_twotimes
-        lbg = zeros(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:)), 1);
-        ubg = zeros(numel(u)+numel(x(:, 1))+numel(x(n+1:end,:)), 1);
+        lbg = zeros(numel(x(:, 1))+numel(x(n+1:end,:)), 1);
+        ubg = zeros(numel(x(:, 1))+numel(x(n+1:end,:)), 1);
         % TODO: SAVGOL
     end
 end
@@ -237,8 +248,7 @@ q_pp = reshape(qq_pp, n, N_MPC+1);
 
 x_p = [q_p; q_pp];
 
-g_x(1, 1 + (0))     = { [ x_k  - x(   :, 1 + (0)); ...  % x_k = tilde x_0 = [tilde q_0; tilde q_0_p] = [q_k; q_k_p]
-                            u  - q_pp(:, 1 + (1))]};    % tilde u = tilde q_pp_1
+g_x(1, 1 + (0))     = {x_k  - x(   :, 1 + (0))};
 
 if(diff_variant == diff_variant_mode.numdiff || diff_variant == diff_variant_mode.savgol_v2 || diff_variant == diff_variant_mode.numdiff_twotimes)
     g_x(1, 1 + (0)) = {[g_x{1, 1 + (0)}; ... 
@@ -274,10 +284,14 @@ for i=0:N_MPC
 end
 
 if(is_int_for_xkp1)
-    g_xkp1(1,1) = { xkp1 - F_kp1(x(:,1), u(:,1)) };
+    g_xkp1(1,1) = {[xkp1 - F_kp1(x(:,1), u(:,1)); xkp2 - F_kp1(xkp1, u(:,2))]};
     qkp1 = xkp1(1:n);
     Hkp1 = hom_transform_endeffector_py_fun(qkp1);
     ykp1 = [Hkp1(1:3, 4); quat_endeffector_py_fun(qkp1)];
+
+    qkp2 = xkp2(1:n);
+    Hkp2 = hom_transform_endeffector_py_fun(qkp2);
+    ykp2 = [Hkp2(1:3, 4); quat_endeffector_py_fun(qkp2)];
 end
 
 % Calculate Cost Functions and set equation constraints
@@ -285,10 +299,6 @@ Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
 J_yt   = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_d(1:3, 1 + (1:N_MPC-1)), pp.Q_y( 1:3,1:3)  );
 J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp.Q_yN(1:3,1:3)  );
-
-if(is_int_for_xkp1)
-    J_yt_kp1 = Q_norm_square( ykp1(1:3) - y_d_kp1(1:3), pp.Q_ykp1(1:3,1:3)  );
-end
 
 J_yr = SX(1,1);
 for i=1:N_MPC
@@ -308,10 +318,11 @@ J_q_pp = Q_norm_square(q_pp, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
 
 if(is_int_for_xkp1)
     q_ykp1_yr_err = quat_mult(ykp1(4:7), quat_inv(y_d_kp1(4:7)));
-    J_yr_kp1 = Q_norm_square( q_ykp1_yr_err(2:4) , pp.Q_ykp1(4:6,4:6)  );
+    q_ykp2_yr_err = quat_mult(ykp2(4:7), quat_inv(y_d_kp2(4:7)));
 
+    J_yt_kp1 = Q_norm_square( ykp1(1:3) - y_d_kp1(1:3), pp.Q_ykp1(1:3,1:3) ) + Q_norm_square( ykp2(1:3) - y_d_kp2(1:3), pp.Q_ykp1(1:3,1:3) );
+    J_yr_kp1 = Q_norm_square( q_ykp1_yr_err(2:4) , pp.Q_ykp1(4:6,4:6) ) + Q_norm_square( q_ykp2_yr_err(2:4) , pp.Q_ykp1(4:6,4:6) );
     g = [g_x, g_xkp1];
-
     cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_yt_kp1, J_yr_kp1}';
 else % diff_variant == diff_variant_mode.numdiff_twotimes
     g = g_x;

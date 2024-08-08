@@ -1,11 +1,17 @@
-function traj_struct_out = create_param_diff_filter(traj_struct, param_global, text, lambda)
+function traj_struct_out = create_param_diff_filter(traj_struct, param_global, text1, lambda, text2, n_order, text3, n_input, type)
     arguments
         traj_struct struct {mustBeNonempty}
         param_global struct {mustBeNonempty}
-        text char = 'lambda'
+        text1 char = 'lambda'
         lambda double = -10
+        text2 char = 'n_order'
+        n_order uint8 = 6
+        text3 char = 'n_input'
+        n_input uint8 = 4
+        type char {mustBeMember(type, {'diff_filter', 'diff_filter_jointspace'})} = 'diff_filter'
     end
-    %% Filter für xyz and Orientation:
+
+    %% Zustandsvariablenfilter
     % lambda = -10;  %Eigenwert für Sollwertfilter, die Zeitkonstante ist dann
     % ja tau = 1/(abs(lambda)) in Sekunden, d. h. bei schnelleren
     % Trajektorien muss man die Zeitkonstante des Sollwertfilters anpassen,
@@ -14,62 +20,53 @@ function traj_struct_out = create_param_diff_filter(traj_struct, param_global, t
     % h. erst nach dieser Zeit kann man damit rechnen, dass der Ausgang des
     % Sollwertfilters mit dessen Eingang übereinstimmt.
 
-    coeffs = poly([lambda lambda lambda lambda lambda lambda]);
+    coeffs = poly(ones(1,n_order)*lambda);
 
-    a0_f = coeffs(7);
-    a1_f = coeffs(6);
-    a2_f = coeffs(5);
-    a3_f = coeffs(4);
-    a4_f = coeffs(3);
-    a5_f = coeffs(2);
-
-    A_f = [0 1 0 0 0 0; 0 0 1 0 0 0; 0 0 0 1 0 0; 0 0 0 0 1 0; 0 0 0 0 0 1; -a0_f -a1_f -a2_f -a3_f -a4_f -a5_f];
-    b_f = [0; 0; 0; 0; 0; a0_f];
-    C_f = eye(6)*a0_f; % damit [yf ; d/dt yf; d^2/dt^2 yf] = a0^3 * xf gilt.
+    a0_f = coeffs(end);
+    ai_f = coeffs(n_order+1:-1:2); % matlab orders it descending.
+    A_f = [[zeros(n_order-1,1), eye(n_order-1)]; -ai_f];
+    b_f = [zeros(n_order-1,1); a0_f];
+    C_f = eye(n_order)*a0_f; % damit [yf ; d/dt yf; d^2/dt^2 yf] = a0^3 * xf gilt.
     D_f = [0; 0; 0; 0; 0; 0];
 
-    SYS_f = ss(A_f,b_f,C_f,D_f); % kontinuierliches System für y
-    SYS_f_z = c2d(SYS_f, param_global.Ta); % diskretes System für y (macht eh euler
-    %vorwärts)
+    %SYS_f = ss(A_f,b_f,C_f,D_f); % kontinuierliches System für y
+    %SYS_f_z = c2d(SYS_f, param_global.Ta); % diskretes System für y (macht eh euler vorwärts)
 
-    Phi_yt = (eye(6) + A_f*param_global.Ta); % euler vorwärts
-    Gamma_yt = b_f*param_global.Ta;  % euler vorwärts
+    Phi = (eye(n_order) + A_f*param_global.Ta); % euler vorwärts
+    Gamma = b_f*param_global.Ta;  % euler vorwärts
 
-    lamda_xyz = lambda;
-    %% Filter für alpha
-    %lambda = -5;
-    coeffs = poly([lambda lambda lambda lambda lambda lambda]);
+    A_f_cells   = reshape(mat2cell(repmat(A_f, 1,1,n_input),   n_order, n_order, ones(1, n_input)), 1, []);
+    b_f_cells   = reshape(mat2cell(repmat(b_f, 1,1,n_input),   n_order, 1,       ones(1, n_input)), 1, []);
 
+    Phi_cells   = reshape(mat2cell(repmat(Phi,   1,1,n_input), n_order, n_order, ones(1, n_input)), 1, []);
+    Gamma_cells = reshape(mat2cell(repmat(Gamma, 1,1,n_input), n_order, 1,       ones(1, n_input)), 1, []);
 
-    a0_f = coeffs(7);
-    a1_f = coeffs(6);
-    a2_f = coeffs(5);
-    a3_f = coeffs(4);
-    a4_f = coeffs(3);
-    a5_f = coeffs(2);
-
-    A_f = [0 1 0 0 0 0; 0 0 1 0 0 0; 0 0 0 1 0 0; 0 0 0 0 1 0; 0 0 0 0 0 1; -a0_f -a1_f -a2_f -a3_f -a4_f -a5_f];
-    b_f = [0; 0; 0; 0; 0; a0_f];
-    C_f = eye(6)*a0_f; % damit [yf ; d/dt yf; d^2/dt^2 yf] = a0^3 * xf gilt.
-    D_f = [0; 0; 0; 0; 0; 0];
-
-    Phi_alpha = (eye(6) + A_f*param_global.Ta); % euler vorwärts
-    Gamma_alpha = b_f*param_global.Ta;  % euler vorwärts
-
-    traj_struct.diff_filter.A = blkdiag(A_f, A_f, A_f, A_f);
-    traj_struct.diff_filter.b = blkdiag(b_f, b_f, b_f, b_f);
-    traj_struct.diff_filter.Ta = param_global.Ta;
-    traj_struct.diff_filter.Phi = blkdiag(Phi_yt, Phi_yt, Phi_yt, Phi_alpha);
-    traj_struct.diff_filter.Gamma = blkdiag(Gamma_yt,Gamma_yt,Gamma_yt,Gamma_alpha);
+    diff_filter = struct;
+    diff_filter.A = blkdiag(A_f_cells{:});
+    diff_filter.b = blkdiag(b_f_cells{:});
+    diff_filter.Ta = param_global.Ta;
+    diff_filter.Phi = blkdiag(Phi_cells{:});
+    diff_filter.Gamma = blkdiag(Gamma_cells{:});
 
     % Brauche ich in Simulink:
-    selector_index1 = [1 7 13 19];
+    selector_index1 = 1:n_order:n_order*n_input;
     selector_index2 = selector_index1+1;
     selector_index3 = selector_index1+2;
 
-    traj_struct.diff_filter.p_d_index    = selector_index1;
-    traj_struct.diff_filter.p_d_p_index  = selector_index2;
-    traj_struct.diff_filter.p_d_pp_index = selector_index3;
+    diff_filter.p_d_index    = selector_index1;
+    diff_filter.p_d_p_index  = selector_index2;
+    diff_filter.p_d_pp_index = selector_index3;
+
+    diff_filter.n_order = n_order;
+    diff_filter.n_input = n_input;
+
+    if strcmp(type, 'diff_filter')
+        traj_struct.diff_filter = diff_filter;
+    elseif strcmp(type, 'diff_filter_jointspace')
+        traj_struct.diff_filter_jointspace = diff_filter;
+    else
+        error('type have to be diff_filter or diff_filter_joint_space');
+    end
 
     traj_struct_out = traj_struct;
 

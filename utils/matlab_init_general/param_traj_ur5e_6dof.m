@@ -18,18 +18,20 @@ traj_struct = struct;
 traj_struct.q_0 = q_0;
 traj_struct.q_0_p = zeros(n,1);
 traj_struct.q_0_pp = zeros(n,1);
+traj_struct.joint_points = [-1, -1, -1].*ones(n,1);
 traj_struct.pose = [xe0, xeT, xe0];
 traj_struct.rotation = cat(3, R_init, R_target, R_init);
 traj_struct.time = [0; T_sim/2; T_sim];
 traj_struct.traj_type = [traj_mode.differential_filter];
 traj_struct.N = 3;
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -3.5); % Param differential filter 5th order trajectory
+traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
 traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
 traj_struct.name = '1: Wrist Singularity, diff filter';
 traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 
-%% TRAJECTORY 2: Differential Filter & ELLBOW SINGULARITY
+%% TRAJECTORY 2: Differential Filter & ELLBOW SINGULARITY: planning in workspace
 
 Q_pos = 1e5*eye(m);  % Weight for the position error in the cost function.
 Q_m = 0;             % Weight for the manipulability error in the cost function.
@@ -41,30 +43,62 @@ xe0 = [0.3921; 0.3921; 0.8; rotm2quat_v4(Ry(pi))];
 [q_0, ~] = inverse_kinematics(param_robot, xe0, q_d, Q_pos, Q_m, Q_q, Q_nl,  1e-2, 100, ct_ctrl_param);
 H_0 = hom_transform_endeffector_py(q_0);
 xe0 = [H_0(1:3,4); rotm2quat_v4(H_0(1:3,1:3))]; % better to exact start in point
-%xeT = [xe0(1:3,1) + [0; 0; -0.5]; rotm2quat_v4( Rz(pi/4)*quat2rotm_v2(xe0(4:7)) )]; % rotm2quat (from matlab) is very precise but slow
 
 R_init = quat2rotm_v2(xe0(4:7));
-%R_target = quat2rotm_v2(xeT(4:7));
 R_target = R_init;
-xeT = xe0;
 
 traj_struct = struct;
 traj_struct.q_0 = q_0;
 traj_struct.q_0_p = zeros(n,1);
 traj_struct.q_0_pp = zeros(n,1);
-traj_struct.pose = [xe0, xeT + [0; 0; -0.025; zeros(4,1)], xe0 - [0; 0; 0; zeros(4,1)], xe0 - [0; 0; 0; zeros(4,1)]];
+traj_struct.joint_points = [-1, -1, -1, -1].*ones(n,1);
+traj_struct.pose = [xe0, xe0 + [0; 0; -0.025; zeros(4,1)], xe0 - [0; 0; 0; zeros(4,1)], xe0 - [0; 0; 0; zeros(4,1)]];
 traj_struct.rotation = cat(3, R_init, R_target, R_init, R_init);
 traj_struct.time = [0; T_sim/4; 1/2*T_sim; T_sim];
 traj_struct.traj_type = [traj_mode.differential_filter];
 traj_struct.N = 4;
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -3.5); % Param differential filter 5th order trajectory
+traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
 traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
 traj_struct.name = '2: ELLBOW Singularity, diff filter';
 traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 
 
-%% TRAJECTORY 3: Differential Filter & SHOULDER SINGULARITY
+%% TRAJECTORY 3: Polynomial & ELLBOW SINGULARITY: planning in joint space
+
+Q_pos = 1e5*eye(m);  % Weight for the position error in the cost function.
+Q_m = 0;             % Weight for the manipulability error in the cost function.
+Q_q = diag([1,1,1e10,1,1,1]);    % Weight for the deviaton of q_sol to q_d
+Q_nl = 1e-1 * eye(n);  % Weight of nl_spring_force(q, ct_ctrl_param, param_robot) -> pose should not start near to limits!
+q_d = [0.3636   -1.3788    0    0.1103    0.3635   -0.0042]';
+xe0 = [0.3921; 0.3921; 0.8; rotm2quat_v4(Ry(pi))];
+
+q_0 = inverse_kinematics(param_robot, xe0, q_d, Q_pos, Q_m, Q_q, Q_nl,  1e-2, 100, ct_ctrl_param);
+
+xeT = xe0 + [0; 0; -0.025; zeros(4,1)];
+
+q_T = inverse_kinematics(param_robot, xeT, q_d, Q_pos, Q_m, Q_q, Q_nl,  1e-2, 100, ct_ctrl_param);
+
+traj_struct = struct;
+traj_struct.q_0 = q_0;
+traj_struct.q_0_p = zeros(n,1);
+traj_struct.q_0_pp = zeros(n,1);
+traj_struct.joint_points = [q_0, q_T, q_0, q_0];
+traj_struct.pose = [-1, -1, -1, -1].*ones(7,1);
+traj_struct.rotation = cat(3, eye(3), eye(3), eye(3), eye(3));
+traj_struct.time = [0; T_sim/4; 1/2*T_sim; T_sim];
+traj_struct.traj_type = [traj_mode.polynomial_jointspace];
+traj_struct.N = 4;
+traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', 0); % Param differential filter 5th order trajectory
+traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
+traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
+traj_struct.name = '3: ELLBOW Singularity, diff filter, joint space';
+traj_cell{cnt} = traj_struct;
+cnt = cnt+1;
+
+
+%% TRAJECTORY 4: Differential Filter & SHOULDER SINGULARITY
 
 Q_pos = 1e3*eye(m);  % Weight for the position error in the cost function.
 Q_m = 1e10;             % Weight for the manipulability error in the cost function.
@@ -88,12 +122,14 @@ traj_struct = struct;
 traj_struct.q_0 = q_0;
 traj_struct.q_0_p = zeros(n,1);
 traj_struct.q_0_pp = zeros(n,1);
+traj_struct.joint_points = [-1, -1, -1].*ones(n,1);
 traj_struct.pose = [xe0, xeT, xe0];
 traj_struct.rotation = cat(3, R_init, R_target, R_init);
 traj_struct.time = [0; T_sim/2; T_sim];
 traj_struct.traj_type = [traj_mode.differential_filter];
 traj_struct.N = 3;
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -3.5); % Param differential filter 5th order trajectory
+traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
 traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
 traj_struct.name = '3: Shoulder Singularity, diff filter';
 traj_cell{cnt} = traj_struct;
