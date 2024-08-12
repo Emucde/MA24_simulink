@@ -81,4 +81,6 @@ create_trajectories;
 
 change_simulink_traj_combo_box; % saves system!
 
+create_trajectory_frame_data;
+
 param_debug;

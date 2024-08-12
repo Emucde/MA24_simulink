@@ -27,7 +27,7 @@ traj_struct.N = 3;
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -3.5); % Param differential filter 5th order trajectory
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
 traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
-traj_struct.name = '1: Wrist Singularity, diff filter';
+traj_struct.name = 'Wrist Singularity, diff filter';
 traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 
@@ -60,7 +60,7 @@ traj_struct.N = 4;
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -3.5); % Param differential filter 5th order trajectory
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
 traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
-traj_struct.name = '2: ELLBOW Singularity, diff filter';
+traj_struct.name = 'ELLBOW Singularity, diff filter';
 traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 
@@ -93,7 +93,7 @@ traj_struct.N = 4;
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', 0); % Param differential filter 5th order trajectory
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
 traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
-traj_struct.name = '3: ELLBOW Singularity, diff filter, joint space';
+traj_struct.name = 'ELLBOW Singularity, Polynomial, joint space';
 traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 
@@ -131,7 +131,7 @@ traj_struct.N = 3;
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -3.5); % Param differential filter 5th order trajectory
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
 traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
-traj_struct.name = '3: Shoulder Singularity, diff filter';
+traj_struct.name = 'Shoulder Singularity, diff filter';
 traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 

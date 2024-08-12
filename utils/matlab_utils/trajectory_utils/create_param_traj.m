@@ -1,10 +1,4 @@
 %% Trajectory selection
-traj_mode.equilibrium = 1;
-traj_mode.differential_filter = 2;
-traj_mode.differential_filter_jointspace = 3;
-traj_mode.polynomial = 4;
-traj_mode.polynomial_jointspace = 5;
-traj_mode.sinus = 6;
 
 if(strcmp(robot_name, 'fr3_7dof'))
     param_traj_fr3_7dof;

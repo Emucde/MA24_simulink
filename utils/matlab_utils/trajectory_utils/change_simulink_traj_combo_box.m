@@ -3,6 +3,8 @@
 
 if(bdIsLoaded(simulink_main_model_name))
 
+    traj_blk_name = [simulink_main_model_name, '/trajectory combo box'];
+
     % Change name of Simulation Block
     % If robots are added this should be extended!
     robot_area_names = {'fr3_7dof Robot Simulation', 'fr3_6dof Robot Simulation', 'ur5e_6dof Robot Simulation'};
@@ -38,7 +40,12 @@ if(bdIsLoaded(simulink_main_model_name))
 
         for i=1:1:N_traj
             traj_name = param_traj_cell{i}.name;
-            traj_state_cell{i} = struct('Value', i, 'Label', traj_name);
+            traj_state_cell{i} = struct('Value', i, 'Label', [num2str(i), ': ', traj_name]);
+        end
+
+        current_traj_value = str2double(get_param(traj_blk_name, 'Value'));
+        if(current_traj_value > N_traj)
+            set_param(traj_blk_name, 'Value', 1);
         end
       
         set_param(['sim_discrete_7dof/', robot_area_names{old_robot_number}], 'Name', 'ur5e_6dof Robot Simulation');
@@ -48,7 +55,6 @@ if(bdIsLoaded(simulink_main_model_name))
     end
 
     % set new names when different
-    traj_blk_name = [simulink_main_model_name, '/trajectory combo box'];
     traj_combo_states_old = get_param(traj_blk_name, 'States');
     traj_combo_states_new = [traj_state_cell{:}]';
 

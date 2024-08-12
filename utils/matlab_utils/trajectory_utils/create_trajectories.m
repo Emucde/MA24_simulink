@@ -12,6 +12,13 @@ cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
 
 overwrite_offline_traj = false;
 
+traj_mode.equilibrium = 1;
+traj_mode.differential_filter = 2;
+traj_mode.differential_filter_jointspace = 3;
+traj_mode.polynomial = 4;
+traj_mode.polynomial_jointspace = 5;
+traj_mode.sinus = 6;
+
 %%%%%%%%%%%%%%%%%%%% CREATE TRAJECTORY %%%%%%%%%%%%%%%%%%%%%
 try
     if(overwrite_offline_traj || overwrite_offline_traj_forced)
