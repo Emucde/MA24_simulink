@@ -1,5 +1,6 @@
 % Change the combo box of the simulink model to the desired trajectory
 % simulink file "sim_discrete_7dof.slx" must be loaded and opened
+% get_param(simulink_main_model_name, 'ObjectParameters') % show all
 
 if(bdIsLoaded(simulink_main_model_name))
 

@@ -70,19 +70,50 @@ if(bdIsLoaded(simulink_main_model_name))
     point_dist = 0.05; % in m
     start_point = param_traj_data.p_d(:, 1, current_traj_value);
     current_traj_data = zeros(size(param_traj_data.p_d(:, :, current_traj_value)));
+    current_t = zeros(size(param_traj_data.t));
     current_traj_data(:, 1) = start_point;
     cnt=2;
     for i=2:N_total
         next_point = param_traj_data.p_d(:, i, current_traj_value);
+        next_t = param_traj_data.t(i);
         dist = norm(next_point - start_point, 2);
         if(dist > point_dist)
             current_traj_data(:, cnt) = next_point;
+            current_t(cnt) = next_t;
             start_point = next_point;
             cnt=cnt+1;
         end
     end
-    current_traj_data(:, cnt) = param_traj_data.p_d(:, end, current_traj_value);
+
+    cnt=cnt-1;
+
+    edge_points_time = param_traj.time(param_traj.start_index(current_traj_value):param_traj.stop_index(current_traj_value));
+    current_traj_data(:, 1) = edge_points(:, 1);
+    N_total_new = length(current_traj_data);
+    for i=1:length(edge_points)
+        [~,idx] = min(abs(current_t - edge_points_time(i)));
+
+        current_traj_data(:, idx) = edge_points(:, i);
+    end
+
     current_traj_data = current_traj_data(:, 1:cnt)';
+
+    % remove duplicates
+    N_curr_points = length(current_traj_data);
+    current_traj_data_fin = zeros(size(current_traj_data));
+    current_traj_data_fin(1,:) = current_traj_data(1,:);
+    start_point = current_traj_data_fin(1,:);
+    cnt = 2;
+    for i=2:N_curr_points
+        next_point = current_traj_data(i,:);
+        dist = norm(next_point - start_point, 2);
+        if(dist > 1e-6)
+            current_traj_data_fin(cnt,:) = next_point;
+            cnt=cnt+1;
+        end
+        start_point = next_point;
+    end
+    current_traj_data = current_traj_data_fin(1:cnt-1,:);
 
     %{
     N_total_new = length(current_traj_data);
