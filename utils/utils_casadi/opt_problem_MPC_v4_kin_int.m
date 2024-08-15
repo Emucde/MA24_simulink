@@ -30,12 +30,17 @@ F = integrate_casadi(f, DT, M, int_method); % runs with Ts_MPC
 DT_ctl = param_global.Ta/M;
 F_kp1 = integrate_casadi(f, DT_ctl, M, int_method); % runs with Ta from sensors
 
-if(N_step_MPC == 1)
+if(N_step_MPC == 1 || N_step_MPC == 2)
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
     DT2 = DT - 2*DT_ctl;
 end
 F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-2*Ta
+
+lambda = -1;
+A = [zeros(n), eye(n); -eye(n)*lambda^2, 2*eye(n)*lambda]; % = d/dt x = Ax + Bu = (A + BC)x, u=Cx
+Q = 1*eye(2*n); % d/dt V = -x'Qx
+P = lyap(A, Q); % V = x'Px => Idea: Use V as end cost term
 
 %% Calculate Initial Guess
 
@@ -99,9 +104,13 @@ mpc_opt_var_inputs = {u, x};
 %   u1 = q_1_pp = u( n+1 : 2*n) | q_1 = x(     1+2*n :     3*n) | q_1_p = x(     1+3*n :     4*n)
 %   u1 = q_1_pp = xx(n+1 : 2*n) | q_1 = xx(N_u+1+2*n : N_u+3*n) | q_1_p = xx(N_u+1+3*n : N_u+4*n)
 N_u = numel(u);
-q1_idx    = N_u+1+2*n : N_u+3*n;
-q1_p_idx  = N_u+1+3*n : N_u+4*n;
-q1_pp_idx = n+1 : 2*n;
+%q1_idx    = N_u+1+2*n : N_u+3*n;
+%q1_p_idx  = N_u+1+3*n : N_u+4*n;
+%q1_pp_idx = n+1 : 2*n;
+
+q1_idx    = N_u+1 : N_u+n;
+q1_p_idx  = N_u+1+n : N_u+2*n;
+q1_pp_idx = 1 : n;
 u_opt_indices = [q1_idx, q1_p_idx, q1_pp_idx]; % [q_1, q_1_p, q_1_pp] needed for joint space CT control
 
 % optimization variables cellarray w
@@ -191,6 +200,7 @@ end
 g = g_x;
 
 J_q_pp = Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
+%J_q_pp = Q_norm_square(x, P);
 
 cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp}';
 

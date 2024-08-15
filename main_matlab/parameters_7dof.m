@@ -86,3 +86,15 @@ create_trajectory_frame_data;
 param_debug;
 
 %set_param('sim_discrete_7dof/Visualization/Spline', 'MarkerSize', '1');
+%%
+% bspline_arr = acin_text_spline_test([0.3 0.7 0.5], 1/4, 1/2);
+% N_dat = 1000;
+% sigma = zeros(N_dat, 3);
+% i=1;
+% for theta=0:1/N_dat:1
+    % CC = spline_fun(theta, 1, bspline_arr(4));
+    % sigma(i, :) = CC(:,1)';
+    % i=i+1;
+% end
+% 
+% plot3(sigma(:,1), sigma(:,2), sigma(:,3), 'LineWidth', 1, 'Color', 'blue');

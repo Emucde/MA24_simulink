@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.offline as py
 from bs4 import BeautifulSoup
+import os
 import webbrowser
 
 
@@ -52,6 +53,10 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
         hovermode = 'closest',
         margin=dict(l=10, r=10, t=50, b=70),
         height=1080,
+        yaxis=dict(
+       autorange = True,
+       fixedrange= False
+   ),
         # legend_indentation = 0,
         # margin_pad=0,
         # Gridline customization for all subplots
@@ -82,11 +87,15 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 
 ###################### MAIN ######################
 # Laden der .mat-Datei
-mat_file_path = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240108_ottbespr/wrist_sing/test.mat"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/meeting_22aug/example2_jointspace"
+mat_file_name = "240815_messung3_komisch.mat"
+mat_file_path = os.path.join(folderpath, mat_file_name)
+outputname = mat_file_name[:-4] + '.html'
+output_file_path = os.path.join(folderpath, outputname)
 
 data = sio.loadmat(mat_file_path)
 
 subplot_data = data['signals']
 
 # plot_solution(subplot_data)
-plot_solution(subplot_data, plot_fig = False, save_plot=True, file_name='/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240108_ottbespr/wrist_sing/jointspace.html')
+plot_solution(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path)

@@ -70,10 +70,10 @@ if(strcmp(MPC_solver, 'qrqp'))
     % opts.regularity_check = false;
     opts.show_eval_warnings = false;
 
-    opts.tol_du=1e-6;
-    opts.tol_pr=1e-6;
-
-    %opts.max_iter = 1500;
+    %opts.tol_du=1e-12;%1e-6;
+    %opts.tol_pr=1e-12;%1e-6;
+%
+    %opts.max_iter = 10000;%1500;
 
     solver = nlpsol('solver', 'sqpmethod', prob, opts);
 

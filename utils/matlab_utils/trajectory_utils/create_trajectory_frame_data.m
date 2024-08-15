@@ -67,7 +67,7 @@ if(bdIsLoaded(simulink_main_model_name))
     param_path_set_points.paths_set1 = paths_set1;
 
     % Wichtig: Die Punkte müssen ein zwei Kommastellen eindeutig sein!
-    point_dist = 0.05; % in m
+    point_dist = 0.01; % in m
     start_point = param_traj_data.p_d(:, 1, current_traj_value);
     current_traj_data = zeros(size(param_traj_data.p_d(:, :, current_traj_value)));
     current_t = zeros(size(param_traj_data.t));

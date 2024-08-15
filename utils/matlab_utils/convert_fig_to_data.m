@@ -22,6 +22,6 @@ for i=1:subplot_number
     end
 end
 
-save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240108_ottbespr/wrist_sing/';
-file_name = 'test.mat';
+save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/meeting_22aug/example2_jointspace/';
+file_name = '240815_messung3_komisch.mat';
 save([save_path, '/', file_name], 'signals');
