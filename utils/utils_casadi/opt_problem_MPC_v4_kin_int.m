@@ -30,7 +30,7 @@ F = integrate_casadi(f, DT, M, int_method); % runs with Ts_MPC
 DT_ctl = param_global.Ta/M;
 F_kp1 = integrate_casadi(f, DT_ctl, M, int_method); % runs with Ta from sensors
 
-if(N_step_MPC == 1 || N_step_MPC == 2)
+if(N_step_MPC == 1)
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
     DT2 = DT - 2*DT_ctl;
@@ -104,14 +104,8 @@ mpc_opt_var_inputs = {u, x};
 %   u1 = q_1_pp = u( n+1 : 2*n) | q_1 = x(     1+2*n :     3*n) | q_1_p = x(     1+3*n :     4*n)
 %   u1 = q_1_pp = xx(n+1 : 2*n) | q_1 = xx(N_u+1+2*n : N_u+3*n) | q_1_p = xx(N_u+1+3*n : N_u+4*n)
 N_u = numel(u);
-%q1_idx    = N_u+1+2*n : N_u+3*n;
-%q1_p_idx  = N_u+1+3*n : N_u+4*n;
-%q1_pp_idx = n+1 : 2*n;
-
-q1_idx    = N_u+1 : N_u+n;
-q1_p_idx  = N_u+1+n : N_u+2*n;
-q1_pp_idx = 1 : n;
-u_opt_indices = [q1_idx, q1_p_idx, q1_pp_idx]; % [q_1, q_1_p, q_1_pp] needed for joint space CT control
+q0_pp_idx = 1 : n;
+u_opt_indices = q0_pp_idx;
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
@@ -165,9 +159,9 @@ for i=0:N_MPC
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        if(i == 0 || i == 1)
+        if(i == 0)
             g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
-        elseif(i == 2)
+        elseif(i == 1)
             g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
         else
             g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
@@ -183,7 +177,7 @@ Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 J_yt   = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_d(1:3, 1 + (1:N_MPC-1)), pp.Q_y( 1:3,1:3)  );
 J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp.Q_yN(1:3,1:3)  );
 
-J_yr = SX(1,1);
+J_yr = 0;
 for i=1:N_MPC
     % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
     % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
@@ -200,7 +194,7 @@ end
 g = g_x;
 
 J_q_pp = Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
-%J_q_pp = Q_norm_square(x, P);
+% J_q_pp = Q_norm_square(x, P);
 
 cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp}';
 

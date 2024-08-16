@@ -88,7 +88,7 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 ###################### MAIN ######################
 # Laden der .mat-Datei
 folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/meeting_22aug/example2_jointspace"
-mat_file_name = "240815_messung3_komisch.mat"
+mat_file_name = "240815_messung3_komisch2.mat"
 mat_file_path = os.path.join(folderpath, mat_file_name)
 outputname = mat_file_name[:-4] + '.html'
 output_file_path = os.path.join(folderpath, outputname)

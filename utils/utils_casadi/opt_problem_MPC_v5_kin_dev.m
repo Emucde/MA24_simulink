@@ -135,7 +135,8 @@ if(is_int_for_xkp1)
 else % diff_variant == diff_variant_mode.numdiff_twotimes
     mpc_opt_var_inputs = {u, x};
 
-    u_opt_indices = [3*n+1:4*n, 4*n+1:5*n, 1:n]; % [q_1, dq_1, ddq_1] needed for joint space CT control
+    %u_opt_indices = [3*n+1:4*n, 4*n+1:5*n, 1:n]; % [q_1, dq_1, ddq_1] needed for joint space CT control
+    u_opt_indices = [n+1:2*n, 2*n+1:3*n, 1:n]; % [q_1, dq_1, ddq_1] needed for joint space CT control
 
     % optimization variables cellarray w
     w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';

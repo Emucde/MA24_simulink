@@ -107,8 +107,8 @@ mpc_opt_var_inputs = {x, v};
 %
 % u      = q_0_pp
 % d/dt u = -lambda_u * q_0_pp
-
-u_opt_indices = (1+N_x : 2*N_x); % [q_1, q_1_p, q_1_pp] needed for joint space CT control
+%(1+N_x : 2*N_x)
+u_opt_indices = numel(x)+1:numel(x)+n; % [q_1, q_1_p, q_1_pp] needed for joint space CT control
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
@@ -180,7 +180,7 @@ Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 J_yt   = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_d(1:3, 1 + (1:N_MPC-1)), pp.Q_y( 1:3,1:3)  );
 J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp.Q_yN(1:3,1:3)  );
 
-J_yr = SX(1,1);
+J_yr = 0;
 for i=1:N_MPC
     % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
     % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
