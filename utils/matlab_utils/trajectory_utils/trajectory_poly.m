@@ -20,8 +20,8 @@ function [y_d, dy_d, ddy_d] = trajectory_poly(t, y0, yT, T)
 %dy_d = (yT - y0) * (-6 * t ^ 2 / T ^ 3 + 6 * t / T ^ 2);
 
 % Polynom 5. Ordnung:
-y_d = y0 + (6 / T ^ 5 * t ^ 5 - 15 / T ^ 4 * t ^ 4 + 10 * t ^ 3 / T ^ 3) * (yT - y0);
-dy_d = (30 / T ^ 5 * t ^ 4 - 60 / T ^ 4 * t ^ 3 + 30 * t ^ 2 / T ^ 3) * (yT - y0);
-ddy_d = (120 / T ^ 5 * t ^ 3 - 180 / T ^ 4 * t ^ 2 + 60 * t / T ^ 3) * (yT - y0);
+y_d   = y0 + (6   / T ^ 5 * t ^ 5 - 15  / T ^ 4 * t ^ 4 + 10 * t ^ 3 / T ^ 3) * (yT - y0);
+dy_d  =      (30  / T ^ 5 * t ^ 4 - 60  / T ^ 4 * t ^ 3 + 30 * t ^ 2 / T ^ 3) * (yT - y0);
+ddy_d =      (120 / T ^ 5 * t ^ 3 - 180 / T ^ 4 * t ^ 2 + 60 * t     / T ^ 3) * (yT - y0);
 
 end

@@ -30,8 +30,8 @@ function [x_d] = create_poly_traj_jointspace(traj_select, t, param_traj, init_bu
     p_d_p = pp_d_p(1:3);
     p_d_pp = pp_d_pp(1:3);
 
-    omega_d = pp_d(4:6);
-    omega_d_p = pp_d_p(4:6);
+    omega_d = pp_d_p(4:6);
+    omega_d_p = pp_d_pp(4:6);
     
     q_d   = pp_d(4:7);
     [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);

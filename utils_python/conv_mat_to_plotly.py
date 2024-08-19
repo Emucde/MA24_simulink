@@ -53,10 +53,6 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
         hovermode = 'closest',
         margin=dict(l=10, r=10, t=50, b=70),
         height=1080,
-        yaxis=dict(
-       autorange = True,
-       fixedrange= False
-   ),
         # legend_indentation = 0,
         # margin_pad=0,
         # Gridline customization for all subplots
@@ -67,6 +63,8 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
     fig.update_layout(
         **{f'xaxis{i}': dict(showticklabels=False) for i in range(1, subplot_number+1-6)}
     )
+
+    fig.update_xaxes(matches='x', autorange=True)
 
     if(plot_fig):
         fig.show()
@@ -88,7 +86,7 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 ###################### MAIN ######################
 # Laden der .mat-Datei
 folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/meeting_22aug/example2_jointspace"
-mat_file_name = "240815_messung3_komisch2.mat"
+mat_file_name = "240815_messung5_mpcv1_dyn.mat"
 mat_file_path = os.path.join(folderpath, mat_file_name)
 outputname = mat_file_name[:-4] + '.html'
 output_file_path = os.path.join(folderpath, outputname)

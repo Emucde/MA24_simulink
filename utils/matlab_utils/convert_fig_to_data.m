@@ -8,7 +8,7 @@ fig_subplots = flip(fig.Children.Children);
 subplot_number = length(fig_subplots);
 
 signals = repmat({0}, 1, subplot_number)';
-N_dec = 8; % read only each 100th sample
+N_dec = 1; % read only each 100th sample
 for i=1:subplot_number
     subplot_data = flip(findobj(fig_subplots(i),'-property','YData'));
     signal_number = length(subplot_data);
@@ -23,5 +23,5 @@ for i=1:subplot_number
 end
 
 save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/meeting_22aug/example2_jointspace/';
-file_name = '240815_messung3_komisch2.mat';
+file_name = '240815_messung5_mpcv1_dyn.mat';
 save([save_path, '/', file_name], 'signals');

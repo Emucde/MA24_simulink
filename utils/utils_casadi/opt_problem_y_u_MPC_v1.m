@@ -67,7 +67,7 @@ m = param_robot.m; % Dimension of Task Space
 
 % Model equations
 % Forward Dynamics: d/dt x = f(x, u)
-use_aba = ~true;
+use_aba = false;
 if(use_aba)
     f = Function.load([input_dir, 'sys_fun_x_aba_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
 else
@@ -163,7 +163,7 @@ lambda_x0 = SX.sym('lambda_x0', size(w));
 lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
-y    = SX( 3, N_MPC+1 ); % TCP position:      (y_0 ... y_N)
+y    = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
 q_pp = SX( n, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
@@ -175,7 +175,8 @@ for i=0:N_MPC
 
     % calculate trajectory values (y_0 ... y_N)
     H_e = hom_transform_endeffector_py_fun(q);
-    y(1:3,   1 + (i)) = H_e(1:3, 4);     %y_t_0 wird nicht verwendet
+    y(1:3,   1 + (i)) = H_e(1:3, 4);
+    y(4:7,   1 + (i)) = quat_endeffector_py_fun(q);
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
     if(i < N_MPC)
@@ -191,17 +192,18 @@ g = g_x;
 
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-Q_ori = SX(1,1);
+Q_ori = 0;
 for i=1:N_MPC
-    RR = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
-    %q_err = rotation2quaternion_casadi( RR );
-    q_err = [1; RR(3,2) - RR(2,3); RR(1,3) - RR(3,1); RR(2,1) - RR(1,2)]; % get unscaled rotax
-    % ang = acos((trace(RR) - 1) / 2);
+    % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+    % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
+    % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
+    q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
+
     if(i < N_MPC)
-        Q_ori = Q_ori + Q_norm_square( q_err(2:4) , pp.Q_y(4:6, 4:6)  );
+        Q_ori = Q_ori + Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6, 4:6)  );
         % Q_ori = Q_ori + ang^2* pp.Q_y(4, 4 );
     else
-        Q_ori_N = Q_norm_square( q_err(2:4) , pp.Q_yN(4:6, 4:6)  );
+        Q_ori_N = Q_norm_square( q_y_yr_err(2:4) , pp.Q_yN(4:6, 4:6)  );
         % Q_ori_N = ang^2* pp.Q_yN(4, 4 );
     end
 end
