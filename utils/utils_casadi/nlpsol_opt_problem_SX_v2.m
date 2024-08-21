@@ -133,6 +133,7 @@ elseif(strcmp(MPC_solver, 'ipopt'))
     all_ipopt_options;
     opts.ipopt.print_level = 5;
     opts.ipopt.fast_step_computation = 'yes';
+    opts.ipopt.print_info_string = 'yes';
     %opts.jit = true;
     %opts.compiler = 'shell';
     %opts.jit_options.flags = {'-O2'};

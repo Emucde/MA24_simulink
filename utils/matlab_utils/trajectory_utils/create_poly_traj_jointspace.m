@@ -22,7 +22,8 @@ function [x_d] = create_poly_traj_jointspace(traj_select, t, param_traj, init_bu
     J = geo_jacobian_endeffector_py(xd);
     J_p = geo_jacobian_endeffector_p_py(xd, dxd);
 
-    pp_d = [H(1:3,4); rotm2quat_v4(H(1:3,1:3))];
+    pp_d = [H(1:3,4); quat_endeffector_py(xd)];
+    % pp_d = [H(1:3,4); rotm2quat_v4(H(1:3,1:3))];
     pp_d_p = J*dxd;
     pp_d_pp = J*ddxd + J_p*dxd;
 
@@ -63,5 +64,5 @@ function [x_d] = create_poly_traj_jointspace(traj_select, t, param_traj, init_bu
     x_d.alpha_d_pp = alpha_d_pp;
     x_d.rot_ax_d = rot_ax_d;
     x_d.alpha_d_offset = 0;
-    x_d.q_d_rel = rotm2quat_v4(H(1:3,1:3));
+    x_d.q_d_rel = q_d;
 end

@@ -54,10 +54,8 @@ if(bdIsLoaded(simulink_main_model_name))
     % koordinate system for trajectory
     N_timesteps = 20;
     N_total = length(param_traj_data.t);
-    N_width = floor(N_total/(N_timesteps-1));
 
-    traj_indices = 1:N_width:N_total;
-    traj_indices(end) = N_total; % ensure fixed start and end point
+    traj_indices = round(linspace(1,N_total,N_timesteps));
 
     % current_traj_value is defined in change_simulink_traj_combo_box.m
     paths_set1 = zeros(N_timesteps,7,1);
