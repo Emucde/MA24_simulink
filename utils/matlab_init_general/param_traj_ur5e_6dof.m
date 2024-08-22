@@ -70,16 +70,18 @@ cnt = cnt+1;
 
 Q_pos = 1e5*eye(m);  % Weight for the position error in the cost function.
 Q_m = 0;             % Weight for the manipulability error in the cost function.
-Q_q = diag([1,1,1e10,1,1,1]);    % Weight for the deviaton of q_sol to q_d
+Q_q = 1e10*diag([1,1,1,1,1,1]);    % Weight for the deviaton of q_sol to q_d
 Q_nl = 1e-1 * eye(n);  % Weight of nl_spring_force(q, ct_ctrl_param, param_robot) -> pose should not start near to limits!
-q_d = [0.3636   -1.3788    0    0.1103    0.3635   -0.0042]';
-xe0 = [0.376; 0.376; 0.747; rotm2quat_v4(Ry(pi))];
+q_d = [-5.9399    5.2908    0   -5.2936   -5.9398   -6.2802]';
+xe0 = [0.3759; 0.3762; 0.7472; rotm2quat_v4(Ry(pi))];
 
 q_0 = inverse_kinematics(param_robot, xe0, q_d, Q_pos, Q_m, Q_q, Q_nl,  1e-2, 100, ct_ctrl_param);
 
-xeT = xe0 + [0; 0; 0.946-xe0(3); zeros(4,1)];
+xeT = xe0 + [0; 0; 0.9462-xe0(3); zeros(4,1)];
 
 %Q_pos = 1e5*diag([1e1,1e1,1e-3,1,1,1]);
+q_d = [-5.9398    5.2914    0    4.1332    5.9398    3.1417]';
+Q_q = 1e10*diag([1,1,1,1,1,1]);
 q_T = inverse_kinematics(param_robot, xeT, q_d, Q_pos, Q_m, Q_q, Q_nl,  1e-2, 100, ct_ctrl_param);
 
 traj_struct = struct;

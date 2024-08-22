@@ -60,6 +60,35 @@
 
 % Note: Simplified notation used for clarity. Define functions and matrices explicitly.
 
+%{
+param_weight.(MPC).Q_y      = 1*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_yN     = 1*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
+
+param_weight.(MPC).R_q_pp   = 1e-10*diag(ones(n,1));  % c_kpn
+param_weight.(MPC).R_du   = 1*diag(ones(n,1));  % c_kpn
+
+param_weight.(MPC).Q_y_ref = 1*diag([1*ones(3,1); 1*ones(3,1)]);
+param_weight.(MPC).Q_y_p_ref = 1*diag([1*ones(3,1); 1*ones(3,1)]);
+param_weight.(MPC).Q_y_pp_ref = 1*diag([1*ones(3,1); 1*ones(3,1)]);
+
+
+% param_weight.(MPC).x_min    = x_min;
+% param_weight.(MPC).x_max    = x_max;
+% param_weight.(MPC).u_min    = u_min;
+% param_weight.(MPC).u_max    = u_max;
+% param_weight.(MPC).q_pp_min    = param_robot.q_pp_limit_lower*1;
+% param_weight.(MPC).q_pp_max    = param_robot.q_pp_limit_upper*1;
+param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
+param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
+param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
+param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max
+param_weight.(MPC).q_pp_min = -inf(size(param_robot.q_pp_limit_lower)); %x_min
+param_weight.(MPC).q_pp_max = +inf(size(param_robot.q_pp_limit_upper)); %x_max
+%}
+
+% The Idea here was to solve the full inverse dynamics to calculate the desired torque for relative
+% weighting of u. But it didn't work, it stucked at one minimum.
+
 import casadi.*
 
 n = param_robot.n_DOF; % Dimension of joint space
@@ -91,15 +120,15 @@ F = integrate_casadi(f, DT, M, int_method);
 p_d_0       = param_trajectory.p_d(       :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
 q_d_0       = param_trajectory.q_d(       :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
 
-% p_d_p_0     = param_trajectory.p_d_p(     :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
-% omega_d_0   = param_trajectory.omega_d(   :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
+p_d_p_0     = param_trajectory.p_d_p(     :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
+omega_d_0   = param_trajectory.omega_d(   :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
 
-% p_d_pp_0    = param_trajectory.p_d_pp(    :, 1 : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
-% omega_d_p_0 = param_trajectory.omega_d_p( :, 1 : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
+p_d_pp_0    = param_trajectory.p_d_pp(    :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
+omega_d_p_0 = param_trajectory.omega_d_p( :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
 
 y_d_0 = [p_d_0; q_d_0];
-% y_d_p_0 = [p_d_p_0; omega_d_0];
-% y_d_pp_0 = [p_d_pp_0; omega_d_p_0];
+y_d_p_0 = [p_d_p_0; omega_d_0];
+y_d_pp_0 = [p_d_pp_0; omega_d_p_0];
 
 x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
 q_0    = x_0_0(1   :   n); % useless line...
@@ -115,10 +144,18 @@ F_sim              = F.mapaccum(N_MPC);
 x_init_guess_kp1_0 = F_sim(x_0_0, u_init_guess_0);
 x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
 
+q_d_init_guess_0 = x_init_guess_0(1:n, 1:N_MPC);
+q_d_p_init_guess_0 = x_init_guess_0(n+1:2*n, 1:N_MPC);
+q_d_pp_init_guess_0 = ones(n, N_MPC).*q_0_pp;
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INIT GUESS 1/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
-lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
-init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(q_d_init_guess_0)+numel(q_d_p_init_guess_0)+numel(q_d_pp_init_guess_0), 1);
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+2*n, 1);
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); q_d_init_guess_0(:); q_d_p_init_guess_0(:); q_d_pp_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+
+% lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
+% lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
+% init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 % get weights from "init_MPC_weight.m"
 param_weight_init = param_weight.(casadi_func_name);
@@ -133,14 +170,18 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables 2/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 u   = SX.sym( 'u',    n, N_MPC   );
 x   = SX.sym( 'x',  2*n, N_MPC+1 );
+q_d = SX.sym( 'q_d',n, N_MPC );
+q_d_p = SX.sym( 'q_d_p',n, N_MPC );
+q_d_pp = SX.sym( 'q_d_pp',n, N_MPC );
 
-mpc_opt_var_inputs = {u, x};
+mpc_opt_var_inputs = {u, x, q_d, q_d_p, q_d_pp};
+% mpc_opt_var_inputs = {u, x};
 
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')'; % optimization variables cellarray w
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables Limits 3/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lbw = [repmat(pp.u_min, size(u, 2), 1); repmat(pp.x_min, size(x, 2), 1)];
-ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max, size(x, 2), 1)];
+lbw = [repmat(pp.u_min, size(u, 2), 1); repmat(pp.x_min, size(x, 2), 1); repmat(pp.x_min(1:n), size(q_d, 2), 1); repmat(pp.x_min(n+1:2*n), size(q_d_p, 2), 1); repmat(pp.q_pp_min, size(q_d_pp, 2), 1)];
+ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max, size(x, 2), 1); repmat(pp.x_max(1:n), size(q_d, 2), 1); repmat(pp.x_max(n+1:2*n), size(q_d_p, 2), 1); repmat(pp.q_pp_max, size(q_d_pp, 2), 1)];
 % lbw = [repmat(pp.u_min, size(u, 2), 1); repmat(pp.x_min, size(x, 2), 1)];
 % ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max, size(x, 2), 1)];
 
@@ -149,9 +190,11 @@ u_opt_indices = 1:n;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INPUT Parameter 4/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 x_k    = SX.sym( 'x_k', 2*n, 1       ); % current x state
 y_d    = SX.sym( 'y_d', m+1, N_MPC+1 ); % (y_d_0 ... y_d_N)
+y_d_p  = SX.sym( 'y_d_p', m, N_MPC+1 ); % (y_d_p_0 ... y_d_p_N)
+y_d_pp = SX.sym( 'y_d_pp', m, N_MPC+1 ); % (y_d_pp_0 ... y_d_pp_N)
 
-mpc_parameter_inputs = {x_k, y_d};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
+mpc_parameter_inputs = {x_k, y_d, y_d_p, y_d_pp};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -161,16 +204,17 @@ end
 
 % constraints conditions cellarray g
 g_x = cell(1, N_MPC+1); % for F
+g_y_d = cell(1, N_MPC);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET Equation Constraint size 5/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if(weights_and_limits_as_parameter)
-    lbg = SX(numel(x), 1);
-    ubg = SX(numel(x), 1);
+    lbg = SX(numel(x)+2*n, 1);
+    ubg = SX(numel(x)+2*n, 1);
     % lbg = SX(numel(x), 1);
     % ubg = SX(numel(x), 1);
 else
-    lbg = zeros(numel(x), 1);
-    ubg = zeros(numel(x), 1);
+    lbg = zeros(numel(x)+numel(q_d), 1);
+    ubg = zeros(numel(x)+numel(q_d), 1);
 end
 
 % lambda_x0, lambda_g0 initial guess
@@ -180,12 +224,20 @@ lambda_g0 = SX.sym('lambda_g0', size(lbg));
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Equation Constraints %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
 y     = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
+y_e_d = SX(  7, N_MPC+1); % desired TCP Pose:      (y_0 ... y_N)
+y_e_d_p = SX(  6, N_MPC+1); % desired TCP velocity:      (y_p_0 ... y_p_N)
+y_e_d_pp = SX(  6, N_MPC+1); % desired TCP acceleration:      (y_pp_0 ... y_pp_N)
+
+u_d = SX( n, N_MPC ); % desired joint torque: (u_0 ... u_N-1)
 
 q_pp = SX( n, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
+q_d_pp = SX( n, N_MPC ); % desired joint acceleration
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
+R_e_d_arr = cell(1, N_MPC+1); % desired TCP orientation:   (R_0 ... R_N)
 
 g_x(  1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
+g_xd = {x_k - [q_d(:, 1); q_d_p(:, 1)]}; % x0 = xk
 for i=0:N_MPC
     % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
     q = x(1:n, 1 + (i));
@@ -197,6 +249,23 @@ for i=0:N_MPC
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
     if(i < N_MPC)
+        q_d_i = q_d(:, 1 + (i));
+        q_d_p_i = q_d_p(:, 1 + (i));
+        q_d_pp_i = q_d_pp(:, 1 + (i));
+
+        H_e_d = hom_transform_endeffector_py_fun(q_d_i);
+        y_e_d(1:3,   1 + (i)) = H_e_d(1:3, 4);
+        y_e_d(4:7,   1 + (i)) = quat_endeffector_py_fun(q_d_i);
+        R_e_d_arr{1 + (i)} = H_e_d(1:3, 1:3);
+
+        q_yd_yr_err = quat_mult(y_e_d(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
+        g_y_d(1, 1 + (i)) = {[y_e_d(1:3, 1 + (i)) - y_d(1:3, 1 + (i)); q_yd_yr_err(2:4)]}; % Set the state dynamics constraints
+
+        y_e_d_p(:, 1 + (i)) = J(q_d_i)*q_d_p_i;
+        y_e_d_pp(:, 1 + (i)) = J(q_d_i)*q_d_pp_i + J_p(q_d_i, q_d_p_i)*q_d_p_i;
+
+        u_d(:, 1 + (i)) = compute_tau_fun(q_d_i, q_d_p_i, q_d_pp_i);
+
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
         g_x(1, 1 + (i+1)) = {F(x(:, 1 + (i)), u(    :, 1 + (i))) - x(:, 1 + (i+1))}; % Set the state dynamics constraints
 
@@ -206,7 +275,8 @@ for i=0:N_MPC
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Total number of equation conditions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-g = g_x;
+g = [g_x, g_xd];
+% g = g_x;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Cost Function  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
@@ -231,13 +301,19 @@ J_yr = Q_ori;
 J_yt_N    = Q_norm_square(  y( 1:3, 1 + (N_MPC) ) - y_d( 1:3, 1 + (N_MPC) ), pp.Q_yN(1:3, 1:3)  );
 J_yr_N    = Q_ori_N;
 
+gg_vec = SX(n, N_MPC);
+for i=0:N_MPC-1
+    gg_vec(:, 1 + (i)) = gravity_vector_py_fun(q_d(:, 1 + (i)));
+end
 % J_q_pp = Q_norm_square(u, pp.R_q_pp);
 
 % J_q_d_pp = Q_norm_square(u_d, pp.R_q_d);
+J_y = Q_norm_square([g_y_d{:}], pp.Q_y_ref) + Q_norm_square(y_e_d_p(:,1:N_MPC) - y_d_p(:,1:N_MPC), pp.Q_y_p_ref) + Q_norm_square(y_e_d_pp(:,1:N_MPC) - y_d_pp(:,1:N_MPC), pp.Q_y_pp_ref);
+J_du = Q_norm_square(u-u_d, pp.R_du);
 % J_q_pp = Q_norm_square(q_pp, pp.R_q_pp);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Additional Outputs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N}';
+cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_du, J_y}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 

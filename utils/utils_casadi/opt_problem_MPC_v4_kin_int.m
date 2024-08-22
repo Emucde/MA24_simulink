@@ -174,11 +174,11 @@ end
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-J_yt   = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_d(1:3, 1 + (1:N_MPC-1)), pp.Q_y( 1:3,1:3)  );
+J_yt   = Q_norm_square( y(1:3, 1 + (0:N_MPC-1) ) - y_d(1:3, 1 + (0:N_MPC-1)), pp.Q_y( 1:3,1:3)  );
 J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp.Q_yN(1:3,1:3)  );
 
 J_yr = 0;
-for i=1:N_MPC
+for i=0:N_MPC
     % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
     % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
     % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)

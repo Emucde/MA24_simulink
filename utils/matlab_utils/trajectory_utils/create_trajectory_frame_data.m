@@ -97,7 +97,7 @@ if(bdIsLoaded(simulink_main_model_name))
     current_traj_data = current_traj_data(:, 1:cnt)';
 
     % remove duplicates
-    N_curr_points = length(current_traj_data);
+    N_curr_points = size(current_traj_data, 1);
     current_traj_data_fin = zeros(size(current_traj_data));
     current_traj_data_fin(1,:) = current_traj_data(1,:);
     start_point = current_traj_data_fin(1,:);
