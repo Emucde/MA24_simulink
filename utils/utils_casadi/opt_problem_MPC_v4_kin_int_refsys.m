@@ -108,7 +108,7 @@ mpc_opt_var_inputs = {x, v};
 % u      = q_0_pp
 % d/dt u = -lambda_u * q_0_pp
 %(1+N_x : 2*N_x)
-u_opt_indices = numel(x)+1:numel(x)+n; % [q_1, q_1_p, q_1_pp] needed for joint space CT control
+u_opt_indices = numel(x)+1:numel(x)+n; % [q_0_pp] needed for joint space CT control
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';

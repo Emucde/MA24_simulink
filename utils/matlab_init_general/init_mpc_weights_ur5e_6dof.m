@@ -9,7 +9,7 @@ MPC='MPC01';
 param_weight.(MPC).Q_y      = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_yN     = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
 
-% param_weight.(MPC).R_q_pp   = 1e-10*diag(ones(n,1));  % c_kpn
+param_weight.(MPC).R_q_pp   = 1e-10*diag(ones(n,1));  % c_kpn
 % param_weight.(MPC).R_du   = 1e-10*diag(ones(n,1));  % c_kpn
 
 % param_weight.(MPC).x_min    = x_min;
@@ -97,12 +97,12 @@ param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 9) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % kinematic mpc with integration and refsys for u
 MPC='MPC9';
-param_weight.(MPC).Q_y     = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % d_kpn
-param_weight.(MPC).Q_yN    = diag([1e8*ones(3,1); 1e8*ones(3,1)]);  % D_N
-param_weight.(MPC).R_q_pp  = 1e-11*diag(ones(n,1));  % d_kpn
-param_weight.(MPC).R_v     = 1e-11*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).Q_y     = diag([1e0*ones(3,1); 1e0*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_yN    = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % D_N
+param_weight.(MPC).R_q_pp  = 1e-10*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).R_v     = 1e-10*diag(ones(n,1));  % d_kpn
 
-param_weight.(MPC).lambda_u  = 10*ones(6,1);
+param_weight.(MPC).lambda_u  = 100*ones(6,1);
 
 % param_weight.(MPC).x_min    = x_min.*[ones(n,1); 0.5*ones(n,1)];
 % param_weight.(MPC).x_max    = x_max.*[ones(n,1); 0.5*ones(n,1)];

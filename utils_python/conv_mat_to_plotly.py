@@ -66,6 +66,26 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 
     fig.update_xaxes(matches='x', autorange=True)
 
+    # updatemenus = []
+    # btn_y = [0.9, 0.4]
+
+    # yaxis_id = f'yaxis{2}'
+    # xaxis_id = f'xaxis{2}'
+
+    # updatemenus.extend([
+    #     dict(
+    #         buttons=[
+    #             dict(label="Linear", method="relayout", args=[{f"{yaxis_id}.range": [0,1]}]),
+    #             dict(label="Log", method="relayout", args=[{f"{yaxis_id}.range": [-10,10]}])
+    #         ],
+    #         direction="down",
+    #         showactive=True,
+    #         active=0,
+    #         xanchor="center",
+    #         yanchor="middle"
+    #     )])
+    # fig.update_layout(updatemenus=updatemenus)
+
     if(plot_fig):
         fig.show()
 
@@ -85,8 +105,8 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 
 ###################### MAIN ######################
 # Laden der .mat-Datei
-folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/meeting_22aug/example2_jointspace"
-mat_file_name = "240815_messung5_mpcv1_dyn.mat"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/meeting_26aug/example4_jointspace_ct_vgl"
+mat_file_name = "240826_messung7_ct_kd1000.mat"
 mat_file_path = os.path.join(folderpath, mat_file_name)
 outputname = mat_file_name[:-4] + '.html'
 output_file_path = os.path.join(folderpath, outputname)
