@@ -138,7 +138,7 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
                 var on_event=true;
 
                 function test(eventdata){
-                    console.log(eventdata);
+                    //console.log(eventdata);
                     
                     graphDiv = document.querySelector('.plotly-graph-div');
                     
@@ -165,29 +165,17 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
                             g_ymin=Infinity;
                             trace.forEach(function(el,id){
                                 filteredY = filteredIndices.map(index => el.y[index]);
+                                if( (yaxis_change && !xaxis_change))
+                                {
+                                    y_rangefilteredIndices = filteredY.map((y, index) => y >= yrange[0] && y <= yrange[1] ? index : -1).filter(index => index !== -1);
+                                    filteredY = y_rangefilteredIndices.map(index => filteredY[index]);
+                                }
 
                                 act_min = Math.min.apply(null, filteredY);
                                 act_max = Math.max.apply(null, filteredY);
 
-                                g_ymax_new = Math.max(g_ymax, act_max);
-                                g_ymin_new = Math.min(g_ymin, act_min);
-
-                                if( (yaxis_change && !xaxis_change))
-                                {
-                                    if(g_ymax_new <= yrange[1] && g_ymax_new >= yrange[0])
-                                    {
-                                        g_ymax = g_ymax_new;
-                                    }
-                                    if(g_ymin_new <= yrange[1] && g_ymin_new >= yrange[0])
-                                    {
-                                        g_ymin = g_ymin_new;
-                                    }
-                                }
-                                else
-                                {
-                                    g_ymax = g_ymax_new;
-                                    g_ymin = g_ymin_new;
-                                }
+                                g_ymax = Math.max(g_ymax, act_max);
+                                g_ymin = Math.min(g_ymin, act_min);
                             });
 
                             offset = 1/9*(g_ymax - g_ymin)/2;
