@@ -66,59 +66,6 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 
     fig.update_xaxes(matches='x', autorange=True)
 
-    updatemenus = []
-    btn_y = [0.9, 0.4]
-
-    yaxis_id = f'yaxis{2}'
-    xaxis_id = f'xaxis{2}'
-
-    updatemenus.extend([
-        dict(
-            buttons=[
-                dict(label="Linear", method="update", args=[{"yaxis2.range": [0,1]}]),
-                dict(label="Log", method="update", args=[{f"{yaxis_id}.range": [-10,10]}])
-            ],
-            direction="down",
-            showactive=True,
-            active=0,
-            xanchor="center",
-            yanchor="middle"
-        )])
-    # fig.update_layout(updatemenus=updatemenus)
-
-    def create(figure, name_list, change_dict_list):
-        info = len([*figure.select_traces()])
-        indices = [idx for idx, trace in enumerate(figure.select_traces()) if trace.name in name_list]
-        
-        # analyze change_dict_list
-        new_colors = []
-        for d in change_dict_list:
-            new_colors.append(d.get('line').get('color'))
-        
-        # analyze traces
-        existing_colors = []
-        for trace in figure.select_traces():
-            existing_colors.append(trace.line.color)
-        
-        # substitute colors
-        for idx, new_color in zip(indices, new_colors):
-            existing_colors[idx] = new_color
-            
-        # prepare output
-        figure.update_layout({"yaxis2.range": figure.layout.xaxis2.range})
-        return {'line': [{'color': color} for color in existing_colors]}
-        # return {"yaxis2.range": [0,1]}
-
-    button = [dict(
-        method='relayout',  
-        args=[
-            create(fig,  ['Secondtrace', 'Forthtrace'], [{'line':{'color':'yellow'}}, {'line':{'color':'red'}}])
-        ],
-        label='button'
-    )]
-        
-    fig.layout.updatemenus = [{'buttons': button}]
-
     if(plot_fig):
         fig.show()
 
@@ -225,8 +172,8 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 
 ###################### MAIN ######################
 # Laden der .mat-Datei
-folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/meeting_26aug/example4_jointspace_ct_vgl"
-mat_file_name = "240826_messung7_ct_kd64.mat"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/meeting_26aug/example1_rot_schwach_gewichten"
+mat_file_name = "240815_messung1.mat"
 mat_file_path = os.path.join(folderpath, mat_file_name)
 outputname = mat_file_name[:-4] + '.html'
 output_file_path = os.path.join(folderpath, outputname)
