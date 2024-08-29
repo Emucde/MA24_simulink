@@ -172,8 +172,8 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 
 ###################### MAIN ######################
 # Laden der .mat-Datei
-folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/meeting_26aug/example1_rot_schwach_gewichten"
-mat_file_name = "240815_messung1.mat"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/example1_allsing"
+mat_file_name = "240826_messung1_mpc8.mat"
 mat_file_path = os.path.join(folderpath, mat_file_name)
 outputname = mat_file_name[:-4] + '.html'
 output_file_path = os.path.join(folderpath, outputname)

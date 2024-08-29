@@ -77,7 +77,7 @@ param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max
 % kinematic mpc with integration without refsys after thelenberg
 MPC='MPC8';
 
-param_weight.(MPC).Q_y    = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_y    = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_yN   = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
 param_weight.(MPC).R_q_pp = 1e-10*diag(ones(n,1));
 
@@ -85,14 +85,14 @@ param_weight.(MPC).R_q_pp = 1e-10*diag(ones(n,1));
 % param_weight.(MPC).Q_yN   = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
 % param_weight.(MPC).R_q_pp = 1e-10*diag(ones(n,1));
 
-% param_weight.(MPC).x_min    = x_min.*[ones(n,1); 1*ones(n,1)];
-% param_weight.(MPC).x_max    = x_max.*[ones(n,1); 1*ones(n,1)];
-% param_weight.(MPC).u_min    = param_robot.q_pp_limit_lower*1;
-% param_weight.(MPC).u_max    = param_robot.q_pp_limit_upper*1;
-param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
-param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
-param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
-param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
+param_weight.(MPC).x_min    = x_min.*[ones(n,1); 1*ones(n,1)];
+param_weight.(MPC).x_max    = x_max.*[ones(n,1); 1*ones(n,1)];
+param_weight.(MPC).u_min    = param_robot.q_pp_limit_lower*1;
+param_weight.(MPC).u_max    = param_robot.q_pp_limit_upper*1;
+% param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
+% param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
+% param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
+% param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 9) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % kinematic mpc with integration and refsys for u
