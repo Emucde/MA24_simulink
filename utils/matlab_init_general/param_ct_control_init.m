@@ -28,13 +28,9 @@ ct_ctrl_param.eps  = 1e-1;
 
 % 4:
 ct_ctrl_param.eps_collinear = 0.95;
-%ct_ctrl_param.D_n_colin = 1e0*eye(n);
-%ct_ctrl_param.K_n_colin = ct_ctrl_param.D_n_colin^2/4;
 
 % 5:
 ct_ctrl_param.lambda_min = 1e-3;
-%ct_ctrl_param.D_n_colin = 1e0*eye(n);
-%ct_ctrl_param.K_n_colin = ct_ctrl_param.D_n_colin^2/4;
 
 %% nullspace for CT controller
 ct_ctrl_param.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;

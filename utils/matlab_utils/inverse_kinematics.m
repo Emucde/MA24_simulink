@@ -107,14 +107,14 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
     
         manipulability = calc_manipulability(best_q); % Calculate and print the manipulability for the joint angles corresponding to the maximum manipulability.
         decimalPlaces = 4;
-        fprintf('Manipulability for the optimal joint angles:\n\t%.*f\n', decimalPlaces, manipulability);
+        fprintf('Manipulability for the optimal joint angles:\n\t%.*g\n', decimalPlaces, manipulability);
     
         xe0_opt = forward_kinematics(best_q)';
         decimalPlaces = 3;
         if(n == 7)
-            fprintf("Joint angles corresponding to the maximum manipulability:\n\t[%.*f, %.*f, %.*f, %.*f, %.*f, %.*f, %.*f]'\n", decimalPlaces, best_q(1), decimalPlaces, best_q(2), decimalPlaces, best_q(3), decimalPlaces, best_q(4), decimalPlaces, best_q(5), decimalPlaces, best_q(6), decimalPlaces, best_q(7));
+            fprintf("Joint angles corresponding to the minimum! manipulability:\n\t[%.*f, %.*f, %.*f, %.*f, %.*f, %.*f, %.*f]'\n", decimalPlaces, best_q(1), decimalPlaces, best_q(2), decimalPlaces, best_q(3), decimalPlaces, best_q(4), decimalPlaces, best_q(5), decimalPlaces, best_q(6), decimalPlaces, best_q(7));
         else
-            fprintf("Joint angles corresponding to the maximum manipulability:\n\t[%.*f, %.*f, %.*f, %.*f, %.*f, %.*f]'\n", decimalPlaces, best_q(1), decimalPlaces, best_q(2), decimalPlaces, best_q(3), decimalPlaces, best_q(4), decimalPlaces, best_q(5), decimalPlaces, best_q(6));
+            fprintf("Joint angles corresponding to the minimum! manipulability:\n\t[%.*f, %.*f, %.*f, %.*f, %.*f, %.*f]'\n", decimalPlaces, best_q(1), decimalPlaces, best_q(2), decimalPlaces, best_q(3), decimalPlaces, best_q(4), decimalPlaces, best_q(5), decimalPlaces, best_q(6));
         end
         
         decimalPlaces = 3;
