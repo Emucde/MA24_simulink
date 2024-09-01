@@ -249,6 +249,7 @@ def create_html_structure(base_path):
       var new_size = act_size == "small" ? "big" : "small";
       var new_width = new_size == "small" ? "320px" : "600px";
       element.setAttribute('act_size', new_size);
+      element.innerHTML = new_size == "small" ? "Change video size to big (600px)" : "Change video size to small (320px)";
 
       videos.forEach(function(el, i){
         el.style.width = new_width;
@@ -284,8 +285,8 @@ def create_html_structure(base_path):
     btn_div.append(load_all_button)
 
     vid_size_button = soup.new_tag('button', onclick="change_video_size(this);")
-    vid_size_button.string = "Change Video Size"
-    vid_size_button['act_size'] = "small"
+    vid_size_button.string = "Change video size to small (320px)"
+    vid_size_button['act_size'] = "big"
 
     btn_div.append(vid_size_button)
 
@@ -331,7 +332,7 @@ def create_html_structure(base_path):
                   li.append(a)
                   body.append(li)
 
-                  video = soup.new_tag('video', width="320", controls="", style="display:none;margin-left:22px;margin-top:8px;")
+                  video = soup.new_tag('video', width="600px", controls="", style="display:none;margin-left:22px;margin-top:8px;")
                   video['is_shown'] = "0"
                   source = soup.new_tag('source', src=os.path.join(dir_path, get_mp4_file(dir_path)), type="video/mp4")
                   source.string = "Your browser does not support the video tag."

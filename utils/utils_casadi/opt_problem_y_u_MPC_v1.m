@@ -93,23 +93,23 @@ F_kp1 = integrate_casadi(f, DT_ctl, M, int_method); % runs with Ta from sensors
 if(N_step_MPC == 1)
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
-    DT2 = DT - 2*DT_ctl;
+    DT2 = DT - DT_ctl;
 end
 F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 
-%% Calculate Initial Guess
-p_d_0       = param_trajectory.p_d(       :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
-q_d_0       = param_trajectory.q_d(       :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
+% Get trajectory data for initial guess
+p_d_0       = param_trajectory.p_d( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
+q_d_0       = param_trajectory.q_d( 1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
 
-% p_d_p_0     = param_trajectory.p_d_p(     :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
-% omega_d_0   = param_trajectory.omega_d(   :, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
-
-% p_d_pp_0    = param_trajectory.p_d_pp(    :, 1 : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
-% omega_d_p_0 = param_trajectory.omega_d_p( :, 1 : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
-
-y_d_0 = [p_d_0; q_d_0];
-% y_d_p_0 = [p_d_p_0; omega_d_0];
-% y_d_pp_0 = [p_d_pp_0; omega_d_p_0];
+% initial guess for reference trajectory parameter
+% [TODO: not all cases implemented]
+if(N_step_MPC == 1)
+    y_d_0    = [p_d_0; q_d_0];
+else
+    p_d_0_kp1 = param_trajectory.p_d(  1:3, 2 );
+    q_d_0_kp1 = param_trajectory.q_d(  1:4, 2 );
+    y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-1)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-1)]];
+end
 
 x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
 q_0    = x_0_0(1   :   n); % useless line...
@@ -252,10 +252,11 @@ J_yr_N    = Q_ori_N;
 % J_q_pp = Q_norm_square(u, pp.R_q_pp);
 
 % J_q_d_pp = Q_norm_square(u_d, pp.R_q_d);
-J_q_pp = Q_norm_square(q_pp, pp.R_q_pp);
+% J_q_pp = Q_norm_square(q_pp, pp.R_q_pp);
+J_u = Q_norm_square(u, pp.R_u);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Additional Outputs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N}';
+cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_u}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 

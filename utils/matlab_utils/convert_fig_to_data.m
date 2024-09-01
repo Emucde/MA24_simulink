@@ -22,12 +22,14 @@ for i=1:subplot_number
     end
 end
 
-%save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj3_poly_ellbow1/CT_mit_singreg';
-%save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj3_poly_ellbow1/MPC_v1_dyn';
-save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj3_poly_ellbow1/MPC_v3_kin_int';
-%save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj3_poly_ellbow1/MPC_v3_kin_int_laenger_praed';
-%file_name = '240826_messung7_traj3_ct.mat';
-%file_name = '240826_messung8_traj3_mpc1_dyn.mat';
-file_name = '240826_messung9_traj3_mpc8_kin_int.mat';
-%file_name = '240826_messung10_traj3_mpc8_kin_int_laenger_praed.mat';
+%save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj6_poly_shouldertry1/CT_mit_singreg';
+%save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj6_poly_shouldertry1/MPC_v1_dyn_transl_schwach_gew';
+%save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj6_poly_shouldertry1/MPC_v1_dyn';
+save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj6_poly_shouldertry1/MPC_v3_kin_int';
+%save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj6_poly_shouldertry1/MPC_v3_kin_int_laenger_praed';
+%file_name = '240826_messung11_traj6_ct.mat';
+%file_name = '240826_messung12_traj6_mpc1_dyn.mat';
+%file_name = '240826_messung13_traj6_mpc1_dyn_transl_schwach_gew.mat';
+file_name = '240826_messung14_traj6_mpc8_kin_int.mat';
+%file_name = '240826_messung15_traj6_mpc8_kin_int_laenger_praed.mat';
 save([save_path, '/', file_name], 'signals');
