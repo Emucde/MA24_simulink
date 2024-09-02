@@ -172,17 +172,11 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 
 ###################### MAIN ######################
 # Laden der .mat-Datei
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj6_poly_shouldertry1/CT_mit_singreg"
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj6_poly_shouldertry1/MPC_v1_dyn_transl_schwach_gew"
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj6_poly_shouldertry1/MPC_v1_dyn"
-folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj6_poly_shouldertry1/MPC_v3_kin_int"
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/traj6_poly_shouldertry1/MPC_v3_kin_int_laenger_praed"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting"
 
-# mat_file_name = '240826_messung11_traj6_ct.mat';
-# mat_file_name = '240826_messung12_traj6_mpc1_dyn.mat';
-# mat_file_name = '240826_messung13_traj6_mpc1_dyn_transl_schwach_gew.mat';
-mat_file_name = '240826_messung14_traj6_mpc8_kin_int.mat';
-# mat_file_name = '240826_messung15_traj6_mpc8_kin_int_laenger_praed.mat';
+# mat_file_name = '240826_messung15_traj7_ct.mat';
+# mat_file_name = '240826_messung5_traj2_mpc1_dyn_qpp_weight.mat';
+mat_file_name = '240826_messung13_traj6_mpc8_kin_no_limits.mat';
 
 mat_file_path = os.path.join(folderpath, mat_file_name)
 outputname = mat_file_name[:-4] + '.html'

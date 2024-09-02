@@ -6,10 +6,10 @@ u_max = [param_robot.torque_limit_upper];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 1) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MPC='MPC01';
-param_weight.(MPC).Q_y      = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
-param_weight.(MPC).Q_yN     = 1e8*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
+param_weight.(MPC).Q_y      = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_yN     = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
 
-param_weight.(MPC).R_u   = 1e-10*diag(ones(n,1));  % c_kpn
+param_weight.(MPC).R_q_pp   = 1e-10*diag(ones(n,1));  % c_kpn
 
 param_weight.(MPC).x_min    = x_min;
 param_weight.(MPC).x_max    = x_max;
@@ -80,7 +80,7 @@ MPC='MPC8';
 
 param_weight.(MPC).Q_y      = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_ykp1   = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
-param_weight.(MPC).Q_yN     = 1e2*diag([1e1*ones(3,1); 1e1*ones(3,1)]);  % D_N
+param_weight.(MPC).Q_yN     = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
 param_weight.(MPC).R_q_pp = 1e-10*diag(ones(n,1));
 
 param_weight.(MPC).x_min    = x_min.*[ones(n,1); 1*ones(n,1)];

@@ -252,11 +252,11 @@ J_yr_N    = Q_ori_N;
 % J_q_pp = Q_norm_square(u, pp.R_q_pp);
 
 % J_q_d_pp = Q_norm_square(u_d, pp.R_q_d);
-% J_q_pp = Q_norm_square(q_pp, pp.R_q_pp);
-J_u = Q_norm_square(u, pp.R_u);
+J_q_pp = Q_norm_square(q_pp, pp.R_q_pp);
+% J_u = Q_norm_square(u, pp.R_u);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Additional Outputs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_u}';
+cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_q_pp}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 

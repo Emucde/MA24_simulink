@@ -68,6 +68,7 @@ def create_html_structure(base_path):
 <!DOCTYPE html>
 <html>
 <head>
+    <title>MPC Simu 02.09.2024</title>
     <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?lang=matlab"></script>
 
     <style>
@@ -142,43 +143,20 @@ def create_html_structure(base_path):
       var is_loaded = element.getAttribute('is_loaded');
       var next_iframe = element.parentNode.nextElementSibling.nextElementSibling.nextElementSibling;
       next_iframe.style.display="block";
-      if(is_loaded == "0")
-      {
-        const newButton = document.createElement('button');
-        newButton.textContent = 'Hide Plot';
-        newButton.onclick = function(){
-          hide_plot(this);
-        };
-        element.insertAdjacentElement('afterend', newButton);
-        element.setAttribute('is_loaded', 1);
 
-        // show or hide code
-        const code_button = document.createElement('button');
-        code_button.textContent = 'Show Settings';
-        code_button.onclick = function(){
-          hide_settings(this);
-        };
-        newButton.insertAdjacentElement('afterend', code_button);
-
-        // show or hide video
-        const video_button = document.createElement('button');
-        video_button.textContent = 'Show Video';
-        video_button.onclick = function(){
-          hide_video(this);
-        };
-        code_button.insertAdjacentElement('afterend', video_button);
-      }
-      else
-      {
-        var button = element.nextElementSibling;
-        button.textContent = 'Hide Plot';
-        next_iframe.setAttribute('is_shown', 1);
-      }
+      // always reload iframe
+      element.target = element.getAttribute('_target');
+      element.href = element.getAttribute('_href');
+      element.setAttribute('is_loaded', 1);
+      element.nextSibling.textContent = 'Hide Plot';
+      next_iframe.setAttribute('is_shown', 1);
     }
     
     function hide_plot(element) {
       var next_iframe = element.parentNode.nextElementSibling.nextElementSibling.nextElementSibling;
       var is_shown = next_iframe.getAttribute('is_shown');
+      var prev_a_tag = element.previousSibling;
+      var is_loaded = prev_a_tag.getAttribute('is_loaded');
       
       if(is_shown == "1")
       {
@@ -191,6 +169,11 @@ def create_html_structure(base_path):
         next_iframe.style.display="block";
         next_iframe.setAttribute('is_shown', 1);
         element.textContent = 'Hide Plot';
+
+        if(is_loaded == "0")
+        {
+          prev_a_tag.click();
+        }
       }
     }
     
@@ -226,6 +209,13 @@ def create_html_structure(base_path):
       {
         next_video.style.display="block";
         next_video.setAttribute('is_shown', 1);
+        var autoplay_button = document.getElementById('autoplay_button');
+        var is_on = autoplay_button.getAttribute('is_on');
+        if(is_on == "1")
+        {
+          next_video.currentTime=0;
+          next_video.play();
+        }
         element.textContent = 'Hide Video';
       }
     }
@@ -249,13 +239,49 @@ def create_html_structure(base_path):
       var new_size = act_size == "small" ? "big" : "small";
       var new_width = new_size == "small" ? "320px" : "600px";
       element.setAttribute('act_size', new_size);
-      element.innerHTML = new_size == "small" ? "Change video size to big (600px)" : "Change video size to small (320px)";
+      element.innerHTML = new_size == "small" ? "Video size 320 px" : "Video size 600 px";
 
       videos.forEach(function(el, i){
         el.style.width = new_width;
       });
     }
 
+    function autoplay(element) {
+      var is_on = element.getAttribute('is_on');
+      var new_state = is_on == "1" ? "0" : "1";
+      element.setAttribute('is_on', new_state);
+      element.innerHTML = new_state == "1" ? "Autoplay ON" : "Autoplay OFF";
+    }
+
+    function change_button_positions() {
+      console.log(window.innerHeight);
+      console.log(window.innerWidth);
+      var width_arr = [];
+      document.querySelectorAll('a').forEach(function(el, i){
+        width_arr.push(el.offsetWidth);
+      });
+      max_width = Math.max.apply(null, width_arr);
+
+      var offset = 50;
+
+      document.querySelectorAll('.hide_plot_button').forEach(function(el, i){
+        el.style.left = max_width + offset + 'px';
+        el.style.display = 'initial';
+      });
+
+      document.querySelectorAll('.hide_settings_button').forEach(function(el, i){
+        el.style.left = max_width + offset + 95 + 'px';
+        el.style.display = 'initial';
+      });
+
+      document.querySelectorAll('.hide_video_button').forEach(function(el, i){
+        el.style.left = max_width + offset + 215 + 'px';
+        el.style.display = 'initial';
+      });
+      console.log(document.querySelectorAll('.hide_video_button'))
+    }
+
+    window.onload = change_button_positions;
     </script>
 </head>
 <body style="background-color:#1e1e1e;">
@@ -285,10 +311,16 @@ def create_html_structure(base_path):
     btn_div.append(load_all_button)
 
     vid_size_button = soup.new_tag('button', onclick="change_video_size(this);")
-    vid_size_button.string = "Change video size to small (320px)"
+    vid_size_button.string = "Video size 600 px"
     vid_size_button['act_size'] = "big"
 
     btn_div.append(vid_size_button)
+
+    autoplay_button = soup.new_tag('button', onclick="autoplay(this);", id="autoplay_button")
+    autoplay_button.string = "Autoplay ON"
+    autoplay_button['is_on'] = "1"
+
+    btn_div.append(autoplay_button)
 
     body.append(btn_div)
 
@@ -326,10 +358,31 @@ def create_html_structure(base_path):
                   li = soup.new_tag('li')
                   
                   # Erstelle a Element
-                  a = soup.new_tag('a', href=file_path, target=f"iframe{iframe_counter}", onclick="click_fun(this)")
+                  a = soup.new_tag('a', href="javascript:void(0)", target="", onclick="click_fun(this)")
                   a['is_loaded'] = "0"
+                  a['_target'] = f"iframe{iframe_counter}"
+                  a['_href'] = file_path
                   a.string = link_text
                   li.append(a)
+
+                  hide_plot_button = soup.new_tag('button', onclick="hide_plot(this);", style="display:none; position: absolute; left: 725px;")
+                  hide_plot_button['class'] = 'hide_plot_button'
+                  hide_plot_button.string = "Show Plot"
+
+                  li.append(hide_plot_button)
+
+                  settings_button = soup.new_tag('button', onclick="hide_settings(this);", style="display:none; position: absolute; left: 820px;")
+                  settings_button['class'] = 'hide_settings_button'
+                  settings_button.string = "Show Settings"
+
+                  li.append(settings_button)
+
+                  video_button = soup.new_tag('button', onclick="hide_video(this);", style="display:none; position: absolute; left: 940px;")
+                  video_button['class'] = 'hide_video_button'
+                  video_button.string = "Show Video"
+
+                  li.append(video_button)
+
                   body.append(li)
 
                   video = soup.new_tag('video', width="600px", controls="", style="display:none;margin-left:22px;margin-top:8px;")
@@ -357,7 +410,7 @@ def create_html_structure(base_path):
                   # Erstelle iframe Element
                   iframe = soup.new_tag('iframe', src="about:blank", title="description", style="display:none;")
                   iframe['name'] = f"iframe{iframe_counter}"
-                  iframe['is_shown'] = "1"
+                  iframe['is_shown'] = "0"
                   body.append(iframe)
 
                   if(dir_path != bottom_dirs[-1]):
