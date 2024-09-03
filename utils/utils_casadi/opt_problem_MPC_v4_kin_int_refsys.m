@@ -12,7 +12,7 @@ quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi'
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
-DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
+DT = (T_horizon_MPC/N_MPC)/M; % Time step - KEINE ZWISCHENST.
 DT_ctl = param_global.Ta/M;
 if(N_step_MPC == 1)
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
@@ -39,7 +39,7 @@ x3 = x(2*n+1:3*n);
 %f = Function('f', {x, v}, {[x2; K_p*x3; x4; v - K_p*x3 - K_d*x4]}, opt);
 f = Function('f', {x, v}, {[x2; x3; -diag(lambda_u) * x3  + v]}, opt);
 
-F_int = integrate_casadi(f, DT, M, int_method); % runs with Ts_MPC
+F_int = integrate_casadi(f, M*DT, 1, int_method); % runs with Ts_MPC
 F = Function('F', {x, v, lambda_u}, {F_int(x, v)});
 
 F_kp1_int = integrate_casadi(f, DT_ctl, M, int_method); % runs with Ta from sensors
@@ -108,7 +108,7 @@ mpc_opt_var_inputs = {x, v};
 % u      = q_0_pp
 % d/dt u = -lambda_u * q_0_pp
 %(1+N_x : 2*N_x)
-u_opt_indices = numel(x)+1:numel(x)+n; % [q_0_pp] needed for joint space CT control
+u_opt_indices = 1+2*n : 3*n; % [q_0_pp] needed for joint space CT control
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
@@ -177,9 +177,10 @@ end
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-J_yt   = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_d(1:3, 1 + (1:N_MPC-1)), pp.Q_y( 1:3,1:3)  );
-J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp.Q_yN(1:3,1:3)  );
+%J_yt   = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_d(1:3, 1 + (1:N_MPC-1)), pp.Q_y( 1:3,1:3)  );
+%J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp.Q_yN(1:3,1:3)  );
 
+J_yt = 0;
 J_yr = 0;
 for i=1:N_MPC
     % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
@@ -187,10 +188,18 @@ for i=1:N_MPC
     % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
     q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
 
-    if(i < N_MPC)
-        J_yr = J_yr + Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6,4:6)  );
+    if(i == 1)
+        J_yr = J_yr + M/DT_ctl * Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6,4:6)  );
+        J_yt = J_yt + M/DT_ctl * Q_norm_square( y(1:3, 1 + (i) ) - y_d(1:3, 1 + (i)), pp.Q_y( 1:3,1:3)  );
+    elseif(i == 2)
+        J_yr = J_yr + M/DT2 * Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6,4:6)  );
+        J_yt = J_yt + M/DT2 * Q_norm_square( y(1:3, 1 + (i) ) - y_d(1:3, 1 + (i)), pp.Q_y( 1:3,1:3)  );
+    elseif(i < N_MPC)
+        J_yr = J_yr + M/DT * Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6,4:6)  );
+        J_yt = J_yt + M/DT * Q_norm_square( y(1:3, 1 + (i) ) - y_d(1:3, 1 + (i)), pp.Q_y( 1:3,1:3)  );
     else
         J_yr_N = Q_norm_square( q_y_yr_err(2:4) , pp.Q_yN(4:6,4:6)  );
+        J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp.Q_yN(1:3,1:3)  );
     end
 end
 

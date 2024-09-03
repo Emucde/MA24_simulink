@@ -74,7 +74,7 @@ if(strcmp(MPC_solver, 'qrqp'))
     %opts.tol_pr=1e-12;%1e-6;
 %
     %opts.max_iter = 10000;%1500;
-
+    
     solver = nlpsol('solver', 'sqpmethod', prob, opts);
 
     % solver.print_options();
