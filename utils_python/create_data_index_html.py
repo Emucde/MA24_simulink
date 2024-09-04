@@ -419,10 +419,10 @@ def create_html_structure(base_path):
                   iframe_counter += 1
 
     # Schreibe das Ergebnis in index.html
-    with open('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/index.html', 'w', encoding='utf-8') as f:
+    with open('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240904_meeting/index.html', 'w', encoding='utf-8') as f:
         html_str = str(soup)
         f.write(html_str)
 
 # Verwendung:
-base_path = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting/"  # Ersetzen Sie dies durch Ihren tatsächlichen Pfad
+base_path = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240904_meeting/"  # Ersetzen Sie dies durch Ihren tatsächlichen Pfad
 create_html_structure(base_path)

@@ -122,17 +122,13 @@ param_weight.(MPC).v_min    = -inf(size(param_robot.q_pp_limit_lower)); %x_min
 param_weight.(MPC).v_max    = +inf(size(param_robot.q_pp_limit_upper)); %x_min 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 10) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% kinematic mpc with integration and refsys
 % kinematic mpc with numerical deviation without reference system
 MPC='MPC10';
 
 param_weight.(MPC).Q_y    = diag([1e0*ones(3,1); 1e0*ones(3,1)]);  % d_kpn
-param_weight.(MPC).Q_ykp1 = diag([1e0*ones(3,1); 1e0*ones(3,1)]);  % d_kpn
-param_weight.(MPC).Q_yN   = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % D_N
+% param_weight.(MPC).Q_ykp1 = diag([1e0*ones(3,1); 1e0*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_yN   = diag([1e2*ones(3,1); 1e2*ones(3,1)]);  % D_N
 param_weight.(MPC).R_q_pp = 1e-10*diag(ones(n,1));  % d_kpn
-
-K_D_q = 8*eye(n);     param_jointspace_ct.(MPC).K_D_q  = K_D_q;
-K_P_q = K_D_q^2/4;    param_jointspace_ct.(MPC).K_P_q  = K_P_q;
 
 % param_weight.(MPC).x_min    = x_min.*[ones(n,1); 0.5*ones(n,1)];
 % param_weight.(MPC).x_max    = x_max.*[ones(n,1); 0.5*ones(n,1)];
@@ -144,8 +140,7 @@ param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min
 param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 11) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% kinematic mpc with integration and refsys
-% kinematic mpc with numerical deviation and reference system
+% kinematic mpc with integration and refsys (not implemented)
 MPC='MPC11';
 param_weight.(MPC).Q_y        = diag([1e2*ones(3,1); 1e2*ones(3,1)]);  % d_kpn
 

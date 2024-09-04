@@ -172,11 +172,11 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 
 ###################### MAIN ######################
 # Laden der .mat-Datei
-folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240904_meeting/mpc_v5_kin_dev/kin_mpc_dev"
 
 # mat_file_name = '240826_messung15_traj7_ct.mat';
 # mat_file_name = '240826_messung5_traj2_mpc1_dyn_qpp_weight.mat';
-mat_file_name = '240826_messung13_traj6_mpc8_kin_no_limits.mat';
+mat_file_name = '240904_sim1_traj2_kin_mpc_dev.mat';
 
 mat_file_path = os.path.join(folderpath, mat_file_name)
 outputname = mat_file_name[:-4] + '.html'

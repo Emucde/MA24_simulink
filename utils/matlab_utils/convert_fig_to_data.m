@@ -22,8 +22,8 @@ for i=1:subplot_number
     end
 end
 
-save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240829_meeting';
+save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240904_meeting/kin_mpc_dev';
 %file_name = '240826_messung4_traj1_ct.mat';
 %file_name = '240826_messung12_traj6_mpc1_dyn_qpp_weight_with_limits.mat';
-file_name = '240826_messung13_traj6_mpc8_kin_no_limits.mat';
+file_name = '240904_sim1_traj2_kin_mpc_dev.mat';
 save([save_path, '/', file_name], 'signals');
