@@ -57,9 +57,9 @@ end
 
         for i = 1:N-2
             if(i == 1)
-                S_v(n+1:2*n, 1:3*n) = [-E zeros(n) E]/T_a_MPC;
+                S_v(1+n*i:n*(i+1), 1+n*(i-1):n*(i+2)) = [-E zeros(n) E]/T_a_MPC;
             elseif(i==2)
-                S_v(n+1:2*n, 1:3*n) = [-E zeros(n) E]/(2*T_a_MPC-T_a);
+                S_v(1+n*i:n*(i+1), 1+n*(i-1):n*(i+2)) = [-E zeros(n) E]/(2*T_a_MPC-T_a);
             else
                 S_v(1+n*i:n*(i+1), 1+n*(i-1):n*(i+2)) = [-E zeros(n) E] / (2*T_a_MPC);
             end

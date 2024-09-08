@@ -63,7 +63,7 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v4_kin_int'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
-param_casadi_fun_name.(MPC).Ts      = 20e-3;
+param_casadi_fun_name.(MPC).Ts      = 1e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
@@ -76,7 +76,7 @@ param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v4_kin_int_refsys'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
 param_casadi_fun_name.(MPC).Ts      = 500e-3;
-param_casadi_fun_name.(MPC).rk_iter = 100;
+param_casadi_fun_name.(MPC).rk_iter = 50;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
@@ -87,28 +87,28 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v5_kin_dev'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
+param_casadi_fun_name.(MPC).Ts      = 250e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 9;
+param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
+param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | SSPRK3 | Euler)
+
+MPC='MPC11';
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).version  = 'v6_kin_int_path_following'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v6_kin_int_path_following )
 param_casadi_fun_name.(MPC).Ts      = 50e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
-param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | SSPRK3 | Euler)
-
-MPC='MPC11'; % NOT IMPLEMENTED!!!!! (and not working yet!)
-param_casadi_fun_name.(MPC).name    = MPC;
-param_casadi_fun_name.(MPC).variant = 'nlpsol';
-param_casadi_fun_name.(MPC).solver  = 'ipopt'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v5_kin_dev_refsys'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
-param_casadi_fun_name.(MPC).Ts      = 1e-3;
-param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 5;
-param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
-param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
-param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | SSPRK3 | Euler)
+param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% param_casadi_fun_struct = param_casadi_fun_name.MPC01;
-param_casadi_fun_struct = param_casadi_fun_name.MPC10;
+% param_casadi_fun_struct = param_casadi_fun_name.MPC9;
+param_casadi_fun_struct = param_casadi_fun_name.MPC11;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';

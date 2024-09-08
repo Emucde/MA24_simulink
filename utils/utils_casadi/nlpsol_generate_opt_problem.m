@@ -16,8 +16,8 @@ elseif(strcmp(MPC_version, "v4_kin_int_refsys"))
     opt_problem_MPC_v4_kin_int_refsys;
 elseif(strcmp(MPC_version, "v5_kin_dev"))
     opt_problem_MPC_v5_kin_dev;
-elseif(strcmp(MPC_version, "v5_kin_dev_refsys"))
-    opt_problem_MPC_v5_kin_dev_refsys;
+elseif(strcmp(MPC_version, "v6_kin_int_path_following"))
+    opt_problem_MPC_v6_kin_int_path_following;
 else
-    error(['MPC_version ''', MPC_version, ''' not found: Only MPC version (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )']);
+    error(['MPC_version ''', MPC_version, ''' not found: Only MPC version (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v6_kin_int_path_following )']);
 end

@@ -6,9 +6,8 @@ diff_variant_mode = struct;
 diff_variant_mode.numdiff = 1; % default forward, central, backward deviation
 diff_variant_mode.savgol = 2; % savgol filtering and deviation
 diff_variant_mode.savgol_v2 = 3; % savgol filtering without additional equations and deviation
-diff_variant_mode.numdiff_twotimes = 4; % forward, central, backward deviation with two times
 
-diff_variant = diff_variant_mode.savgol_v2;
+diff_variant = diff_variant_mode.numdiff;
 
 n = param_robot.n_DOF; % Dimension of joint space
 m = param_robot.m; % Dimension of Task Space
@@ -23,8 +22,13 @@ M = 1; % RK4 steps per interval
 DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 DT_ctl = param_global.Ta/M;
 
+if(N_step_MPC == 1)
+    DT2 = DT_ctl; % special case if Ts_MPC = Ta
+else
+    DT2 = DT - DT_ctl;
+end
+
 x = SX.sym('x', 2*n);
-u = SX.sym('u', n);
 
 %% Calculate Initial Guess
 
@@ -55,7 +59,7 @@ ddq_0  = q_0_pp;
 xe_k_0 = p_d_0(1:3, 1); % x pos, y pos, defined in parameters_xdof.m
 u_k_0  = ddq_0;
 
-u_init_guess_0 = [u_k_0];
+u_init_guess_0 = u_k_0;
 x_init_guess_0 = ones(n, N_MPC+1).*x_0_0(1:n);
 
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0) + numel(x_init_guess_0), 1);
@@ -126,23 +130,19 @@ y    = SX( 7, N_MPC+1 ); % TCP pose:      (y_0 ... y_N)
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 if(diff_variant == diff_variant_mode.numdiff)
-    S_v = create_numdiff_matrix(DT, n, N_MPC+1, 'fwdbwdcentral');
-    % S_v = create_numdiff_matrix(DT, n, N_MPC+1, 'bwd');
-    S_a = S_v^2;
-elseif(diff_variant == diff_variant_mode.savgol_v2)
-    DD = create_numdiff_matrix(DT, n, N_MPC+1, 'savgol');
-    S_v = DD{2};
-    S_a = DD{3};
-elseif(diff_variant == diff_variant_mode.savgol)
-    DD = create_numdiff_matrix(DT, n, N_MPC+1, 'savgol'); % create the velocity deviation matrix S_v
-    %S_q = eye(size(DD{1}));
-    S_q = DD{1};
-    S_v = DD{2};
-    S_a = DD{3};
-elseif(diff_variant == diff_variant_mode.numdiff_twotimes)
-    % TODO SAVGOL MIT 3 X create_numdiff for Ta, Ta_MPC, Ta_MPC-Ta und entspr matrizen ersetzen
     S_v = create_numdiff_matrix(DT_ctl, n, N_MPC+1, 'fwdbwdcentraltwotimes', DT);
     S_a = S_v^2;
+elseif(diff_variant == diff_variant_mode.savgol)
+    DD_DT  = create_numdiff_matrix(DT, n, N_MPC+1, 'savgol');
+
+    S_v = DD_DT{2};
+    S_a = DD_DT{3};
+elseif(diff_variant == diff_variant_mode.savgol_v2)
+    DD_DT  = create_numdiff_matrix(DT, n, N_MPC+1, 'savgol');
+
+    S_q = DD_DT{1};
+    S_v = DD_DT{2};
+    S_a = DD_DT{3};
 else
     error('invalid mode');
 end
@@ -153,7 +153,7 @@ qq_p  = S_v * qq;
 qq_pp = S_a * qq;
 
 if(diff_variant == diff_variant_mode.savgol_v2)
-    qq = DD{1} * qq;
+    qq = S_q * qq;
 end
 
 q_p = reshape(qq_p, n, N_MPC+1);

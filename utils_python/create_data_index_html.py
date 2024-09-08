@@ -62,13 +62,13 @@ def get_mp4_file(path):
               return file
     return 'no mp4 file found!'
 
-def create_html_structure(base_path):
+def create_html_structure(base_path, title_text='index.html'):
     # HTML-Grundgerüst
     html_template = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>MPC Simu 02.09.2024</title>
+    <title>index.html</title>
     <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?lang=matlab"></script>
 
     <style>
@@ -291,6 +291,14 @@ def create_html_structure(base_path):
 
     # Parse das HTML-Template
     soup = BeautifulSoup(html_template, 'html.parser')
+
+    title_path = os.path.join(base_path, 'main_title.txt')
+    if os.path.exists(title_path):
+        with open(title_path, 'r', encoding='utf-8') as f:
+            main_title = f.read().strip()
+            title = soup.find('title')
+            title.string = os.path.basename(main_title)
+
     body = soup.body
 
     header_path = os.path.join(base_path, 'main_header.txt')
@@ -419,7 +427,7 @@ def create_html_structure(base_path):
                   iframe_counter += 1
 
     # Schreibe das Ergebnis in index.html
-    with open('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240904_meeting/index.html', 'w', encoding='utf-8') as f:
+    with open(os.path.join(base_path, 'index.html'), 'w', encoding='utf-8') as f:
         html_str = str(soup)
         f.write(html_str)
 

@@ -68,8 +68,8 @@ if [[ $variant == "opti" ]]; then
 else
    input="./templates/template_offline_MCP_s_fun_nlpsol_shared_subsystem.slx"
    MPC_string="MPC8"
-   solver_string="ipopt"
-   idx_val=9
+   solver_string="qrqp"
+   idx_val=5
 fi
 tmp_dir="tmp_slx"
 mkdir $tmp_dir
@@ -94,28 +94,19 @@ echo "use \"close_system('$output')\" in Matlab to reload the model."
 echo ""
 echo "add the following lines to \"init_MPC_weights.m\":"
 echo ""
-weight_data="%%%%%%%%%%%%%%%%%%%%%%%%%% MPC1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-MPC='MPC1';
-param_weight.(MPC).Q_y      = 1e5*diag([1 1]);   % d_kpn
-param_weight.(MPC).Q_y_p    = 1e-5*diag([1 1]); % d_kpn
-param_weight.(MPC).Q_y_pp   = 1e-5*diag([1 1]); % d_kpn
-param_weight.(MPC).Q_y0_pp  = 1e-5*diag([1 1]); % D_0
-param_weight.(MPC).Q_y1     = 1e5*diag([1 1]);   % D_1
-param_weight.(MPC).Q_y1_p   = 1e-5*diag([1 1]); % D_1
-param_weight.(MPC).Q_y1_pp  = 1e-5*diag([1 1]); % D_1
-param_weight.(MPC).Q_yN     = 1e5*diag([1 1]);   % D_N
-param_weight.(MPC).Q_yN_p   = 1e-5*diag([1 1]); % D_N
+weight_data="%%%%%%%%%%%%%%%%%%%%%%%%%% MPC8 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+MPC='MPC8';
+param_weight.(MPC).Q_y      = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_ykp1   = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_yN     = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
+param_weight.(MPC).R_q_pp = 1e-10*diag(ones(n,1));
+param_weight.(MPC).R_y_pp = 1e-5*diag(ones(n,1));
 
-param_weight.(MPC).Q_q_p    = 0*diag([1 1]);  % c_kpn
-param_weight.(MPC).Q_q_pp   = 0*diag([1 1]);  % c_kpn
-param_weight.(MPC).Q_q0_pp  = 0*diag([1 1]);  % C_0
-param_weight.(MPC).Q_qN_p   = 0*diag([1 1]);  % C_N
-
-param_weight.(MPC).x_min    = inf*[ -1; -1; -1; -1 ];
-param_weight.(MPC).x_max    = inf*[ 1; 1; 1; 1];
-param_weight.(MPC).u_min    = inf*[ -10; -10 ];
-param_weight.(MPC).u_max    = inf*[ 10; 10 ];"
-weight_data=$(echo "$weight_data" | sed "s/MPC1/MPC$endindex/g")
+param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
+param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
+param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min 
+param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
+weight_data=$(echo "$weight_data" | sed "s/MPC8/MPC$endindex/g")
 echo "$weight_data"
 
 
