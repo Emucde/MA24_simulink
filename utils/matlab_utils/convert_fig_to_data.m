@@ -22,7 +22,7 @@ for i=1:subplot_number
     end
 end
 
-save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/mpc_v5_kin_int_pathfollow';
+save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/';
 %file_name = '240904_sim1_traj2_kin_mpc_int_40ms.mat';
-file_name = '240908_traj2_kin_int_pathfollow_200ms.mat';
+file_name = '240909_traj2_kin_int_planner_5ms.mat';
 save([save_path, '/', file_name], 'signals');

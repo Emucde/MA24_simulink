@@ -12,11 +12,6 @@ quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi'
 M = rk_iter; % RK4 steps per interval
 DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 
-% du = SX.sym('du', 2*n);
-% dx = SX.sym('dx', 2*n); % x = [q1, ... qn, dq1, ... dqn]
-% f = Function('f', {dx, du}, {dx});
-% F = integrate_casadi(f, DT, M, int_method);
-
 % Discrete yt_ref system
 x = SX.sym('x', 2*n);
 u = SX.sym('u', n);
@@ -31,34 +26,24 @@ F_kp1 = integrate_casadi(f, DT_ctl, M, int_method); % runs with Ta from sensors
 if(N_step_MPC == 1)
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
-    DT2 = DT - DT_ctl;
+    DT2 = DT - 2*DT_ctl;
 end
 F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-2*Ta
-
-lambda = -1;
-A = [zeros(n), eye(n); -eye(n)*lambda^2, 2*eye(n)*lambda]; % = d/dt x = Ax + Bu = (A + BC)x, u=Cx
-Q = 1*eye(2*n); % d/dt V = -x'Qx
-P = lyap(A, Q); % V = x'Px => Idea: Use V as end cost term
-
-%% Calculate Initial Guess
 
 % Get trajectory data for initial guess
 p_d_0       = param_trajectory.p_d( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
 q_d_0       = param_trajectory.q_d( 1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
 
 % initial guess for reference trajectory parameter
-% [TODO: not all cases implemented]
 if(N_step_MPC == 1)
     y_d_0    = [p_d_0; q_d_0];
 else
-    p_d_0_kp1 = param_trajectory.p_d(  1:3, 2 );
-    q_d_0_kp1 = param_trajectory.q_d(  1:4, 2 );
-    y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-1)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-1)]];
+    p_d_0_kp1 = param_trajectory.p_d(  1:3, 2:3 );
+    q_d_0_kp1 = param_trajectory.q_d(  1:4, 2:3 );
+    y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-2)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-2)]];
 end
 
-% Robot System: Initial guess
-
-% einige probleme beim simulieren [TODO]
+%% Calculate Initial Guess
 
 x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xd compute_tau_fun(q_0, dq_0, ddq_0); % gravity compensationof.m
 q_0    = x_0_0(1   :   n); % useless line...
@@ -102,8 +87,9 @@ mpc_opt_var_inputs = {u, x};
 %   u1 = q_1_pp = u( n+1 : 2*n) | q_1 = x(     1+2*n :     3*n) | q_1_p = x(     1+3*n :     4*n)
 %   u1 = q_1_pp = xx(n+1 : 2*n) | q_1 = xx(N_u+1+2*n : N_u+3*n) | q_1_p = xx(N_u+1+3*n : N_u+4*n)
 N_u = numel(u);
-q0_pp_idx = 1 : n;
-u_opt_indices = q0_pp_idx;
+q0_pp_idx = [N_u+1 : N_u+n, N_u+1+n:N_u+2*n, 1 : n]; % [q_0, q_p_0, q_pp_0] % current desired state for CT Control
+q1_pp_idx = [N_u+1+2*n : N_u+3*n, N_u+1+3*n:N_u+4*n]; % [q_1, q_p_1] % next init state for MPC
+u_opt_indices = [q0_pp_idx, q1_pp_idx];
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
@@ -134,10 +120,6 @@ else
     ubg = zeros(numel(x), 1);
 end
 
-% lambda_x0, lambda_g0 initial guess
-lambda_x0 = SX.sym('lambda_x0', size(w));
-lambda_g0 = SX.sym('lambda_g0', size(lbg));
-
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
 y       = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
 
@@ -157,9 +139,9 @@ for i=0:N_MPC
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        if(i == 0)
+        if(i == 0 || i == 1)
             g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
-        elseif(i == 1)
+        elseif(i == 2)
             g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
         else
             g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
@@ -172,11 +154,9 @@ end
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-J_yt   = Q_norm_square( y(1:3, 1 + (2:N_MPC-1) ) - y_d(1:3, 1 + (2:N_MPC-1)), pp.Q_y( 1:3,1:3)  );
-J_ytkp1 = Q_norm_square( y(1:3, 1 + ( 1 ) ) - y_d(1:3, 1 + ( 1 )), pp.Q_ykp1(1:3,1:3)  );
+J_yt   = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_d(1:3, 1 + (1:N_MPC-1)), pp.Q_y( 1:3,1:3)  );
 J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp.Q_yN(1:3,1:3)  );
 
-J_yrkp1 = 0;
 J_yr = 0;
 for i=1:N_MPC
     % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
@@ -184,9 +164,7 @@ for i=1:N_MPC
     % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
     q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
 
-    if(i==1)
-        J_yrkp1 = Q_norm_square( q_y_yr_err(2:4) , pp.Q_ykp1(4:6,4:6)  );
-    elseif(i < N_MPC)
+    if(i < N_MPC)
         J_yr = J_yr + Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6,4:6)  );
     else
         J_yr_N = Q_norm_square( q_y_yr_err(2:4) , pp.Q_yN(4:6,4:6)  );
@@ -196,9 +174,8 @@ end
 g = g_x;
 
 J_q_pp = Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
-% J_q_pp = Q_norm_square(x, P);
 
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_ytkp1, J_yrkp1, J_q_pp}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp}';
 
 
 cost_vars_SX = eval(cost_vars_names);

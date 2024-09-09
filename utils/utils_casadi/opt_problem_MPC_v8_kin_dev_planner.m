@@ -15,41 +15,25 @@ m = param_robot.m; % Dimension of Task Space
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
-[~, ~, Q] = quat_deriv(ones(4,1), ones(3,1), ones(3,1)); % get function handle
-
-M = 1; % RK4 steps per interval
+% Discrete system dynamics
+M = rk_iter; % RK4 steps per interval
 DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 DT_ctl = param_global.Ta/M;
 
-if(N_step_MPC == 1)
-    DT2 = DT_ctl; % special case if Ts_MPC = Ta
-else
-    DT2 = DT - DT_ctl;
-end
-
-x = SX.sym('x', 2*n);
-
-%% Calculate Initial Guess
-
 % Get trajectory data for initial guess
-p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
+p_d_0       = param_trajectory.p_d( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
+q_d_0       = param_trajectory.q_d( 1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
 
-q_d_0       = param_trajectory.q_d(       1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
-
-p_d_0_kp1 = param_trajectory.p_d(1:3, 2);
-q_d_0_kp1 = param_trajectory.q_d(1:4, 2);
-
-% initial guess for reference trajectory
-
-if(N_step_MPC == 1)
+% initial guess for reference trajectory parameter
+if(N_step_MPC == 1 || N_step_MPC == 2)
     y_d_0    = [p_d_0; q_d_0];
 else
-    p_d_0_kp1 = param_trajectory.p_d(  1:3, 2 );
-    q_d_0_kp1 = param_trajectory.q_d(  1:4, 2 );
-    y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-1)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-1)]];
+    p_d_0_kp1 = param_trajectory.p_d(  1:3, 2:3 );
+    q_d_0_kp1 = param_trajectory.q_d(  1:4, 2:3 );
+    y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-2)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-2)]];
 end
 
-% Robot System: Initial guess
+%% Calculate Initial Guess
 
 x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xd compute_tau_fun(q_0, dq_0, ddq_0); % gravity compensationof.m
 q_0    = x_0_0(1   :   n); % useless line...
@@ -60,15 +44,16 @@ u_k_0  = ddq_0;
 
 u_init_guess_0 = u_k_0;
 q_init_guess_0 = ones(n, N_MPC+1).*x_0_0(1:n);
+q_p_init_guess_0 = ones(n, 2).*x_0_0(n+1:2*n);
 
-lam_x_init_guess_0 = zeros(numel(u_init_guess_0) + numel(q_init_guess_0), 1);
-lam_g_init_guess_0 = zeros(numel(u_init_guess_0) + 2*n, 1);
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0) + numel(q_init_guess_0) + numel(q_p_init_guess_0), 1);
+lam_g_init_guess_0 = zeros(numel(u_init_guess_0) + 4*n, 1);
+% eig brauch ich q0, q0p, q0pp, q1, q1p = 5n Gleichungsbedingungen.
 
-init_guess_0 = [u_init_guess_0(:); q_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
-
+init_guess_0 = [u_init_guess_0(:); q_init_guess_0(:); q_p_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 if(any(isnan(full(init_guess_0))))
-    error('init_guess_0 contains NaN values!');
+    error('115: init_guess_0 contains NaN values!');
 end
 
 % get weights from "init_MPC_weight.m"
@@ -82,23 +67,26 @@ else % hardcoded weights
 end
 
 % Optimization Variables:
-u     = SX.sym( 'u',    n,       1 ); % %u0=q0pp (0 to Ta)
+u     = SX.sym( 'u',    n, 1 ); % %u0=q0pp (0 to Ta)
 q     = SX.sym( 'q',    n, N_MPC+1 );
+q_p_out   = SX.sym( 'q_p',  n, 2 );
+x     = [q, q_p_out];
 
-mpc_opt_var_inputs = {u, q};
+mpc_opt_var_inputs = {u, q, q_p_out};
 
-u_opt_indices = 1:n; % q_0_pp needed for joint space CT control
-
-% TODO: So kann man q_p eigentlich nicht limitieren!!! vgl. mpc v8
+N_u = numel(u);
+N_q = numel(q);
+q0_pp_idx = [N_u+1   : N_u+  n, N_u+N_q+1   : N_u+N_q+n,  1 : n]; % [q_0, q_p_0, q_pp_0] % current desired state for CT Control
+q1_pp_idx = [N_u+1+n : N_u+2*n, N_u+N_q+1+n : N_u+N_q+2*n      ]; % [q_1, q_p_1] % next init state for MPC
+u_opt_indices = [q0_pp_idx, q1_pp_idx];
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min, size(u, 2), 1); repmat(pp.x_min(1:n), size(q, 2), 1)];
-ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max(1:n), size(q, 2), 1)];
-
+lbw = [repmat(pp.u_min, size(u, 2), 1); repmat(pp.x_min(1:n), size(q, 2), 1); repmat(pp.x_min(n+1:2*n), size(q_p_out, 2), 1)];
+ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max(1:n), size(q, 2), 1); repmat(pp.x_max(n+1:2*n), size(q_p_out, 2), 1)];
 
 % input parameter
-x_k  = SX.sym( 'x_k',  2*n,       1 ); % current x state = initial x state
+x_k  = SX.sym( 'x_k',  2*n, 1 ); % current x state = initial x state
 y_d  = SX.sym( 'y_d',  m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
 
 mpc_parameter_inputs = {x_k, y_d};
@@ -111,14 +99,14 @@ if(weights_and_limits_as_parameter) % debug input parameter
 end
 
 % constraints conditions cellarray g
-g_x  = cell(1, 2);
+g_x  = cell(1, 4);
 
 if(weights_and_limits_as_parameter)
-    lbg = SX(3*n, 1);
-    ubg = SX(3*n, 1);
+    lbg = SX(numel(lam_g_init_guess_0), 1);
+    ubg = SX(numel(lam_g_init_guess_0), 1);
 else
-    lbg = zeros(3*n, 1);
-    ubg = zeros(3*n, 1);
+    lbg = zeros(numel(lam_g_init_guess_0), 1);
+    ubg = zeros(numel(lam_g_init_guess_0), 1);
 end
 
 % lambda_x0, lambda_g0 initial guess
@@ -130,7 +118,7 @@ y    = SX( 7, N_MPC+1 ); % TCP pose:      (y_0 ... y_N)
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 if(diff_variant == diff_variant_mode.numdiff)
-    S_v = create_numdiff_matrix(DT_ctl, n, N_MPC+1, 'fwdbwdcentraltwotimes', DT);
+    S_v = create_numdiff_matrix(DT_ctl, n, N_MPC+1, 'fwdbwdcentralthreetimes', DT);
     S_a = S_v^2;
 elseif(diff_variant == diff_variant_mode.savgol)
     DD_DT  = create_numdiff_matrix(DT, n, N_MPC+1, 'savgol');
@@ -159,8 +147,11 @@ end
 q_p = reshape(qq_p, n, N_MPC+1);
 q_pp = reshape(qq_pp, n, N_MPC+1);
 
-g_x(1, 1 + (0)) = {x_k  - [q(:, 1 + (0)); q_p(:, 1 + (0))]}; % x0 = xk
-g_x(1, 1 + (1)) = {u - q_pp(:, 1 + (0))}; % u0 = q0pp
+g_x(1, 1 + (0)) = {x_k - [q(:, 1 + (0)); q_p(:, 1 + (0))]}; % x0 = xk
+% g_x(1, 1 + (0)) = {x_k(1:n) - q(:, 1 + (0))}; % x0 = xk
+g_x(1, 1 + (1)) = {q_p_out(:, 1 + (0)) - q_p(:, 1 + (0))};
+g_x(1, 1 + (2)) = {q_p_out(:, 1 + (1)) - q_p(:, 1 + (1))};
+g_x(1, 1 + (3)) = {u - q_pp(:, 1 + (0))}; % u0 = q0pp
 
 for i=0:N_MPC
     q_i = q(:, 1 + (i));
