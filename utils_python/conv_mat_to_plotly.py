@@ -174,7 +174,7 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 # Laden der .mat-Datei
 folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
 
-mat_file_name = '240909_traj2_kin_int_planner_5ms.mat';
+mat_file_name = '240909_traj2_kin_int_planner_1s.mat';
 
 mat_file_path = os.path.join(folderpath, mat_file_name)
 outputname = mat_file_name[:-4] + '.html'

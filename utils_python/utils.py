@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
 import scipy as sp
+from scipy.signal import savgol_filter
 import time
 import crocoddyl
 import pinocchio
@@ -15,6 +16,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.offline as py
 from typing import overload
+from bs4 import BeautifulSoup
 
 def trajectory_poly(t, y0, yT, T):
     # The function plans a trajectory from y0 in R3 to yT in R3 and returns the desired position and velocity on this trajectory at time t.
@@ -138,6 +140,7 @@ class TicToc:
         elapsed_time = current_time - self.start_time
         self.elapsed_total_time += elapsed_time
         self.start_time = current_time
+        return elapsed_time
 
     def get_time(self):
         self.toc()
@@ -176,6 +179,38 @@ def block_diag(a, b):
     an, am = a.shape
     bn, bm = b.shape
     return np.block([[a, np.zeros((an, bm))], [np.zeros((bn, am)), b]])
+
+def smooth_signal_savgol(signal, window_length, poly_order):
+    """
+    Smooths a signal using the Savitzky-Golay filter while maintaining the original length.
+    
+    Parameters:
+    signal (array-like): The input signal to be smoothed.
+    window_length (int): The length of the smoothing window. Must be odd.
+    poly_order (int): The order of the polynomial for filtering.
+    
+    Returns:
+    numpy.ndarray: The smoothed signal with the same length as the input signal.
+    """
+    if window_length % 2 == 0:
+        raise ValueError("window_length must be odd.")
+    
+    # Convert the signal to a numpy array
+    signal = np.array(signal)
+    
+    # Calculate the number of samples to pad at each end
+    pad_size = window_length // 2
+    
+    # Pad the signal at both ends
+    padded_signal = np.pad(signal, (pad_size, pad_size), mode='edge')
+    
+    # Apply the Savitzky-Golay filter to the padded signal
+    smoothed_signal = savgol_filter(padded_signal, window_length, poly_order)
+    
+    # Remove the extra samples to restore the original length
+    final_smoothed_signal = smoothed_signal[pad_size:-pad_size]
+    
+    return final_smoothed_signal
 
 ################################## MODEL TESTS ############################################
 
@@ -541,6 +576,12 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
     y_d_p_data  = param_trajectory['p_d_p'].T
     y_d_pp_data = param_trajectory['p_d_pp'].T
 
+    if state.nq >= 6:
+        # y_d_r_data = param_trajectory['q_d'].T
+        # y_d_r_p_data = param_trajectory['omega_d'].T
+        # y_d_r_pp_data = param_trajectory['omega_d_p'].T
+        R_d_data = param_trajectory['R_d']
+
     N = start_index + (end_index-start_index)*N_step
 
     # weights
@@ -563,6 +604,8 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
 
     for i in range(start_index, N, N_step):
         y_d    = y_d_data[i]
+        if state.nq >= 6:
+            R_d  = R_d_data[:,:,i] # rotation matrix!
         
         runningCostModel = crocoddyl.CostModelSum(state)
 
@@ -598,8 +641,18 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
             ),
         )
 
+        if state.nq >= 6:
+            goalTrackingCost_r = crocoddyl.CostModelResidual(
+                state,
+                residual=crocoddyl.ResidualModelFrameRotation(
+                    state, TCP_frame_id, R_d
+                ),
+            )
+
         if i < N-N_step:
             runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
+            if state.nq >= 6:
+                runningCostModel.addCost("TCP_rot", goalTrackingCost_r, q_tracking_cost)
             if np.sum(q_xreg_cost) not in [0, None]:
                 runningCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
             if np.sum(q_ureg_cost) not in [0, None]:
@@ -613,6 +666,8 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
             ))
         else: # i == N: # Endkostenterm
             terminalDifferentialCostModel.addCost("TCP_pose", goalTrackingCost, q_terminate_tracking_cost)
+            if state.nq >= 6:
+                terminalDifferentialCostModel.addCost("TCP_rot", goalTrackingCost_r, q_terminate_tracking_cost)
             if np.sum(q_xreg_terminate_cost) not in [0, None]:
                 terminalDifferentialCostModel.addCost("stateReg", xRegCost, q_xreg_terminate_cost)
             if np.sum(q_ureg_terminate_cost) not in [0, None]:
@@ -952,6 +1007,465 @@ def plot_trajectory(param_trajectory):
     plt.tight_layout()
     plt.show()
 
+def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, param_trajectory, frep_per_Ta_step):
+    robot_data = robot_model.createData()
+
+    N = len(xs)
+    n = robot_model.nq
+
+    p_e = np.zeros((N, 3))
+    p_e_p = np.zeros((N, 3))
+    p_e_pp = np.zeros((N, 3))
+
+    quat_e = np.zeros((N, 4))
+    omega_e = np.zeros((N, 3))
+    omega_e_p = np.zeros((N, 3))
+
+    p_d = param_trajectory['p_d']
+    p_d_p = param_trajectory['p_d_p']
+    p_d_pp = param_trajectory['p_d_pp']
+
+    quat_d = param_trajectory['q_d']
+    omega_d = param_trajectory['omega_d']
+    omega_d_p = param_trajectory['omega_d_p']
+
+    w = np.zeros(N)  # manipulability
+
+    q        = np.zeros((N, n))
+    q_p      = np.zeros((N, n))
+    q_pp     = np.zeros((N, n))
+
+    p_err    = np.zeros((N, 3))
+    p_err_p  = np.zeros((N, 3))
+    p_err_pp = np.zeros((N, 3))
+
+    e_x = np.zeros(N)
+    e_x_p = np.zeros(N)
+    e_x_pp = np.zeros(N)
+
+    e_y = np.zeros(N)
+    e_y_p = np.zeros(N)
+    e_y_pp = np.zeros(N)
+
+    e_z = np.zeros(N)
+    e_z_p = np.zeros(N)
+    e_z_pp = np.zeros(N)
+
+    quat_err = np.zeros((N, 4))
+    omega_err = np.zeros((N, 3))
+    omega_err_p = np.zeros((N, 3))
+
+    tau = np.zeros((N, n))
+
+    window_length = 301
+    poly_order = 2
+    frep_per_Ta_step_mean = smooth_signal_savgol(frep_per_Ta_step, window_length, poly_order)
+
+    for i in range(N):
+        q[i] = xs[i, 0:n]
+        q_p[i] = xs[i, n:2 * n]
+
+        tau[i] = us[i]
+
+        q_pp[i] = pinocchio.aba(robot_model, robot_data, q[i], q_p[i], tau[i])
+
+        pinocchio.forwardKinematics(robot_model, robot_data, q[i], q_p[i], q_pp[i])
+        pinocchio.updateFramePlacements(robot_model, robot_data)
+
+        pinocchio.computeJointJacobians(robot_model, robot_data, q[i])
+        J = pinocchio.getFrameJacobian(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+        pinocchio.computeJointJacobiansTimeVariation(robot_model, robot_data, q[i], q_p[i])
+        J_p = pinocchio.getFrameJacobianTimeVariation(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+
+        p_e[i] = robot_data.oMf[TCP_frame_id].translation.T.copy()
+        p_e_p[i] = J[0:3, :] @ q_p[i]
+        # p_e_pp[i] = J[0:3, :] @ q_pp[i] + J_p[0:3, :] @ q_p[i]
+        p_e_pp[i] = pinocchio.getFrameClassicalAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).linear
+
+        quat_e[i] = pinocchio.SE3ToXYZQUATtuple(robot_data.oMf[TCP_frame_id])[3]
+        omega_e[i] = pinocchio.getFrameVelocity(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
+        omega_e_p[i] = pinocchio.getFrameAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
+
+        w[i] = np.sqrt(sp.linalg.det(J @ J.T))
+
+        p_err[i] = p_e[i] - p_d[:, i]
+        p_err_p[i] = p_e_p[i] - p_d_p[:, i]
+        p_err_pp[i] = p_e_pp[i] - p_d_pp[:, i]
+
+        e_x[i] = p_err[i][0]
+        e_y[i] = p_err[i][1]
+        e_z[i] = p_err[i][2]
+
+        e_x_p[i] = p_err_p[i][0]
+        e_y_p[i] = p_err_p[i][1]
+        e_z_p[i] = p_err_p[i][2]
+
+        e_x_pp[i] = p_err_pp[i][0]
+        e_y_pp[i] = p_err_pp[i][1]
+        e_z_pp[i] = p_err_pp[i][2]
+
+        q_e = pinocchio.Quaternion(quat_e[i])
+        q_d_inv = pinocchio.Quaternion.inverse(pinocchio.Quaternion(quat_d[:,i]))
+
+        quat_err_temp = q_e * q_d_inv
+        quat_err[i] = np.array([quat_err_temp.w, quat_err_temp.x, quat_err_temp.y, quat_err_temp.z])
+
+        omega_err[i] = omega_e[i] - param_trajectory['omega_d'][:, i]
+
+        omega_err_p[i] = omega_e_p[i] - param_trajectory['omega_d_p'][:, i]
+
+    # create subplot data array
+    subplot1 = {'title': 'p_e (m) (Y: x, B: y, P: z)', 
+                'sig_labels': ['p_e_x (m)', 'p_e_y (m)', 'p_e_z (m)', 'p_d_x (m)', 'p_d_y (m)', 'p_d_z (m)'],
+                'sig_xdata': t,
+                'sig_ydata': [p_e[:, 0], p_e[:, 1], p_e[:, 2], p_d[0], p_d[1], p_d[2]],
+                'sig_linestyles': ['-', '-', '-', '--', '--', '--'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,153,200)', 'rgb(0,0,255)', 'rgb(255,0,0)', 'rgb(0,127,0)']}
+
+    subplot2 = {'title': 'ṗ_e (m/s) (Y: x, B: y, P: z)',
+                'sig_labels': ['ṗ_e_x (m/s)', 'ṗ_e_y (m/s)', 'ṗ_e_z (m/s)', 'ṗ_d_x (m/s)', 'ṗ_d_y (m/s)', 'ṗ_d_z (m/s)'],
+                'sig_xdata': t,
+                'sig_ydata': [p_e_p[:, 0], p_e_p[:, 1], p_e_p[:, 2], p_d_p[0], p_d_p[1], p_d_p[2],
+                              ],
+                'sig_linestyles': ['-', '-', '-', '--', '--', '--'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,153,200)', 'rgb(0,0,255)', 'rgb(255,0,0)', 'rgb(0,127,0)']}
+    
+    subplot3 = {'title': 'p̈_e (m/s²) (Y: x, B: y, P: z)',
+                'sig_labels': ['p̈_e_x (m/s²)', 'p̈_e_y (m/s²)', 'p̈_e_z (m/s²)', 'p̈_d_x (m/s²)', 'p̈_d_y (m/s²)', 'p̈_d_z (m/s²)'],
+                'sig_xdata': t,
+                'sig_ydata': [p_e_pp[:, 0], p_e_pp[:, 1], p_e_pp[:, 2], p_d_pp[0], p_d_pp[1], p_d_pp[2]],
+                'sig_linestyles': ['-', '-', '-', '--', '--', '--'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,153,200)', 'rgb(0,0,255)', 'rgb(255,0,0)', 'rgb(0,127,0)']}
+
+    # manipulate subplot data array
+    subplot4 = {'title': 'Manip. w = √( det( JJ⸆ ) )',
+                'sig_labels': ['Manip. w = √( det( JJ⸆ ) )'],
+                'sig_xdata': t,
+                'sig_ydata': [w],
+                'sig_linestyles': ['-'],
+                'sig_colors': ['rgb(255,255,17)']}
+
+    subplot5 = {'title': 'e_x (m)',
+                'sig_labels': ['e_x (m)'],
+                'sig_xdata': t,
+                'sig_ydata': [e_x],
+                'sig_linestyles': ['-'],
+                'sig_colors': ['rgb(255,255,17)']}
+    
+    subplot6 = {'title': 'ė_x (m/s)',
+                'sig_labels': ['ė_x (m/s)'],
+                'sig_xdata': t,
+                'sig_ydata': [e_x_p],
+                'sig_linestyles': ['-'],
+                'sig_colors': ['rgb(255,255,17)']}
+    
+    subplot7 = {'title': 'ё_x (m/s²)',
+                'sig_labels': ['ё_x (m/s²)'],
+                'sig_xdata': t,
+                'sig_ydata': [e_x_pp],
+                'sig_linestyles': ['-'],
+                'sig_colors': ['rgb(255,255,17)']}
+    
+    subplot8 = {'title': 'q (rad)',
+                'sig_labels': ['q1', 'q2', 'q3', 'q4', 'q5', 'q6'],
+                'sig_xdata': t,
+                'sig_ydata': [q[:, 0], q[:, 1], q[:, 2], q[:, 3], q[:, 4], q[:, 5]],
+                'sig_linestyles': ['-', '-', '-', '-', '-', '-'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(100,212,19)', 'rgb(183,70,255)', 'rgb(15,255,255)']}
+
+    subplot9 = {'title': 'e_y (m)',
+                'sig_labels': ['e_y (m)'],
+                'sig_xdata': t,
+                'sig_ydata': [e_y],
+                'sig_linestyles': ['-'],
+                'sig_colors': ['rgb(19,159,255)']}
+    
+    subplot10 = {'title': 'ė_y (m/s)',
+                'sig_labels': ['ė_y (m/s)'],
+                'sig_xdata': t,
+                'sig_ydata': [e_y_p],
+                'sig_linestyles': ['-'],
+                'sig_colors': ['rgb(19,159,255)']}
+    
+    subplot11 = {'title': 'ё_y (m/s²)',
+                'sig_labels': ['ё_y (m/s²)'],
+                'sig_xdata': t,
+                'sig_ydata': [e_y_pp],
+                'sig_linestyles': ['-'],
+                'sig_colors': ['rgb(19,159,255)']}
+    
+    subplot12 = {'title': 'q̇ (rad/s)',
+                'sig_labels': ['q̇_1', 'q̇_2', 'q̇_3', 'q̇_4', 'q̇_5', 'q̇_6'],
+                'sig_xdata': t,
+                'sig_ydata': [q_p[:, 0], q_p[:, 1], q_p[:, 2], q_p[:, 3], q_p[:, 4], q_p[:, 5]],
+                'sig_linestyles': ['-', '-', '-', '-', '-', '-'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(100,212,19)', 'rgb(183,70,255)', 'rgb(15,255,255)']}
+                 
+    subplot13 = {'title': 'e_z (m)',
+                'sig_labels': ['e_z (m)'],
+                'sig_xdata': t,
+                'sig_ydata': [e_z],
+                'sig_linestyles': ['-'],
+                'sig_colors': ['rgb(255,153,200)']}
+    
+    subplot14 = {'title': 'ė_z (m/s)',
+                'sig_labels': ['ė_z (m/s)'],
+                'sig_xdata': t,
+                'sig_ydata': [e_z_p],
+                'sig_linestyles': ['-'],
+                'sig_colors': ['rgb(255,153,200)']}
+    
+    subplot15 = {'title': 'ё_z (m/s²)',
+                'sig_labels': ['ё_z (m/s²)'],
+                'sig_xdata': t,
+                'sig_ydata': [e_z_pp],
+                'sig_linestyles': ['-'],
+                'sig_colors': ['rgb(255,153,200)']}
+    
+    subplot16 = {'title': 'q̈ (rad/s²)',
+                'sig_labels': ['q̈_1', 'q̈_2', 'q̈_3', 'q̈_4', 'q̈_5', 'q̈_6'],
+                'sig_xdata': t,
+                'sig_ydata': [q_pp[:, 0], q_pp[:, 1], q_pp[:, 2], q_pp[:, 3], q_pp[:, 4], q_pp[:, 5]],
+                'sig_linestyles': ['-', '-', '-', '-', '-', '-'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(100,212,19)', 'rgb(183,70,255)', 'rgb(15,255,255)']}
+    
+    subplot17 = {'title': 'quat_e(2:4)',
+                'sig_labels': ['quat_e_2', 'quat_e_3', 'quat_e_4', 'quat_d_2', 'quat_d_3', 'quat_d_4'],
+                'sig_xdata': t,
+                'sig_ydata': [quat_e[:, 1], quat_e[:, 2], quat_e[:, 3], quat_d[1], quat_d[2], quat_d[3]],
+                'sig_linestyles': ['-', '-', '-', '--', '--', '--'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(0,0,255)', 'rgb(255,0,0)', 'rgb(0,127,0)']}
+    
+    subplot18 = {'title': 'ω_e (rad/s)',
+                'sig_labels': ['ω_e_x (rad/s)', 'ω_e_y (rad/s)', 'ω_e_z (rad/s)', 'ω_d_x (rad/s)', 'ω_d_y (rad/s)', 'ω_d_z (rad/s)'],
+                'sig_xdata': t,
+                'sig_ydata': [omega_e[:, 0], omega_e[:, 1], omega_e[:, 2], omega_d[0], omega_d[1], omega_d[2]],
+                'sig_linestyles': ['-', '-', '-', '--', '--', '--'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(0,0,255)', 'rgb(255,0,0)', 'rgb(0,127,0)']}
+    
+    subplot19 = {'title': 'ὠ_e (rad/s²)',
+                'sig_labels': ['ὠ_e_x (rad/s²)', 'ὠ_e_y (rad/s²)', 'ὠ_e_z (rad/s²)', 'ὠ_d_x (rad/s²)', 'ὠ_d_y (rad/s²)', 'ὠ_d_z (rad/s²)'],
+                'sig_xdata': t,
+                'sig_ydata': [omega_e_p[:, 0], omega_e_p[:, 1], omega_e_p[:, 2], omega_d_p[0], omega_d_p[1], omega_d_p[2]],
+                'sig_linestyles': ['-', '-', '-', '--', '--', '--'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(0,0,255)', 'rgb(255,0,0)', 'rgb(0,127,0)']}
+    
+    subplot20 = {'title': 'freq per Ta step (Hz)',
+                'sig_labels': ['frep_per_Ta_step', 'frep_per_Ta_step_mean'],
+                'sig_xdata': t,
+                'sig_ydata': [frep_per_Ta_step, frep_per_Ta_step_mean],
+                'sig_linestyles': ['-', '-'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(255,0,0)']}
+    
+    subplot21 = {'title': 'quat_err',
+                'sig_labels': ['quat_err_2', 'quat_err_3', 'quat_err_4'],
+                'sig_xdata': t,
+                'sig_ydata': [quat_err[:, 1], quat_err[:, 2], quat_err[:, 3]],
+                'sig_linestyles': ['-', '-', '-', '-'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(100,212,19)']}
+    
+    subplot22 = {'title': 'e_ω (rad/s)',
+                'sig_labels': ['e_ω_x (rad/s)', 'e_ω_y (rad/s)', 'e_ω_z (rad/s)'],
+                'sig_xdata': t,
+                'sig_ydata': [omega_err[:, 0], omega_err[:, 1], omega_err[:, 2]],
+                'sig_linestyles': ['-', '-', '-'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)']}
+    
+    subplot23 = {'title': 'ė_ω (rad/s)',
+                'sig_labels': ['ė_ω_x (rad/s)', 'ė_ω_y (rad/s)', 'ė_ω_z (rad/s)'],
+                'sig_xdata': t,
+                'sig_ydata': [omega_err_p[:, 0], omega_err_p[:, 1], omega_err_p[:, 2]],
+                'sig_linestyles': ['-', '-', '-'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)']}
+    
+    subplot24 = {'title': 'tau (Nm)',
+                'sig_labels': ['tau_1', 'tau_2', 'tau_3', 'tau_4', 'tau_5', 'tau_6'],
+                'sig_xdata': t,
+                'sig_ydata': [tau[:, 0], tau[:, 1], tau[:, 2], tau[:, 3], tau[:, 4], tau[:, 5]],
+                'sig_linestyles': ['-', '-', '-', '-', '-', '-'],
+                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(100,212,19)', 'rgb(183,70,255)', 'rgb(15,255,255)']}
+
+    subplot_data = [subplot1, subplot2, subplot3, subplot4, subplot5, subplot6, subplot7, subplot8, subplot9, subplot10, subplot11, subplot12, subplot13, subplot14, subplot15, subplot16, subplot17, subplot18, subplot19, subplot20, subplot21, subplot22, subplot23, subplot24]
+
+    return subplot_data
+
+def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', plot_fig=True, matlab_import=True):
+    subplot_number = len(subplot_data)
+    sig_labels = np.empty(24, dtype=object)
+
+    if matlab_import:
+        for i in range(0, subplot_number):
+            sig_label     = subplot_data[i][0][0][0][0]
+            if len(subplot_data[i][0]) > 1:
+                sig_labels[i] = sig_label[:-2]
+            else:
+                sig_labels[i] = sig_label
+            #row=1+np.mod(i,4), col=1+int(np.floor(i/4)
+    else:
+        for i in range(0, subplot_number):
+            sig_labels[i] = subplot_data[i]['title']
+
+    sig_labels_orig = sig_labels
+    sig_labels = sig_labels.reshape(6,4).T.flatten().tolist()
+    
+    # Create a Plotly subplot
+    fig = make_subplots(rows=4, cols=int(subplot_number/4), shared_xaxes=False, vertical_spacing=0.05, horizontal_spacing=0.035, subplot_titles=sig_labels)
+    
+    # Plot tdata
+    for i in range(0, subplot_number):
+        sig_title = sig_labels_orig[i]
+        signal_number = len(subplot_data[i]['sig_ydata'])
+        for j in range(0, signal_number):
+            if matlab_import:
+                sig_label     = subplot_data[i][0][j][0][0]
+                sig_xdata     = subplot_data[i][0][j][1][0]
+                sig_ydata     = subplot_data[i][0][j][2][0]
+                sig_linestyle = subplot_data[i][0][j][3][0]
+                sig_color     = 255*subplot_data[i][0][j][4][0]
+                sig_color     = f"rgb({','.join(map(str, sig_color))})"
+            else:
+                sig_label = subplot_data[i]['sig_labels'][j]
+                sig_xdata = subplot_data[i]['sig_xdata']
+                sig_ydata = subplot_data[i]['sig_ydata'][j]
+                sig_linestyle = subplot_data[i]['sig_linestyles'][j]
+                sig_color = subplot_data[i]['sig_colors'][j]
+
+            if sig_linestyle == '-':
+                line_style = dict(width=1, color=sig_color, dash='solid')
+            elif sig_linestyle == '--':
+                line_style = dict(width=1, color=sig_color, dash='dash')
+
+            act_row = 1+np.mod(i,4)
+            act_col = 1+int(np.floor(i/4))
+            fig.add_trace(go.Scatter(x=sig_xdata, y=sig_ydata, name=sig_label, line = line_style, hoverinfo = 'x+y+text', hovertext=sig_label, text=sig_title), row=act_row, col=act_col)
+            if act_row == 4:
+                fig.update_xaxes(title_text='t (s)', row=act_row, col=act_col)
+
+    # fig.update_layout(plot_bgcolor='#1e1e1e', paper_bgcolor='#1e1e1e', font=dict(color='#ffffff'), legend=dict(orientation='h'))
+    fig.update_layout(
+        plot_bgcolor='#101010',  # Set plot background color
+        paper_bgcolor='#1e1e1e',  # Set paper background color
+        font=dict(color='#ffffff'),  # Set font color
+        legend=dict(orientation='h', yanchor='middle', y=10, yref='container'),  # Set legend orientation
+        hovermode = 'closest',
+        margin=dict(l=10, r=10, t=50, b=70),
+        height=1080,
+        # legend_indentation = 0,
+        # margin_pad=0,
+        # Gridline customization for all subplots
+        **{f'xaxis{i}': dict(gridwidth=1, gridcolor='#757575', linecolor='#757575', zerolinecolor='#757575', zerolinewidth=1) for i in range(1, subplot_number+1)},
+        **{f'yaxis{i}': dict(gridwidth=1, gridcolor='#757575', linecolor='#757575', zerolinecolor='#757575', zerolinewidth=1) for i in range(1, subplot_number+1)}
+    )
+
+    fig.update_layout(
+        **{f'xaxis{i}': dict(showticklabels=False) for i in range(1, subplot_number+1-6)}
+    )
+
+    fig.update_xaxes(matches='x', autorange=True)
+
+    if(plot_fig):
+        fig.show()
+
+    if(save_plot):
+        autoscale_code='''
+        rec_time = 100; //ms
+        function autoscale_function(){
+            //console.log('run');
+            graphDiv = document.querySelector('.plotly-graph-div');
+            //console.log(graphDiv);
+            if(graphDiv == null || graphDiv.on == undefined)
+            {
+                setTimeout(autoscale_function, rec_time);
+            }
+            else
+            {
+                var on_event=true;
+
+                function test(eventdata){
+                    //console.log(eventdata);
+                    
+                    graphDiv = document.querySelector('.plotly-graph-div');
+                    
+                    if(on_event==true)
+                    {
+                        on_event=false;
+                        labels = graphDiv.layout.annotations;
+                        update={};
+
+                        labels.forEach(function(act_label, i){
+
+                            trace = graphDiv.data.filter(trace => trace.text.includes(labels[i].text));
+
+                            xrange = graphDiv.layout.xaxis.range;
+                            yaxisName = i === 0 ? 'yaxis' : `yaxis${i + 1}`;
+                            yrange = graphDiv.layout[yaxisName].range;
+                            filteredIndices = trace[0].x.map((x, index) => x >= xrange[0] && x <= xrange[1] ? index : -1).filter(index => index !== -1);
+                            //filteredX = filteredIndices.map(index => trace[0].x[index]);
+
+                            yaxis_change = Object.keys(eventdata).some(key => key.includes('yaxis'));
+                            xaxis_change = Object.keys(eventdata).some(key => key.includes('xaxis'));
+
+                            g_ymax=-Infinity;
+                            g_ymin=Infinity;
+                            trace.forEach(function(el,id){
+                                filteredY = filteredIndices.map(index => el.y[index]);
+                                if( (yaxis_change && !xaxis_change))
+                                {
+                                    y_rangefilteredIndices = filteredY.map((y, index) => y >= yrange[0] && y <= yrange[1] ? index : -1).filter(index => index !== -1);
+                                    filteredY = y_rangefilteredIndices.map(index => filteredY[index]);
+                                }
+
+                                act_min = Math.min.apply(null, filteredY);
+                                act_max = Math.max.apply(null, filteredY);
+
+                                g_ymax = Math.max(g_ymax, act_max);
+                                g_ymin = Math.min(g_ymin, act_min);
+                            });
+
+                            offset = 1/9*(g_ymax - g_ymin)/2;
+                            if(offset == 0)
+                            {
+                                offset=0.001;
+                            }
+
+                            if(i == 0)
+                            {
+                                ylabel='yaxis.range';
+                            }
+                            else
+                            {
+                                ylabel='yaxis'+(1+i)+'.range';
+                            }
+
+                            update[ylabel] = [g_ymin-offset,g_ymax+offset];
+                        });
+                        
+                        Plotly.relayout(graphDiv, update);
+                    }
+                    else
+                    {
+                        on_event=true;
+                    }
+                    }
+
+                graphDiv.on('plotly_relayout', test);
+            }
+        }
+        setTimeout(autoscale_function, rec_time);
+        '''
+
+        py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False) # , include_plotlyjs='cdn'
+        with open(file_name, 'r', encoding='utf-8') as file:
+            html_content = file.read()
+            soup = BeautifulSoup(html_content, 'html.parser')
+            first_script_tag = soup.find('script')
+            if first_script_tag:
+                new_script = soup.new_tag('script')
+                new_script.string = "document.body.style.background='#1e1e1e';"+autoscale_code
+                first_script_tag.insert_after(new_script)
+                with open(file_name, 'w', encoding='utf-8') as file:
+                    file.write(str(soup))
+        webbrowser.open('file://' + file_name)
 
 def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_plot=False, file_name='plot_saved', plot_fig=True):
     robot_data = robot_model.createData()
@@ -1006,8 +1520,8 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
         pinocchio.computeJointJacobiansTimeVariation(robot_model, robot_data, q[i], q_p[i])
         J_p = pinocchio.getFrameJacobianTimeVariation(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED) # ist falsch!!
 
-        J_v   = J[  0:3, 0:2] # mir translatorischen anteil
-        J_v_p = J_p[0:3, 0:2] # z ist unnötig
+        J_v   = J[  0:3, :] # mir translatorischen anteil
+        J_v_p = J_p[0:3, :] # z ist unnötig
 
         y_opt_p[i]  = J_v @ q_p[i] # pinocchio.getVelocity(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).linear ist falsch
         # y_opt_pp[i] = J_v @ q_pp[i] + J_v_p @ q_p[i] # J_p und damit J_V_p stimmt einfach nicht, vgl maple????? vgl Issue auf Github Doku

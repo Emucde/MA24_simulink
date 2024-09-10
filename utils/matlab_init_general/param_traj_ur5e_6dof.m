@@ -1,4 +1,4 @@
-%% TRAJECTORY 1: Differential Filter & WRIST SINGULARITY 1
+%% TRAJECTORY 1: Polynomial 5. Order & WRIST SINGULARITY 1
 cnt = 1;
 
 q_d = [0.3636   -1.3788    0    0.1103    0.3635   -0.0042]';
