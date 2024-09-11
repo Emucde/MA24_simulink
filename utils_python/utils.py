@@ -1082,7 +1082,10 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, param_trajectory, frep_
         # p_e_pp[i] = J[0:3, :] @ q_pp[i] + J_p[0:3, :] @ q_p[i]
         p_e_pp[i] = pinocchio.getFrameClassicalAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).linear
 
-        quat_e[i] = pinocchio.SE3ToXYZQUATtuple(robot_data.oMf[TCP_frame_id])[3]
+        quat_e_7val = pinocchio.SE3ToXYZQUAT(robot_data.oMf[TCP_frame_id])
+        quat_e_xyzw = pinocchio.Quaternion(quat_e_7val[3::])
+        quat_e[i] = np.hstack([quat_e_7val[6], quat_e_7val[3:6]]) #wxyz
+
         omega_e[i] = pinocchio.getFrameVelocity(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
         omega_e_p[i] = pinocchio.getFrameAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
 
@@ -1104,15 +1107,62 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, param_trajectory, frep_
         e_y_pp[i] = p_err_pp[i][1]
         e_z_pp[i] = p_err_pp[i][2]
 
-        q_e = pinocchio.Quaternion(quat_e[i])
-        q_d_inv = pinocchio.Quaternion.inverse(pinocchio.Quaternion(quat_d[:,i]))
+        quat_d_xyzw = pinocchio.Quaternion( np.hstack([quat_d[1:, i], quat_d[0, i]]) )
+        q_d_xyzw_inv = pinocchio.Quaternion.inverse(quat_d_xyzw)
 
-        quat_err_temp = q_e * q_d_inv
+        quat_err_temp = quat_e_xyzw * q_d_xyzw_inv
         quat_err[i] = np.array([quat_err_temp.w, quat_err_temp.x, quat_err_temp.y, quat_err_temp.z])
 
         omega_err[i] = omega_e[i] - param_trajectory['omega_d'][:, i]
 
         omega_err_p[i] = omega_e_p[i] - param_trajectory['omega_d_p'][:, i]
+
+    # make data shorter, use only each N_dec sample
+    N_dec = 1
+    t = t[::N_dec]
+
+    p_e = p_e[::N_dec]
+    p_e_p = p_e_p[::N_dec]
+    p_e_pp = p_e_pp[::N_dec]
+
+    quat_e = quat_e[::N_dec]
+    omega_e = omega_e[::N_dec]
+    omega_e_p = omega_e_p[::N_dec]
+
+    p_d = p_d[:, ::N_dec]
+    p_d_p = p_d_p[:, ::N_dec]
+    p_d_pp = p_d_pp[:, ::N_dec]
+
+    quat_d = quat_d[:, ::N_dec]
+    omega_d = omega_d[:, ::N_dec]
+    omega_d_p = omega_d_p[:, ::N_dec]
+
+    p_err = p_err[::N_dec]
+    p_err_p = p_err_p[::N_dec]
+    p_err_pp = p_err_pp[::N_dec]
+
+    e_x = e_x[::N_dec]
+    e_y = e_y[::N_dec]
+    e_z = e_z[::N_dec]
+
+    e_x_p = e_x_p[::N_dec]
+    e_y_p = e_y_p[::N_dec]
+    e_z_p = e_z_p[::N_dec]
+
+    e_x_pp = e_x_pp[::N_dec]
+    e_y_pp = e_y_pp[::N_dec]
+    e_z_pp = e_z_pp[::N_dec]
+    
+    quat_err = quat_err[::N_dec]
+    omega_err = omega_err[::N_dec]
+    omega_err_p = omega_err_p[::N_dec]
+    
+    w = w[::N_dec]
+    
+    q = q[::N_dec]
+    q_p = q_p[::N_dec]
+    q_pp = q_pp[::N_dec]
+    tau = tau[::N_dec]
 
     # create subplot data array
     subplot1 = {'title': 'p_e (m) (Y: x, B: y, P: z)', 
@@ -1390,8 +1440,22 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
                     {
                         on_event=false;
                         labels = graphDiv.layout.annotations;
-                        update={};
 
+                        // Get changed axes
+                        yaxis_change = Object.keys(eventdata).some(key => key.includes('yaxis'));
+                        xaxis_change = Object.keys(eventdata).some(key => key.includes('xaxis'));
+
+                        changed_yaxis = Object.keys(eventdata).filter(key => key.includes('yaxis'));
+                        yaxis_names = changed_yaxis.map(name => name.split('.')[0]);  // get only axis name
+                        yaxis_names = [...new Set(yaxis_names)]; // get unique names
+                        trace_numbers = yaxis_names.map(name => name.split('yaxis')[1]); // get trace numbers from names
+                        trace_numbers = trace_numbers.map(name => name === '' ? 0 : Number(name)-1); // trace number '' should be 0
+
+                        //create a array with length of the number of traces and false for each yaxis that was not in trace_numbers
+                        // and true for each yaxis that is in trace numbers
+                        yaxis_in_trace = Array.from({length: labels.length}, (_, i) => trace_numbers.includes(i));
+                    
+                        update={};
                         labels.forEach(function(act_label, i){
 
                             trace = graphDiv.data.filter(trace => trace.text.includes(labels[i].text));
@@ -1401,15 +1465,12 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
                             yrange = graphDiv.layout[yaxisName].range;
                             filteredIndices = trace[0].x.map((x, index) => x >= xrange[0] && x <= xrange[1] ? index : -1).filter(index => index !== -1);
                             //filteredX = filteredIndices.map(index => trace[0].x[index]);
-
-                            yaxis_change = Object.keys(eventdata).some(key => key.includes('yaxis'));
-                            xaxis_change = Object.keys(eventdata).some(key => key.includes('xaxis'));
-
+                            
                             g_ymax=-Infinity;
                             g_ymin=Infinity;
                             trace.forEach(function(el,id){
                                 filteredY = filteredIndices.map(index => el.y[index]);
-                                if( (yaxis_change && !xaxis_change))
+                                if( (yaxis_change && !xaxis_change) || (yaxis_in_trace[i] && xaxis_change) )
                                 {
                                     y_rangefilteredIndices = filteredY.map((y, index) => y >= yrange[0] && y <= yrange[1] ? index : -1).filter(index => index !== -1);
                                     filteredY = y_rangefilteredIndices.map(index => filteredY[index]);
@@ -1454,7 +1515,7 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
         setTimeout(autoscale_function, rec_time);
         '''
 
-        py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False) # , include_plotlyjs='cdn'
+        py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False, include_plotlyjs='cdn') # , include_plotlyjs='cdn'
         with open(file_name, 'r', encoding='utf-8') as file:
             html_content = file.read()
             soup = BeautifulSoup(html_content, 'html.parser')

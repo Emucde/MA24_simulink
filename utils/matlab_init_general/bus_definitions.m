@@ -80,6 +80,8 @@ clear -regexp slBus; clear bus_temp_struct;
 %% robot model bus init
 
 bus_temp_struct = struct;
+bus_temp_struct.q_noise = zeros(n,1);
+bus_temp_struct.q_p_noise = zeros(n,1);
 bus_temp_struct.q = zeros(n,1);
 bus_temp_struct.q_p = zeros(n,1);
 bus_temp_struct.q_pp = zeros(n,1);

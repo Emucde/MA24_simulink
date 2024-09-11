@@ -52,7 +52,7 @@ traj_select 4: ELLBOW Singularity 2, Polynomial, joint space
 traj_select 5: Shoulder Sing 1, Polynomial, Workspace
 traj_select 6: Shoulder Sing 2, Polynomial, Workspace
 '''
-traj_select = 1
+traj_select = 0
 
 t = traj_data_all['t'][0,0][0, :]
 p_d = traj_data_all['p_d'][0,0][:, :, traj_select]
@@ -77,22 +77,22 @@ dt = 1e-3  # Time step # y_offset nicht vergessen!!!
 ############################################ MPC Settings ###############################################
 #########################################################################################################
 
-opt_type = 'MPC_v1_soft_terminate' # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' 
+opt_type = 'MPC_v1_bounds_terminate' # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' 
 int_type = 'euler' # 'euler' | 'RK2' | 'RK3' | 'RK4'
 N_solver_steps = 1000
 N_MPC = 5 # anzahl der Stützstellen innerhalb des Prädiktionshorizont
-Ts_MPC = 1e-3 # Interne Abtastzeit der MPC muss vielfaches von dt sein
+Ts_MPC = 50e-3 # Interne Abtastzeit der MPC muss vielfaches von dt sein
 
 param_mpc_weight = {
-    'q_tracking_cost': 1e2,            # penalizes deviations from the trajectory
-    'q_terminate_tracking_cost': 1e5,  # penalizes deviations from the trajectory at the end
+    'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
+    'q_terminate_tracking_cost': 1e8,  # penalizes deviations from the trajectory at the end
     'q_terminate_tracking_bound_cost': 1e5,  # penalizes deviations from the bounds of | y_N - y_N_ref | < eps
-    'q_xreg_terminate_cost': 1e-2,  # penalizes deviations from the trajectory at the end
-    'q_ureg_terminate_cost': 1e-5,  # penalizes deviations from the trajectory at the end
-    'q_xreg_cost': 1e-2,              # penalizes changes from the current state
-    'q_ureg_cost': 1e-5,              # penalizes changes from the current input
-    'q_x_bound_cost': 1e-10,              # penalizes ignoring the bounds
-    'q_u_bound_cost': 1e-10,              # penalizes ignoring the bounds
+    'q_xreg_terminate_cost': 1e-3,  # penalizes deviations from the trajectory at the end
+    'q_ureg_terminate_cost': 1e-10,  # penalizes deviations from the trajectory at the end
+    'q_xreg_cost': 1e-3,              # penalizes changes from the current state
+    'q_ureg_cost': 1e-10,              # penalizes changes from the current input
+    'q_x_bound_cost': 1e5,              # penalizes ignoring the bounds
+    'q_u_bound_cost': 1e5,              # penalizes ignoring the bounds
     'Kd': 100*np.eye(3),
     'Kp': 100*np.eye(3),
     'lb_y_ref_N': -1e-6*np.ones(3), # only used if MPC_v3_bounds_yN_ref
@@ -188,6 +188,8 @@ for i in range(N_traj):
 measureSolver.print_time(additional_text='Total Solver time')
 measureTotal.print_time(additional_text='Total MPC time')
 
+t = t[:N_traj]
+
 traj_data['p_d']    = traj_data['p_d'][   :, 0:N_traj]
 traj_data['p_d_p']  = traj_data['p_d_p'][ :, 0:N_traj]
 traj_data['p_d_pp'] = traj_data['p_d_pp'][:, 0:N_traj]
@@ -203,19 +205,15 @@ traj_data['omega_d_p'] = traj_data['omega_d_p'][:, 0:N_traj]
 
 subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, freq_per_Ta_step)
 folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-outputname = '240910_traj2_crocddyl_25ms.html';
+outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html';
 output_file_path = os.path.join(folderpath, outputname)
 plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False)
 
 plot_sol=False
-if plot_sol:
-    y_opt, y_opt_p, y_opt_pp, e, e_p, e_pp, w, q, q_p, q_pp, tau = plot_solution(us, xs, t, TCP_frame_id, robot_model, traj_data)
-else:
-    y_opt, y_opt_p, y_opt_pp, e, e_p, e_pp, w, q, q_p, q_pp, tau = plot_solution(us, xs, t, TCP_frame_id, robot_model, traj_data, plot_fig=False)
 
-print('Max error:       y - y_d = {:.2e}'.format(np.max(np.abs(e))), 'm')
-print('Max error:   y_p - y_d_p = {:.2e}'.format(np.max(np.abs(e_p))), 'm/s')
-print('Max error: y_pp - y_d_pp = {:.2e}'.format(np.max(np.abs(e_pp))), 'm/s^2')
+# print('Max error:       y - y_d = {:.2e}'.format(np.max(np.abs(e))), 'm')
+# print('Max error:   y_p - y_d_p = {:.2e}'.format(np.max(np.abs(e_p))), 'm/s')
+# print('Max error: y_pp - y_d_pp = {:.2e}'.format(np.max(np.abs(e_pp))), 'm/s^2')
 #print("\nTotal cost:", ddp.cost)
 print("Minimum Found:", hasConverged)
 
