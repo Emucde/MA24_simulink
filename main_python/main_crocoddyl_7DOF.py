@@ -88,9 +88,9 @@ param_mpc_weight = {
     'q_terminate_tracking_cost': 1e8,  # penalizes deviations from the trajectory at the end
     'q_terminate_tracking_bound_cost': 1e5,  # penalizes deviations from the bounds of | y_N - y_N_ref | < eps
     'q_xreg_terminate_cost': 1e-3,  # penalizes deviations from the trajectory at the end
-    'q_ureg_terminate_cost': 1e-10,  # penalizes deviations from the trajectory at the end
+    'q_ureg_terminate_cost': 1e-5,  # penalizes deviations from the trajectory at the end
     'q_xreg_cost': 1e-3,              # penalizes changes from the current state
-    'q_ureg_cost': 1e-10,              # penalizes changes from the current input
+    'q_ureg_cost': 1e-5,              # penalizes changes from the current input
     'q_x_bound_cost': 1e5,              # penalizes ignoring the bounds
     'q_u_bound_cost': 1e5,              # penalizes ignoring the bounds
     'Kd': 100*np.eye(3),
@@ -217,6 +217,6 @@ plot_sol=False
 #print("\nTotal cost:", ddp.cost)
 print("Minimum Found:", hasConverged)
 
-visualize=False
-if visualize==True:
-    visualize_robot(robot, q, traj_data, dt, 3, 1)
+# visualize=False
+# if visualize==True:
+#     visualize_robot(robot, q, traj_data, dt, 3, 1)

@@ -120,6 +120,10 @@ else
     ubg = zeros(numel(x), 1);
 end
 
+% lambda_x0, lambda_g0 initial guess
+lambda_x0 = SX.sym('lambda_x0', size(w));
+lambda_g0 = SX.sym('lambda_g0', size(lbg));
+
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
 y       = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
 
