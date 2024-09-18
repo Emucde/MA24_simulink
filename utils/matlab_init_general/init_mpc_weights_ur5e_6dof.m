@@ -82,7 +82,6 @@ param_weight.(MPC).Q_y      = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_ykp1   = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_yN     = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
 param_weight.(MPC).R_q_pp = 1e-10*diag(ones(n,1));
-param_weight.(MPC).R_y_pp = 1e-2*diag(ones(n,1));
 
 param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
 param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 

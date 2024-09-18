@@ -7,10 +7,6 @@ m = param_robot.m; % Dimension of Task Space
 
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
-J = Function.load([input_dir, 'geo_jacobian_endeffector_py.casadi']);
-J_p = Function.load([input_dir, 'geo_jacobian_endeffector_p_py.casadi']);
-
-[~, ~, Q] = quat_deriv(ones(4,1), ones(3,1), ones(3,1)); % get function handle
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
@@ -50,11 +46,11 @@ P = lyap(A, Q); % V = x'Px => Idea: Use V as end cost term
 p_d_0       = param_trajectory.p_d( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
 q_d_0       = param_trajectory.q_d( 1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
 
-p_d_p_0    = param_trajectory.p_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_0 ... y_N)
-omega_d_0 = param_trajectory.omega_d( 1:3, 1 : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (q_0 ... q_N)
+% p_d_p_0    = param_trajectory.p_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_0 ... y_N)
+% omega_d_0 = param_trajectory.omega_d( 1:3, 1 : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (q_0 ... q_N)
 
-p_d_pp_0    = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_0 ... y_N)
-omega_d_p_0 = param_trajectory.omega_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (q_0 ... q_N)
+% p_d_pp_0    = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (y_0 ... y_N)
+% omega_d_p_0 = param_trajectory.omega_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC ); % (q_0 ... q_N)
 
 % initial guess for reference trajectory parameter
 % [TODO: not all cases implemented]
@@ -66,14 +62,6 @@ else
     p_d_0_kp1 = param_trajectory.p_d(  1:3, 2 );
     q_d_0_kp1 = param_trajectory.q_d(  1:4, 2 );
     y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-1)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-1)]];
-
-    p_d_p_0_kp1 = param_trajectory.p_d_p(  1:3, 2 );
-    omega_d_0_kp1 = param_trajectory.omega_d(  1:3, 2 );
-    y_d_p_0 = [[p_d_p_0(:,1), p_d_p_0_kp1, p_d_p_0(:,2:end-1)]; [omega_d_0(:,1), omega_d_0_kp1, omega_d_0(:,2:end-1)]];
-
-    p_d_pp_0_kp1 = param_trajectory.p_d_pp(  1:3, 2 );
-    omega_d_p_0_kp1 = param_trajectory.omega_d_p(  1:3, 2 );
-    y_d_pp_0 = [[p_d_pp_0(:,1), p_d_pp_0_kp1, p_d_pp_0(:,2:end-1)]; [omega_d_p_0(:,1), omega_d_p_0_kp1, omega_d_p_0(:,2:end-1)]];
 end
 
 % Robot System: Initial guess
@@ -133,10 +121,9 @@ ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max, size(x, 2), 1)];
 % input parameter
 x_k    = SX.sym( 'x_k',     2*n, 1 ); % current x state = initial x state
 y_d    = SX.sym( 'y_d',     m+1, N_MPC+1 );
-y_d_pp = SX.sym( 'y_d_pp',  m,   N_MPC );
 
-mpc_parameter_inputs = {x_k, y_d, y_d_pp};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:); y_d_pp_0(:)];
+mpc_parameter_inputs = {x_k, y_d};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -146,7 +133,6 @@ end
 
 % constraints conditions cellarray g
 g_x  = cell(1, N_MPC+1); % for F
-g_q_pp_d = cell(1, N_MPC);
 
 if(weights_and_limits_as_parameter)
     lbg = SX(numel(lam_g_init_guess_0), 1);
@@ -162,8 +148,6 @@ lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
 y       = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
-y_p     = SX(  6, N_MPC); % TCP velocity
-y_pp    = SX(  6, N_MPC); % TCP acceleration
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
@@ -180,9 +164,6 @@ for i=0:N_MPC
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
     if(i < N_MPC)
-        q_p = x(n+1:2*n, 1 + (i));
-        y_pp(:, 1 + (i)) = J_p(q, q_p)*q_p + J(q)*u(:, 1 + (i));
-
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
         if(i == 0)
             g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
@@ -221,9 +202,9 @@ end
 
 g = g_x;
 
-% J_q_pp = Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
+J_q_pp = Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
 % J_q_pp = N_MPC*Q_norm_square(u - q_d_pp, pp.R_y_pp)+Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
-J_q_pp = Q_norm_square(y_pp - y_d_pp, pp.R_y_pp);
+% J_q_pp = Q_norm_square(y_pp - y_d_pp, pp.R_y_pp);
 
 cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp}';
 
