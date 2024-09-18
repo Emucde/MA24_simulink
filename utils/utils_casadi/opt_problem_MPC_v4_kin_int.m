@@ -90,10 +90,10 @@ u_k_0  = ddq_0;
 u_init_guess_0 = ones(n, N_MPC).*u_k_0;
 x_init_guess_0 = [x_0_0 ones(2*n, N_MPC).*x_0_0];
 
-lam_x_init_guess_0 = zeros(2*numel(u_init_guess_0)+numel(x_init_guess_0), 1);
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
 lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
 
-init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); u_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 if(any(isnan(full(init_guess_0))))
     error('115: init_guess_0 contains NaN values!');
@@ -112,10 +112,8 @@ end
 % Optimization Variables:
 u     = SX.sym( 'u',  n,   N_MPC   ); % u = q_0_pp
 x     = SX.sym( 'x',  2*n, N_MPC+1 );
-q_d_p = SX.sym( 'q_d_p', n, N_MPC );
-q_d_pp = SX.sym( 'q_d_pp', n, N_MPC );
 
-mpc_opt_var_inputs = {u, x, q_d_pp};
+mpc_opt_var_inputs = {u, x};
 
 % u = [u0; u1; ... uN-1], x = [x0; x1; ... xN] = [q_0;q_0_p;q_1;q_1_p;...;q_N;q_N_p]
 % xx = [u; x] = [u0; u1; ... uN-1; x0; x1; ... xN]
@@ -129,17 +127,16 @@ u_opt_indices = q0_pp_idx;
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min, size(u, 2), 1); repmat(pp.x_min, size(x, 2), 1); repmat(pp.u_min, size(u, 2), 1)];
-ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max, size(x, 2), 1); repmat(pp.u_max, size(u, 2), 1)];
+lbw = [repmat(pp.u_min, size(u, 2), 1); repmat(pp.x_min, size(x, 2), 1)];
+ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max, size(x, 2), 1)];
 
 % input parameter
 x_k    = SX.sym( 'x_k',     2*n, 1 ); % current x state = initial x state
 y_d    = SX.sym( 'y_d',     m+1, N_MPC+1 );
-y_d_p  = SX.sym( 'y_d_p',  m,   N_MPC );
 y_d_pp = SX.sym( 'y_d_pp',  m,   N_MPC );
 
-mpc_parameter_inputs = {x_k, y_d, y_d_p, y_d_pp};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:)];
+mpc_parameter_inputs = {x_k, y_d, y_d_pp};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:); y_d_pp_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
