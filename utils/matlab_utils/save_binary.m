@@ -1,6 +1,7 @@
-function save_binary(y_d)
+function save_binary(y_d, file_name)
+% e.g. save_binary(init_guess_0, mpc8_init_guess.bin')
     % Open the binary file for writing
-    fileID = fopen('traj.bin', 'w');
+    fileID = fopen(file_name, 'w');
     
     % Write the dimensions of y_d to the file
     [rows, cols] = size(y_d);

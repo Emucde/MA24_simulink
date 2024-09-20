@@ -368,7 +368,7 @@ elseif(create_init_guess_for_all_traj)
 end
 
 %% COMPILE matlab s_function (can be used as normal function in matlab)
-if(~compile_matlab_sfunction)
+if(compile_matlab_sfunction)
     % re-define same casadi function with new name
     % Da der Name von f_opt der matlab name ist und im Objekt gespeichert ist verwendet 
     % die Funktion casadi_fun_to_mex ebenfalls diesen Namen und er muss daher nicht

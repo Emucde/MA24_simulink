@@ -26,6 +26,7 @@ extern "C" {
 #endif
 #include <stdarg.h>
 
+////////////// START CUSTOM ACIN ////////////////
 // TIMER DEPENDENCIES
 #include <time.h>
 #include <pthread.h>
@@ -41,6 +42,7 @@ extern "C" {
 #define PORT_C	         8081
 #define PORT_SIMULINK	 8080
 #define MAXLINE 48
+////////////// END CUSTOM ACIN ////////////////
 
 #ifndef casadi_real
 #define casadi_real double
@@ -42144,6 +42146,8 @@ void mex_MPC8(int resc, mxArray *resv[], int argc, const mxArray *argv[]) {
 }
 #endif
 
+////////////// START CUSTOM ACIN ////////////////
+
 void delay_ms(long ms)
 {
     struct timespec ts;
@@ -42152,10 +42156,32 @@ void delay_ms(long ms)
     nanosleep(&ts, NULL);
 }
 
+#define N_MPC 5
+#define N_step_MPC 10
+
+#define ROWS 7
+#define COLS (N_MPC+1)
+
+#define BLOCK_SIZE (ROWS * COLS)
 
 #define TOTAL_UPDATES 5000 // Total number of data updates
 #define NUM_DOUBLES 12 // for received robot state: 12 doubles = 2*n data q, qp
 #define NUM_BYTES NUM_DOUBLES*8
+
+
+void read_trajectory_block(FILE* file, long int data_start, casadi_real* data, const int* indices) {
+    for (int j = 0; j < COLS; j++) {
+        fseek(file, data_start + indices[j] * ROWS * sizeof(casadi_real), SEEK_SET);
+        fread(&data[j * ROWS], sizeof(casadi_real), ROWS, file);
+    }
+}
+
+void read_file(FILE* file, long int data_start, casadi_real* data, const int data_len) {
+    for (int j = 0; j < data_len; j++) {
+        fseek(file, data_start + j * sizeof(casadi_real), SEEK_SET);
+        fread(&data[j], sizeof(casadi_real), 1, file);
+    }
+}
 
 struct shared_data {
     casadi_real *u_opt_new;              // Buffer to store data
@@ -42176,6 +42202,7 @@ struct shared_data {
     casadi_int* iw;
     casadi_real* w;
     struct timespec start_time; // Start time for runtime tracking
+    FILE *traj_file;
 };
 
 struct shared_data shared;
@@ -42196,7 +42223,15 @@ void *update_data(void *arg) {
     casadi_real* a = 0;
     const casadi_real* r=0;
     int n=0;
+    int indices[COLS] = {0, 1, 100, 200, 300, 400};
+    casadi_real data[BLOCK_SIZE] = {0};
+    FILE *traj_file = shared.traj_file;
     setvbuf(stdout, NULL, _IOFBF, BUFSIZ);
+    long int firstrun = 1;
+    long int init_guess_len = (shared.res[2] - shared.res[1])*sizeof(casadi_real);
+    casadi_real *init_guess_in = (casadi_real *) shared.arg[1];
+    casadi_real *init_guess_sol = shared.res[1];
+
 
     for (int i = 0; i < TOTAL_UPDATES; i++)
     {
@@ -42206,28 +42241,36 @@ void *update_data(void *arg) {
             &shared.udp_c_receive_addrlen);      
 
         // pthread_mutex_lock(&shared.mutex); // Lock mutex before updating data
+        //read trajectory
+        read_trajectory_block(traj_file, 8, &data[0], &indices[0]);
+        memcpy(&shared.w[12], data, sizeof(data));
         
         // Call MPC8 to update data
         casadi_int flag = MPC8(shared.arg, shared.res, shared.iw, shared.w+797, 0);
 
-        r=shared.w+510;
         CASADI_PRINTF("Empfangene Daten: ");
         for (int j = 0; j < NUM_DOUBLES; j++) {
             CASADI_PRINTF("%2.4g ", shared.input_buffer[j]);
         }
-        CASADI_PRINTF("\n  u_opt:\n");
-        for (int j=0; j<6; ++j) CASADI_PRINTF("%2.4g ", *r++);
-        CASADI_PRINTF("\n  u:\n");
-        for (int j=6; j<36; ++j) CASADI_PRINTF("%2.4g ", *r++);
-        CASADI_PRINTF("\n  x_opt:\n");
-        for (int j=36; j<36+72; ++j) CASADI_PRINTF("%2.4g ", *r++);
-        CASADI_PRINTF("\n\n");
-        fflush(stdout);
 
-        // r=shared.w;
-        // CASADI_PRINTF("ALL OUTPUT\n");
-        // for (int j=0; j<797; ++j) CASADI_PRINTF("%g ", *r++);
+        //r=shared.w+510;
+        // CASADI_PRINTF("\n  u_opt:\n");
+        // for (int j=0; j<6; ++j) CASADI_PRINTF("%2.4g ", *r++);
+        // CASADI_PRINTF("\n  u:\n");
+        // for (int j=6; j<36; ++j) CASADI_PRINTF("%2.4g ", *r++);
+        // CASADI_PRINTF("\n  x_opt:\n");
+        // for (int j=36; j<36+72; ++j) CASADI_PRINTF("%2.4g ", *r++);
         // CASADI_PRINTF("\n\n");
+
+        r=shared.w;
+        CASADI_PRINTF("ALL INPUT:\n");
+        for (int j=0; j<510; ++j) CASADI_PRINTF("%2.4g ", *r++);
+        CASADI_PRINTF("\n\n");
+        CASADI_PRINTF("ALL OUTPUT:\n");
+        for (int j=510; j<797; ++j) CASADI_PRINTF("%2.4g ", *r++);
+        CASADI_PRINTF("\n\n");
+
+        fflush(stdout);
         
         if (flag != 0) {
             printf("Error in MPC8: flag = %d\n", flag);
@@ -42236,10 +42279,25 @@ void *update_data(void *arg) {
             return NULL;
         }
 
+        // if(firstrun == 1)
+        // {
+        //   u_opt_res_ptr = shared.res[0]; // send u_opt_0
+        //   firstrun = 0;
+        // }
+        // else
+        // {
+        //   u_opt_res_ptr = shared.res[1]+6; // send u_opt_1
+        // }
+
         for(int j=0; j<6; j++)
         {
           shared.u_opt_new[j] = u_opt_res_ptr[j];
+          indices[j] = indices[j] + 1; // set indices to next prediction horizon
         }
+
+        // set current solution as initial guess:
+        memcpy(init_guess_in, init_guess_sol, init_guess_len);
+        
         // pthread_mutex_unlock(&shared.mutex); // Unlock mutex after updating
 
         // delay_ms(1);
@@ -42299,7 +42357,8 @@ void threaded_send(int sockfd, casadi_real *u_opt_new, size_t u_opt_new_size,
                    const struct sockaddr_in udp_c_receive_addr,
                    unsigned long update_interval_ms, unsigned long send_interval_ms,
                    const casadi_real** arg, casadi_real** res,
-                   casadi_int* iw, casadi_real* w) {
+                   casadi_int* iw, casadi_real* w,
+                   FILE *traj_file) {
     
     pthread_t update_thread, send_thread;
 
@@ -42323,6 +42382,8 @@ void threaded_send(int sockfd, casadi_real *u_opt_new, size_t u_opt_new_size,
     shared.iw = iw; 
     shared.w = w;
 
+    shared.traj_file = traj_file;
+
     clock_gettime(CLOCK_MONOTONIC, &shared.start_time); // Record start time
 
     pthread_mutex_init(&shared.mutex, NULL); 
@@ -42336,20 +42397,7 @@ void threaded_send(int sockfd, casadi_real *u_opt_new, size_t u_opt_new_size,
     pthread_mutex_destroy(&shared.mutex); 
 }
 
-#define N_MPC 5
-#define N_step_MPC 10
-
-#define ROWS 7
-#define COLS (N_MPC+1)
-
-#define BLOCK_SIZE (ROWS * COLS)
-
-void read_trajectory_block(FILE* file, casadi_real* data, const int* indices) {
-    for (int j = 0; j < COLS; j++) {
-        fseek(file, indices[j] * ROWS * sizeof(casadi_real), SEEK_SET);
-        fread(&data[j * ROWS], sizeof(casadi_real), ROWS, file);
-    }
-}
+////////////// END CUSTOM ACIN ////////////////
 
 casadi_int main_MPC8(casadi_int argc, char* argv[]) {
   casadi_int j;
@@ -42360,52 +42408,67 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
   casadi_real w[9606];
   const casadi_real* arg[23];
   casadi_real* res[17];
-  
-  FILE *file;
-  unsigned int rows, cols;
-  double block[BLOCK_SIZE];
+  arg[0] = w+0;
+  arg[1] = w+54;
+  arg[2] = w+330;
+  res[0] = w+510;
+  res[1] = w+516;
+  res[2] = w+792;
+  res[3] = w+793;
+  res[4] = w+794;
+  res[5] = w+795;
+  res[6] = w+796;
 
-  file = fopen("traj.bin", "rb");
-  if (file == NULL) {
-      printf("Error opening file\n");
+  ////////////// START CUSTOM ACIN ////////////////
+
+  FILE *traj_file;
+  FILE *init_guess_file;
+  unsigned int rows, cols;
+  long int data_start;
+  long int data_start_init_guess;
+  double block[BLOCK_SIZE];
+  casadi_real data[BLOCK_SIZE] = {0};
+  casadi_real init_guess_data[510] = {0};
+  int indices[COLS] = {0, 1, 100, 200, 300, 400};
+
+  traj_file = fopen("traj.bin", "rb");
+  if (traj_file == NULL) {
+      printf("Error opening traj_file\n");
       return 1;
   }
 
   // // Read the dimensions
-  // fread(&rows, sizeof(unsigned int), 1, file);
-  // fread(&cols, sizeof(unsigned int), 1, file);
+  fread(&rows, sizeof(unsigned int), 1, traj_file);
+  fread(&cols, sizeof(unsigned int), 1, traj_file);
 
-  // printf("Trajectory dimensions: %d x %d\n", rows, cols);
+  printf("Trajectory dimensions: %d x %d\n", rows, cols);
 
-  //     // Read and process the data in 7x1 blocks
-  //   for (int i = 0; i < cols; i++) {
-  //       fread(block, sizeof(double), BLOCK_SIZE, file);
-        
-  //       // Process the block here
-  //       printf("Block %d: ", i);
-  //       for (int j = 0; j < BLOCK_SIZE; j++) {
-  //           printf("%f ", block[j]);
-  //           delay_ms(10);
-  //       }
-  //       printf("\n");
-  //   }
+  // Calculate the starting position of the data
+  data_start = ftell(traj_file);
 
-    casadi_real data[BLOCK_SIZE] = {0};
-    int indices[COLS] = {0, 1, 100, 200, 300, 400};
+  read_trajectory_block(traj_file, data_start, &data[0], &indices[0]);
 
-    read_trajectory_block(file, &data[0], &indices[0]);
+  init_guess_file = fopen("mpc8_init_allinputs.bin", "rb");
+  if (traj_file == NULL) {
+      printf("Error opening traj_file\n");
+      return 1;
+  }
 
-    printf("Gelesene Daten:\n");
-    for (int i = 0; i < BLOCK_SIZE; i++) {
-        printf("%f ", data[i]);
-        if(i % 7 == 0)
-        {
-          printf("\n");
-        }
-    }
-    
-    // Close the file
-    fclose(file);
+  fread(&rows, sizeof(unsigned int), 1, init_guess_file);
+  fread(&cols, sizeof(unsigned int), 1, init_guess_file);
+
+  printf("init_guess dimensions: %d x %d\n", rows, cols);
+
+  data_start_init_guess = ftell(init_guess_file);
+
+  read_file(init_guess_file, data_start_init_guess, init_guess_data, 510);
+
+  // printf("Gelesene Daten:\n");
+  // for (int i = 0; i < BLOCK_SIZE; i++) {
+      
+  //     printf("%2.17f ", data[i]);
+  //     if(i > 0 && (i+1) % ROWS == 0) printf("\n");
+  // }
 
   // UDP CONNECTION
 
@@ -42438,21 +42501,10 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-  // MPC FUNCTION
+  memcpy(w, init_guess_data, sizeof(init_guess_data));
+  memcpy(&w[12], data, sizeof(data));
 
-  arg[0] = w+0;
-  arg[1] = w+54;
-  arg[2] = w+330;
-  res[0] = w+510;
-  res[1] = w+516;
-  res[2] = w+792;
-  res[3] = w+793;
-  res[4] = w+794;
-  res[5] = w+795;
-  res[6] = w+796;
 
-  casadi_real input_data[] = {-0.0348999931741583, -2.46129996449934, -3.55689998058550, 2.23979998651330, 0.0349999704327306, -1.24879998892337, 0, 0, 0, 0, 0, 0, -0.00580896139208963, 0.233884114973655, 0.405204646676946, 0.587633365057046, -0.00884712344620295, -0.809053376861168, 0.00643351132754176, -0.00580896139208963, 0.233884114973655, 0.405204646676946, 0.587633365057046, -0.00884712344620295, -0.809053376861168, 0.00643351132754176, -0.00580896139208963, 0.233884114973655, 0.405204646676946, 0.587633365057046, -0.00884712344620295, -0.809053376861168, 0.00643351132754176, -0.00580896139208963, 0.233884114973655, 0.405204646676946, 0.587633365057046, -0.00884712344620295, -0.809053376861168, 0.00643351132754176, -0.00580896139208963, 0.233884114973655, 0.405204646676946, 0.587633365057046, -0.00884712344620295, -0.809053376861168, 0.00643351132754176, -0.00580896139208963, 0.233884114973655, 0.405204646676946, 0.587633365057046, -0.00884712344620295, -0.809053376861168, 0.00643351132754176, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, -0.0348999931741580, -2.46129996449934, -3.55689998058550, 2.23979998651330, 0.0349999704327308, -1.24879998892337, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, -0.0348999931741580, -2.46129996449934, -3.55689998058550, 2.23979998651330, 0.0349999704327308, -1.24879998892337, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, -0.0348999931741580, -2.46129996449934, -3.55689998058550, 2.23979998651330, 0.0349999704327308, -1.24879998892337, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, -0.0348999931741580, -2.46129996449934, -3.55689998058550, 2.23979998651330, 0.0349999704327308, -1.24879998892337, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, -0.0348999931741580, -2.46129996449934, -3.55689998058550, 2.23979998651330, 0.0349999704327308, -1.24879998892337, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, -0.0348999931741580, -2.46129996449934, -3.55689998058550, 2.23979998651330, 0.0349999704327308, -1.24879998892337, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 2.22044604925031e-16, 100, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 100, 100, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 100, 100000, 0, 0, 0, 0, 0, 0, 100000, 0, 0, 0, 0, 0, 0, 100000, 0, 0, 0, 0, 0, 0, 100000, 0, 0, 0, 0, 0, 0, 100000, 0, 0, 0, 0, 0, 0, 100000, 1.00000000000000e-10, 0, 0, 0, 0, 0, 0, 1.00000000000000e-10, 0, 0, 0, 0, 0, 0, 1.00000000000000e-10, 0, 0, 0, 0, 0, 0, 1.00000000000000e-10, 0, 0, 0, 0, 0, 0, 1.00000000000000e-10, 0, 0, 0, 0, 0, 0, 1.00000000000000e-10, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY};
-  memcpy(w, input_data, sizeof(input_data));
 
   flag = MPC8(arg, res, iw, w+797, 0);
   if (flag) return flag;
@@ -42473,11 +42525,25 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
                 udp_c_receive_addr,
                 1,    // Update interval in milliseconds
                 0.1,   // Send interval in milliseconds
-                arg, res, iw, w);
+                arg, res, iw, w,
+                traj_file);
 
   fflush(stdout);
+  // Close the file
+  fclose(traj_file);
 
   return 0;
+
+  ////////////// END CUSTOM ACIN ////////////////
+
+  // a = w;
+  // for (j=0; j<510; ++j) if (scanf("%lg", a++)<=0) return 2;
+  // flag = MPC8(arg, res, iw, w+797, 0);
+  // if (flag) return flag;
+  // r = w+510;
+  // for (j=0; j<287; ++j) CASADI_PRINTF("%g ", *r++);
+  // CASADI_PRINTF("\n");
+  // return 0;
 }
 
 
