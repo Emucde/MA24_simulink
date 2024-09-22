@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "string.h": "c",
+        "in.h": "c",
+        "stdlib.h": "c",
+        "types.h": "c",
+        "socket.h": "c",
+        "inet.h": "c",
+        "main_mpc_udp.h": "c",
+        "time.h": "c",
+        "stdio.h": "c"
+    },
+    "editor.largeFileOptimizations": false,
+}

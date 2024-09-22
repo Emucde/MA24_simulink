@@ -1,7 +1,6 @@
 # Project description
 slprj
 .fuse_hidden*
-.vscode
 *.asv
 *.slxc
 *.autosave

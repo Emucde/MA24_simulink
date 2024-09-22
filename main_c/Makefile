@@ -7,7 +7,7 @@ TARGET = MPC8_matlab
 
 all: $(TARGET)
 
-$(TARGET): $(TARGET).c
+$(TARGET): $(TARGET).c main_mpc_udp.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 clean:
