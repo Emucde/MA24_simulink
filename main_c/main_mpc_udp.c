@@ -351,7 +351,27 @@ casadi_int main_MPC(const casadi_real** arg, casadi_real** res,
   fclose(traj_file);
 }
 
-// int main()
-// {
-//     printf("done\n");
-// }
+int main()
+{
+    casadi_int j;
+    casadi_real* a;
+    const casadi_real* r;
+    casadi_int flag;
+    casadi_int iw[IW_LEN];
+    casadi_real w[W_LEN];
+    const casadi_real* arg[ARG_LEN];
+    casadi_real* res[RES_LEN];
+
+    int i;
+    for(i=0; i<(int) sizeof(ARG)/sizeof(uint32_t); i++)
+    {
+        arg[i] = w+ARG[i];
+    }
+
+    for(i=0; i<(int) sizeof(RES)/sizeof(uint32_t); i++)
+    {
+        res[i] = w+RES[i];
+    }
+
+    return main_MPC(arg, res, iw, w, w+W_END_ADDRESS, 0, &MPC8);
+}

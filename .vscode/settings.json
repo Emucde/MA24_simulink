@@ -8,7 +8,9 @@
         "inet.h": "c",
         "main_mpc_udp.h": "c",
         "time.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "mpc8.h": "c",
+        "stdarg.h": "c"
     },
     "editor.largeFileOptimizations": false,
 }

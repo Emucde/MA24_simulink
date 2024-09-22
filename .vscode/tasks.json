@@ -12,7 +12,7 @@
                 "-fdiagnostics-color=always",
                 "-g",
                 "${file}",
-                "main_mpc_udp.c",
+                "${workspaceFolder}/s_functions/ur5e_6dof/mpc_c_sourcefiles/*.c",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
             ],

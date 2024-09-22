@@ -15,8 +15,9 @@ convert_maple_to_casadi         = false; % convert maple functions into casadi f
 fullsimu                        = false; % make full mpc simulation and plot results
 traj_select_mpc                 = 2; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
 create_init_guess_for_all_traj  = true; % create init guess for all trajectories
-compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
-compile_matlab_sfunction        = ~true; % only needed for matlab MPC simu, filename: "casadi_func_name
+compile_sfun                    = false; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
+compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
+generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
 
 % Compile Mode:
 % compile_mode = 1 | nlpsol-sfun | fast compile time | very accurate,          | sometimes slower exec
@@ -376,6 +377,10 @@ if(compile_matlab_sfunction)
     %f_opt = Function(MPC_matlab_name, input_vars_MX, output_vars_MX);
     casadi_fun_to_mex(f_opt, [output_dir, 'maple_msfun'], MPC_matlab_name, '-O2');
     disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
+end
+err
+if(generate_realtime_udp_c_fun)
+    calc_udp_cfun_adresses(f_opt, [s_fun_path, 'mpc_c_sourcefiles/']);
 end
 
 run(parameter_str);

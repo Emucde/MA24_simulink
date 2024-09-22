@@ -35,6 +35,9 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#include "../s_functions/ur5e_6dof/mpc_c_sourcefiles/MPC8.h"
+#include "../s_functions/ur5e_6dof/mpc_c_sourcefiles/MPC8_adressdef.h"
+
 typedef int (*CasadiFunPtr_t)(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem);
 
 void delay_ms(long ms);
