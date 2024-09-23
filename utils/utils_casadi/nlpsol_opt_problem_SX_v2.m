@@ -1,5 +1,7 @@
 import casadi.*
 
+fprintf('Start execution of ''nlpsol_opt_problem_SX_v2.m''\n');
+
 % Create optimization Problem (depending on MPC_version)
 nlpsol_generate_opt_problem;
 
@@ -10,6 +12,8 @@ input_initial_guess_SX = [input_opt_var_SX(:)', {lambda_x0}, {lambda_g0}];
 
 input_vars_SX  = horzcat(input_parameter_SX, input_initial_guess_SX);
 output_values_SX = {J, vertcat(w{:}), vertcat(g{:}), vertcat(p{:}), lambda_x0, lambda_g0};
+
+get_str_names_from_sx_cell;
 
 if(weights_and_limits_as_parameter)
     input_min_len = length(input_vars_SX);
@@ -206,7 +210,7 @@ input_vars_MX = horzcat(merge_cell_arrays({input_vars_MX{1:input_parameter_len}}
                 {input_vars_MX{input_parameter_len+input_initial_guess_len+1 : end}});
 
 %% Define f_opt and calculate final initial guess values
-f_opt = Function(casadi_func_name, input_vars_MX, output_vars_MX);
+f_opt = Function(casadi_func_name, input_vars_MX, output_vars_MX, f_opt_input_str, f_opt_output_str);
 
 %init_MPC_weights;
 param_weight_init = param_weight.(casadi_func_name);
@@ -327,3 +331,7 @@ end
 %    to S-function parameters
 % 2) add 's_function_MPC1' to S-function name
 % 3) set S-function modules to ''
+% or better see the output of 'compile_casadi_sfunction.m'
+
+fprintf('\nExecution of ''nlpsol_opt_problem_SX_v2.m'' finished\n');
+fprintf('--------------------------------------------------------------------\n\n');

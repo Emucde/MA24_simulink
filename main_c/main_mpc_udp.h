@@ -37,6 +37,7 @@
 
 #include "../s_functions/ur5e_6dof/mpc_c_sourcefiles/MPC8.h"
 #include "../s_functions/ur5e_6dof/mpc_c_sourcefiles/MPC8_adressdef.h"
+#include "../s_functions/ur5e_6dof/mpc_c_sourcefiles/MPC8_param_weight.h"
 
 typedef int (*CasadiFunPtr_t)(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem);
 

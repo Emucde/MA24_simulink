@@ -6,11 +6,13 @@ if(exist('parameter_str', 'var') && strcmp(parameter_str, "parameters_2dof"))
     rmpath('./maple/maple_generated/2_dof_system');
 end
 
-%if strcmp(mfilename, 'parameters')
-    clear
+if(  ~( exist('mpc_casadi_main_state', 'var') && strcmp(mpc_casadi_main_state, "running") )  )
     %close all
-    clc
-%end
+    clc;
+end
+clear;
+
+fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 
 %start_in_singularity = false;
 %trajectory_out_of_workspace = false; % TODO: einfach offset 0 setzten
@@ -98,3 +100,6 @@ param_debug;
 % end
 % 
 % plot3(sigma(:,1), sigma(:,2), sigma(:,3), 'LineWidth', 1, 'Color', 'blue');
+
+fprintf('\nExecution of ''parameters_7dof.m'' finished\n');
+fprintf('--------------------------------------------------------------------\n\n');

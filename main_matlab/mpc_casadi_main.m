@@ -3,7 +3,11 @@ if(~exist('parameter_str', 'var')) % otherwise parameter_str is already defined 
     %parameter_str = "parameters_2dof"; % default value
     parameter_str = "parameters_7dof"; % default value
 end
+
+fprintf('Start Execution of ''mpc_casadi_main.m''\n\n');
+
 run(parameter_str); init_casadi; import casadi.*;
+
 %dbstop if error
 %% GLOBAL SETTINGS FOR MPC
 
@@ -15,9 +19,10 @@ convert_maple_to_casadi         = false; % convert maple functions into casadi f
 fullsimu                        = false; % make full mpc simulation and plot results
 traj_select_mpc                 = 2; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
 create_init_guess_for_all_traj  = true; % create init guess for all trajectories
-compile_sfun                    = false; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
+compile_sfun                    = ~false; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
 generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
+reload_parameters_m             = true; % reload parameters.m at the end (clears all variables!)
 
 % Compile Mode:
 % compile_mode = 1 | nlpsol-sfun | fast compile time | very accurate,          | sometimes slower exec
@@ -153,11 +158,12 @@ fixed_parameter  = param_casadi_fun_struct.fixed_parameter;
 weights_and_limits_as_parameter = ~fixed_parameter; %[todo, replace]
 
 
-disp(['Selected: ', casadi_func_name])
+disp(['mpc_casadi_main.m: Selected MPC: ', casadi_func_name]);
+fprintf('--------------------------------------------------------------------\n\n');
 
 % checks
 if mod(Ts_MPC, param_global.Ta) ~= 0
-    error('Error: Result is not an integer.');
+    error('mpc_casadi_main.m: Error: Result is not an integer.');
 end
 
 %% Convert Maple Functions to casadi functions
@@ -198,12 +204,12 @@ MPC_matlab_name = [casadi_func_name, substr];
 
 %% DEFINE OPTIMIZATION PROBLEM
 if(strcmp(MPC_variant, 'opti'))
-    error('Error: opti stack version currently not working!');
+    error('mpc_casadi_main.m: Error: opti stack version currently not working!');
     opti_opt_problem;
 elseif(strcmp(MPC_variant, 'nlpsol'))
     nlpsol_opt_problem_SX_v2;
 else
-    error(['Error: Variant = ', MPC_variant, ' is not valid. Should be (opti | nlpsol)']);
+    error(['mpc_casadi_main.m: Error: Variant = ', MPC_variant, ' is not valid. Should be (opti | nlpsol)']);
 end
 
 %% Test MPC (fast)
@@ -238,7 +244,7 @@ if(fullsimu)
     if(exist(MPC_matlab_name, 'file') == 3)
         matlab_sfun = str2func(MPC_matlab_name);
     else
-        error(['Error: no matlab s-fun ', MPC_matlab_name,' exists!'])
+        error(['mpc_casadi_main.m: Error: no matlab s-fun ', MPC_matlab_name,' exists!'])
     end
     
     %load("./s_functions/trajectory_data/"+"param_"+casadi_func_name+"_traj_data.mat")
@@ -276,7 +282,7 @@ if(fullsimu)
         yr_d_p = param_trajectory.omega_d(:, :, traj_select_mpc);
         yr_d_pp= param_trajectory.omega_d_p(:, :, traj_select_mpc);
     else
-        error(['Error: MPC_version = ', MPC_version, ' is not valid. Should be (v3_rpy | v3_quat)']);
+        error(['mpc_casadi_main.m: Error: MPC_version = ', MPC_version, ' is not valid. Should be (v3_rpy | v3_quat)']);
     end
     
     tic
@@ -316,7 +322,7 @@ if(fullsimu)
         u_k_new_arr(:, i) = u_k_new;
         x_k_new_arr(:, i) = x_k_new;
     end
-    disp(['full simu execution time: ', num2str(toc), ' s'])
+    disp(['mpc_casadi_main.m: full simu execution time: ', num2str(toc), ' s'])
 
     figure;
     subplot(3,1,1);
@@ -363,6 +369,7 @@ if(ceil(1 + (T_horizon_MPC + param_global.T_sim) / param_global.Ta) > traj_setti
     overwrite_offline_traj_forced = true;
     create_trajectories;
 elseif(create_init_guess_for_all_traj)
+    fprintf(['mpc_casadi_main.m: Creating initial guess for ', casadi_func_name, ' for all trajectories:\n']);
     files = struct;
     files.name = ['param_', casadi_func_name, '.mat'];
     create_mpc_init_guess;
@@ -378,11 +385,26 @@ if(compile_matlab_sfunction)
     casadi_fun_to_mex(f_opt, [output_dir, 'maple_msfun'], MPC_matlab_name, '-O2');
     disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
 end
-err
+
+%% Create c and header file for external usage of mpcs in c
 if(generate_realtime_udp_c_fun)
-    calc_udp_cfun_adresses(f_opt, [s_fun_path, 'mpc_c_sourcefiles/']);
+    mpc_c_sourcefile_path = [s_fun_path, 'mpc_c_sourcefiles/'];
+    fprintf(['mpc_casadi_main.m: Creating headers for C: \n\nOutput folder for headers: ', mpc_c_sourcefile_path, '\n\n']);
+    calc_udp_cfun_adresses(f_opt, f_opt_input_cell, f_opt_output_cell, mpc_c_sourcefile_path);
+    generate_mpc_param_realtime_udp_c_fun(param_weight, casadi_func_name, mpc_c_sourcefile_path)
+
+    fprintf('--------------------------------------------------------------------\n\n');
 end
 
-run(parameter_str);
-cd ..
-cd MA24_simulink
+if(reload_parameters_m)
+    fprintf("mpc_casadi_main.m: Reload parameters.m:\n\n");
+    mpc_casadi_main_state = 'running';
+    run(parameter_str);
+    cd ..
+    cd MA24_simulink
+    
+    mpc_casadi_main_state = 'done';
+end
+
+fprintf('Execution of ''mpc_casadi_main.m'' finished\n');
+fprintf('--------------------------------------------------------------------\n\n');

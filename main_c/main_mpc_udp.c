@@ -357,21 +357,21 @@ int main()
     casadi_real* a;
     const casadi_real* r;
     casadi_int flag;
-    casadi_int iw[IW_LEN];
-    casadi_real w[W_LEN];
-    const casadi_real* arg[ARG_LEN];
-    casadi_real* res[RES_LEN];
+    casadi_int iw[MPC8_IW_LEN];
+    casadi_real w[MPC8_W_LEN];
+    const casadi_real* arg[MPC8_ARG_LEN];
+    casadi_real* res[MPC8_RES_LEN];
 
     int i;
-    for(i=0; i<(int) sizeof(ARG)/sizeof(uint32_t); i++)
+    for(i=0; i<(int) sizeof(MPC8_ARG)/sizeof(uint32_t); i++)
     {
-        arg[i] = w+ARG[i];
+        arg[i] = w+MPC8_ARG[i];
     }
 
-    for(i=0; i<(int) sizeof(RES)/sizeof(uint32_t); i++)
+    for(i=0; i<(int) sizeof(MPC8_RES)/sizeof(uint32_t); i++)
     {
-        res[i] = w+RES[i];
+        res[i] = w+MPC8_RES[i];
     }
 
-    return main_MPC(arg, res, iw, w, w+W_END_ADDRESS, 0, &MPC8);
+    return main_MPC(arg, res, iw, w, w+MPC8_W_END_ADDRESS, 0, &MPC8);
 }

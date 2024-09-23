@@ -41700,7 +41700,7 @@ static int casadi_f9(const casadi_real** arg, casadi_real** res, casadi_int* iw,
   return 0;
 }
 
-/* MPC8:(i0[1x54],i1[1x276],i2[1x180])->(o0[6],o1[1x276],o2,o3,o4,o5,o6) */
+/* MPC8:(reference_values = [x_k(12x1), y_d(7x6)] [1x54],init_guess = [u(6x5), x(12x6), lambda_u(6x5), lambda_x(12x6), g(12x6)] [1x276],param_weight = [Q_y(6x6), Q_ykp1(6x6), Q_yN(6x6), R_q_pp(6x6), x_min(12x1), x_max(12x1), u_min(6x1), u_max(6x1)] [1x180])->(u_opt = [u[0:5](6x1)] [6],init_guess_out = [u_out(6x5), x_out(12x6), lambda_u_out(6x5), lambda_x_out(12x6), g_out(12x6)] [1x276],[J_yt(1x1),J_yt_N(1x1),J_yr(1x1),J_yr_N(1x1),J_q_pp(1x1)]) */
 static int casadi_f0(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem) {
   casadi_real **res1=res+7, *rr, *ss;
   const casadi_real **arg1=arg+3;
@@ -41908,22 +41908,22 @@ CASADI_SYMBOL_EXPORT casadi_real MPC8_default_in(casadi_int i) {
 
 CASADI_SYMBOL_EXPORT const char* MPC8_name_in(casadi_int i) {
   switch (i) {
-    case 0: return "i0";
-    case 1: return "i1";
-    case 2: return "i2";
+    case 0: return "reference_values = [x_k(12x1), y_d(7x6)] ";
+    case 1: return "init_guess = [u(6x5), x(12x6), lambda_u(6x5), lambda_x(12x6), g(12x6)] ";
+    case 2: return "param_weight = [Q_y(6x6), Q_ykp1(6x6), Q_yN(6x6), R_q_pp(6x6), x_min(12x1), x_max(12x1), u_min(6x1), u_max(6x1)] ";
     default: return 0;
   }
 }
 
 CASADI_SYMBOL_EXPORT const char* MPC8_name_out(casadi_int i) {
   switch (i) {
-    case 0: return "o0";
-    case 1: return "o1";
-    case 2: return "o2";
-    case 3: return "o3";
-    case 4: return "o4";
-    case 5: return "o5";
-    case 6: return "o6";
+    case 0: return "u_opt = [u[0:5](6x1)] ";
+    case 1: return "init_guess_out = [u_out(6x5), x_out(12x6), lambda_u_out(6x5), lambda_x_out(12x6), g_out(12x6)] ";
+    case 2: return "[J_yt(1x1)";
+    case 3: return "J_yt_N(1x1)";
+    case 4: return "J_yr(1x1)";
+    case 5: return "J_yr_N(1x1)";
+    case 6: return "J_q_pp(1x1)]";
     default: return 0;
   }
 }

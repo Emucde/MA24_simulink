@@ -10,7 +10,9 @@
         "time.h": "c",
         "stdio.h": "c",
         "mpc8.h": "c",
-        "stdarg.h": "c"
+        "stdarg.h": "c",
+        "cstdint": "cpp",
+        "mpc8_adressdef.h": "c"
     },
     "editor.largeFileOptimizations": false,
 }

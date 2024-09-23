@@ -6,6 +6,8 @@ weights_and_limits_as_parameter = true;
 plot_null_simu                  = false;
 print_init_guess_cost_functions = false;
 
+fprintf('\n\nStart execution of ''create_mpc_init_gues.m''\n');
+
 tic
 for name={files.name}
     name_mat_file    = name{1};
@@ -41,9 +43,13 @@ for name={files.name}
 
     param_weight_init = param_weight.(casadi_func_name);
     param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init), 'vector');
+    
+    traj_names = fieldnames(traj_settings.traj_mode);
 
     init_guess_cell = cell(1, param_traj.N_traj);            
     for ii=1:param_traj.N_traj
+        fprintf('--------------------------------------------------------------------\n\n');
+        fprintf(['Creating initial guess for trajectory ',num2str(ii),' (', traj_names{param_traj.traj_type(ii)},'):\n\n']);
         param_trajectory = param_traj_data_fun(traj_settings, 'get', ii, param_traj_data);
         traj_select_mpc = ii;
 
@@ -74,6 +80,9 @@ for name={files.name}
     eval([param_MPC_init_guess_name, ' = param_MPC;']);
     save(param_MPC_init_guess_mat_file, param_MPC_init_guess_name);
 end
-disp(['parameter.m: Execution Time for Init guess Calculation: ', sprintf('%f', toc), 's']);
+fprintf('--------------------------------------------------------------------\n\n');
+fprintf(['parameter.m: Execution Time for Init guess Calculation: ', sprintf('%f', toc), 's\n\n']);
+fprintf('Execution of ''create_mpc_init_guess.m'' finished\n');
+fprintf('--------------------------------------------------------------------\n\n');
 
 init_MPC_weights; % why necessary?

@@ -70,10 +70,11 @@ function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver
         s_func_name_origin = [output_dir, s_fun_name];
         s_func_name_new = [output_dir, s_fun_name(1:end-2), '_', casadi_fun_c_header_name];  % final name for Simulink s-function (.c)
         
+        % Enable Mex Compile
         opts = struct('main', true, ...
             'mex', true);
-        casadi_fun.generate(casadi_fun_name, opts);
-        
+        casadi_fun.generate(casadi_fun_name, opts); %TODO: wird das nicht ohnehin von cg.generate() ueberschrieben?
+
         cg_options = struct;
         cg_options.casadi_real = 'real_T';
         cg_options.real_min = num2str(eps);
