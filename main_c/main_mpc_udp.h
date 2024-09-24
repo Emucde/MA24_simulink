@@ -36,16 +36,10 @@
 #include <netinet/in.h>
 
 #include "../s_functions/ur5e_6dof/mpc_c_sourcefiles/MPC8.h"
-#include "../s_functions/ur5e_6dof/mpc_c_sourcefiles/MPC8_adressdef.h"
-#include "../s_functions/ur5e_6dof/mpc_c_sourcefiles/MPC8_param_weight.h"
+#include "../s_functions/ur5e_6dof/mpc_c_sourcefiles/MPC8_addressdef.h"
+#include "../s_functions/ur5e_6dof/mpc_c_sourcefiles/MPC8_param.h"
 
 typedef int (*CasadiFunPtr_t)(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem);
-
-void delay_ms(long ms);
-
-void read_trajectory_block(FILE* file, long int data_start, casadi_real* data, const int* indices);
-
-void read_file(FILE* file, long int data_start, casadi_real* data, const int data_len);
 
 struct shared_data {
     casadi_real *u_opt_new;              // Buffer to store data
@@ -68,23 +62,11 @@ struct shared_data {
     casadi_real* w_end_addr;
     struct timespec start_time; // Start time for runtime tracking
     FILE *traj_file;
+    unsigned int traj_data_startbyte;
+    unsigned int traj_rows;
+    unsigned int traj_cols;
+    uint32_t *traj_indices;
     CasadiFunPtr_t casadi_fun;
 };
 
-void *update_data(void *arg);
-
-void *send_data(void *arg);
-
-void threaded_send(int sockfd, casadi_real *u_opt_new, size_t u_opt_new_size,
-                   casadi_real *input_buffer, size_t input_buffer_size,
-                   const struct sockaddr_in udp_c_send_addr,
-                   const struct sockaddr_in udp_c_receive_addr,
-                   unsigned long update_interval_ms, unsigned long send_interval_ms,
-                   const casadi_real** arg, casadi_real** res,
-                   casadi_int* iw, casadi_real* w, casadi_real* w_end_addr,
-                   FILE *traj_file, CasadiFunPtr_t casadi_fun);
-
-casadi_int main_MPC(const casadi_real** arg, casadi_real** res,
-                    casadi_int* iw, casadi_real* w, casadi_real* w_end_addr, int mem,
-                    CasadiFunPtr_t casadi_fun);
 #endif // MAIN_MPC_UDP_H

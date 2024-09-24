@@ -26,10 +26,10 @@ void delay_ms(long ms)
 #define NUM_BYTES NUM_DOUBLES*8
 
 
-void read_trajectory_block(FILE* file, long int data_start, casadi_real* data, const int* indices) {
-    for (int j = 0; j < COLS; j++) {
-        fseek(file, data_start + indices[j] * ROWS * sizeof(casadi_real), SEEK_SET);
-        fread(&data[j * ROWS], sizeof(casadi_real), ROWS, file);
+void read_trajectory_block(FILE* file, unsigned int traj_data_startbyte, uint32_t rows, uint32_t cols, casadi_real* data, const int* indices) {
+    for (int j = 0; j < cols; j++) {
+        fseek(file, traj_data_startbyte + indices[j] * rows * sizeof(casadi_real), SEEK_SET);
+        fread(&data[j * rows], sizeof(casadi_real), rows, file);
     }
 }
 
@@ -58,7 +58,7 @@ void *update_data(void *arg) {
     casadi_real* a = 0;
     const casadi_real* r=0;
     int n=0;
-    int indices[COLS] = {0, 1, 100, 200, 300, 400};
+    uint32_t * traj_indices = shared.traj_indices;
     casadi_real data[BLOCK_SIZE] = {0};
     FILE *traj_file = shared.traj_file;
     setvbuf(stdout, NULL, _IOFBF, BUFSIZ);
@@ -78,7 +78,7 @@ void *update_data(void *arg) {
 
         // pthread_mutex_lock(&shared.mutex); // Lock mutex before updating data
         //read trajectory
-        read_trajectory_block(traj_file, 8, &data[0], &indices[0]);
+        read_trajectory_block(traj_file, shared.traj_data_startbyte, shared.traj_rows, MPC8_traj_data_per_horizon, &data[0], traj_indices);
         memcpy(&shared.w[12], data, sizeof(data));
         
         // Call MPC8 to update data
@@ -125,10 +125,10 @@ void *update_data(void *arg) {
         //   u_opt_res_ptr = shared.res[1]+6; // send u_opt_1
         // }
 
-        for(int j=0; j<6; j++)
+        for(int j=0; j<MPC8_traj_data_per_horizon; j++)
         {
           shared.u_opt_new[j] = u_opt_res_ptr[j];
-          indices[j] = indices[j] + 1; // set indices to next prediction horizon
+          traj_indices[j] = traj_indices[j] + 1; // set indices to next prediction horizon
         }
 
         // set current solution as initial guess:
@@ -194,7 +194,9 @@ void threaded_send(int sockfd, casadi_real *u_opt_new, size_t u_opt_new_size,
                    unsigned long update_interval_ms, unsigned long send_interval_ms,
                    const casadi_real** arg, casadi_real** res,
                    casadi_int* iw, casadi_real* w, casadi_real* w_end_addr,
-                   FILE *traj_file, CasadiFunPtr_t casadi_fun) {
+                   FILE *traj_file, unsigned int traj_data_startbyte,
+                   unsigned int traj_rows, unsigned int traj_cols, uint32_t* traj_indices,
+                   CasadiFunPtr_t casadi_fun) {
     
     pthread_t update_thread, send_thread;
 
@@ -215,11 +217,15 @@ void threaded_send(int sockfd, casadi_real *u_opt_new, size_t u_opt_new_size,
     shared.should_exit = 0; 
     shared.arg = arg;
     shared.res = res; 
-    shared.iw = iw; 
+    shared.iw = iw;
     shared.w = w;
     shared.w_end_addr = w_end_addr;
 
     shared.traj_file = traj_file;
+    shared.traj_data_startbyte = traj_data_startbyte;
+    shared.traj_rows = traj_rows;
+    shared.traj_cols = traj_cols;
+    shared.traj_indices = traj_indices;
 
     shared.casadi_fun = casadi_fun;
 
@@ -236,61 +242,113 @@ void threaded_send(int sockfd, casadi_real *u_opt_new, size_t u_opt_new_size,
     pthread_mutex_destroy(&shared.mutex); 
 }
 
+#define TRAJ_SELECT 2 // number between 1 and 7
+
 casadi_int main_MPC(const casadi_real** arg, casadi_real** res,
                     casadi_int* iw, casadi_real* w, casadi_real* w_end_addr, int mem,
                     CasadiFunPtr_t casadi_fun)
 {
-  casadi_int flag=0;
-  FILE *traj_file;
-  FILE *init_guess_file;
-  unsigned int rows, cols;
-  long int data_start;
-  long int data_start_init_guess;
-  double block[BLOCK_SIZE];
-  casadi_real data[BLOCK_SIZE] = {0};
-  casadi_real init_guess_data[510] = {0};
-  int indices[COLS] = {0, 1, 100, 200, 300, 400};
+    casadi_int flag=0;
+    FILE *traj_file;
+    FILE *init_guess_file;
+    FILE *x0_init_file;
+    uint32_t traj_rows, traj_cols, traj_amount;
+    uint32_t init_guess_rows, init_guess_cols;
+    uint32_t x0_init_rows, x0_init_cols;
+    unsigned int traj_data_startbyte;
+    unsigned int init_guess_startbyte;
+    unsigned int q0_init_data_startbyte;
 
-  traj_file = fopen("traj.bin", "rb");
-  if (traj_file == NULL) {
-      printf("Error opening traj_file\n");
-      return 1;
-  }
+    casadi_real x0_init[MPC8_X_K_LEN] = {0};
+    casadi_real yd_init[MPC8_Y_D_LEN] = {0};
 
-  // // Read the dimensions
-  fread(&rows, sizeof(unsigned int), 1, traj_file);
-  fread(&cols, sizeof(unsigned int), 1, traj_file);
+    casadi_real init_guess_data[MPC8_INIT_GUESS_LEN] = {0};
+    uint32_t traj_indices[MPC8_traj_data_per_horizon] = {0};
 
-  printf("Trajectory dimensions: %d x %d\n", rows, cols);
+    memcpy(traj_indices, MPC8_traj_indices, sizeof(traj_indices));
 
-  // Calculate the starting position of the data
-  data_start = ftell(traj_file);
+    traj_file = fopen(TRAJ_DATA_PATH, "rb");
+    if (traj_file == NULL) {
+        printf("Error opening traj_file\n");
+        return 1;
+    }
 
-  read_trajectory_block(traj_file, data_start, &data[0], &indices[0]);
+    // // Read the dimensions
+    fread(&traj_rows, sizeof(uint32_t), 1, traj_file);
+    fread(&traj_cols, sizeof(uint32_t), 1, traj_file);
+    fread(&traj_amount, sizeof(uint32_t), 1, traj_file);
 
-  init_guess_file = fopen("mpc8_init_allinputs.bin", "rb");
-  if (traj_file == NULL) {
-      printf("Error opening traj_file\n");
-      return 1;
-  }
+    printf("Trajectory dimensions: %d x %d, traj_amount: %d\n", traj_rows, traj_cols, traj_amount);
 
-  fread(&rows, sizeof(unsigned int), 1, init_guess_file);
-  fread(&cols, sizeof(unsigned int), 1, init_guess_file);
+    // Calculate the starting position of traj_data
+    traj_data_startbyte = ftell(traj_file) + traj_rows*traj_cols*(TRAJ_SELECT-1) * sizeof(casadi_real);
 
-  printf("init_guess dimensions: %d x %d\n", rows, cols);
+    read_trajectory_block(traj_file, traj_data_startbyte, traj_rows, MPC8_traj_data_per_horizon, &yd_init[0], &traj_indices[0]);
 
-  data_start_init_guess = ftell(init_guess_file);
+    init_guess_file = fopen(MPC8_INIT_GUESS_PATH, "rb");
+    if (init_guess_file == NULL) {
+        printf("Error opening init_guess_file\n");
+        return 1;
+    }
 
-  read_file(init_guess_file, data_start_init_guess, init_guess_data, 510);
+    fread(&init_guess_rows, sizeof(unsigned int), 1, init_guess_file);
+    fread(&init_guess_cols, sizeof(unsigned int), 1, init_guess_file);
 
-  // printf("Gelesene Daten:\n");
-  // for (int i = 0; i < BLOCK_SIZE; i++) {
-      
-  //     printf("%2.17f ", data[i]);
-  //     if(i > 0 && (i+1) % ROWS == 0) printf("\n");
-  // }
+    printf("init_guess dimensions: %d x %d\n", init_guess_rows, init_guess_cols);
 
-  // UDP CONNECTION
+    init_guess_startbyte = ftell(init_guess_file) + init_guess_rows*(TRAJ_SELECT-1) * sizeof(casadi_real);
+
+    read_file(init_guess_file, init_guess_startbyte, init_guess_data, init_guess_rows);
+
+    x0_init_file = fopen(X0_INIT_PATH, "rb");
+    if (x0_init_file == NULL) {
+        printf("Error opening x0_init_file\n");
+        return 1;
+    }
+
+    // Read the dimensions
+    fread(&x0_init_rows, sizeof(uint32_t), 1, x0_init_file);
+    fread(&x0_init_cols, sizeof(uint32_t), 1, x0_init_file);
+
+    printf("x0_init dimensions: %d x %d\n", x0_init_rows, x0_init_cols);
+
+    // Calculate the starting position of q0_init_data
+    q0_init_data_startbyte = ftell(x0_init_file) + x0_init_rows*(TRAJ_SELECT-1) * sizeof(casadi_real);
+
+    // Read the data
+    read_file(x0_init_file, q0_init_data_startbyte, x0_init, x0_init_cols);
+
+
+
+    FILE *init_all_file;
+    init_all_file = fopen("mpc8_init_allinputs.bin", "rb");
+    if (traj_file == NULL) {
+        printf("Error opening traj_file\n");
+        return 1;
+    }
+
+    int rows;
+    int cols, data_start_init_guess;
+    casadi_real init_data_full[510];
+
+    fread(&rows, sizeof(unsigned int), 1, init_all_file);
+    fread(&cols, sizeof(unsigned int), 1, init_all_file);
+
+    printf("init_guess dimensions: %d x %d\n", rows, cols);
+
+    data_start_init_guess = ftell(init_all_file);
+
+    read_file(init_all_file, data_start_init_guess, init_data_full, 510);
+
+    fclose(init_all_file);
+
+    memcpy(w+MPC8_X_K_ADDR, x0_init, sizeof(x0_init)); // init x0
+    memcpy(w+MPC8_Y_D_ADDR, yd_init, sizeof(yd_init));
+    memcpy(w+MPC8_INIT_GUESS_ADDR, init_guess_data, sizeof(init_guess_data));
+    memcpy(w+MPC8_PARAM_WEIGHT_ADDR, MPC8_param_weight, sizeof(MPC8_param_weight));
+
+
+    // UDP CONNECTION
 
 	int sockfd;
 	struct sockaddr_in udp_c_receive_addr, udp_c_send_addr;
@@ -321,9 +379,6 @@ casadi_int main_MPC(const casadi_real** arg, casadi_real** res,
 		exit(EXIT_FAILURE);
 	}
 
-  memcpy(w, init_guess_data, sizeof(init_guess_data));
-  memcpy(&w[12], data, sizeof(data));
-
   flag = casadi_fun(arg, res, iw, w_end_addr, 0);
   if (flag) return flag;
 
@@ -344,7 +399,9 @@ casadi_int main_MPC(const casadi_real** arg, casadi_real** res,
                 1,    // Update interval in milliseconds
                 0.1,   // Send interval in milliseconds
                 arg, res, iw, w, w_end_addr,
-                traj_file, casadi_fun);
+                traj_file, traj_data_startbyte,
+                traj_rows, traj_cols, &traj_indices[0],
+                casadi_fun);
 
   fflush(stdout);
   // Close the file

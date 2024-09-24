@@ -2,6 +2,8 @@ import casadi.*;
 
 %% GENERATE OFFLINE TRAJECTORY
 param_MPC_traj_data_mat_file = [s_fun_path, '/trajectory_data/param_traj_data.mat'];
+param_MPC_traj_data_bin_file = [s_fun_path, '/trajectory_data/param_traj_data.bin'];
+param_MPC_x0_init_bin_file = [s_fun_path, '/trajectory_data/param_x0_init.bin'];
 param_traj_file = [s_fun_path, '/trajectory_data/param_traj.mat'];
 param_traj_cell_file = [s_fun_path, '/trajectory_data/param_traj_cell.mat'];
 param_traj_settings = [s_fun_path, '/trajectory_data/param_traj_settings.mat'];
@@ -102,6 +104,8 @@ catch ME
     disp('Cannot create init guess, please compile new')
     fprintf(2, 'Fehler: %s\n', getReport(ME));
 end
+
+save_trajectories_as_binary(param_traj_data, param_traj, param_MPC_traj_data_bin_file, param_MPC_x0_init_bin_file);
 
 if(plot_trajectory)
         figure;

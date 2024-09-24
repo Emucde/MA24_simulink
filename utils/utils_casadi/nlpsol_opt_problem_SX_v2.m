@@ -324,6 +324,21 @@ if(compile_sfun)
     end
 end
 
+%% CALCULATE TRAJ INDICES
+
+
+yy_d = [param_trajectory.p_d; param_trajectory.q_d];
+
+[~, cols_y0] = size(y_d_0);
+traj_indices_cell = cell(1, cols_y0);
+
+for col = 1:cols_y0
+    current_column = y_d_0(:, col);
+    traj_indices_cell{col} = find(all(yy_d == current_column, 1));
+end
+
+MPC_traj_indices = cell2mat(traj_indices_cell);
+
 %% s-function in Simulink: Name of s-function: MPC1
 % 1) Insert S-Function Block in Matlab
 % 2) add 

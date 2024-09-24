@@ -12,7 +12,12 @@
         "mpc8.h": "c",
         "stdarg.h": "c",
         "cstdint": "cpp",
-        "mpc8_adressdef.h": "c"
+        "mpc8_adressdef.h": "c",
+        "mpc8_addressdef.h": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c",
+        "span": "c"
     },
     "editor.largeFileOptimizations": false,
 }

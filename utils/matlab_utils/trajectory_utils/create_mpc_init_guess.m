@@ -6,7 +6,7 @@ weights_and_limits_as_parameter = true;
 plot_null_simu                  = false;
 print_init_guess_cost_functions = false;
 
-fprintf('\n\nStart execution of ''create_mpc_init_gues.m''\n');
+fprintf('\n\nStart execution of ''create_mpc_init_guess.m''\n');
 
 tic
 for name={files.name}
@@ -16,6 +16,7 @@ for name={files.name}
 
     param_MPC_init_guess_name = [param_MPC_name, '_init_guess'];
     param_MPC_init_guess_mat_file = [s_fun_path, '/initial_guess/', param_MPC_init_guess_name,'.mat'];
+    param_MPC_init_guess_bin_file = [s_fun_path, '/initial_guess/', param_MPC_init_guess_name,'.bin'];
 
     fprintf('\n');
     disp(['Calculating init guess for: ', param_MPC_name]);
@@ -79,6 +80,7 @@ for name={files.name}
     
     eval([param_MPC_init_guess_name, ' = param_MPC;']);
     save(param_MPC_init_guess_mat_file, param_MPC_init_guess_name);
+    save_init_guess_as_binary(init_guess_arr, param_MPC_init_guess_bin_file);
 end
 fprintf('--------------------------------------------------------------------\n\n');
 fprintf(['parameter.m: Execution Time for Init guess Calculation: ', sprintf('%f', toc), 's\n\n']);
