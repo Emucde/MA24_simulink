@@ -89,8 +89,11 @@ f_opt_input_str = {refval_str, init_guess_str, param_weight_str};
 % OUTPUTS
 u_opt_str = str_cell2str(u_opt_str_cell, 'u_opt =');
 init_guess_out_str = str_cell2str(init_guess_out_str_cell, 'init_guess_out =');
-costfun_str = str_cell2str(costfun_str_cell, '');
-costfun_str_cell_new = strsplit(costfun_str(2:end-1), ', ');
+
+costfun_str_cell_new =  cell(1, n_costfun);
+for i=1:n_costfun
+    costfun_str_cell_new{i} = str_cell2str(costfun_str_cell(i), ['cost_fun_', num2str(i), ' =']);
+end
 
 f_opt_output_cell = {u_opt_str_cell, init_guess_out_str_cell, costfun_str_cell};
 f_opt_output_str = [{u_opt_str}, {init_guess_out_str}, costfun_str_cell_new(:)'];

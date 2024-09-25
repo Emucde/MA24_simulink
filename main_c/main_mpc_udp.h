@@ -3,20 +3,6 @@
 #ifndef MAIN_MPC_UDP_H
 #define MAIN_MPC_UDP_H
 
-#ifndef casadi_real
-#define casadi_real double
-#endif
-
-#ifndef casadi_int
-#define casadi_int long long int
-#endif
-
-#ifndef CASADI_MAX_NUM_THREADS
-#define CASADI_MAX_NUM_THREADS 1
-#endif
-
-#define CASADI_PRINTF printf
-
 // CASADI DEPENDENCIES
 #include <math.h>
 #include <stdio.h>
@@ -55,6 +41,7 @@ struct shared_data {
     int should_exit;           // Flag to signal thread termination
     unsigned long update_interval_ns; // Interval between data updates (in nanoseconds)
     unsigned long send_interval_ns;   // Interval between sends (in nanoseconds)
+    unsigned long* send_cnt;   // Interval between receives (in nanoseconds)
     const casadi_real** arg;
     casadi_real** res;
     casadi_int* iw;

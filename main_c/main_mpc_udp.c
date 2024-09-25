@@ -5,6 +5,19 @@
 #define PORT_SIMULINK	 8080
 #define MAXLINE 48
 
+#define DEBUG_SHOW_U_OPT
+// #define DEBUG_SHOW_INPUT_OUTPUT
+// #define DEBUG_SHOW_SEND_DATA
+#define DEBUG_SHOW_REC_DATA
+
+#define TOTAL_UPDATES 5000 // Total number of data updates
+#define UDP_UPDATE_INTERVALL_MS 1       // Update interval in milliseconds
+#define UDP_SEND_INTERVALL_MS 0.1         // Send interval in milliseconds
+
+
+#define TRAJ_SELECT 2 // number between 1 and 7
+
+
 void delay_ms(long ms)
 {
     struct timespec ts;
@@ -12,19 +25,6 @@ void delay_ms(long ms)
     ts.tv_nsec = (ms % 1000) * 1000000;
     nanosleep(&ts, NULL);
 }
-
-#define N_MPC 5
-#define N_step_MPC 10
-
-#define ROWS 7
-#define COLS (N_MPC+1)
-
-#define BLOCK_SIZE (ROWS * COLS)
-
-#define TOTAL_UPDATES 5000 // Total number of data updates
-#define NUM_DOUBLES 12 // for received robot state: 12 doubles = 2*n data q, qp
-#define NUM_BYTES NUM_DOUBLES*8
-
 
 void read_trajectory_block(FILE* file, unsigned int traj_data_startbyte, uint32_t rows, uint32_t cols, casadi_real* data, const int* indices) {
     for (int j = 0; j < cols; j++) {
@@ -59,52 +59,74 @@ void *update_data(void *arg) {
     const casadi_real* r=0;
     int n=0;
     uint32_t * traj_indices = shared.traj_indices;
-    casadi_real data[BLOCK_SIZE] = {0};
     FILE *traj_file = shared.traj_file;
     setvbuf(stdout, NULL, _IOFBF, BUFSIZ);
-    long int firstrun = 1;
     long int init_guess_len = (shared.res[2] - shared.res[1])*sizeof(casadi_real);
     casadi_real *init_guess_in = (casadi_real *) shared.arg[1];
     casadi_real *init_guess_sol = shared.res[1];
     casadi_int flag = 0;
     CasadiFunPtr_t casadi_fun = shared.casadi_fun;
 
+    casadi_real read_data[MPC8_X_K_LEN+1] = {0};
+    casadi_real x_k[MPC8_X_K_LEN] = {0};
+
     for (int i = 0; i < TOTAL_UPDATES; i++)
     {
 
-        n = recvfrom(shared.sockfd, (casadi_real *) shared.input_buffer, NUM_BYTES,
-            MSG_WAITALL, ( struct sockaddr *) &shared.udp_c_receive_addr,
-            &shared.udp_c_receive_addrlen);      
+        // n = recvfrom(shared.sockfd, &x_k[0], MPC8_X_K_LEN*sizeof(casadi_real),
+        //     MSG_WAITALL, ( struct sockaddr *) &shared.udp_c_receive_addr,
+        //     &shared.udp_c_receive_addrlen);
+        // memcpy(shared.w+MPC8_X_K_ADDR, x_k, sizeof(x_k));
 
-        // pthread_mutex_lock(&shared.mutex); // Lock mutex before updating data
+        n = recvfrom(shared.sockfd, read_data, sizeof(read_data),
+            MSG_WAITALL, ( struct sockaddr *) &shared.udp_c_receive_addr,
+            &shared.udp_c_receive_addrlen);
+
+        pthread_mutex_lock(&shared.mutex); // Lock mutex before updating data
+
+        *shared.send_cnt = (unsigned long) read_data[0];
+        memcpy(x_k, &read_data[1], MPC8_X_K_LEN*sizeof(casadi_real));
+
         //read trajectory
-        read_trajectory_block(traj_file, shared.traj_data_startbyte, shared.traj_rows, MPC8_traj_data_per_horizon, &data[0], traj_indices);
-        memcpy(&shared.w[12], data, sizeof(data));
-        
+        read_trajectory_block(traj_file, shared.traj_data_startbyte, shared.traj_rows, MPC8_traj_data_per_horizon, shared.w+MPC8_Y_D_ADDR, traj_indices);
+        //memcpy(data, shared.w+MPC8_Y_D_ADDR, sizeof(data));
+
         // Call MPC8 to update data
         flag = casadi_fun(shared.arg, shared.res, shared.iw, shared.w_end_addr, 0);
 
-        CASADI_PRINTF("Empfangene Daten: ");
-        for (int j = 0; j < NUM_DOUBLES; j++) {
-            CASADI_PRINTF("%2.4g ", shared.input_buffer[j]);
+        printf("send_cnt = %lu\n", *shared.send_cnt);
+
+        #ifdef DEBUG_SHOW_REC_DATA
+        printf("Empfangene Daten: ");
+        for (int j = 0; j < MPC8_X_K_LEN; j++) {
+            // printf("%2.4g ", shared.input_buffer[j]);
+            printf("%2.4g ", x_k[j]);
         }
+        printf("\n");
+        #endif
 
-        //r=shared.w+510;
-        // CASADI_PRINTF("\n  u_opt:\n");
-        // for (int j=0; j<6; ++j) CASADI_PRINTF("%2.4g ", *r++);
-        // CASADI_PRINTF("\n  u:\n");
-        // for (int j=6; j<36; ++j) CASADI_PRINTF("%2.4g ", *r++);
-        // CASADI_PRINTF("\n  x_opt:\n");
-        // for (int j=36; j<36+72; ++j) CASADI_PRINTF("%2.4g ", *r++);
-        // CASADI_PRINTF("\n\n");
+        //
+        #ifdef DEBUG_SHOW_U_OPT
+        r=shared.w+MPC8_U_OUT_ADDR+1*MPC8_U_OPT_LEN;
+        printf("u_opt: ");
+        for (int j=0; j<MPC8_U_OPT_LEN; ++j) printf("%2.4g ", *r++);
+        printf("\n\n");
+        #endif
 
+        // printf("\n  u:\n");
+        // for (int j=6; j<36; ++j) printf("%2.4g ", *r++);
+        // printf("\n  x_opt:\n");
+        // for (int j=36; j<36+72; ++j) printf("%2.4g ", *r++);
+
+        #ifdef DEBUG_SHOW_INPUT_OUTPUT
         r=shared.w;
-        CASADI_PRINTF("ALL INPUT:\n");
-        for (int j=0; j<510; ++j) CASADI_PRINTF("%2.4g ", *r++);
-        CASADI_PRINTF("\n\n");
-        CASADI_PRINTF("ALL OUTPUT:\n");
-        for (int j=510; j<797; ++j) CASADI_PRINTF("%2.4g ", *r++);
-        CASADI_PRINTF("\n\n");
+        printf("ALL INPUT:\n");
+        for (int j=0; j<MPC8_OUT_U_OPT_ADDR; ++j) printf("%2.4g ", *r++);
+        printf("\n\n");
+        printf("ALL OUTPUT:\n");
+        for (int j=MPC8_OUT_U_OPT_ADDR; j<MPC8_W_END_ADDRESS; ++j) printf("%2.4g ", *r++);
+        printf("\n\n");
+        #endif
 
         fflush(stdout);
         
@@ -115,29 +137,15 @@ void *update_data(void *arg) {
             return NULL;
         }
 
-        // if(firstrun == 1)
-        // {
-        //   u_opt_res_ptr = shared.res[0]; // send u_opt_0
-        //   firstrun = 0;
-        // }
-        // else
-        // {
-        //   u_opt_res_ptr = shared.res[1]+6; // send u_opt_1
-        // }
-
-        for(int j=0; j<MPC8_traj_data_per_horizon; j++)
-        {
-          shared.u_opt_new[j] = u_opt_res_ptr[j];
-          traj_indices[j] = traj_indices[j] + 1; // set indices to next prediction horizon
-        }
-
         // set current solution as initial guess:
-        memcpy(init_guess_in, init_guess_sol, init_guess_len);
-        
-        // pthread_mutex_unlock(&shared.mutex); // Unlock mutex after updating
+        // memcpy(shared.w+MPC8_IN_INIT_GUESS_ADDR, init_guess_sol, MPC8_INIT_GUESS_LEN*sizeof(casadi_real));
 
-        // delay_ms(1);
-        // precise_nanosleep(500000);
+        // Increate the indices for the next trajectory block
+        for (int j = 0; j < MPC8_traj_data_per_horizon; j++) {
+            traj_indices[j] = (traj_indices[j] + 1);
+        }
+        
+        pthread_mutex_unlock(&shared.mutex); // Unlock mutex after updating
     }
     
     shared.should_exit = 1; // Signal to exit after all updates
@@ -148,6 +156,8 @@ void *update_data(void *arg) {
 void *send_data(void *arg) {
     struct timespec next_send;
     clock_gettime(CLOCK_MONOTONIC, &next_send);
+    casadi_real send_data[MPC8_U_OUT_LEN+1] = {0};
+    casadi_int i;
 
     while (!shared.should_exit) {
         // Wait until it's time to send the data
@@ -162,19 +172,25 @@ void *send_data(void *arg) {
             precise_nanosleep(100); // Sleep for a short duration to reduce CPU load
         }
 
-        // pthread_mutex_lock(&shared.mutex); // Lock mutex before sending
+        //write send_cnt and u_opt to send_data
+        send_data[0] = *shared.send_cnt;
+        memcpy(&send_data[1], shared.w+MPC8_U_OUT_ADDR, MPC8_U_OUT_LEN*sizeof(casadi_real));
 
         // Send data to simulink. Info: shared.buffers shows at adress of u_opt
-        sendto(shared.sockfd, shared.u_opt_new, shared.u_opt_new_size,
-                  MSG_CONFIRM, (const struct sockaddr *) &shared.udp_c_send_addr, shared.udp_c_send_addrlen);
+        sendto(shared.sockfd, send_data, sizeof(send_data), 0,
+            (const struct sockaddr *) &shared.udp_c_send_addr,
+            shared.udp_c_send_addrlen);
 
-        // printf("Gesendete Daten: ");
-        // for (int i = 0; i < 6; i++) {
-        //     printf("%g ", shared.u_opt_new[i]);
-        // }
-        // printf("\n");
-        
-        // pthread_mutex_unlock(&shared.mutex); // Unlock mutex after sending
+        // sendto(shared.sockfd, shared.w+MPC8_U_OUT_ADDR+1*MPC8_U_OPT_LEN, MPC8_U_OPT_LEN*sizeof(casadi_real),
+        //     0, (const struct sockaddr *) &shared.udp_c_send_addr, shared.udp_c_send_addrlen);
+
+        #ifdef DEBUG_SHOW_SEND_DATA
+        printf("Gesendete Daten: ");
+        for (int i = 0; i < 6; i++) {
+            printf("%g ", shared.u_opt_new[i]);
+        }
+        printf("\n");
+        #endif
 
         // Calculate next send time
         next_send.tv_nsec += shared.send_interval_ns;
@@ -192,6 +208,7 @@ void threaded_send(int sockfd, casadi_real *u_opt_new, size_t u_opt_new_size,
                    const struct sockaddr_in udp_c_send_addr,
                    const struct sockaddr_in udp_c_receive_addr,
                    unsigned long update_interval_ms, unsigned long send_interval_ms,
+                   unsigned long *send_cnt,
                    const casadi_real** arg, casadi_real** res,
                    casadi_int* iw, casadi_real* w, casadi_real* w_end_addr,
                    FILE *traj_file, unsigned int traj_data_startbyte,
@@ -213,6 +230,7 @@ void threaded_send(int sockfd, casadi_real *u_opt_new, size_t u_opt_new_size,
 
     shared.update_interval_ns = update_interval_ms * 1000000; // Convert ms to ns
     shared.send_interval_ns = send_interval_ms * 1000000;     // Convert ms to ns
+    shared.send_cnt = send_cnt;
 
     shared.should_exit = 0; 
     shared.arg = arg;
@@ -242,8 +260,6 @@ void threaded_send(int sockfd, casadi_real *u_opt_new, size_t u_opt_new_size,
     pthread_mutex_destroy(&shared.mutex); 
 }
 
-#define TRAJ_SELECT 2 // number between 1 and 7
-
 casadi_int main_MPC(const casadi_real** arg, casadi_real** res,
                     casadi_int* iw, casadi_real* w, casadi_real* w_end_addr, int mem,
                     CasadiFunPtr_t casadi_fun)
@@ -264,6 +280,8 @@ casadi_int main_MPC(const casadi_real** arg, casadi_real** res,
 
     casadi_real init_guess_data[MPC8_INIT_GUESS_LEN] = {0};
     uint32_t traj_indices[MPC8_traj_data_per_horizon] = {0};
+
+    unsigned long send_cnt = 0;
 
     memcpy(traj_indices, MPC8_traj_indices, sizeof(traj_indices));
 
@@ -344,9 +362,8 @@ casadi_int main_MPC(const casadi_real** arg, casadi_real** res,
 
     memcpy(w+MPC8_X_K_ADDR, x0_init, sizeof(x0_init)); // init x0
     memcpy(w+MPC8_Y_D_ADDR, yd_init, sizeof(yd_init));
-    memcpy(w+MPC8_INIT_GUESS_ADDR, init_guess_data, sizeof(init_guess_data));
-    memcpy(w+MPC8_PARAM_WEIGHT_ADDR, MPC8_param_weight, sizeof(MPC8_param_weight));
-
+    memcpy(w+MPC8_IN_INIT_GUESS_ADDR, init_guess_data, sizeof(init_guess_data));
+    memcpy(w+MPC8_IN_PARAM_WEIGHT_ADDR, MPC8_param_weight, sizeof(MPC8_param_weight));
 
     // UDP CONNECTION
 
@@ -383,21 +400,22 @@ casadi_int main_MPC(const casadi_real** arg, casadi_real** res,
   if (flag) return flag;
 
   // send only u_opt = q_pp
-  casadi_real u_opt[6] = {0};
-  casadi_real *u_opt_res_ptr = res[0];
-  for(int i=0; i<6; i++)
+  casadi_real u_opt[MPC8_U_OPT_LEN] = {0};
+  casadi_real *u_opt_res_ptr = w+MPC8_U_OPT_ADDR;
+  for(int i=0; i<MPC8_U_OPT_LEN; i++)
   {
     u_opt[i] = u_opt_res_ptr[i];
   }
 
-  casadi_real *input_robot_state = &w[0]; // idee: beim empfangen von daten anfangszustand direkt ueberschreiben.
+  casadi_real *input_robot_state = w+MPC8_X_K_ADDR; // idee: beim empfangen von daten anfangszustand direkt ueberschreiben.
 
-  threaded_send(sockfd, &u_opt[0], 6 * sizeof(casadi_real),
-                input_robot_state, 6*2 * sizeof(casadi_real),
+  threaded_send(sockfd, &u_opt[0], MPC8_U_OPT_LEN * sizeof(casadi_real),
+                input_robot_state, MPC8_X_K_LEN * sizeof(casadi_real),
                 udp_c_send_addr,
                 udp_c_receive_addr,
-                1,    // Update interval in milliseconds
-                0.1,   // Send interval in milliseconds
+                UDP_UPDATE_INTERVALL_MS,    // Update interval in milliseconds
+                UDP_SEND_INTERVALL_MS,   // Send interval in milliseconds
+                &send_cnt, // Send counter
                 arg, res, iw, w, w_end_addr,
                 traj_file, traj_data_startbyte,
                 traj_rows, traj_cols, &traj_indices[0],
@@ -429,6 +447,5 @@ int main()
     {
         res[i] = w+MPC8_RES[i];
     }
-
     return main_MPC(arg, res, iw, w, w+MPC8_W_END_ADDRESS, 0, &MPC8);
 }

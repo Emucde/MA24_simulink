@@ -31,7 +31,7 @@ F_kp1 = integrate_casadi(f, DT_ctl, M, int_method); % runs with Ta from sensors
 if(N_step_MPC == 1)
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
-    DT2 = DT - DT_ctl;
+    DT2 = DT - 2*DT_ctl;
 end
 F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 
@@ -56,12 +56,10 @@ q_d_0       = param_trajectory.q_d( 1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_M
 % [TODO: not all cases implemented]
 if(N_step_MPC == 1)
     y_d_0    = [p_d_0; q_d_0];
-    y_d_p_0  = [p_d_p_0; omega_d_0];
-    y_d_pp_0 = [p_d_pp_0; omega_d_p_0];
 else
-    p_d_0_kp1 = param_trajectory.p_d(  1:3, 2 );
-    q_d_0_kp1 = param_trajectory.q_d(  1:4, 2 );
-    y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-1)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-1)]];
+    p_d_0_kp1 = param_trajectory.p_d(  1:3, 2:3 );
+    q_d_0_kp1 = param_trajectory.q_d(  1:4, 2:3 );
+    y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-2)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-2)]];
 end
 
 % Robot System: Initial guess
@@ -165,9 +163,9 @@ for i=0:N_MPC
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        if(i == 0)
+        if(i == 0 || i == 1)
             g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
-        elseif(i == 1)
+        elseif(i == 2)
             g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
         else
             g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))

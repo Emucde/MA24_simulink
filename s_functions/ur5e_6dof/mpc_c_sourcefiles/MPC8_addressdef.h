@@ -9,7 +9,7 @@
 #define MPC8_RES_LEN 17
 #define MPC8_W_LEN 9606
 static const uint32_t MPC8_ARG[] = {0,54,330};
-static const uint32_t MPC8_RES[] = {510,516,792,794,795,796};
+static const uint32_t MPC8_RES[] = {510,516,792,793,794,795,796};
 #define MPC8_W_END_ADDRESS 797
 
 // INPUT DIMENSIONS:
@@ -50,9 +50,10 @@ static const uint32_t MPC8_RES[] = {510,516,792,794,795,796};
 #define MPC8_U_MIN_ADDR 498        /*u_min: [6 1] array values */
 #define MPC8_U_MAX_ADDR 504        /*u_max: [6 1] array values */
 
-#define MPC8_REFERENCE_VALUES_ADDR 0        /* reference_values = [x_k(12x1), y_d(7x6)] */
-#define MPC8_INIT_GUESS_ADDR 54        /* init_guess = [u(6x5), x(12x6), lambda_u(6x5), lambda_x(12x6), g(12x6)] */
-#define MPC8_PARAM_WEIGHT_ADDR 330        /* param_weight = [Q_y(6x6), Q_ykp1(6x6), Q_yN(6x6), R_q_pp(6x6), x_min(12x1), x_max(12x1), u_min(6x1), u_max(6x1)] */
+// CASADI FUN INPUT ADRESSES:
+#define MPC8_IN_REFERENCE_VALUES_ADDR 0        /* reference_values = [x_k(12x1), y_d(7x6)] */
+#define MPC8_IN_INIT_GUESS_ADDR 54        /* init_guess = [u(6x5), x(12x6), lambda_u(6x5), lambda_x(12x6), g(12x6)] */
+#define MPC8_IN_PARAM_WEIGHT_ADDR 330        /* param_weight = [Q_y(6x6), Q_ykp1(6x6), Q_yN(6x6), R_q_pp(6x6), x_min(12x1), x_max(12x1), u_min(6x1), u_max(6x1)] */
 
 // OUTPUT DIMENSIONS:
 #define MPC8_U_OPT_LEN 6        /*u_opt: [6 1] array values */
@@ -79,5 +80,14 @@ static const uint32_t MPC8_RES[] = {510,516,792,794,795,796};
 #define MPC8_J_YR_ADDR 794        /*J_yr: [1 1] array values */
 #define MPC8_J_YR_N_ADDR 795        /*J_yr_N: [1 1] array values */
 #define MPC8_J_Q_PP_ADDR 796        /*J_q_pp: [1 1] array values */
+
+// CASADI FUN OUTPUT ADRESSES:
+#define MPC8_OUT_U_OPT_ADDR 510        /* u_opt = [u[0:5](6x1)] */
+#define MPC8_OUT_INIT_GUESS_OUT_ADDR 516        /* init_guess_out = [u_out(6x5), x_out(12x6), lambda_u_out(6x5), lambda_x_out(12x6), g_out(12x6)] */
+#define MPC8_OUT_COST_FUN_1_ADDR 792        /* cost_fun_1 = [J_yt(1x1)] */
+#define MPC8_OUT_COST_FUN_2_ADDR 793        /* cost_fun_2 = [J_yt_N(1x1)] */
+#define MPC8_OUT_COST_FUN_3_ADDR 794        /* cost_fun_3 = [J_yr(1x1)] */
+#define MPC8_OUT_COST_FUN_4_ADDR 795        /* cost_fun_4 = [J_yr_N(1x1)] */
+#define MPC8_OUT_COST_FUN_5_ADDR 796        /* cost_fun_5 = [J_q_pp(1x1)] */
 
 #endif /* MPC8_ADRESSDEF_H */

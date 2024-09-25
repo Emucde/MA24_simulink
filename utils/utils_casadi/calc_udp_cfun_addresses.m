@@ -106,7 +106,7 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
 
     % Calculate output addresses
     res_addr(1) = arg_addr(end) + length(arg_sx{1, end});
-    for i = 2:n_out-1
+    for i = 2:n_out
         res_addr(i) = length(res_sx{1,i-1}) + res_addr(i-1);
     end
 
@@ -182,15 +182,15 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
 
     fprintf(fid, '\n');
 
-    define_names = {'REFERENCE_VALUES', 'INIT_GUESS', 'PARAM_WEIGHT'};
-
+    %Absolute adresses of casadi_fun's inputs
     input_ref_addr_arr = zeros(1, casadi_fun.n_in);
     var_len = 0;
     ii_cnt = 1;
-    for i=1:length(define_names)
+    for i=1:casadi_fun.n_in
         current_len = length(casadi_fun.sx_in{i});
         input_ref_addr_arr(ii_cnt) = var_len;
-        fprintf(fid, '#define %s_%s_LEN %d', casadi_fun_name, define_names{i}, current_len);
+        input_name_cells = strsplit(casadi_fun.name_in(i-1),' = ');
+        fprintf(fid, '#define %s_%s_LEN %d', casadi_fun_name, upper(input_name_cells{1}), current_len);
         fprintf(fid, '        /* %s*/\n', casadi_fun.name_in(i-1));
         var_len = var_len + current_len;
         ii_cnt = ii_cnt + 1;
@@ -218,10 +218,12 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
     end
 
     fprintf(fid, '\n');
+    fprintf(fid, '// CASADI FUN INPUT ADRESSES:\n');
 
     ii_cnt = 1;
-    for i=1:length(define_names)
-        fprintf(fid, '#define %s_%s_ADDR %d', casadi_fun_name, define_names{i}, input_ref_addr_arr(ii_cnt));
+    for i=1:casadi_fun.n_in
+        input_name_cells = strsplit(casadi_fun.name_in(i-1),' = ');
+        fprintf(fid, '#define %s_IN_%s_ADDR %d', casadi_fun_name, upper(input_name_cells{1}), input_ref_addr_arr(ii_cnt));
         fprintf(fid, '        /* %s*/\n', casadi_fun.name_in(i-1));
         ii_cnt = ii_cnt + 1;
     end
@@ -282,6 +284,19 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
             end
             ii_cnt = ii_cnt + 1;
         end
+    end
+
+    fprintf(fid, '\n');
+    fprintf(fid, '// CASADI FUN OUTPUT ADRESSES:\n');
+
+    %Absolute adresses of casadi_fun's outputs
+    var_len = res_addr(1);
+    for i=1:casadi_fun.n_out
+        current_len = length(casadi_fun.sx_out{i});
+        output_name_cells = strsplit(casadi_fun.name_out(i-1),' = ');
+        fprintf(fid, '#define %s_OUT_%s_ADDR %d', casadi_fun_name, upper(output_name_cells{1}), var_len);
+        fprintf(fid, '        /* %s*/\n', casadi_fun.name_out(i-1));
+        var_len = var_len + current_len;
     end
     
     % Close the #ifndef guard
