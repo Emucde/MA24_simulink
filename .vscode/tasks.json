@@ -13,7 +13,7 @@
                 "${file}",
                 "${workspaceFolder}/s_functions/ur5e_6dof/mpc_c_sourcefiles/*.c",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}",
+                "${fileDirname}/${fileBasenameNoExtension}.o",
                 "-lm",
                 "-pthread"
             ],

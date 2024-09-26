@@ -5,6 +5,7 @@ slprj
 *.slxc
 *.autosave
 *.casadi
+*.o
 .tmp
 main_simulink/simulink_log/*.txt
 jit*.c
