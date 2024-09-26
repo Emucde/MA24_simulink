@@ -5,16 +5,17 @@
             "label": "C/C++: gcc build active file",
             "command": "/usr/bin/gcc",
             "args": [
-                "-I/media/daten/Anwendungen/casadi-3.6.5-linux64-matlab2018b/include",
-                "-L/media/daten/Anwendungen/casadi-3.6.5-linux64-matlab2018b",
+                "-I${casadi_path}/include",
+                "-L${casadi_path}",
                 "-lcasadi",
-                "-lm",
                 "-fdiagnostics-color=always",
                 "-g",
                 "${file}",
                 "${workspaceFolder}/s_functions/ur5e_6dof/mpc_c_sourcefiles/*.c",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
+                "${fileDirname}/${fileBasenameNoExtension}",
+                "-lm",
+                "-pthread"
             ],
             "options": {
                 "cwd": "${fileDirname}"

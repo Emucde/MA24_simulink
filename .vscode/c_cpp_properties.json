@@ -4,7 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/media/daten/Anwendungen/casadi-3.6.5-linux64-matlab2018b"
+                "/home/rslstudent/Students/Emanuel/casadi-3.6.6-linux64-matlab2018b"
             ],
             "defines": [
                 "_POSIX_C_SOURCE=199309L"

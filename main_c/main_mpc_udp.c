@@ -131,7 +131,7 @@ void *update_data(void *arg) {
         fflush(stdout);
         
         if (flag != 0) {
-            printf("Error in MPC8: flag = %d\n", flag);
+            printf("Error in MPC8: flag = %d\n", (int) flag);
             shared.should_exit = 1;
             pthread_mutex_unlock(&shared.mutex);
             return NULL;
