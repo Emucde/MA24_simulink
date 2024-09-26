@@ -19,15 +19,16 @@ extern "C" {
 #endif
 
 #include <math.h>
+#include <simstruc.h>
 #include <stdarg.h>
 #include <stdio.h>
 
 #ifndef casadi_real
-#define casadi_real double
+#define casadi_real real_T
 #endif
 
 #ifndef casadi_int
-#define casadi_int long long int
+#define casadi_int int_T
 #endif
 
 #ifndef CASADI_MAX_NUM_THREADS
@@ -486,7 +487,7 @@ casadi_real casadi_bilin(const casadi_real* A, const casadi_int* sp_A, const cas
 #endif
 
 #ifndef casadi_real_min
-  #define casadi_real_min 2.2250738585072014e-308
+  #define casadi_real_min 2.2204e-16
 #endif
 
 struct casadi_qrqp_prob {

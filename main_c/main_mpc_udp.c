@@ -70,9 +70,13 @@ void *update_data(void *arg) {
     casadi_real read_data[MPC8_X_K_LEN+1] = {0};
     casadi_real x_k[MPC8_X_K_LEN] = {0};
 
-    for (int i = 0; i < TOTAL_UPDATES; i++)
-    {
+    clock_t start, end;
+    double cpu_time_used;
 
+    // for (int i = 0; i < TOTAL_UPDATES; i++)
+    while (!shared.should_exit)
+    {
+        
         // n = recvfrom(shared.sockfd, &x_k[0], MPC8_X_K_LEN*sizeof(casadi_real),
         //     MSG_WAITALL, ( struct sockaddr *) &shared.udp_c_receive_addr,
         //     &shared.udp_c_receive_addrlen);
@@ -82,6 +86,7 @@ void *update_data(void *arg) {
             MSG_WAITALL, ( struct sockaddr *) &shared.udp_c_receive_addr,
             &shared.udp_c_receive_addrlen);
 
+        start = clock();
         pthread_mutex_lock(&shared.mutex); // Lock mutex before updating data
 
         *shared.send_cnt = (unsigned long) read_data[0];
@@ -146,6 +151,9 @@ void *update_data(void *arg) {
         }
         
         pthread_mutex_unlock(&shared.mutex); // Unlock mutex after updating
+        end = clock();
+        cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+        printf("Udpate Function took %.3f ms to execute\n", 1000*cpu_time_used);
     }
     
     shared.should_exit = 1; // Signal to exit after all updates

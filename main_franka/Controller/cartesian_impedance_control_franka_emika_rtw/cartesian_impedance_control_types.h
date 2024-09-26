@@ -7,9 +7,9 @@
  *
  * Code generation for model "cartesian_impedance_control".
  *
- * Model version              : 8.2
+ * Model version              : 8.21
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Thu Sep 26 11:23:31 2024
+ * C++ source code generated on : Thu Sep 26 15:01:04 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -20,18 +20,32 @@
 
 #ifndef RTW_HEADER_cartesian_impedance_control_types_h_
 #define RTW_HEADER_cartesian_impedance_control_types_h_
+#include "rtwtypes.h"
+#ifndef DEFINED_TYPEDEF_FOR_struct_zgJGJvTOOGEq9ehmj4thTC_
+#define DEFINED_TYPEDEF_FOR_struct_zgJGJvTOOGEq9ehmj4thTC_
+
+struct struct_zgJGJvTOOGEq9ehmj4thTC
+{
+  real_T Ta;
+}
+
+;
+
+#endif
+
 #ifndef SS_UINT64
-#define SS_UINT64                      17
+#define SS_UINT64                      18
 #endif
 
 #ifndef SS_INT64
-#define SS_INT64                       18
+#define SS_INT64                       19
 #endif
 
 /* Parameters (default storage) */
 typedef struct P_cartesian_impedance_control_T_ P_cartesian_impedance_control_T;
 
 /* Forward declaration for rtModel */
-typedef struct tag_RTM_cartesian_impedance_c_T RT_MODEL_cartesian_impedance__T;
+typedef struct tag_RTM_cartesian_impedance_control_T
+  RT_MODEL_cartesian_impedance_control_T;
 
 #endif                     /* RTW_HEADER_cartesian_impedance_control_types_h_ */

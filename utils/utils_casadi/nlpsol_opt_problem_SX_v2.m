@@ -310,6 +310,7 @@ if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
 end
 
 %% COMPILE (nlpsol)
+
 if(compile_sfun)
     if(compile_mode == 1)
         tic;

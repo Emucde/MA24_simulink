@@ -7,9 +7,9 @@
  *
  * Code generation for model "cartesian_impedance_control".
  *
- * Model version              : 8.2
+ * Model version              : 8.21
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Thu Sep 26 11:23:31 2024
+ * C++ source code generated on : Thu Sep 26 15:01:04 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -22,6 +22,47 @@
 
 /* Block parameters (default storage) */
 P_cartesian_impedance_control_T cartesian_impedance_control_P = {
+  /* Variable: q_init
+   * Referenced by: '<S4>/Constant'
+   */
+  { 0.0, -0.78539816339744828, 0.0, -2.3561944901923448, 0.0, 1.5707963267948966,
+    0.78539816339744828 },
+
+  /* Mask Parameter: UDPReceivefromc1_localPort
+   * Referenced by: '<Root>/UDP Receive from c 1'
+   */
+  8080,
+
+  /* Mask Parameter: UDPSend_remotePort
+   * Referenced by: '<S5>/UDP Send'
+   */
+  8081,
+
+  /* Expression: 0.001
+   * Referenced by: '<S4>/Switch'
+   */
+  0.001,
+
+  /* Expression: 0
+   * Referenced by: '<Root>/Memory'
+   */
+  0.0,
+
+  /* Expression: zeros(6,1)
+   * Referenced by: '<Root>/Constant3'
+   */
+  { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 },
+
+  /* Expression: 0
+   * Referenced by: '<Root>/Memory1'
+   */
+  0.0,
+
+  /* Expression: 0
+   * Referenced by: '<Root>/Memory2'
+   */
+  0.0,
+
   /* Expression: diag([600, 600, 600, 50.0, 50.0, 50.0])
    * Referenced by: '<S1>/stiffness'
    */
@@ -38,22 +79,22 @@ P_cartesian_impedance_control_T cartesian_impedance_control_P = {
     0.0, 0.0, 0.0, 0.0, 0.0, 14.142135623730951 },
 
   /* Expression: 1000
-   * Referenced by: '<S2>/Rate Limiter'
+   * Referenced by: '<S4>/Rate Limiter'
    */
   1000.0,
 
   /* Expression: -1000
-   * Referenced by: '<S2>/Rate Limiter'
+   * Referenced by: '<S4>/Rate Limiter'
    */
   -1000.0,
 
   /* Expression: 0
-   * Referenced by: '<S2>/Rate Limiter'
+   * Referenced by: '<S4>/Rate Limiter'
    */
   0.0,
 
   /* Expression: collision_thresholds
-   * Referenced by: '<S2>/Apply Control'
+   * Referenced by: '<S4>/Apply Control'
    */
   { 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
     100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
@@ -62,28 +103,28 @@ P_cartesian_impedance_control_T cartesian_impedance_control_P = {
     100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0 },
 
   /* Expression: joint_impedance
-   * Referenced by: '<S2>/Apply Control'
+   * Referenced by: '<S4>/Apply Control'
    */
   { 3000.0, 3000.0, 3000.0, 2500.0, 2500.0, 2000.0, 2000.0 },
 
   /* Expression: cartesian_impedance
-   * Referenced by: '<S2>/Apply Control'
+   * Referenced by: '<S4>/Apply Control'
    */
   { 3000.0, 3000.0, 3000.0, 300.0, 300.0, 300.0 },
 
   /* Expression: load_inertia
-   * Referenced by: '<S2>/Apply Control'
+   * Referenced by: '<S4>/Apply Control'
    */
   { 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001 },
 
   /* Expression: EE_T_K
-   * Referenced by: '<S2>/Apply Control'
+   * Referenced by: '<S4>/Apply Control'
    */
   { 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
     1.0 },
 
   /* Expression: init_joint_configuration
-   * Referenced by: '<S2>/Apply Control'
+   * Referenced by: '<S4>/Apply Control'
    */
   { 0.0, -0.78539816339744828, 0.0, -2.3561944901923448, 0.0, 1.5707963267948966,
     0.78539816339744828 }

@@ -53,7 +53,7 @@ try
 
     for i = 1:length(fun_arr_sfun)
         fun_name = fun_arr_sfun{i};
-        
+
         casadi_fun = Function.load([input_dir, fun_name '.casadi']);
         if(compile_mode == 1)
             tic;

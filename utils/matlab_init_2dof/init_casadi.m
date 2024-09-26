@@ -1,6 +1,11 @@
 addpath(genpath('./maple_generated/2_dof_system'));
 addpath(genpath('./utils_casadi'));
-addpath('/media/daten/Anwendungen/casadi-3.6.4-linux64-matlab2018b/')
+% addpath('/media/daten/Anwendungen/casadi-3.6.4-linux64-matlab2018b/')
+[status,cmdout] = system('cat ~/.bashrc');
+cpath_cell = strsplit(cmdout, 'casadi_path=');
+casadi_path = cpath_cell{end};
+casadi_path = casadi_path(1:end-1);
+addpath(casadi_path);
 import casadi.*
 
 %script_path = matlab.desktop.editor.getActiveFilename; % Get the path of the current script

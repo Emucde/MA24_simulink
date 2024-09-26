@@ -1,4 +1,5 @@
-cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/
+%cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/
+%cd ..
 
 %% INIT
 if(exist('parameter_str', 'var') && strcmp(parameter_str, "parameters_2dof"))

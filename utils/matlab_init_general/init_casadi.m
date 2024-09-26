@@ -1,5 +1,9 @@
 % addpath('/media/daten/Anwendungen/casadi-3.6.4-linux64-matlab2018b/')
-addpath('/media/daten/Anwendungen/casadi-3.6.5-linux64-matlab2018b/')
+[status,cmdout] = system('cat ~/.bashrc');
+cpath_cell = strsplit(cmdout, 'casadi_path=');
+casadi_path = cpath_cell{end};
+casadi_path = casadi_path(1:end-1);
+addpath(casadi_path);
 import casadi.*
 % warning('TODO: auf casadi 3.6.5 umsteigen')
 

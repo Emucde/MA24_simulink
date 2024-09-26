@@ -10,11 +10,11 @@ extern "C" {
 #endif
 
 #ifndef casadi_real
-#define casadi_real double
+#define casadi_real real_T
 #endif
 
 #ifndef casadi_int
-#define casadi_int long long int
+#define casadi_int int_T
 #endif
 
 int MPC8(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem);

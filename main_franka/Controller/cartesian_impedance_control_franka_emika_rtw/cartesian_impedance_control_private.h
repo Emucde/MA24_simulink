@@ -7,9 +7,9 @@
  *
  * Code generation for model "cartesian_impedance_control".
  *
- * Model version              : 8.2
+ * Model version              : 8.21
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Thu Sep 26 11:23:31 2024
+ * C++ source code generated on : Thu Sep 26 15:01:04 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -24,6 +24,7 @@
 #include "builtin_typeid_types.h"
 #include "multiword_types.h"
 #include "cartesian_impedance_control_types.h"
+#include "cartesian_impedance_control.h"
 
 /* Private macros used by the generated code to access rtModel */
 #ifndef rtmIsMajorTimeStep
@@ -41,4 +42,7 @@
 #ifndef rtmSetTPtr
 #define rtmSetTPtr(rtm, val)           ((rtm)->Timing.t = (val))
 #endif
+
+extern "C" void s_function_opti_sys_fun_qpp_aba(SimStruct *rts);
+
 #endif                   /* RTW_HEADER_cartesian_impedance_control_private_h_ */

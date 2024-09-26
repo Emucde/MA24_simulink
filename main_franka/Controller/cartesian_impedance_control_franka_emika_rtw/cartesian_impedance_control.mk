@@ -2,7 +2,7 @@
 ## Makefile generated for component 'cartesian_impedance_control'. 
 ## 
 ## Makefile     : cartesian_impedance_control.mk
-## Generated on : Thu Sep 26 11:23:36 2024
+## Generated on : Thu Sep 26 15:01:10 2024
 ## Final product: $(RELATIVE_PATH_TO_ANCHOR)/cartesian_impedance_control
 ## Product type : executable
 ## 
@@ -21,7 +21,7 @@ MAKEFILE                  = cartesian_impedance_control.mk
 MATLAB_ROOT               = /usr/local/MATLAB/R2022b
 MATLAB_BIN                = /usr/local/MATLAB/R2022b/bin
 MATLAB_ARCH_BIN           = $(MATLAB_BIN)/glnxa64
-START_DIR                 = /home/rslstudent/Students/Emanuel/Controller
+START_DIR                 = /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/Controller
 SOLVER                    = 
 SOLVER_OBJ                = 
 CLASSIC_INTERFACE         = 0
@@ -59,11 +59,11 @@ CPP_WARN_FLAGS             = -Wall -W -Wwrite-strings -Winline -Wpointer-arith -
 CPP_WARN_FLAGS_MAX         = $(CPP_WARN_FLAGS) -Wcast-qual -Wshadow
 MW_BIN_DIR                 = $(MATLAB_ROOT)/bin/glnxa64
 CPP_17_OPTS                = -std=c++17
-FRANKA_INCLUDE_DIRECTORIES = -I/home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/libfranka/include -I/home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/libfranka/examples -I/home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/libfranka/common/include -I/home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/libfranka/src -I/home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/libfranka/build -I/home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/franka_simulink_library/src -I/home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/franka_simulink_library/blocks -I/usr/local/MATLAB/R2022b/toolbox/coder/rtiostream/src -I/usr/local/MATLAB/R2022b/toolbox/coder/rtiostream/src/utils -I/usr/include/eigen3
+FRANKA_INCLUDE_DIRECTORIES = -I/home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka/include -I/home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka/examples -I/home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka/common/include -I/home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka/src -I/home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka/build -I/home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src -I/home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/franka_simulink_library/blocks -I/usr/local/MATLAB/R2022b/toolbox/coder/rtiostream/src -I/usr/local/MATLAB/R2022b/toolbox/coder/rtiostream/src/utils -I/usr/include/eigen3
 
 TOOLCHAIN_SRCS = 
 TOOLCHAIN_INCS = 
-TOOLCHAIN_LIBS = /home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/libfranka/build/examples/libexamples_common.a /home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/libfranka/build/libfranka.so -lPocoNet -lPocoFoundation -lPocoUtil -lmx -lmex -lmat -lm -lstdc++ -lpthread
+TOOLCHAIN_LIBS = /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka/build/examples/libexamples_common.a /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka/build/libfranka.so -lPocoNet -lPocoFoundation -lPocoUtil -lmx -lmex -lmat -lm -lstdc++ -lpthread
 
 #------------------------
 # BUILD TOOL COMMANDS
@@ -166,7 +166,7 @@ BUILD_TYPE = "Top-Level Standalone Executable"
 ## INCLUDE PATHS
 ###########################################################################
 
-INCLUDES_BUILDINFO = -I$(START_DIR) -I$(START_DIR)/cartesian_impedance_control_franka_emika_rtw -I$(MATLAB_ROOT)/extern/include -I$(MATLAB_ROOT)/simulink/include -I$(MATLAB_ROOT)/rtw/c/src -I$(MATLAB_ROOT)/rtw/c/src/ext_mode/common -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/include -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/common -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/include -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/include -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/include -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/include -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src -I$(MATLAB_ROOT)/toolbox/coder/rtiostream/src
+INCLUDES_BUILDINFO = -I$(START_DIR) -I$(MATLAB_ROOT)/toolbox/shared/spc/src_ml/extern/include -I$(START_DIR)/cartesian_impedance_control_franka_emika_rtw -I$(MATLAB_ROOT)/extern/include -I$(MATLAB_ROOT)/simulink/include -I$(MATLAB_ROOT)/rtw/c/src -I$(MATLAB_ROOT)/rtw/c/src/ext_mode/common -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/include -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/common -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/include -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/include -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/include -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/include -I$(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src -I$(MATLAB_ROOT)/toolbox/coder/rtiostream/src
 
 INCLUDES = $(INCLUDES_BUILDINFO)
 
@@ -176,7 +176,7 @@ INCLUDES = $(INCLUDES_BUILDINFO)
 
 DEFINES_BUILD_ARGS = -DCLASSIC_INTERFACE=0 -DALLOCATIONFCN=0 -DEXT_MODE=1 -DMAT_FILE=1 -DONESTEPFCN=1 -DTERMFCN=1 -DMULTI_INSTANCE_CODE=0 -DINTEGER_CODE=0 -DMT=0
 DEFINES_CUSTOM = 
-DEFINES_OPTS = -DXCP_DAQ_SUPPORT -DXCP_CALIBRATION_SUPPORT -DXCP_TIMESTAMP_SUPPORT -DXCP_TIMESTAMP_BASED_ON_SIMULATION_TIME -DXCP_SET_MTA_SUPPORT -DEXTMODE_XCP_TRIGGER_SUPPORT -DINTERNAL_XCP_MEM_BLOCK_1_SIZE=128 -DINTERNAL_XCP_MEM_BLOCK_1_NUMBER=1 -DINTERNAL_XCP_MEM_BLOCK_2_SIZE=144 -DINTERNAL_XCP_MEM_BLOCK_2_NUMBER=4 -DINTERNAL_XCP_MEM_BLOCK_3_SIZE=24 -DINTERNAL_XCP_MEM_BLOCK_3_NUMBER=4 -DINTERNAL_XCP_MEM_RESERVED_POOLS_TOTAL_SIZE=2350 -DINTERNAL_XCP_MEM_RESERVED_POOLS_NUMBER=5 -DXCP_MEM_DAQ_RESERVED_POOL_BLOCKS_NUMBER=3 -DXCP_MEM_DAQ_RESERVED_POOLS_NUMBER=1 -DXCP_MIN_EVENT_NO_RESERVED_POOL=2 -DXCP_EXTMODE_RUN_BACKGROUND_FLUSH -DEXTMODE_STATIC -DEXTMODE_STATIC_SIZE=1000000 -DON_TARGET_WAIT_FOR_START=1 -DTID01EQ=1
+DEFINES_OPTS = -DXCP_DAQ_SUPPORT -DXCP_CALIBRATION_SUPPORT -DXCP_TIMESTAMP_SUPPORT -DXCP_TIMESTAMP_BASED_ON_SIMULATION_TIME -DXCP_SET_MTA_SUPPORT -DEXTMODE_XCP_TRIGGER_SUPPORT -DINTERNAL_XCP_MEM_BLOCK_1_SIZE=128 -DINTERNAL_XCP_MEM_BLOCK_1_NUMBER=1 -DINTERNAL_XCP_MEM_BLOCK_2_SIZE=144 -DINTERNAL_XCP_MEM_BLOCK_2_NUMBER=4 -DINTERNAL_XCP_MEM_BLOCK_3_SIZE=64 -DINTERNAL_XCP_MEM_BLOCK_3_NUMBER=4 -DINTERNAL_XCP_MEM_RESERVED_POOLS_TOTAL_SIZE=10330 -DINTERNAL_XCP_MEM_RESERVED_POOLS_NUMBER=5 -DXCP_MEM_DAQ_RESERVED_POOL_BLOCKS_NUMBER=3 -DXCP_MEM_DAQ_RESERVED_POOLS_NUMBER=1 -DXCP_MIN_EVENT_NO_RESERVED_POOL=2 -DXCP_EXTMODE_RUN_BACKGROUND_FLUSH -DEXTMODE_STATIC -DEXTMODE_STATIC_SIZE=1000000 -DON_TARGET_WAIT_FOR_START=1 -DTID01EQ=1
 DEFINES_STANDARD = -DMODEL=cartesian_impedance_control -DNUMST=2 -DNCSTATES=0 -DHAVESTDIO -DRT -DUSE_RTMODEL
 
 DEFINES = $(DEFINES_BUILD_ARGS) $(DEFINES_CUSTOM) $(DEFINES_OPTS) $(DEFINES_STANDARD)
@@ -185,7 +185,7 @@ DEFINES = $(DEFINES_BUILD_ARGS) $(DEFINES_CUSTOM) $(DEFINES_OPTS) $(DEFINES_STAN
 ## SOURCE FILES
 ###########################################################################
 
-SRCS = $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_work.c $(MATLAB_ROOT)/rtw/c/src/rt_logging.c $(START_DIR)/cartesian_impedance_control_franka_emika_rtw/cartesian_impedance_control.cpp $(START_DIR)/cartesian_impedance_control_franka_emika_rtw/cartesian_impedance_control_data.cpp $(START_DIR)/cartesian_impedance_control_franka_emika_rtw/rtGetInf.cpp $(START_DIR)/cartesian_impedance_control_franka_emika_rtw/rtGetNaN.cpp $(START_DIR)/cartesian_impedance_control_franka_emika_rtw/rt_nonfinite.cpp $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_common.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_classic_trigger.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp_standard.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp_daq.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp_calibration.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src/xcp_fifo.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src/xcp_transport.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default/xcp_mem_default.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default/xcp_drv_rtiostream.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/common/xcp_utils.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src/xcp_frame_tcp.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_param_default_tcp.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default/xcp_platform_default.c $(MATLAB_ROOT)/toolbox/coder/rtiostream/src/rtiostreamtcpip/rtiostream_tcpip.c /home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/franka_simulink_library/src/sizes_codegen.cpp /home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/franka_simulink_library/src/gripper_api.cpp /home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/franka_simulink_library/src/robot_api.cpp /home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/franka_simulink_library/src/control_modes.cpp
+SRCS = $(MATLAB_ROOT)/toolbox/shared/spc/src_ml/extern/src/DAHostLib_Network.c $(MATLAB_ROOT)/toolbox/shared/spc/src_ml/extern/src/DAHostLib_rtw.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_work.c $(MATLAB_ROOT)/rtw/c/src/rt_matrx.c $(MATLAB_ROOT)/rtw/c/src/rt_printf.c $(MATLAB_ROOT)/rtw/c/src/rt_logging.c $(START_DIR)/cartesian_impedance_control_franka_emika_rtw/cartesian_impedance_control.cpp $(START_DIR)/cartesian_impedance_control_franka_emika_rtw/cartesian_impedance_control_data.cpp $(START_DIR)/cartesian_impedance_control_franka_emika_rtw/rtGetInf.cpp $(START_DIR)/cartesian_impedance_control_franka_emika_rtw/rtGetNaN.cpp $(START_DIR)/cartesian_impedance_control_franka_emika_rtw/rt_nonfinite.cpp $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_common.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_classic_trigger.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp_standard.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp_daq.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp_calibration.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src/xcp_fifo.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src/xcp_transport.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default/xcp_mem_default.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default/xcp_drv_rtiostream.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/common/xcp_utils.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src/xcp_frame_tcp.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_param_default_tcp.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default/xcp_platform_default.c $(MATLAB_ROOT)/toolbox/coder/rtiostream/src/rtiostreamtcpip/rtiostream_tcpip.c $(START_DIR)/s_function_opti_sys_fun_qpp_aba.c /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/sizes_codegen.cpp /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/gripper_api.cpp /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/robot_api.cpp /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/control_modes.cpp $(START_DIR)/sys_fun_qpp_aba.c
 
 MAIN_SRC = $(START_DIR)/cartesian_impedance_control_franka_emika_rtw/rt_main.cpp
 
@@ -195,7 +195,7 @@ ALL_SRCS = $(SRCS) $(MAIN_SRC)
 ## OBJECTS
 ###########################################################################
 
-OBJS = xcp_ext_work.o rt_logging.o cartesian_impedance_control.o cartesian_impedance_control_data.o rtGetInf.o rtGetNaN.o rt_nonfinite.o xcp_ext_common.o xcp_ext_classic_trigger.o xcp.o xcp_standard.o xcp_daq.o xcp_calibration.o xcp_fifo.o xcp_transport.o xcp_mem_default.o xcp_drv_rtiostream.o xcp_utils.o xcp_frame_tcp.o xcp_ext_param_default_tcp.o xcp_platform_default.o rtiostream_tcpip.o sizes_codegen.o gripper_api.o robot_api.o control_modes.o
+OBJS = DAHostLib_Network.o DAHostLib_rtw.o xcp_ext_work.o rt_matrx.o rt_printf.o rt_logging.o cartesian_impedance_control.o cartesian_impedance_control_data.o rtGetInf.o rtGetNaN.o rt_nonfinite.o xcp_ext_common.o xcp_ext_classic_trigger.o xcp.o xcp_standard.o xcp_daq.o xcp_calibration.o xcp_fifo.o xcp_transport.o xcp_mem_default.o xcp_drv_rtiostream.o xcp_utils.o xcp_frame_tcp.o xcp_ext_param_default_tcp.o xcp_platform_default.o rtiostream_tcpip.o s_function_opti_sys_fun_qpp_aba.o sizes_codegen.o gripper_api.o robot_api.o control_modes.o sys_fun_qpp_aba.o
 
 MAIN_OBJ = rt_main.o
 
@@ -217,7 +217,7 @@ LIBS =
 ## SYSTEM LIBRARIES
 ###########################################################################
 
-SYSTEM_LIBS = 
+SYSTEM_LIBS =  -lm -ldl
 
 ###########################################################################
 ## ADDITIONAL TOOLCHAIN FLAGS
@@ -311,11 +311,11 @@ $(PRODUCT) : $(OBJS) $(PREBUILT_OBJS) $(MAIN_OBJ)
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
 
 
-%.o : /home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/franka_simulink_library/blocks/%.c
+%.o : /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/franka_simulink_library/blocks/%.c
 	$(CC) $(CFLAGS) -o"$@" "$<"
 
 
-%.o : /home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/franka_simulink_library/blocks/%.cpp
+%.o : /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/franka_simulink_library/blocks/%.cpp
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
 
 
@@ -324,6 +324,14 @@ $(PRODUCT) : $(OBJS) $(PREBUILT_OBJS) $(MAIN_OBJ)
 
 
 %.o : $(START_DIR)/%.cpp
+	$(CPP) $(CPPFLAGS) -o "$@" "$<"
+
+
+%.o : $(MATLAB_ROOT)/toolbox/shared/spc/src_ml/extern/src/%.c
+	$(CC) $(CFLAGS) -o"$@" "$<"
+
+
+%.o : $(MATLAB_ROOT)/toolbox/shared/spc/src_ml/extern/src/%.cpp
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
 
 
@@ -391,7 +399,23 @@ $(PRODUCT) : $(OBJS) $(PREBUILT_OBJS) $(MAIN_OBJ)
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
 
 
+DAHostLib_Network.o : $(MATLAB_ROOT)/toolbox/shared/spc/src_ml/extern/src/DAHostLib_Network.c
+	$(CC) $(CFLAGS) -o"$@" "$<"
+
+
+DAHostLib_rtw.o : $(MATLAB_ROOT)/toolbox/shared/spc/src_ml/extern/src/DAHostLib_rtw.c
+	$(CC) $(CFLAGS) -o"$@" "$<"
+
+
 xcp_ext_work.o : $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_work.c
+	$(CC) $(CFLAGS) -o"$@" "$<"
+
+
+rt_matrx.o : $(MATLAB_ROOT)/rtw/c/src/rt_matrx.c
+	$(CC) $(CFLAGS) -o"$@" "$<"
+
+
+rt_printf.o : $(MATLAB_ROOT)/rtw/c/src/rt_printf.c
 	$(CC) $(CFLAGS) -o"$@" "$<"
 
 
@@ -483,20 +507,28 @@ rtiostream_tcpip.o : $(MATLAB_ROOT)/toolbox/coder/rtiostream/src/rtiostreamtcpip
 	$(CC) $(CFLAGS) -o"$@" "$<"
 
 
-sizes_codegen.o : /home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/franka_simulink_library/src/sizes_codegen.cpp
+s_function_opti_sys_fun_qpp_aba.o : $(START_DIR)/s_function_opti_sys_fun_qpp_aba.c
+	$(CC) $(CFLAGS) -o"$@" "$<"
+
+
+sizes_codegen.o : /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/sizes_codegen.cpp
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
 
 
-gripper_api.o : /home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/franka_simulink_library/src/gripper_api.cpp
+gripper_api.o : /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/gripper_api.cpp
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
 
 
-robot_api.o : /home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/franka_simulink_library/src/robot_api.cpp
+robot_api.o : /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/robot_api.cpp
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
 
 
-control_modes.o : /home/rslstudent/Students/Emanuel/franka_matlab_v0.3.1/franka_simulink_library/src/control_modes.cpp
+control_modes.o : /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/control_modes.cpp
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
+
+
+sys_fun_qpp_aba.o : $(START_DIR)/sys_fun_qpp_aba.c
+	$(CC) $(CFLAGS) -o"$@" "$<"
 
 
 ###########################################################################
