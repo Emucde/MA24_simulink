@@ -1,0 +1,76 @@
+#ifndef MPC01_PARAM_H
+#define MPC01_PARAM_H
+
+#include <stdint.h>
+#include <math.h>
+
+#ifndef Inf
+#define Inf INFINITY
+#endif
+
+#ifndef TRAJ_DATA_PATH
+#define TRAJ_DATA_PATH "../s_functions/ur5e_6dof/trajectory_data/param_traj_data.bin"
+#endif
+
+#ifndef X0_INIT_PATH
+#define X0_INIT_PATH "../s_functions/ur5e_6dof/trajectory_data/param_x0_init.bin"
+#endif
+
+#define MPC01_INIT_GUESS_PATH "../s_functions/ur5e_6dof/initial_guess/param_MPC01_init_guess.bin"
+
+//MPC_SETTINGS:
+#define MPC01_N 5
+#define MPC01_N_step 10
+#define MPC01_Ts 0.01
+#define MPC01_T_horizon 0.05
+#define MPC01_rk_iter 1
+#define MPC01_variant "nlpsol"
+#define MPC01_solver "qrqp"
+#define MPC01_version "v1"
+#define MPC01_name "MPC01"
+#define MPC01_int_method "Euler"
+#define MPC01_fixed_parameter 0
+#define MPC01_traj_data_per_horizon 6
+static const uint32_t MPC01_traj_indices[] = {0,1,10,20,30,40};
+
+//MPC_WEIGHTS:
+const casadi_real MPC01_param_weight[144] = {
+    /* Q_y : 6x6 matrix values */
+    1, 0, 0, 0, 0, 0, 
+    0, 1, 0, 0, 0, 0, 
+    0, 0, 1, 0, 0, 0, 
+    0, 0, 0, 1, 0, 0, 
+    0, 0, 0, 0, 1, 0, 
+    0, 0, 0, 0, 0, 1, 
+
+    /* Q_yN : 6x6 matrix values */
+    100000, 0, 0, 0, 0, 0, 
+    0, 100000, 0, 0, 0, 0, 
+    0, 0, 100000, 0, 0, 0, 
+    0, 0, 0, 100000, 0, 0, 
+    0, 0, 0, 0, 100000, 0, 
+    0, 0, 0, 0, 0, 100000, 
+
+    /* R_q_pp : 6x6 matrix values */
+    1e-10, 0, 0, 0, 0, 0, 
+    0, 1e-10, 0, 0, 0, 0, 
+    0, 0, 1e-10, 0, 0, 0, 
+    0, 0, 0, 1e-10, 0, 0, 
+    0, 0, 0, 0, 1e-10, 0, 
+    0, 0, 0, 0, 0, 1e-10, 
+
+    /* x_min : [12 1] array values */
+    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
+
+    /* x_max : [12 1] array values */
+    Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
+
+    /* u_min : [6 1] array values */
+    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
+
+    /* u_max : [6 1] array values */
+    Inf, Inf, Inf, Inf, Inf, Inf, 
+};
+
+
+#endif
