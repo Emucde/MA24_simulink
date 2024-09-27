@@ -325,17 +325,17 @@ if(compile_sfun)
     end
 end
 
-%% CALCULATE TRAJ INDICES
+%% CALCULATE TRAJ INDICES:
+% Needed because the MPC's do not have equidistant states!
 
-
-yy_d = [param_trajectory.p_d; param_trajectory.q_d];
+pp_d = param_trajectory.p_d % use only translational part
 
 [~, cols_y0] = size(y_d_0);
 traj_indices_cell = cell(1, cols_y0);
 
 for col = 1:cols_y0
-    current_column = y_d_0(:, col);
-    traj_indices_cell{col} = find(all(yy_d == current_column, 1));
+    current_column = y_d_0(1:3, col); % use only translational part
+    traj_indices_cell{col} = find(all(pp_d == current_column, 1));
 end
 
 MPC_traj_indices = cell2mat(traj_indices_cell);
