@@ -31,17 +31,15 @@ end
 F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 
 % Get trajectory data for initial guess
-p_d_0       = param_trajectory.p_d( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
-q_d_0       = param_trajectory.q_d( 1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
-
-% initial guess for reference trajectory parameter
-if(N_step_MPC == 1)
-    y_d_0    = [p_d_0; q_d_0];
+if(N_step_MPC <= 3)
+    MPC_traj_indices = 1:N_MPC;
 else
-    p_d_0_kp1 = param_trajectory.p_d(  1:3, 2:3 );
-    q_d_0_kp1 = param_trajectory.q_d(  1:4, 2:3 );
-    y_d_0    = [[p_d_0(:,1), p_d_0_kp1, p_d_0(:,2:end-2)]; [q_d_0(:,1), q_d_0_kp1, q_d_0(:,2:end-2)]];
+    MPC_traj_indices = [1, 2, 3, N_step_MPC : N_step_MPC : 1 + (N_MPC-2) * N_step_MPC];
 end
+
+p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
+q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
+y_d_0 = [p_d_0; q_d_0];
 
 %% Calculate Initial Guess
 

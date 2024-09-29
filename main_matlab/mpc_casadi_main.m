@@ -69,7 +69,7 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v4_kin_int'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
-param_casadi_fun_name.(MPC).Ts      = 100e-3;
+param_casadi_fun_name.(MPC).Ts      = 10e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
@@ -137,8 +137,8 @@ param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true:
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4  | SSPRK3 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC01;
-% param_casadi_fun_struct = param_casadi_fun_name.MPC8;
+% param_casadi_fun_struct = param_casadi_fun_name.MPC01;
+param_casadi_fun_struct = param_casadi_fun_name.MPC8;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %param_casadi_fun_struct.name = 'MPC6_qrqp_nlpsol';
@@ -269,9 +269,9 @@ if(fullsimu)
         f_opt2 = f_opt;
     end
 
-    yt_d    = param_trajectory.p_d(:, :, traj_select_mpc)
-    yt_d_p  = param_trajectory.p_d_p(:, :, traj_select_mpc)
-    yt_d_pp = param_trajectory.p_d_pp(:, :, traj_select_mpc)
+    yt_d    = param_trajectory.p_d(:, :, traj_select_mpc);
+    yt_d_p  = param_trajectory.p_d_p(:, :, traj_select_mpc);
+    yt_d_pp = param_trajectory.p_d_pp(:, :, traj_select_mpc);
 
     if(strcmp(MPC_version, 'v3_rpy'))
         yr_d    = param_trajectory.Phi_d(:, :, traj_select_mpc);

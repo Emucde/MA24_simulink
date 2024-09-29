@@ -377,6 +377,9 @@ fr3.param.q_limit_lower = q_min(fr3.param.n_indices);
 fr3.param.q_p_limit_upper = q_dot_max(fr3.param.n_indices);
 fr3.param.q_p_limit_lower = q_dot_min(fr3.param.n_indices);
 
+fr3.param.q_pp_limit_upper = q_ddot_max(fr3.param.n_indices);
+fr3.param.q_pp_limit_lower = q_ddot_min(fr3.param.n_indices);
+
 fr3.param.q_n = (q_max + q_min) / 2; % not the best reference pose for fr3
 
 fr3.param.torque_limit_upper = tau_max(fr3.param.n_indices);

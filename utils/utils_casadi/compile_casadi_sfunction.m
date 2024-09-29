@@ -96,12 +96,12 @@ function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver
         disp(['Compiling s-function ', s_func_name_new, ' with ', opt_flag, ' (nlpsol-opti method)'])
         mex(s_func_name_new, casadi_fun_c_header_path, '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
         
-        % delete(s_func_name_new);
-        % delete(casadi_fun_c_header_path);
-        % delete(casadi_fun_h_header_path);
-        % if(exist([output_dir, casadi_fun_name, '.casadi'], 'file') == 2)
-        %     delete([output_dir, casadi_fun_name, '.casadi']);
-        % end
+        delete(s_func_name_new);
+        delete(casadi_fun_c_header_path);
+        delete(casadi_fun_h_header_path);
+        if(exist([output_dir, casadi_fun_name, '.casadi'], 'file') == 2)
+            delete([output_dir, casadi_fun_name, '.casadi']);
+        end
         
         % display s-function in simulink settings
         fprintf('\n');

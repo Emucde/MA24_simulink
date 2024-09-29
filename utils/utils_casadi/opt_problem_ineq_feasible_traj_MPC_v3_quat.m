@@ -83,13 +83,16 @@ Hr = Function('H_qw', {zr, alpha_r}, {[Hr_val(1:4)/norm_2(Hr_val(1:4)); Hr_val(5
 %% Calculate Initial Guess
 
 % Get trajectory data for initial guess
-p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
-p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
-p_d_pp_0 = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
+MPC_traj_indices = 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC;
+warning('opt_problem_ineq_feasible_traj_MPC_v3_quat: Hier ist MPC_traj_indices = 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC');
 
-q_d_0       = param_trajectory.q_d(       1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
-omega_d_0   = param_trajectory.omega_d(   1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_0 ... omega_N)
-omega_d_p_0 = param_trajectory.omega_d_p( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (omega_p_0 ... omega_p_N)
+p_d_0    = param_trajectory.p_d(    1:3, MPC_traj_indices ); % (y_0 ... y_N)
+p_d_p_0  = param_trajectory.p_d_p(  1:3, MPC_traj_indices ); % (y_p_0 ... y_p_N)
+p_d_pp_0 = param_trajectory.p_d_pp( 1:3, MPC_traj_indices ); % (y_pp_0 ... y_pp_N)
+
+q_d_0       = param_trajectory.q_d(       1:4, MPC_traj_indices ); % (q_0 ... q_N)
+omega_d_0   = param_trajectory.omega_d(   1:3, MPC_traj_indices ); % (omega_0 ... omega_N)
+omega_d_p_0 = param_trajectory.omega_d_p( 1:3, MPC_traj_indices ); % (omega_p_0 ... omega_p_N)
 
 % initial guess for reference trajectory
 y_d_0    = [p_d_0;    q_d_0   ];

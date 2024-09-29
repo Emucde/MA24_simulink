@@ -80,13 +80,16 @@ Hr = integrate_casadi(hr_ref, DT, M, int_method);
 %% Calculate Initial Guess
 
 % Get trajectory data for initial guess
-p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
-p_d_p_0  = param_trajectory.p_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_p_0 ... y_p_N)
-p_d_pp_0 = param_trajectory.p_d_pp( 1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_pp_0 ... y_pp_N)
+MPC_traj_indices = 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC;
+warning('opt_problem_ineq_feasible_traj_MPC_v3_rpy: Hier ist MPC_traj_indices = 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC');
 
-Phi_d_0 = param_trajectory.Phi_d(      1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_0 ... Phi_N)
-Phi_d_p_0 = param_trajectory.Phi_d_p(  1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_p_0 ... Phi_p_N)
-Phi_d_pp_0 = param_trajectory.Phi_d_pp(1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (Phi_pp_0 ... Phi_pp_N)
+p_d_0    = param_trajectory.p_d(    1:3, MPC_traj_indices ); % (y_0 ... y_N)
+p_d_p_0  = param_trajectory.p_d_p(  1:3, MPC_traj_indices ); % (y_p_0 ... y_p_N)
+p_d_pp_0 = param_trajectory.p_d_pp( 1:3, MPC_traj_indices ); % (y_pp_0 ... y_pp_N)
+
+Phi_d_0 = param_trajectory.Phi_d(      1:3, MPC_traj_indices ); % (Phi_0 ... Phi_N)
+Phi_d_p_0 = param_trajectory.Phi_d_p(  1:3, MPC_traj_indices ); % (Phi_p_0 ... Phi_p_N)
+Phi_d_pp_0 = param_trajectory.Phi_d_pp(1:3, MPC_traj_indices ); % (Phi_pp_0 ... Phi_pp_N)
 
 % initial guess for reference trajectory
 y_d_0    = [p_d_0;    Phi_d_0    ];

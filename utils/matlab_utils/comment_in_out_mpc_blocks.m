@@ -14,7 +14,8 @@ if(bdIsLoaded(simulink_main_model_name))
     mpc_subsys_list = controller_blocklist(cellfun(@(x) contains(x, 'MPC'), controller_blocklist));
     
     for i=1:length(mpc_subsys_list)
-        mpc_sfun_string = [simulink_main_model_name, '/Simulation models/Controller Subsystem/', mpc_subsys_list{i}, '/S-Function'];
+        mpc_subsys_string = [simulink_main_model_name, '/Simulation models/Controller Subsystem/', mpc_subsys_list{i}];
+        mpc_sfun_string = [mpc_subsys_string, '/S-Function'];
         sfun_mpc_modules = get_param(mpc_sfun_string, 'SFunctionModules');
 
         comment_state = get_param(mpc_sfun_string, 'Commented');

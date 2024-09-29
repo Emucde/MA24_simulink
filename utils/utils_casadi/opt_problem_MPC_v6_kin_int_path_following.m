@@ -55,10 +55,22 @@ theta_i = param_traj_time/param_traj_time(end);
 
 % if_else_and = @(cond1, cond2, true_val, false_val) if_else(cond1, if_else(cond2, true_val, false_val), false_val);
 
-sigma_def = if_else(theta < theta_i(1), pose(:,1), ...
-            if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2), theta_i(2)), ...
-            if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), ...
-            if_else(theta < theta_i(4), trajectory_poly(theta-theta_i(3), pose(:,3), pose(:,4), theta_i(4)-theta_i(3)), pose(:,end)))));
+if(strcmp(robot_name, 'ur5e_6dof'))
+    sigma_def = if_else(theta < theta_i(1), pose(:,1), ...
+                if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2), theta_i(2)), ...
+                if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), ...
+                if_else(theta < theta_i(4), trajectory_poly(theta-theta_i(3), pose(:,3), pose(:,4), theta_i(4)-theta_i(3)), pose(:,end)))));
+else % only 3 points
+    sigma_def = if_else(theta < theta_i(1), pose(:,1), ...
+                if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2), theta_i(2)), ...
+                if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), pose(:,end))));
+end
+
+if(N_step_MPC == 1)
+    MPC_traj_indices = 1:N_MPC;
+else
+    MPC_traj_indices = [1, 2, N_step_MPC : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC];
+end
 
 T = param_traj_time(end);
 sigma_fun = Function('sigma_fun', {theta}, {sigma_def});

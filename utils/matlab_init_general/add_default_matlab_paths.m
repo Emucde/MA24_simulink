@@ -9,6 +9,7 @@ folder_add_to_path = {
     'utils/matlab_utils/spline_functions'
     'utils/matlab_init_general'
     'utils/utils_casadi'
+    'utils/simulink_utils/utils_general'
     'maple/maple_generated/fr3_7dof'  % yes this too, because I need T matrix from it for trajectory generation
     'urdf_creation'
     'main_simulink'

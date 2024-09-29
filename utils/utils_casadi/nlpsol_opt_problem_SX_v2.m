@@ -325,21 +325,6 @@ if(compile_sfun)
     end
 end
 
-%% CALCULATE TRAJ INDICES:
-% Needed because the MPC's do not have equidistant states!
-
-pp_d = param_trajectory.p_d % use only translational part
-
-[~, cols_y0] = size(y_d_0);
-traj_indices_cell = cell(1, cols_y0);
-
-for col = 1:cols_y0
-    current_column = y_d_0(1:3, col); % use only translational part
-    traj_indices_cell{col} = find(all(pp_d == current_column, 1));
-end
-
-MPC_traj_indices = cell2mat(traj_indices_cell);
-
 %% s-function in Simulink: Name of s-function: MPC1
 % 1) Insert S-Function Block in Matlab
 % 2) add 
