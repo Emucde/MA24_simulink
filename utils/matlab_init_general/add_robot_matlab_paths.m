@@ -11,10 +11,10 @@ if(~strcmp(robot_name, robot_name_old))
     disp('Robot change detected, changing paths and closing all Simulink models...')
     warning('off', 'MATLAB:rmpath:DirNotFound')
     rmpath(genpath('./s_functions'));
-    rmpath(genpath('./utils/simulink_util/utils_6dof'));
-    rmpath(genpath('./utils/simulink_util/utils_7dof'));
-    rmpath(genpath('./utils/simulink_util/fr3_visual'));
-    rmpath(genpath('./utils/simulink_util/ur5e_visual'));
+    rmpath(genpath('./utils/simulink_utils/utils_6dof'));
+    rmpath(genpath('./utils/simulink_utils/utils_7dof'));
+    rmpath(genpath('./utils/simulink_utils/fr3_visual'));
+    rmpath(genpath('./utils/simulink_utils/ur5e_visual'));
     % closeAllSimulinkModels('./utils/simulink_utils');
     % closeAllSimulinkModels('./s_functions') % closeAllSimulinkModels('./s_functions')
 
