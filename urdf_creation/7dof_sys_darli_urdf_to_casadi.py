@@ -11,6 +11,8 @@ import casadi as cs
 from darli.backend import CasadiBackend, PinocchioBackend
 from darli.model import Model
 
+print('Bitte nur \'7dof_sys_pinocchio3_to_casadi.py\' verwenden!')
+
 def SX00_to_SX0(J_fun, q, q_p=None):
     if q_p is None:
         J_val = J_fun(q)

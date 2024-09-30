@@ -12,8 +12,6 @@ param_MPC_file_path = [s_fun_path, '/mpc_settings/'];
 files = dir([param_MPC_file_path, '*.mat']);
 cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
 
-overwrite_offline_traj = false;
-
 traj_mode.equilibrium = 1;
 traj_mode.differential_filter = 2;
 traj_mode.differential_filter_jointspace = 3;

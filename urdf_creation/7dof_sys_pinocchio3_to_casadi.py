@@ -26,20 +26,27 @@ def SX00_to_SX0(J_fun, q, q_p=None):
 
 # robot_name = "fr3_7dof"
 # robot_name = "fr3_6dof"
-robot_name = "ur5e"
+robot_name = "fr3_no_hand_6dof"
+# robot_name = "ur5e"
 
 if "fr3" in robot_name:
     mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_FR3')
     root_link = "fr3_link0"
-    end_link = "fr3_hand_tcp"
-    if "7dof" in robot_name:
+    if robot_name == "fr3_7dof":
         urdf_path = os.path.join(os.path.dirname(__file__), 'fr3_7dof.urdf')
         s_functions_path = './s_functions/fr3_7dof/casadi_functions/'
         q_0 = [0, 0, np.pi/4, -np.pi/2, 0, np.pi/2, 0] # 7 DOF
-    elif "6dof" in robot_name:
+        end_link = "fr3_hand_tcp"
+    elif robot_name == "fr3_6dof":
         urdf_path = os.path.join(os.path.dirname(__file__), 'fr3_6dof.urdf')
-        s_functions_path = './s_functions/fr3_6dof/'
+        s_functions_path = './s_functions/fr3_6dof/casadi_functions/'
         q_0 = [0, 0, -np.pi/2, 0, np.pi/2, 0] # joint q3 fixed at pi/4
+        end_link = "fr3_hand_tcp"
+    elif robot_name == "fr3_no_hand_6dof":
+        urdf_path = os.path.join(os.path.dirname(__file__), 'fr3_no_hand_6dof.urdf')
+        s_functions_path = './s_functions/fr3_no_hand_6dof/casadi_functions/'
+        q_0 = [0, -np.pi/4, -3 * np.pi/4, 0, np.pi/2, np.pi/4] # joint q3 fixed at 0
+        end_link = "fr3_link8_tcp"
     else:
         raise Exception("Unknown robot name '{}'".format(robot_name), "Available robots: 'fr3_7dof', 'fr3_6dof'")
 elif robot_name == "ur5e":

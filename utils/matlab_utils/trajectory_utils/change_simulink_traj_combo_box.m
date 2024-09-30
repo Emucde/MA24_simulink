@@ -8,7 +8,7 @@ if(bdIsLoaded(simulink_main_model_name))
 
     % Change name of Simulation Block
     % If robots are added this should be extended!
-    robot_area_names = {'fr3_7dof Robot Simulation', 'fr3_6dof Robot Simulation', 'ur5e_6dof Robot Simulation'};
+    robot_area_names = {'fr3_7dof Robot Simulation', 'fr3_6dof Robot Simulation', 'fr3_no_hand_6dof Robot Simulation', 'ur5e_6dof Robot Simulation'};
     for old_robot_number = 1:length(robot_area_names)
         try
             get_param(['sim_discrete_7dof/', robot_area_names{old_robot_number}], 'Name');
@@ -35,24 +35,16 @@ if(bdIsLoaded(simulink_main_model_name))
     end
 
     if(strcmp(robot_name, 'fr3_7dof'))
-        %traj_state_cell = cell(1, 4);
-        %traj_state_cell{1} = struct('Value', 1, 'Label', '1: stabilize equilibrium');
-        %traj_state_cell{2} = struct('Value', 2, 'Label', '2: 5th order differential filter');
-        %traj_state_cell{3} = struct('Value', 3, 'Label', '3: 5th order polynomial');
-        %traj_state_cell{4} = struct('Value', 4, 'Label', '4: smooth sinus');
         set_param(['sim_discrete_7dof/', robot_area_names{old_robot_number}], 'Name', 'fr3_7dof Robot Simulation');
     elseif(strcmp(robot_name, 'fr3_6dof'))
-        %traj_state_cell = cell(1, 4);
-        %traj_state_cell{1} = struct('Value', 1, 'Label', '1: stabilize equilibrium');
-        %traj_state_cell{2} = struct('Value', 2, 'Label', '2: 5th order differential filter');
-        %traj_state_cell{3} = struct('Value', 3, 'Label', '3: 5th order polynomial');
-        %traj_state_cell{4} = struct('Value', 4, 'Label', '4: smooth sinus');
         set_param(['sim_discrete_7dof/', robot_area_names{old_robot_number}], 'Name', 'fr3_6dof Robot Simulation');
+    elseif(strcmp(robot_name, 'fr3_no_hand_6dof'))
+        set_param(['sim_discrete_7dof/', robot_area_names{old_robot_number}], 'Name', 'fr3_no_hand_6dof Robot Simulation');
     elseif(strcmp(robot_name, 'ur5e_6dof'))     
         set_param(['sim_discrete_7dof/', robot_area_names{old_robot_number}], 'Name', 'ur5e_6dof Robot Simulation');
        
     else
-        error('Only robot_name ( fr3_7dof | fr3_6dof | ur5e_6dof ) implemented!');
+        error('Only robot_name ( fr3_7dof | fr3_6dof | fr3_no_hand_6dof | ur5e_6dof ) implemented!');
     end
 
     % set new names when different

@@ -80,7 +80,7 @@ init_MPC_weights; %% set MPC weights
 
 param_ct_control_init;
 
-create_trajectories;
+overwrite_offline_traj = false; create_trajectories;
 
 change_simulink_traj_combo_box; % saves system!
 
@@ -103,4 +103,4 @@ param_debug;
 % plot3(sigma(:,1), sigma(:,2), sigma(:,3), 'LineWidth', 1, 'Color', 'blue');
 
 fprintf('\nExecution of ''parameters_7dof.m'' finished\n');
-fprintf('--------------------------------------------------------------------\n\n');
+fprintf('--------------------------------------------------------------------\n');

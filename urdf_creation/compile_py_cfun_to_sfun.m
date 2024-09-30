@@ -18,7 +18,8 @@ end
 % valid robot_names: fr3_7dof, fr3_6dof, ur5e
 % robot_name = 'fr3_7dof';
 % robot_name = 'fr3_6dof';
-robot_name = 'ur5e_6dof';
+robot_name = 'fr3_no_hand_6dof';
+% robot_name = 'ur5e_6dof';
 
 compile_mode = 2; % Compile mode: 1 - nlpsol, 2 - opti
 output_dir = ['./s_functions/', robot_name, '/'];

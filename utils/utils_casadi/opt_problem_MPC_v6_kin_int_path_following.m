@@ -54,7 +54,7 @@ theta_i = param_traj_time/param_traj_time(end);
 % define path function
 
 % if_else_and = @(cond1, cond2, true_val, false_val) if_else(cond1, if_else(cond2, true_val, false_val), false_val);
-
+% [TODO]
 if(strcmp(robot_name, 'ur5e_6dof'))
     sigma_def = if_else(theta < theta_i(1), pose(:,1), ...
                 if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2), theta_i(2)), ...

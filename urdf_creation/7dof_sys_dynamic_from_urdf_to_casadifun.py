@@ -1,5 +1,5 @@
 # Bitte conda 'mpc' env verwenden, dort ist urdf2casadi installiert.
-print('Bitte nicht verwenden ist sehr ungenau!')
+print('Bitte nicht verwenden ist sehr ungenau! Bitte nur \'7dof_sys_pinocchio3_to_casadi.py\' verwenden!')
 import casadi as cs
 import os
 from urdf2casadi import urdfparser as u2c

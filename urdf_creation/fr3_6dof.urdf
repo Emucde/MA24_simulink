@@ -121,7 +121,7 @@
   <joint name="fr3_joint3" type="fixed">
     <!-- default 7dof -->
     <!-- <origin rpy="1.57079632679489661923132169163975 0 0" xyz="0 -0.316 0"/> -->
-    <!-- fixed at q3=pi/4 -->
+    <!-- fixed at q3=pi/4: KOS steht am kopf desw. das minus in -0.785398... -->
     <origin rpy="1.57079632679489661923132169163975 -0.78539816339744830961566084581988 0" xyz="0 -0.316 0"/>
     <parent link="fr3_link2"/>
     <child link="fr3_link3"/>

@@ -34,19 +34,19 @@ function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver
     casadi_fun_name = casadi_fun.name;
     casadi_fun_c_header_name = [casadi_fun_name, '.c'];
     casadi_fun_h_header_name = [casadi_fun_name, '.h'];
-    casadi_fun_c_header_path = [output_dir, casadi_fun_c_header_name];
-    casadi_fun_h_header_path = [output_dir, casadi_fun_h_header_name];
+    casadi_fun_c_header_path = [output_dir, '/', casadi_fun_c_header_name];
+    casadi_fun_h_header_path = [output_dir, '/', casadi_fun_h_header_name];
 
     if(mode == 1) % classic nlpsol s_function
-        s_func_name_origin       = [output_dir, s_fun_name];
+        s_func_name_origin       = [output_dir, '/', s_fun_name];
         s_func_name_new          = [s_fun_name(1:end-2), '_', casadi_fun_c_header_name]; % final name for Simulink s-function (.c)
-        s_fun_c_file_path        = [output_dir, s_func_name_new];
+        s_fun_c_file_path        = [output_dir, '/', s_func_name_new];
 
         copyfile(s_func_name_origin, s_fun_c_file_path, 'f');
         replace_strings_in_casadi_file(s_fun_c_file_path, ['nlpsol_', casadi_fun_name]);
         
         % Save the CasADi function
-        casadi_fun.save([output_dir, casadi_fun_name, '.casadi']);
+        casadi_fun.save([output_dir, '/', casadi_fun_name, '.casadi']);
         
         % Get paths to CasADi libraries and headers
         lib_path = GlobalOptions.getCasadiPath();
@@ -59,16 +59,15 @@ function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver
         
         delete(s_fun_c_file_path);
 
-        pathname = split(output_dir, '/');
-        pathname = pathname{2};
+        pathname = output_dir;
         fprintf('\n');
         disp(['S-function name: ', s_fun_name(1:end-2), '_', casadi_fun_name]);
         disp("S-function parameters:'" + pathname + "/" + casadi_fun_name + ".casadi', '" + casadi_fun_name + "'");
         disp("S-function modules:" + "'" + casadi_fun_name + "'");
         fprintf('\n');
     elseif(mode == 2) % modified combination of [2] and [3]
-        s_func_name_origin = [output_dir, s_fun_name];
-        s_func_name_new = [output_dir, s_fun_name(1:end-2), '_', casadi_fun_c_header_name];  % final name for Simulink s-function (.c)
+        s_func_name_origin = [output_dir, '/', s_fun_name];
+        s_func_name_new = [output_dir, '/', s_fun_name(1:end-2), '_', casadi_fun_c_header_name];  % final name for Simulink s-function (.c)
         
         % Enable Mex Compile
         opts = struct('main', true, ...
@@ -99,8 +98,8 @@ function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver
         delete(s_func_name_new);
         delete(casadi_fun_c_header_path);
         delete(casadi_fun_h_header_path);
-        if(exist([output_dir, casadi_fun_name, '.casadi'], 'file') == 2)
-            delete([output_dir, casadi_fun_name, '.casadi']);
+        if(exist([output_dir, '/', casadi_fun_name, '.casadi'], 'file') == 2)
+            delete([output_dir, '/', casadi_fun_name, '.casadi']);
         end
         
         % display s-function in simulink settings

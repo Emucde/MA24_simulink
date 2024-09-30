@@ -14,13 +14,17 @@ if(~strcmp(robot_name, robot_name_old))
     rmpath(genpath('./utils/simulink_utils/utils_6dof'));
     rmpath(genpath('./utils/simulink_utils/utils_7dof'));
     rmpath(genpath('./utils/simulink_utils/fr3_visual'));
+    rmpath(genpath('./utils/simulink_utils/fr3_no_hand_visual'));
     rmpath(genpath('./utils/simulink_utils/ur5e_visual'));
     % closeAllSimulinkModels('./utils/simulink_utils');
     % closeAllSimulinkModels('./s_functions') % closeAllSimulinkModels('./s_functions')
 
     % close all scripts due to path changes
     closeAllSimulinkModels('.', simulink_main_model_name);
+
+    % change s function paths
     rename_s_functions_parameter;
+
     warning('on', 'MATLAB:rmpath:DirNotFound')
 end
 
@@ -34,10 +38,12 @@ end
 
 if(strcmp(robot_name, 'fr3_7dof') || strcmp(robot_name, 'fr3_6dof'))
     robot_folder_cell(2) = {'utils/simulink_utils/fr3_visual'};
+elseif(strcmp(robot_name, 'fr3_no_hand_6dof'))
+    robot_folder_cell(2) = {'utils/simulink_utils/fr3_no_hand_visual'};
 elseif(strcmp(robot_name, 'ur5e_6dof'))
     robot_folder_cell(2) = {'utils/simulink_utils/ur5e_visual'};
 else
-    error('Only robot_name ( fr3_7dof | fr3_6dof | ur5e_6dof ) implemented!')
+    error('Only robot_name ( fr3_7dof | fr3_6dof | fr3_no_hand_6dof | ur5e_6dof ) implemented!')
 end
 
 folder_add_to_path = [s_fun_path(3:end); robot_folder_cell];
