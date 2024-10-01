@@ -1,8 +1,8 @@
-#define S_FUNCTION_NAME  s_function_opti_sys_fun_qpp_aba
+#define S_FUNCTION_NAME  s_function_opti_H
 #define S_FUNCTION_LEVEL 2
 
 #include "simstruc.h"
-#include "sys_fun_qpp_aba.h"
+#include "H.h"
 
 static void mdlInitializeSizes(SimStruct *S)
 {
@@ -12,16 +12,16 @@ static void mdlInitializeSizes(SimStruct *S)
     }
 
     /* Read in CasADi function dimensions */
-    int_T n_in  = sys_fun_qpp_aba_n_in();
-    int_T n_out = sys_fun_qpp_aba_n_out();
+    int_T n_in  = H_n_in();
+    int_T n_out = H_n_out();
     int_T sz_arg, sz_res, sz_iw, sz_w;
-    sys_fun_qpp_aba_work(&sz_arg, &sz_res, &sz_iw, &sz_w);
+    H_work(&sz_arg, &sz_res, &sz_iw, &sz_w);
     
     /* Set up simulink input/output ports */
     int_T i;
     if (!ssSetNumInputPorts(S, n_in)) return;
     for (i=0;i<n_in;++i) {
-      const int_T* sp = sys_fun_qpp_aba_sparsity_in(i);
+      const int_T* sp = H_sparsity_in(i);
       /* Dense inputs assumed here */
       ssSetInputPortDirectFeedThrough(S, i, 1);
       ssSetInputPortMatrixDimensions(S, i, sp[0], sp[1]);
@@ -30,7 +30,7 @@ static void mdlInitializeSizes(SimStruct *S)
 
     if (!ssSetNumOutputPorts(S, n_out)) return;
     for (i=0;i<n_out;++i) {
-      const int_T* sp = sys_fun_qpp_aba_sparsity_out(i);
+      const int_T* sp = H_sparsity_out(i);
       /* Dense outputs assumed here */
       ssSetOutputPortMatrixDimensions(S, i, sp[0], sp[1]);
     }
@@ -52,7 +52,7 @@ static void mdlInitializeSizes(SimStruct *S)
                  SS_OPTION_USE_TLC_WITH_ACCELERATOR);
 
     /* Signal that we want to use the CasADi Function */
-    sys_fun_qpp_aba_incref();
+    H_incref();
 }
 
 /*static void mdlStart(SimStruct *S) {
@@ -76,10 +76,10 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 {
     
     /* Read in CasADi function dimensions */
-    int_T n_in  = sys_fun_qpp_aba_n_in();
-    int_T n_out = sys_fun_qpp_aba_n_out();
+    int_T n_in  = H_n_in();
+    int_T n_out = H_n_out();
     int_T sz_arg, sz_res, sz_iw, sz_w;
-    sys_fun_qpp_aba_work(&sz_arg, &sz_res, &sz_iw, &sz_w);
+    H_work(&sz_arg, &sz_res, &sz_iw, &sz_w);
     
     /* Set up CasADi function work vectors */
     void** p = ssGetPWork(S);
@@ -102,18 +102,18 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     /* Get a hold on a location to read/write persistant internal memory
     */
 
-    int mem = sys_fun_qpp_aba_checkout();
+    int mem = H_checkout();
 
     /* Run the CasADi function */
-    sys_fun_qpp_aba(arg,res,iw,w,mem);
+    H(arg,res,iw,w,mem);
 
     /* Release hold */
-    sys_fun_qpp_aba_release(mem);
+    H_release(mem);
 }
 
 static void mdlTerminate(SimStruct *S) {
   /* Signal that we no longer want to use the CasADi Function */
-  sys_fun_qpp_aba_decref();
+  H_decref();
 }
 
 

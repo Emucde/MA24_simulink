@@ -310,7 +310,9 @@ if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
 end
 
 %% COMPILE (nlpsol)
-
+compile_mode = 2;% [TODO]
+f_opt = Function.load('s_functions/fr3_no_hand_6dof/casadi_functions/sys_fun_qpp_aba_py.casadi');
+%f_opt = Function.load('s_functions/fr3_no_hand_6dof/casadi_functions/hom_transform_endeffector_py.casadi');
 if(compile_sfun)
     if(compile_mode == 1)
         tic;
