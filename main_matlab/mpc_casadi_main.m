@@ -21,7 +21,7 @@ traj_select_mpc                 = 2; % (1: equilibrium, 2: 5th order diff filt, 
 create_init_guess_for_all_traj  = true; % create init guess for all trajectories
 compile_sfun                    = ~false; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
-compile_all_mpc_sfunctions      = ~false;
+compile_all_mpc_sfunctions      = false;
 generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
 reload_parameters_m             = true; % reload parameters.m at the end (clears all variables!)
 

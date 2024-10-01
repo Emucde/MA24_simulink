@@ -1,4 +1,4 @@
-function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver, opt_flag, mode)
+function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver, opt_flag, mode, remove_sourcefiles)
 % COMPILE_CASADI_SFUNCTION Compiles a CasADi S-function for use in Simulink.
 %
 % Inputs:
@@ -28,6 +28,16 @@ function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver
 % [1] https://web.casadi.org/blog/mpc-simulink2/
 % [2] https://web.casadi.org/blog/s-function/
 % [3] https://github.com/casadi/casadi/discussions/3337
+arguments
+    casadi_fun casadi.Function
+    s_fun_name char
+    output_dir char
+    MPC_solver char
+    opt_flag char = '-O2'
+    mode (1,1) {mustBeInteger, mustBeInRange(mode, 1, 2)} = 1
+    remove_sourcefiles logical = true
+end
+
 
     import casadi.*;
 
@@ -57,7 +67,9 @@ function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver
         mex(['-I' inc_path],['-L' lib_path],'-lcasadi', s_fun_c_file_path, '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir);
         %file_name = 'f_opt.casadi';
         
-        delete(s_fun_c_file_path);
+        if(remove_sourcefiles)
+            delete(s_fun_c_file_path);
+        end
 
         pathname = output_dir;
         fprintf('\n');
@@ -95,11 +107,13 @@ function compile_casadi_sfunction(casadi_fun, s_fun_name, output_dir, MPC_solver
         disp(['Compiling s-function ', s_func_name_new, ' with ', opt_flag, ' (nlpsol-opti method)'])
         mex(s_func_name_new, casadi_fun_c_header_path, '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
         
-        delete(s_func_name_new);
-        delete(casadi_fun_c_header_path);
-        delete(casadi_fun_h_header_path);
-        if(exist([output_dir, '/', casadi_fun_name, '.casadi'], 'file') == 2)
-            delete([output_dir, '/', casadi_fun_name, '.casadi']);
+        if(remove_sourcefiles)
+            delete(s_func_name_new);
+            delete(casadi_fun_c_header_path);
+            delete(casadi_fun_h_header_path);
+            if(exist([output_dir, '/', casadi_fun_name, '.casadi'], 'file') == 2)
+                delete([output_dir, '/', casadi_fun_name, '.casadi']);
+            end
         end
         
         % display s-function in simulink settings
