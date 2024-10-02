@@ -55,10 +55,10 @@ static void mdlInitializeSizes(SimStruct *S)
     sys_fun_qpp_aba_incref();
 }
 
-static void mdlStart(SimStruct *S) {
+/*static void mdlStart(SimStruct *S) {
   slDataTypeAccess *dta = ssGetDataTypeAccess(S);
   DTypeId solver_stats_bus_id = ssGetDataTypeId(S, "solver_stats_bus");
-}
+}*/
 
 
 /* Function: mdlInitializeSampleTimes =========================================

@@ -7,9 +7,9 @@
  *
  * Code generation for model "cartesian_impedance_control".
  *
- * Model version              : 8.21
+ * Model version              : 8.47
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Thu Sep 26 15:01:04 2024
+ * C++ source code generated on : Wed Oct  2 11:53:02 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -44,5 +44,6 @@
 #endif
 
 extern "C" void s_function_opti_sys_fun_qpp_aba(SimStruct *rts);
+extern "C" void s_function_opti_robot_model_bus_fun(SimStruct *rts);
 
 #endif                   /* RTW_HEADER_cartesian_impedance_control_private_h_ */

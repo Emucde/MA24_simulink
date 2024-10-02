@@ -55,10 +55,11 @@ static void mdlInitializeSizes(SimStruct *S)
     robot_model_bus_fun_incref();
 }
 
-static void mdlStart(SimStruct *S) {
+/*static void mdlStart(SimStruct *S) {
   slDataTypeAccess *dta = ssGetDataTypeAccess(S);
   DTypeId solver_stats_bus_id = ssGetDataTypeId(S, "solver_stats_bus");
-}
+}*/
+
 
 
 /* Function: mdlInitializeSampleTimes =========================================

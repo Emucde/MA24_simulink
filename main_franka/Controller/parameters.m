@@ -1,4 +1,12 @@
 addpath(genpath('../'));
+addpath(genpath('../../utils/matlab_init_general/'));
+
+n=6;
+bus_definitions;
+
+robot_ip = '172.16.10.2';
+% restoredefaultpath
+% addpath(genpath('./s_functions'));
 % init_franka_matlab('0.13.0')
 
 q_init = [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]';

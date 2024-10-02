@@ -7,9 +7,9 @@
  *
  * Code generation for model "cartesian_impedance_control".
  *
- * Model version              : 8.21
+ * Model version              : 8.47
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Thu Sep 26 15:01:04 2024
+ * C++ source code generated on : Wed Oct  2 11:53:02 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -32,7 +32,7 @@ extern "C"
 }
 
 const real_T cartesian_impedance_cont_period = 0.001;
-SimulinkPandaRobot simulinkPandaRobot_1721602;
+SimulinkPandaRobot simulinkPandaRobot_17216102;
 
 /* Block signals (default storage) */
 B_cartesian_impedance_control_T cartesian_impedance_control_B;
@@ -67,47 +67,47 @@ void cartesian_impedance_control_step(void)
     /* Reset subsysRan breadcrumbs */
     srClearBC(cartesian_impedance_control_DW.UDPsendtoc_SubsysRanBC);
 
-    /* S-Function (get_robot_state): '<S4>/Get Robot State2' */
+    /* S-Function (get_robot_state): '<S6>/Get Robot State2' */
     {
       // Wait for the control thread signal
       if ((bool)cartesian_impedance_control_DW.GetRobotState2_DWORK1 &&
-          simulinkPandaRobot_1721602.getControlThreadHasBeenSpawned()) {
-        simulinkPandaRobot_1721602.waitForControlThreadStep();
+          simulinkPandaRobot_17216102.getControlThreadHasBeenSpawned()) {
+        simulinkPandaRobot_17216102.waitForControlThreadStep();
       }
 
       // If control loop threw exeption terminate execution
-      simulinkPandaRobot_1721602.checkIfAndHandleException();
-      if (!simulinkPandaRobot_1721602.getCurrentlyInFirstControlStep()) {
+      simulinkPandaRobot_17216102.checkIfAndHandleException();
+      if (!simulinkPandaRobot_17216102.getCurrentlyInFirstControlStep()) {
         std::vector<std::string> output_signals;
         signalsStringToSignalsVector(output_signals,"q dq O_F_ext_hat_K");
 
         //copy outputs
-        simulinkPandaRobot_1721602.copyOutputSignal(output_signals, 0,
+        simulinkPandaRobot_17216102.copyOutputSignal(output_signals, 0,
           &cartesian_impedance_control_B.GetRobotState2_o1[0]);
-        simulinkPandaRobot_1721602.copyOutputSignal(output_signals, 1,
+        simulinkPandaRobot_17216102.copyOutputSignal(output_signals, 1,
           &cartesian_impedance_control_B.GetRobotState2_o2[0]);
-        simulinkPandaRobot_1721602.copyOutputSignal(output_signals, 2,
+        simulinkPandaRobot_17216102.copyOutputSignal(output_signals, 2,
           &cartesian_impedance_control_B.GetRobotState2_o3[0]);
       }
     }
 
-    /* Clock: '<S4>/Clock' */
+    /* Clock: '<S6>/Clock' */
     rtb_Clock = cartesian_impedance_control_M->Timing.t[0];
     for (i = 0; i < 7; i++) {
-      /* Switch: '<S4>/Switch' */
+      /* Switch: '<S6>/Switch' */
       if (rtb_Clock > cartesian_impedance_control_P.Switch_Threshold) {
-        /* Switch: '<S4>/Switch' */
+        /* Switch: '<S6>/Switch' */
         cartesian_impedance_control_B.Switch[i] =
           cartesian_impedance_control_B.GetRobotState2_o1[i];
       } else {
-        /* Switch: '<S4>/Switch' incorporates:
-         *  Constant: '<S4>/Constant'
+        /* Switch: '<S6>/Switch' incorporates:
+         *  Constant: '<S6>/Constant'
          */
         cartesian_impedance_control_B.Switch[i] =
           cartesian_impedance_control_P.q_init[i];
       }
 
-      /* End of Switch: '<S4>/Switch' */
+      /* End of Switch: '<S6>/Switch' */
     }
 
     /* S-Function (sdspFromNetwork): '<Root>/UDP Receive from c 1' */
@@ -140,6 +140,32 @@ void cartesian_impedance_control_step(void)
     cartesian_impedance_control_B.enable_out = 1.0;
 
     /* End of MATLAB Function: '<Root>/MATLAB Function1' */
+
+    /* MATLAB Function: '<Root>/get x' */
+    cartesian_impedance_control_B.q_o[0] = cartesian_impedance_control_B.Switch
+      [0];
+    cartesian_impedance_control_B.q_o[1] = cartesian_impedance_control_B.Switch
+      [1];
+    cartesian_impedance_control_B.q_o[2] = cartesian_impedance_control_B.Switch
+      [3];
+    cartesian_impedance_control_B.q_o[3] = cartesian_impedance_control_B.Switch
+      [4];
+    cartesian_impedance_control_B.q_o[4] = cartesian_impedance_control_B.Switch
+      [5];
+    cartesian_impedance_control_B.q_o[5] = cartesian_impedance_control_B.Switch
+      [6];
+    cartesian_impedance_control_B.q_p_0[0] =
+      cartesian_impedance_control_B.GetRobotState2_o2[0];
+    cartesian_impedance_control_B.q_p_0[1] =
+      cartesian_impedance_control_B.GetRobotState2_o2[1];
+    cartesian_impedance_control_B.q_p_0[2] =
+      cartesian_impedance_control_B.GetRobotState2_o2[3];
+    cartesian_impedance_control_B.q_p_0[3] =
+      cartesian_impedance_control_B.GetRobotState2_o2[4];
+    cartesian_impedance_control_B.q_p_0[4] =
+      cartesian_impedance_control_B.GetRobotState2_o2[5];
+    cartesian_impedance_control_B.q_p_0[5] =
+      cartesian_impedance_control_B.GetRobotState2_o2[6];
     for (i = 0; i < 6; i++) {
       /* Constant: '<Root>/Constant3' */
       cartesian_impedance_control_B.Constant3[i] =
@@ -151,6 +177,14 @@ void cartesian_impedance_control_step(void)
     /* Level2 S-Function Block: '<Root>/S-Function1' (s_function_opti_sys_fun_qpp_aba) */
     {
       SimStruct *rts = cartesian_impedance_control_M->childSfunctions[0];
+      sfcnOutputs(rts,0);
+    }
+
+    /* S-Function (s_function_opti_robot_model_bus_fun): '<Root>/S-Function2' */
+
+    /* Level2 S-Function Block: '<Root>/S-Function2' (s_function_opti_robot_model_bus_fun) */
+    {
+      SimStruct *rts = cartesian_impedance_control_M->childSfunctions[1];
       sfcnOutputs(rts,0);
     }
 
@@ -182,12 +216,12 @@ void cartesian_impedance_control_step(void)
     /* End of MATLAB Function: '<Root>/MATLAB Function' */
 
     /* Outputs for Enabled SubSystem: '<Root>/UDP send to c' incorporates:
-     *  EnablePort: '<S5>/Enable'
+     *  EnablePort: '<S7>/Enable'
      */
     cartesian_impedance_control_DW.UDPsendtoc_MODE =
       (cartesian_impedance_control_B.enable_out > 0.0);
     if (cartesian_impedance_control_DW.UDPsendtoc_MODE) {
-      /* SignalConversion generated from: '<S5>/UDP Send' */
+      /* SignalConversion generated from: '<S7>/UDP Send' */
       cartesian_impedance_control_B.TmpSignalConversionAtUDPSendInp[0] =
         cartesian_impedance_control_B.send_cnt;
       for (i = 0; i < 7; i++) {
@@ -197,7 +231,7 @@ void cartesian_impedance_control_step(void)
           cartesian_impedance_control_B.GetRobotState2_o2[i];
       }
 
-      /* End of SignalConversion generated from: '<S5>/UDP Send' */
+      /* End of SignalConversion generated from: '<S7>/UDP Send' */
       srUpdateBC(cartesian_impedance_control_DW.UDPsendtoc_SubsysRanBC);
     }
 
@@ -205,37 +239,37 @@ void cartesian_impedance_control_step(void)
 
     /* S-Function (get_model): '<S1>/Get Model' */
     {
-      if (simulinkPandaRobot_1721602.getControlThreadHasBeenSpawned()) {
+      if (simulinkPandaRobot_17216102.getControlThreadHasBeenSpawned()) {
         // Wait for the control thread signal
         if ((bool)cartesian_impedance_control_DW.GetModel_DWORK1) {
-          simulinkPandaRobot_1721602.waitForControlThreadStep();
+          simulinkPandaRobot_17216102.waitForControlThreadStep();
         }
 
         // If control loop threw exeption terminate execution
-        simulinkPandaRobot_1721602.checkIfAndHandleException();
+        simulinkPandaRobot_17216102.checkIfAndHandleException();
 
         // robot pose
-        simulinkPandaRobot_1721602.copyRobotPose
+        simulinkPandaRobot_17216102.copyRobotPose
           (&cartesian_impedance_control_B.GetModel_o1[0]);
 
         // bodyJacobian
-        simulinkPandaRobot_1721602.copyBodyJacobian
+        simulinkPandaRobot_17216102.copyBodyJacobian
           (&cartesian_impedance_control_B.GetModel_o2[0]);
 
         // zeroJacobian
-        simulinkPandaRobot_1721602.copyZeroJacobian
+        simulinkPandaRobot_17216102.copyZeroJacobian
           (&cartesian_impedance_control_B.GetModel_o3[0]);
 
         // mass
-        simulinkPandaRobot_1721602.copyMass
+        simulinkPandaRobot_17216102.copyMass
           (&cartesian_impedance_control_B.GetModel_o4[0]);
 
         // coriolis
-        simulinkPandaRobot_1721602.copyCoriolis
+        simulinkPandaRobot_17216102.copyCoriolis
           (&cartesian_impedance_control_B.coriolis[0]);
 
         // gravity
-        simulinkPandaRobot_1721602.copyGravity
+        simulinkPandaRobot_17216102.copyGravity
           (&cartesian_impedance_control_B.GetModel_o6[0]);
       }
     }
@@ -244,20 +278,20 @@ void cartesian_impedance_control_step(void)
     {
       // Wait for the control thread signal
       if ((bool)cartesian_impedance_control_DW.GetRobotState_DWORK1 &&
-          simulinkPandaRobot_1721602.getControlThreadHasBeenSpawned()) {
-        simulinkPandaRobot_1721602.waitForControlThreadStep();
+          simulinkPandaRobot_17216102.getControlThreadHasBeenSpawned()) {
+        simulinkPandaRobot_17216102.waitForControlThreadStep();
       }
 
       // If control loop threw exeption terminate execution
-      simulinkPandaRobot_1721602.checkIfAndHandleException();
-      if (!simulinkPandaRobot_1721602.getCurrentlyInFirstControlStep()) {
+      simulinkPandaRobot_17216102.checkIfAndHandleException();
+      if (!simulinkPandaRobot_17216102.getCurrentlyInFirstControlStep()) {
         std::vector<std::string> output_signals;
         signalsStringToSignalsVector(output_signals,"O_T_EE dq");
 
         //copy outputs
-        simulinkPandaRobot_1721602.copyOutputSignal(output_signals, 0,
+        simulinkPandaRobot_17216102.copyOutputSignal(output_signals, 0,
           &cartesian_impedance_control_B.GetRobotState_o1[0]);
-        simulinkPandaRobot_1721602.copyOutputSignal(output_signals, 1,
+        simulinkPandaRobot_17216102.copyOutputSignal(output_signals, 1,
           &cartesian_impedance_control_B.GetRobotState_o2[0]);
       }
     }
@@ -266,19 +300,19 @@ void cartesian_impedance_control_step(void)
     {
       // Wait for the control thread signal
       if ((bool)cartesian_impedance_control_DW.GetInitialRobotState_DWORK2 &&
-          simulinkPandaRobot_1721602.getControlThreadHasBeenSpawned()) {
-        simulinkPandaRobot_1721602.waitForControlThreadStep();
+          simulinkPandaRobot_17216102.getControlThreadHasBeenSpawned()) {
+        simulinkPandaRobot_17216102.waitForControlThreadStep();
       }
 
       // If control loop threw exeption terminate execution
-      simulinkPandaRobot_1721602.checkIfAndHandleException();
-      if (!simulinkPandaRobot_1721602.getCurrentlyInFirstControlStep() && !(bool)
-          cartesian_impedance_control_DW.GetInitialRobotState_DWORK1) {
+      simulinkPandaRobot_17216102.checkIfAndHandleException();
+      if (!simulinkPandaRobot_17216102.getCurrentlyInFirstControlStep() &&
+          !(bool)cartesian_impedance_control_DW.GetInitialRobotState_DWORK1) {
         std::vector<std::string> output_signals;
         signalsStringToSignalsVector(output_signals,"O_T_EE");
 
         //copy outputs
-        simulinkPandaRobot_1721602.copyOutputSignal(output_signals, 0,
+        simulinkPandaRobot_17216102.copyOutputSignal(output_signals, 0,
           &cartesian_impedance_control_B.GetInitialRobotState[0]);
         cartesian_impedance_control_DW.GetInitialRobotState_DWORK1 = 1;
       }
@@ -428,7 +462,7 @@ void cartesian_impedance_control_step(void)
 
     /* End of Sum: '<S1>/Subtract' */
 
-    /* RateLimiter: '<S4>/Rate Limiter' */
+    /* RateLimiter: '<S6>/Rate Limiter' */
     rtb_Clock = cartesian_impedance_control_P.RateLimiter_RisingLim *
       cartesian_impedance_cont_period;
     qy = cartesian_impedance_control_P.RateLimiter_FallingLim *
@@ -449,7 +483,7 @@ void cartesian_impedance_control_step(void)
        */
       S = cartesian_impedance_control_B.coriolis[i] + tmp_1[i];
 
-      /* RateLimiter: '<S4>/Rate Limiter' */
+      /* RateLimiter: '<S6>/Rate Limiter' */
       cartesian_impedance_control_B.RateLimiter[i] = S -
         cartesian_impedance_control_DW.PrevY[i];
       if (cartesian_impedance_control_B.RateLimiter[i] > rtb_Clock) {
@@ -466,33 +500,41 @@ void cartesian_impedance_control_step(void)
         cartesian_impedance_control_B.RateLimiter[i];
     }
 
-    /* S-Function (apply_control): '<S4>/Apply Control' */
+    /* S-Function (apply_control): '<S6>/Apply Control' */
     {
-      /* S-Function Block: <S4>/Apply Control */
+      /* S-Function Block: <S6>/Apply Control */
       if ((bool)cartesian_impedance_control_DW.ApplyControl_DWORK1) {
         // Wait for the control thread signal
         if ((bool)cartesian_impedance_control_DW.ApplyControl_DWORK2) {
-          simulinkPandaRobot_1721602.waitForControlThreadStep();
+          simulinkPandaRobot_17216102.waitForControlThreadStep();
         }
 
         // If control loop threw exeption terminate execution
-        simulinkPandaRobot_1721602.checkIfAndHandleException();
+        simulinkPandaRobot_17216102.checkIfAndHandleException();
 
         // copy inputs
-        simulinkPandaRobot_1721602.copyInputSignal
+        simulinkPandaRobot_17216102.copyInputSignal
           (&cartesian_impedance_control_B.RateLimiter[0], 0);
 
         // notify control thread that the inputs have been read
-        simulinkPandaRobot_1721602.notifyControlThreadToContinue();
+        simulinkPandaRobot_17216102.notifyControlThreadToContinue();
       } else if (!(bool)cartesian_impedance_control_DW.ApplyControl_DWORK1) {
         // Its the first time _step() function is called -->
         // Initialize according to settings parsed from the mask
         // and spawn control thread
-        simulinkPandaRobot_1721602.applyRobotSettings();
-        simulinkPandaRobot_1721602.spawnControlThread();
+        simulinkPandaRobot_17216102.applyRobotSettings();
+        simulinkPandaRobot_17216102.spawnControlThread();
         cartesian_impedance_control_DW.ApplyControl_DWORK1 = 1;
       }
     }
+
+    /* MATLAB Function: '<Root>/MATLAB Function2' incorporates:
+     *  MATLAB Function: '<Root>/Robot model bus'
+     *  S-Function (s_function_opti_robot_model_bus_fun): '<Root>/S-Function2'
+     */
+    cartesian_impedance_control_B.x = cartesian_impedance_control_B.H[12];
+    cartesian_impedance_control_B.y = cartesian_impedance_control_B.H[13];
+    cartesian_impedance_control_B.z = cartesian_impedance_control_B.H[14];
   }
 
   /* Matfile logging */
@@ -515,11 +557,11 @@ void cartesian_impedance_control_step(void)
       cartesian_impedance_control_B.data_cnt_o;
 
     /* Update for Enabled SubSystem: '<Root>/UDP send to c' incorporates:
-     *  EnablePort: '<S5>/Enable'
+     *  EnablePort: '<S7>/Enable'
      */
     if (cartesian_impedance_control_DW.UDPsendtoc_MODE) {
-      /* Update for S-Function (sdspToNetwork): '<S5>/UDP Send' incorporates:
-       *  SignalConversion generated from: '<S5>/UDP Send'
+      /* Update for S-Function (sdspToNetwork): '<S7>/UDP Send' incorporates:
+       *  SignalConversion generated from: '<S7>/UDP Send'
        */
       sErr = GetErrorBuffer(&cartesian_impedance_control_DW.UDPSend_NetworkLib
                             [0U]);
@@ -531,7 +573,7 @@ void cartesian_impedance_control_step(void)
         rtmSetStopRequested(cartesian_impedance_control_M, 1);
       }
 
-      /* End of Update for S-Function (sdspToNetwork): '<S5>/UDP Send' */
+      /* End of Update for S-Function (sdspToNetwork): '<S7>/UDP Send' */
     }
 
     /* End of Update for SubSystem: '<Root>/UDP send to c' */
@@ -624,6 +666,8 @@ void cartesian_impedance_control_initialize(void)
   }
 
   rtsiSetSimTimeStep(&cartesian_impedance_control_M->solverInfo, MAJOR_TIME_STEP);
+  rtsiSetIsMinorTimeStepWithModeChange
+    (&cartesian_impedance_control_M->solverInfo, false);
   rtsiSetSolverName(&cartesian_impedance_control_M->solverInfo,
                     "FixedStepDiscrete");
   cartesian_impedance_control_M->solverInfoPtr =
@@ -690,23 +734,26 @@ void cartesian_impedance_control_initialize(void)
   }
 
   /* External mode info */
-  cartesian_impedance_control_M->Sizes.checksums[0] = (2347485286U);
-  cartesian_impedance_control_M->Sizes.checksums[1] = (3158364773U);
-  cartesian_impedance_control_M->Sizes.checksums[2] = (4061902251U);
-  cartesian_impedance_control_M->Sizes.checksums[3] = (3987505037U);
+  cartesian_impedance_control_M->Sizes.checksums[0] = (3633726209U);
+  cartesian_impedance_control_M->Sizes.checksums[1] = (1982847101U);
+  cartesian_impedance_control_M->Sizes.checksums[2] = (526584042U);
+  cartesian_impedance_control_M->Sizes.checksums[3] = (142358268U);
 
   {
     static const sysRanDType rtAlwaysEnabled = SUBSYS_RAN_BC_ENABLE;
     static RTWExtModeInfo rt_ExtModeInfo;
-    static const sysRanDType *systemRan[5];
+    static const sysRanDType *systemRan[8];
     cartesian_impedance_control_M->extModeInfo = (&rt_ExtModeInfo);
     rteiSetSubSystemActiveVectorAddresses(&rt_ExtModeInfo, systemRan);
     systemRan[0] = &rtAlwaysEnabled;
     systemRan[1] = &rtAlwaysEnabled;
     systemRan[2] = &rtAlwaysEnabled;
     systemRan[3] = &rtAlwaysEnabled;
-    systemRan[4] = (sysRanDType *)
+    systemRan[4] = &rtAlwaysEnabled;
+    systemRan[5] = &rtAlwaysEnabled;
+    systemRan[6] = (sysRanDType *)
       &cartesian_impedance_control_DW.UDPsendtoc_SubsysRanBC;
+    systemRan[7] = &rtAlwaysEnabled;
     rteiSetModelMappingInfoPtr(cartesian_impedance_control_M->extModeInfo,
       &cartesian_impedance_control_M->SpecialInfo.mappingInfo);
     rteiSetChecksumsPtr(cartesian_impedance_control_M->extModeInfo,
@@ -733,7 +780,7 @@ void cartesian_impedance_control_initialize(void)
   /* block instance data */
   {
     {
-      simulinkPandaRobot_1721602 = SimulinkPandaRobot( "172.16.0.2",
+      simulinkPandaRobot_17216102 = SimulinkPandaRobot( "172.16.10.2",
         0,
         0,
         0,
@@ -785,18 +832,20 @@ void cartesian_impedance_control_initialize(void)
     rtssSetSolverInfoPtr(sfcnInfo, &cartesian_impedance_control_M->solverInfoPtr);
   }
 
-  cartesian_impedance_control_M->Sizes.numSFcns = (1);
+  cartesian_impedance_control_M->Sizes.numSFcns = (2);
 
   /* register each child */
   {
     (void) memset(static_cast<void *>
                   (&cartesian_impedance_control_M->NonInlinedSFcns.childSFunctions
                    [0]), 0,
-                  1*sizeof(SimStruct));
+                  2*sizeof(SimStruct));
     cartesian_impedance_control_M->childSfunctions =
       (&cartesian_impedance_control_M->NonInlinedSFcns.childSFunctionPtrs[0]);
     cartesian_impedance_control_M->childSfunctions[0] =
       (&cartesian_impedance_control_M->NonInlinedSFcns.childSFunctions[0]);
+    cartesian_impedance_control_M->childSfunctions[1] =
+      (&cartesian_impedance_control_M->NonInlinedSFcns.childSFunctions[1]);
 
     /* Level2 S-Function Block: cartesian_impedance_control/<Root>/S-Function1 (s_function_opti_sys_fun_qpp_aba) */
     {
@@ -883,7 +932,7 @@ void cartesian_impedance_control_initialize(void)
           int_T *dimensions = (int_T *)
             &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn0.iDims0;
           ssSetInputPortRequiredContiguous(rts, 0, 1);
-          ssSetInputPortSignal(rts, 0, &cartesian_impedance_control_B.Switch[0]);
+          ssSetInputPortSignal(rts, 0, cartesian_impedance_control_B.q_o);
           dimensions[0] = 6;
           dimensions[1] = 1;
           _ssSetInputPortDimensionsPtrAsInt(rts, 0, dimensions);
@@ -896,9 +945,7 @@ void cartesian_impedance_control_initialize(void)
           int_T *dimensions = (int_T *)
             &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn0.iDims1;
           ssSetInputPortRequiredContiguous(rts, 1, 1);
-          ssSetInputPortSignal(rts, 1,
-                               &cartesian_impedance_control_B.GetRobotState2_o2
-                               [0]);
+          ssSetInputPortSignal(rts, 1, cartesian_impedance_control_B.q_p_0);
           dimensions[0] = 6;
           dimensions[1] = 1;
           _ssSetInputPortDimensionsPtrAsInt(rts, 1, dimensions);
@@ -1003,6 +1050,278 @@ void cartesian_impedance_control_initialize(void)
       ssSetInputPortBufferDstPort(rts, 1, -1);
       ssSetInputPortBufferDstPort(rts, 2, -1);
     }
+
+    /* Level2 S-Function Block: cartesian_impedance_control/<Root>/S-Function2 (s_function_opti_robot_model_bus_fun) */
+    {
+      SimStruct *rts = cartesian_impedance_control_M->childSfunctions[1];
+
+      /* timing info */
+      time_T *sfcnPeriod =
+        cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.sfcnPeriod;
+      time_T *sfcnOffset =
+        cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.sfcnOffset;
+      int_T *sfcnTsMap =
+        cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.sfcnTsMap;
+      (void) memset(static_cast<void*>(sfcnPeriod), 0,
+                    sizeof(time_T)*1);
+      (void) memset(static_cast<void*>(sfcnOffset), 0,
+                    sizeof(time_T)*1);
+      ssSetSampleTimePtr(rts, &sfcnPeriod[0]);
+      ssSetOffsetTimePtr(rts, &sfcnOffset[0]);
+      ssSetSampleTimeTaskIDPtr(rts, sfcnTsMap);
+
+      {
+        ssSetBlkInfo2Ptr(rts,
+                         &cartesian_impedance_control_M->NonInlinedSFcns.blkInfo2
+                         [1]);
+      }
+
+      _ssSetBlkInfo2PortInfo2Ptr(rts,
+        &cartesian_impedance_control_M->NonInlinedSFcns.inputOutputPortInfo2[1]);
+
+      /* Set up the mdlInfo pointer */
+      ssSetRTWSfcnInfo(rts, cartesian_impedance_control_M->sfcnInfo);
+
+      /* Allocate memory of model methods 2 */
+      {
+        ssSetModelMethods2(rts,
+                           &cartesian_impedance_control_M->NonInlinedSFcns.methods2
+                           [1]);
+      }
+
+      /* Allocate memory of model methods 3 */
+      {
+        ssSetModelMethods3(rts,
+                           &cartesian_impedance_control_M->NonInlinedSFcns.methods3
+                           [1]);
+      }
+
+      /* Allocate memory of model methods 4 */
+      {
+        ssSetModelMethods4(rts,
+                           &cartesian_impedance_control_M->NonInlinedSFcns.methods4
+                           [1]);
+      }
+
+      /* Allocate memory for states auxilliary information */
+      {
+        ssSetStatesInfo2(rts,
+                         &cartesian_impedance_control_M->NonInlinedSFcns.statesInfo2
+                         [1]);
+        ssSetPeriodicStatesInfo(rts,
+          &cartesian_impedance_control_M->NonInlinedSFcns.periodicStatesInfo[1]);
+      }
+
+      /* inputs */
+      {
+        _ssSetNumInputPorts(rts, 2);
+        ssSetPortInfoForInputs(rts,
+          &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.inputPortInfo[0]);
+        ssSetPortInfoForInputs(rts,
+          &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.inputPortInfo[0]);
+        _ssSetPortInfo2ForInputUnits(rts,
+          &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.inputPortUnits[0]);
+        ssSetInputPortUnit(rts, 0, 0);
+        ssSetInputPortUnit(rts, 1, 0);
+        _ssSetPortInfo2ForInputCoSimAttribute(rts,
+          &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.inputPortCoSimAttribute
+          [0]);
+        ssSetInputPortIsContinuousQuantity(rts, 0, 0);
+        ssSetInputPortIsContinuousQuantity(rts, 1, 0);
+
+        /* port 0 */
+        {
+          int_T *dimensions = (int_T *)
+            &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.iDims0;
+          ssSetInputPortRequiredContiguous(rts, 0, 1);
+          ssSetInputPortSignal(rts, 0, cartesian_impedance_control_B.q_o);
+          dimensions[0] = 6;
+          dimensions[1] = 1;
+          _ssSetInputPortDimensionsPtrAsInt(rts, 0, dimensions);
+          _ssSetInputPortNumDimensions(rts, 0, 2);
+          ssSetInputPortWidthAsInt(rts, 0, 6);
+        }
+
+        /* port 1 */
+        {
+          int_T *dimensions = (int_T *)
+            &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.iDims1;
+          ssSetInputPortRequiredContiguous(rts, 1, 1);
+          ssSetInputPortSignal(rts, 1, cartesian_impedance_control_B.q_p_0);
+          dimensions[0] = 6;
+          dimensions[1] = 1;
+          _ssSetInputPortDimensionsPtrAsInt(rts, 1, dimensions);
+          _ssSetInputPortNumDimensions(rts, 1, 2);
+          ssSetInputPortWidthAsInt(rts, 1, 6);
+        }
+      }
+
+      /* outputs */
+      {
+        ssSetPortInfoForOutputs(rts,
+          &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.outputPortInfo[0]);
+        ssSetPortInfoForOutputs(rts,
+          &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.outputPortInfo[0]);
+        _ssSetNumOutputPorts(rts, 6);
+        _ssSetPortInfo2ForOutputUnits(rts,
+          &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.outputPortUnits
+          [0]);
+        ssSetOutputPortUnit(rts, 0, 0);
+        ssSetOutputPortUnit(rts, 1, 0);
+        ssSetOutputPortUnit(rts, 2, 0);
+        ssSetOutputPortUnit(rts, 3, 0);
+        ssSetOutputPortUnit(rts, 4, 0);
+        ssSetOutputPortUnit(rts, 5, 0);
+        _ssSetPortInfo2ForOutputCoSimAttribute(rts,
+          &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.outputPortCoSimAttribute
+          [0]);
+        ssSetOutputPortIsContinuousQuantity(rts, 0, 0);
+        ssSetOutputPortIsContinuousQuantity(rts, 1, 0);
+        ssSetOutputPortIsContinuousQuantity(rts, 2, 0);
+        ssSetOutputPortIsContinuousQuantity(rts, 3, 0);
+        ssSetOutputPortIsContinuousQuantity(rts, 4, 0);
+        ssSetOutputPortIsContinuousQuantity(rts, 5, 0);
+
+        /* port 0 */
+        {
+          int_T *dimensions = (int_T *)
+            &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.oDims0;
+          dimensions[0] = 4;
+          dimensions[1] = 4;
+          _ssSetOutputPortDimensionsPtrAsInt(rts, 0, dimensions);
+          _ssSetOutputPortNumDimensions(rts, 0, 2);
+          ssSetOutputPortWidthAsInt(rts, 0, 16);
+          ssSetOutputPortSignal(rts, 0, ((real_T *)
+            cartesian_impedance_control_B.H));
+        }
+
+        /* port 1 */
+        {
+          int_T *dimensions = (int_T *)
+            &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.oDims1;
+          dimensions[0] = 6;
+          dimensions[1] = 6;
+          _ssSetOutputPortDimensionsPtrAsInt(rts, 1, dimensions);
+          _ssSetOutputPortNumDimensions(rts, 1, 2);
+          ssSetOutputPortWidthAsInt(rts, 1, 36);
+          ssSetOutputPortSignal(rts, 1, ((real_T *)
+            cartesian_impedance_control_B.J));
+        }
+
+        /* port 2 */
+        {
+          int_T *dimensions = (int_T *)
+            &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.oDims2;
+          dimensions[0] = 6;
+          dimensions[1] = 6;
+          _ssSetOutputPortDimensionsPtrAsInt(rts, 2, dimensions);
+          _ssSetOutputPortNumDimensions(rts, 2, 2);
+          ssSetOutputPortWidthAsInt(rts, 2, 36);
+          ssSetOutputPortSignal(rts, 2, ((real_T *)
+            cartesian_impedance_control_B.J_p));
+        }
+
+        /* port 3 */
+        {
+          int_T *dimensions = (int_T *)
+            &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.oDims3;
+          dimensions[0] = 6;
+          dimensions[1] = 6;
+          _ssSetOutputPortDimensionsPtrAsInt(rts, 3, dimensions);
+          _ssSetOutputPortNumDimensions(rts, 3, 2);
+          ssSetOutputPortWidthAsInt(rts, 3, 36);
+          ssSetOutputPortSignal(rts, 3, ((real_T *)
+            cartesian_impedance_control_B.M));
+        }
+
+        /* port 4 */
+        {
+          int_T *dimensions = (int_T *)
+            &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.oDims4;
+          dimensions[0] = 6;
+          dimensions[1] = 1;
+          _ssSetOutputPortDimensionsPtrAsInt(rts, 4, dimensions);
+          _ssSetOutputPortNumDimensions(rts, 4, 2);
+          ssSetOutputPortWidthAsInt(rts, 4, 6);
+          ssSetOutputPortSignal(rts, 4, ((real_T *)
+            cartesian_impedance_control_B.Cg));
+        }
+
+        /* port 5 */
+        {
+          int_T *dimensions = (int_T *)
+            &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.oDims5;
+          dimensions[0] = 6;
+          dimensions[1] = 1;
+          _ssSetOutputPortDimensionsPtrAsInt(rts, 5, dimensions);
+          _ssSetOutputPortNumDimensions(rts, 5, 2);
+          ssSetOutputPortWidthAsInt(rts, 5, 6);
+          ssSetOutputPortSignal(rts, 5, ((real_T *)
+            cartesian_impedance_control_B.g));
+        }
+      }
+
+      /* path info */
+      ssSetModelName(rts, "S-Function2");
+      ssSetPath(rts, "cartesian_impedance_control/S-Function2");
+      ssSetRTModel(rts,cartesian_impedance_control_M);
+      ssSetParentSS(rts, (NULL));
+      ssSetRootSS(rts, rts);
+      ssSetVersion(rts, SIMSTRUCT_VERSION_LEVEL2);
+
+      /* work vectors */
+      ssSetPWork(rts, (void **)
+                 &cartesian_impedance_control_DW.SFunction2_PWORK[0]);
+
+      {
+        struct _ssDWorkRecord *dWorkRecord = (struct _ssDWorkRecord *)
+          &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.dWork;
+        struct _ssDWorkAuxRecord *dWorkAuxRecord = (struct _ssDWorkAuxRecord *)
+          &cartesian_impedance_control_M->NonInlinedSFcns.Sfcn1.dWorkAux;
+        ssSetSFcnDWork(rts, dWorkRecord);
+        ssSetSFcnDWorkAux(rts, dWorkAuxRecord);
+        ssSetNumDWorkAsInt(rts, 1);
+
+        /* PWORK */
+        ssSetDWorkWidthAsInt(rts, 0, 8);
+        ssSetDWorkDataType(rts, 0,SS_POINTER);
+        ssSetDWorkComplexSignal(rts, 0, 0);
+        ssSetDWork(rts, 0, &cartesian_impedance_control_DW.SFunction2_PWORK[0]);
+      }
+
+      /* registration */
+      s_function_opti_robot_model_bus_fun(rts);
+      sfcnInitializeSizes(rts);
+      sfcnInitializeSampleTimes(rts);
+
+      /* adjust sample time */
+      ssSetSampleTime(rts, 0, 0.0);
+      ssSetOffsetTime(rts, 0, 0.0);
+      sfcnTsMap[0] = 0;
+
+      /* set compiled values of dynamic vector attributes */
+      ssSetNumNonsampledZCsAsInt(rts, 0);
+
+      /* Update connectivity flags for each port */
+      _ssSetInputPortConnected(rts, 0, 1);
+      _ssSetInputPortConnected(rts, 1, 1);
+      _ssSetOutputPortConnected(rts, 0, 1);
+      _ssSetOutputPortConnected(rts, 1, 1);
+      _ssSetOutputPortConnected(rts, 2, 1);
+      _ssSetOutputPortConnected(rts, 3, 1);
+      _ssSetOutputPortConnected(rts, 4, 1);
+      _ssSetOutputPortConnected(rts, 5, 1);
+      _ssSetOutputPortBeingMerged(rts, 0, 0);
+      _ssSetOutputPortBeingMerged(rts, 1, 0);
+      _ssSetOutputPortBeingMerged(rts, 2, 0);
+      _ssSetOutputPortBeingMerged(rts, 3, 0);
+      _ssSetOutputPortBeingMerged(rts, 4, 0);
+      _ssSetOutputPortBeingMerged(rts, 5, 0);
+
+      /* Update the BufferDstPort flags for each input port */
+      ssSetInputPortBufferDstPort(rts, 0, -1);
+      ssSetInputPortBufferDstPort(rts, 1, -1);
+    }
   }
 
   /* Matfile logging */
@@ -1014,10 +1333,10 @@ void cartesian_impedance_control_initialize(void)
   {
     char_T *sErr;
 
-    /* Start for S-Function (get_robot_state): '<S4>/Get Robot State2' */
+    /* Start for S-Function (get_robot_state): '<S6>/Get Robot State2' */
     {
       cartesian_impedance_control_DW.GetRobotState2_DWORK1 = (double)
-        simulinkPandaRobot_1721602.establishIfCurrentBlockFirstToBeComputed();
+        simulinkPandaRobot_17216102.establishIfCurrentBlockFirstToBeComputed();
     }
 
     /* Start for S-Function (sdspFromNetwork): '<Root>/UDP Receive from c 1' */
@@ -1055,7 +1374,7 @@ void cartesian_impedance_control_initialize(void)
     /* Start for Enabled SubSystem: '<Root>/UDP send to c' */
     cartesian_impedance_control_DW.UDPsendtoc_MODE = false;
 
-    /* Start for S-Function (sdspToNetwork): '<S5>/UDP Send' */
+    /* Start for S-Function (sdspToNetwork): '<S7>/UDP Send' */
     sErr = GetErrorBuffer(&cartesian_impedance_control_DW.UDPSend_NetworkLib[0U]);
     CreateUDPInterface(&cartesian_impedance_control_DW.UDPSend_NetworkLib[0U]);
     if (*sErr == 0) {
@@ -1077,34 +1396,34 @@ void cartesian_impedance_control_initialize(void)
       }
     }
 
-    /* End of Start for S-Function (sdspToNetwork): '<S5>/UDP Send' */
+    /* End of Start for S-Function (sdspToNetwork): '<S7>/UDP Send' */
     /* End of Start for SubSystem: '<Root>/UDP send to c' */
 
     /* Start for S-Function (get_model): '<S1>/Get Model' */
     {
       cartesian_impedance_control_DW.GetModel_DWORK1 = (double)
-        simulinkPandaRobot_1721602.establishIfCurrentBlockFirstToBeComputed();
+        simulinkPandaRobot_17216102.establishIfCurrentBlockFirstToBeComputed();
     }
 
     /* Start for S-Function (get_robot_state): '<Root>/Get Robot State' */
     {
       cartesian_impedance_control_DW.GetRobotState_DWORK1 = (double)
-        simulinkPandaRobot_1721602.establishIfCurrentBlockFirstToBeComputed();
+        simulinkPandaRobot_17216102.establishIfCurrentBlockFirstToBeComputed();
     }
 
     /* Start for S-Function (get_initial_robot_state): '<Root>/Get Initial Robot State' */
     {
       cartesian_impedance_control_DW.GetInitialRobotState_DWORK1 = 0;
       cartesian_impedance_control_DW.GetInitialRobotState_DWORK2 = (double)
-        simulinkPandaRobot_1721602.establishIfCurrentBlockFirstToBeComputed();
+        simulinkPandaRobot_17216102.establishIfCurrentBlockFirstToBeComputed();
     }
 
-    /* Start for S-Function (apply_control): '<S4>/Apply Control' */
+    /* Start for S-Function (apply_control): '<S6>/Apply Control' */
     {
       //Flag for performing initialization in first run of main _step();
       cartesian_impedance_control_DW.ApplyControl_DWORK1 = 0;
       cartesian_impedance_control_DW.ApplyControl_DWORK2 = (double)
-        simulinkPandaRobot_1721602.establishIfCurrentBlockFirstToBeComputed();
+        simulinkPandaRobot_17216102.establishIfCurrentBlockFirstToBeComputed();
     }
   }
 
@@ -1120,13 +1439,13 @@ void cartesian_impedance_control_initialize(void)
   cartesian_impedance_control_DW.Memory2_PreviousInput =
     cartesian_impedance_control_P.Memory2_InitialCondition;
 
-  /* InitializeConditions for RateLimiter: '<S4>/Rate Limiter' */
+  /* InitializeConditions for RateLimiter: '<S6>/Rate Limiter' */
   for (int32_T i = 0; i < 7; i++) {
     cartesian_impedance_control_DW.PrevY[i] =
       cartesian_impedance_control_P.RateLimiter_IC;
   }
 
-  /* End of InitializeConditions for RateLimiter: '<S4>/Rate Limiter' */
+  /* End of InitializeConditions for RateLimiter: '<S6>/Rate Limiter' */
 }
 
 /* Model terminate function */
@@ -1156,8 +1475,15 @@ void cartesian_impedance_control_terminate(void)
     sfcnTerminate(rts);
   }
 
+  /* Terminate for S-Function (s_function_opti_robot_model_bus_fun): '<Root>/S-Function2' */
+  /* Level2 S-Function Block: '<Root>/S-Function2' (s_function_opti_robot_model_bus_fun) */
+  {
+    SimStruct *rts = cartesian_impedance_control_M->childSfunctions[1];
+    sfcnTerminate(rts);
+  }
+
   /* Terminate for Enabled SubSystem: '<Root>/UDP send to c' */
-  /* Terminate for S-Function (sdspToNetwork): '<S5>/UDP Send' */
+  /* Terminate for S-Function (sdspToNetwork): '<S7>/UDP Send' */
   sErr = GetErrorBuffer(&cartesian_impedance_control_DW.UDPSend_NetworkLib[0U]);
   LibTerminate(&cartesian_impedance_control_DW.UDPSend_NetworkLib[0U]);
   if (*sErr != 0) {
@@ -1168,10 +1494,10 @@ void cartesian_impedance_control_terminate(void)
   LibDestroy(&cartesian_impedance_control_DW.UDPSend_NetworkLib[0U], 1);
   DestroyUDPInterface(&cartesian_impedance_control_DW.UDPSend_NetworkLib[0U]);
 
-  /* End of Terminate for S-Function (sdspToNetwork): '<S5>/UDP Send' */
+  /* End of Terminate for S-Function (sdspToNetwork): '<S7>/UDP Send' */
   /* End of Terminate for SubSystem: '<Root>/UDP send to c' */
-  /* Terminate for S-Function (apply_control): '<S4>/Apply Control' */
+  /* Terminate for S-Function (apply_control): '<S6>/Apply Control' */
   {
-    /* S-Function Block: <S4>/Apply Control */
+    /* S-Function Block: <S6>/Apply Control */
   }
 }
