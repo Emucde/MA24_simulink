@@ -7,7 +7,7 @@
 #define MPC8_IW_LEN 870
 #define MPC8_ARG_LEN 23
 #define MPC8_RES_LEN 17
-#define MPC8_W_LEN 9606
+#define MPC8_W_LEN 10406
 static const uint32_t MPC8_ARG[] = {0,54,330};
 static const uint32_t MPC8_RES[] = {510,516,792,793,794,795,796};
 #define MPC8_W_END_ADDRESS 797

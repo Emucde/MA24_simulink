@@ -55,5 +55,8 @@ for i = 1:length(folder_add_to_path)
     end
 end
 
-robot_name_old = robot_name;
-save('./utils/matlab_init_general/old_robot_name.mat', 'robot_name_old');
+if(~strcmp(robot_name, robot_name_old))
+    robot_name_old = robot_name;
+    save('./utils/matlab_init_general/old_robot_name.mat', 'robot_name_old');
+    disp('Paths changed successfully!')
+end

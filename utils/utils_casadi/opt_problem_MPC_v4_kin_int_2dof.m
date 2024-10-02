@@ -1,12 +1,18 @@
 % MPC v4: Optimization problem 
+% q = [q1, q2, q3, q4, q5, q6, q7]
+% ONLY JOINTS A2 (q2) and A4 (q4) are used!
 
 import casadi.*
 
-n = param_robot.n_DOF; % Dimension of joint space
-m = param_robot.m; % Dimension of Task Space
+n = 2; % Dimension of joint space
+m = 2; % Dimension of Task Space
 
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
-quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
+quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']); % here not needed
+
+q = SX.sym( 'q',  n,   N_MPC   );
+q_subs = vertcat([0 q(1) 0 q(2) 0 0]);
+H_2dof = hom_transform_endeffector_py_fun(q_subs);
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
@@ -171,6 +177,10 @@ J_yt   = Q_norm_square( y(1:3, 1 + (2:N_MPC-1) ) - y_d(1:3, 1 + (2:N_MPC-1)), pp
 J_yt = J_yt + Q_norm_square( y(1:3, 1 + ( 1       ) ) - y_d(1:3, 1 + ( 1       )), pp.Q_ykp1(1:3,1:3));
 J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp.Q_yN(1:3,1:3)  );
 
+% J_yt   = Q_norm_square( y(3, 1 + (2:N_MPC-1) ) - y_d(3, 1 + (2:N_MPC-1)), pp.Q_y( 3,3)  );
+% J_yt = J_yt + Q_norm_square( y(3, 1 + ( 1       ) ) - y_d(3, 1 + ( 1       )), pp.Q_ykp1(3,3));
+% J_yt_N = Q_norm_square( y(3, 1 + (  N_MPC  ) ) - y_d(3, 1 + (  N_MPC  )), pp.Q_yN(3,3)  );
+
 J_yr = 0;
 for i=1:N_MPC
     % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
@@ -186,6 +196,9 @@ for i=1:N_MPC
         J_yr_N = Q_norm_square( q_y_yr_err(2:4) , pp.Q_yN(4:6,4:6)  );
     end
 end
+
+% J_yr = 0;
+% J_yr_N = 0;
 
 g = g_x;
 
