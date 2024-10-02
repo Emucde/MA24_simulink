@@ -310,19 +310,14 @@ if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
 end
 
 %% COMPILE (nlpsol)
-compile_mode = 2;% [TODO]
-f_opt = Function.load('s_functions/fr3_no_hand_6dof/casadi_functions/sys_fun_qpp_aba_py.casadi');
-%f_opt = Function.load('s_functions/fr3_no_hand_6dof/casadi_functions/hom_transform_endeffector_py.casadi');
 if(compile_sfun)
     if(compile_mode == 1)
         tic;
-        s_fun_name = 's_function_nlpsol.c';
-        compile_casadi_sfunction(f_opt, s_fun_name, output_dir, MPC_solver, '-O3', compile_mode); % default nlpsol s-function
+        compile_casadi_sfunction(f_opt, [s_fun_path, '/'], output_dir, MPC_solver, '-O3', compile_mode); % default nlpsol s-function
         disp(['Compile time for casadi s-function (nlpsol): ', num2str(toc), ' s']);
     elseif(compile_mode == 2)
         tic;
-        s_fun_name = 's_function_opti.c';
-        compile_casadi_sfunction(f_opt, s_fun_name, output_dir, MPC_solver, '-O2', compile_mode); % default opti s-function
+        compile_casadi_sfunction(f_opt, [s_fun_path, '/'], output_dir, MPC_solver, '-O2', compile_mode); % default opti s-function
         disp(['Compile time for casadi s-function (opti for nlpsol): ', num2str(toc), ' s']);
     end
 end
