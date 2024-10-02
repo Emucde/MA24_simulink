@@ -11,8 +11,8 @@ hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_ende
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']); % here not needed
 
 q = SX.sym( 'q',  n,   N_MPC   );
-q_subs = vertcat([0 q(1) 0 q(2) 0 0]);
-H_2dof = hom_transform_endeffector_py_fun(q_subs);
+q_subs = vertcat([q_0(1) q(1) q_0(3) q(2) q_0(5) q_0(6)]);
+H_2dof = Function('H_2dof', {q}, {hom_transform_endeffector_py_fun(q_subs)});
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval

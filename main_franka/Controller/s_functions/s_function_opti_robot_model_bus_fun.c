@@ -61,7 +61,6 @@ static void mdlInitializeSizes(SimStruct *S)
 }*/
 
 
-
 /* Function: mdlInitializeSampleTimes =========================================
  * Abstract:
  *    Specifiy that we inherit our sample time from the driving block.

@@ -153,6 +153,7 @@ sys_fun_x_aba = cs.Function('sys_fun_x_aba', [x, u], [cs.vertcat(x[n:2*n], sys_f
 sys_fun_x_sol = cs.Function('sys_fun_x_sol', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp_sol(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u) (sol)'])
 
 robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'g(q)'])
+# robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), C(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'C(q, q_p)', 'g(q)'])
 
 # get hom. transformation matrices of all joints
 joint_names = casadi_model.names.tolist() # first joint is 'universal_joint' (ignore it)

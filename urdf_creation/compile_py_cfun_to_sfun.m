@@ -73,9 +73,9 @@ try
     compile_multiple_cfun(fun_arr_sfun, s_fun_path, input_dir, output_dir, opt_flag, compile_mode, true);
     fprintf('\n--------------------------------------------------------------------\n\n');
 
-    disp('Compile casadi functions to s-functions for realtime simulink:');
-    compile_multiple_cfun(fun_arr_sfun_realtime, s_fun_path, input_dir, output_dir_realtime, opt_flag, compile_mode, false);
-    fprintf('\n--------------------------------------------------------------------\n\n');
+    % disp('Compile casadi functions to s-functions for realtime simulink:');
+    % compile_multiple_cfun(fun_arr_sfun_realtime, s_fun_path, input_dir, output_dir_realtime, opt_flag, compile_mode, false);
+    % fprintf('\n--------------------------------------------------------------------\n\n');
 catch ME
     disp('Error in compile_py_cfun_to_sfun.m')
     fprintf(2, 'Error: %s\n', getReport(ME));

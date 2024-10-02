@@ -7,9 +7,9 @@
  *
  * Code generation for model "cartesian_impedance_control".
  *
- * Model version              : 8.47
+ * Model version              : 8.68
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Wed Oct  2 11:53:02 2024
+ * C++ source code generated on : Wed Oct  2 17:07:10 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -31,9 +31,13 @@
 #include "gripper_api.h"
 #include "DAHostLib_Network.h"
 #include "cartesian_impedance_control_types.h"
-#include <string.h>
-#include <stddef.h>
-#include <float.h>
+
+extern "C"
+{
+
+#include "rtGetNaN.h"
+
+}
 
 extern "C"
 {
@@ -41,6 +45,18 @@ extern "C"
 #include "rt_nonfinite.h"
 
 }
+
+#include <string.h>
+#include <stddef.h>
+
+extern "C"
+{
+
+#include "rtGetInf.h"
+
+}
+
+#include <float.h>
 
 /* Macros for accessing real-time model data structure */
 #ifndef rtmGetContTimeOutputInconsistentWithStateAtMajorStepFlag
@@ -133,10 +149,10 @@ extern "C"
 
 /* Block signals (default storage) */
 struct B_cartesian_impedance_control_T {
-  real_T GetRobotState2_o1[7];         /* '<S6>/Get Robot State2' */
-  real_T GetRobotState2_o2[7];         /* '<S6>/Get Robot State2' */
-  real_T GetRobotState2_o3[6];         /* '<S6>/Get Robot State2' */
-  real_T Switch[7];                    /* '<S6>/Switch' */
+  real_T GetRobotState2_o1[7];         /* '<S7>/Get Robot State2' */
+  real_T GetRobotState2_o2[7];         /* '<S7>/Get Robot State2' */
+  real_T GetRobotState2_o3[6];         /* '<S7>/Get Robot State2' */
+  real_T Switch[7];                    /* '<S7>/Switch' */
   real_T u_opt[31];                    /* '<Root>/UDP Receive from c 1' */
   real_T Constant3[6];                 /* '<Root>/Constant3' */
   real_T SFunction1[6];                /* '<Root>/S-Function1' */
@@ -146,16 +162,16 @@ struct B_cartesian_impedance_control_T {
   real_T M[36];                        /* '<Root>/S-Function2' */
   real_T Cg[6];                        /* '<Root>/S-Function2' */
   real_T g[6];                         /* '<Root>/S-Function2' */
-  real_T GetModel_o1[16];              /* '<S1>/Get Model' */
-  real_T GetModel_o2[42];              /* '<S1>/Get Model' */
-  real_T GetModel_o3[42];              /* '<S1>/Get Model' */
-  real_T GetModel_o4[49];              /* '<S1>/Get Model' */
-  real_T coriolis[7];                  /* '<S1>/Get Model' */
-  real_T GetModel_o6[7];               /* '<S1>/Get Model' */
+  real_T GetModel_o1[16];              /* '<S2>/Get Model' */
+  real_T GetModel_o2[42];              /* '<S2>/Get Model' */
+  real_T GetModel_o3[42];              /* '<S2>/Get Model' */
+  real_T GetModel_o4[49];              /* '<S2>/Get Model' */
+  real_T coriolis[7];                  /* '<S2>/Get Model' */
+  real_T GetModel_o6[7];               /* '<S2>/Get Model' */
   real_T GetRobotState_o1[16];         /* '<Root>/Get Robot State' */
   real_T GetRobotState_o2[7];          /* '<Root>/Get Robot State' */
   real_T GetInitialRobotState[16];     /* '<Root>/Get Initial Robot State' */
-  real_T RateLimiter[7];               /* '<S6>/Rate Limiter' */
+  real_T RateLimiter[7];               /* '<S7>/Rate Limiter' */
   real_T q_o[6];                       /* '<Root>/get x' */
   real_T q_p_0[6];                     /* '<Root>/get x' */
   real_T TmpSignalConversionAtUDPSendInp[15];
@@ -167,29 +183,35 @@ struct B_cartesian_impedance_control_T {
   real_T send_cnt;                     /* '<Root>/MATLAB Function' */
   real_T init_cnt_o;                   /* '<Root>/MATLAB Function' */
   real_T data_cnt_o;                   /* '<Root>/MATLAB Function' */
+  real_T tau[6];                       /* '<Root>/CT controller' */
   uint16_T UDPReceivefromc1_o2;        /* '<Root>/UDP Receive from c 1' */
 };
 
 /* Block states (default storage) for system '<Root>' */
 struct DW_cartesian_impedance_control_T {
-  real_T GetRobotState2_DWORK1;        /* '<S6>/Get Robot State2' */
+  real_T GetRobotState2_DWORK1;        /* '<S7>/Get Robot State2' */
   real_T UDPReceivefromc1_NetworkLib[137];/* '<Root>/UDP Receive from c 1' */
   real_T Memory_PreviousInput;         /* '<Root>/Memory' */
   real_T Memory1_PreviousInput;        /* '<Root>/Memory1' */
   real_T Memory2_PreviousInput;        /* '<Root>/Memory2' */
-  real_T GetModel_DWORK1;              /* '<S1>/Get Model' */
+  real_T GetModel_DWORK1;              /* '<S2>/Get Model' */
   real_T GetRobotState_DWORK1;         /* '<Root>/Get Robot State' */
   real_T GetInitialRobotState_DWORK1;  /* '<Root>/Get Initial Robot State' */
   real_T GetInitialRobotState_DWORK2;  /* '<Root>/Get Initial Robot State' */
-  real_T PrevY[7];                     /* '<S6>/Rate Limiter' */
-  real_T ApplyControl_DWORK1;          /* '<S6>/Apply Control' */
-  real_T ApplyControl_DWORK2;          /* '<S6>/Apply Control' */
-  real_T UDPSend_NetworkLib[137];      /* '<S7>/UDP Send' */
+  real_T PrevY[7];                     /* '<S7>/Rate Limiter' */
+  real_T ApplyControl_DWORK1;          /* '<S7>/Apply Control' */
+  real_T ApplyControl_DWORK2;          /* '<S7>/Apply Control' */
+  real_T cnt;                          /* '<Root>/get data' */
+  real_T UDPSend_NetworkLib[137];      /* '<S8>/UDP Send' */
   void *SFunction1_PWORK[4];           /* '<Root>/S-Function1' */
   void *SFunction2_PWORK[8];           /* '<Root>/S-Function2' */
   struct {
     void *LoggedData[3];
   } Scope_PWORK;                       /* '<Root>/Scope' */
+
+  struct {
+    void *LoggedData;
+  } Scope5_PWORK;                      /* '<Root>/Scope5' */
 
   struct {
     void *LoggedData[3];
@@ -204,23 +226,27 @@ struct DW_cartesian_impedance_control_T {
   } Scope1_PWORK;                      /* '<Root>/Scope1' */
 
   int8_T UDPsendtoc_SubsysRanBC;       /* '<Root>/UDP send to c' */
+  boolean_T q_old_not_empty;           /* '<Root>/CT controller' */
   boolean_T UDPsendtoc_MODE;           /* '<Root>/UDP send to c' */
 };
 
 /* Parameters (default storage) */
 struct P_cartesian_impedance_control_T_ {
+  struct_ORyNrVSSEspV4i2F61GoeD ct_ctrl_param;/* Variable: ct_ctrl_param
+                                               * Referenced by: '<Root>/CT controller'
+                                               */
   real_T q_init[7];                    /* Variable: q_init
-                                        * Referenced by: '<S6>/Constant'
+                                        * Referenced by: '<S7>/Constant'
                                         */
   int32_T UDPReceivefromc1_localPort;
                                    /* Mask Parameter: UDPReceivefromc1_localPort
                                     * Referenced by: '<Root>/UDP Receive from c 1'
                                     */
   int32_T UDPSend_remotePort;          /* Mask Parameter: UDPSend_remotePort
-                                        * Referenced by: '<S7>/UDP Send'
+                                        * Referenced by: '<S8>/UDP Send'
                                         */
   real_T Switch_Threshold;             /* Expression: 0.001
-                                        * Referenced by: '<S6>/Switch'
+                                        * Referenced by: '<S7>/Switch'
                                         */
   real_T Memory_InitialCondition;      /* Expression: 0
                                         * Referenced by: '<Root>/Memory'
@@ -236,38 +262,44 @@ struct P_cartesian_impedance_control_T_ {
                                         */
   real_T stiffness_Value[36];
                           /* Expression: diag([600, 600, 600, 50.0, 50.0, 50.0])
-                           * Referenced by: '<S1>/stiffness'
+                           * Referenced by: '<S2>/stiffness'
                            */
   real_T damping_Value[36];
             /* Expression: diag(2*sqrt([150.0, 150.0, 150.0, 50.0, 50.0, 50.0]))
-             * Referenced by: '<S1>/damping'
+             * Referenced by: '<S2>/damping'
              */
+  real_T Constant5_Value;              /* Expression: 5
+                                        * Referenced by: '<Root>/Constant5'
+                                        */
+  real_T Constant4_Value;              /* Expression: 1
+                                        * Referenced by: '<Root>/Constant4'
+                                        */
   real_T RateLimiter_RisingLim;        /* Expression: 1000
-                                        * Referenced by: '<S6>/Rate Limiter'
+                                        * Referenced by: '<S7>/Rate Limiter'
                                         */
   real_T RateLimiter_FallingLim;       /* Expression: -1000
-                                        * Referenced by: '<S6>/Rate Limiter'
+                                        * Referenced by: '<S7>/Rate Limiter'
                                         */
   real_T RateLimiter_IC;               /* Expression: 0
-                                        * Referenced by: '<S6>/Rate Limiter'
+                                        * Referenced by: '<S7>/Rate Limiter'
                                         */
   real_T ApplyControl_P1[52];          /* Expression: collision_thresholds
-                                        * Referenced by: '<S6>/Apply Control'
+                                        * Referenced by: '<S7>/Apply Control'
                                         */
   real_T ApplyControl_P2[7];           /* Expression: joint_impedance
-                                        * Referenced by: '<S6>/Apply Control'
+                                        * Referenced by: '<S7>/Apply Control'
                                         */
   real_T ApplyControl_P3[6];           /* Expression: cartesian_impedance
-                                        * Referenced by: '<S6>/Apply Control'
+                                        * Referenced by: '<S7>/Apply Control'
                                         */
   real_T ApplyControl_P4[13];          /* Expression: load_inertia
-                                        * Referenced by: '<S6>/Apply Control'
+                                        * Referenced by: '<S7>/Apply Control'
                                         */
   real_T ApplyControl_P5[16];          /* Expression: EE_T_K
-                                        * Referenced by: '<S6>/Apply Control'
+                                        * Referenced by: '<S7>/Apply Control'
                                         */
   real_T ApplyControl_P6[7];           /* Expression: init_joint_configuration
-                                        * Referenced by: '<S6>/Apply Control'
+                                        * Referenced by: '<S7>/Apply Control'
                                         */
 };
 
@@ -496,14 +528,16 @@ extern "C"
  * Here is the system hierarchy for this model
  *
  * '<Root>' : 'cartesian_impedance_control'
- * '<S1>'   : 'cartesian_impedance_control/Cartesian Impedance Controller'
- * '<S2>'   : 'cartesian_impedance_control/MATLAB Function'
- * '<S3>'   : 'cartesian_impedance_control/MATLAB Function1'
- * '<S4>'   : 'cartesian_impedance_control/MATLAB Function2'
- * '<S5>'   : 'cartesian_impedance_control/Robot model bus'
- * '<S6>'   : 'cartesian_impedance_control/Subsystem'
- * '<S7>'   : 'cartesian_impedance_control/UDP send to c'
- * '<S8>'   : 'cartesian_impedance_control/get x'
- * '<S9>'   : 'cartesian_impedance_control/Cartesian Impedance Controller/MATLAB Function'
+ * '<S1>'   : 'cartesian_impedance_control/CT controller'
+ * '<S2>'   : 'cartesian_impedance_control/Cartesian Impedance Controller'
+ * '<S3>'   : 'cartesian_impedance_control/MATLAB Function'
+ * '<S4>'   : 'cartesian_impedance_control/MATLAB Function1'
+ * '<S5>'   : 'cartesian_impedance_control/MATLAB Function2'
+ * '<S6>'   : 'cartesian_impedance_control/Robot model bus'
+ * '<S7>'   : 'cartesian_impedance_control/Subsystem'
+ * '<S8>'   : 'cartesian_impedance_control/UDP send to c'
+ * '<S9>'   : 'cartesian_impedance_control/get data'
+ * '<S10>'  : 'cartesian_impedance_control/get x'
+ * '<S11>'  : 'cartesian_impedance_control/Cartesian Impedance Controller/MATLAB Function'
  */
 #endif                           /* RTW_HEADER_cartesian_impedance_control_h_ */

@@ -35,9 +35,9 @@ const casadi_int* robot_model_bus_fun_sparsity_out(casadi_int i);
 int robot_model_bus_fun_work(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_int *sz_w);
 int robot_model_bus_fun_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_int *sz_w);
 #define robot_model_bus_fun_SZ_ARG 2
-#define robot_model_bus_fun_SZ_RES 6
+#define robot_model_bus_fun_SZ_RES 7
 #define robot_model_bus_fun_SZ_IW 0
-#define robot_model_bus_fun_SZ_W 172
+#define robot_model_bus_fun_SZ_W 384
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

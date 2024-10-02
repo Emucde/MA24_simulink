@@ -20,7 +20,7 @@ fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 %x_traj_out_of_workspace_value = 0.1;
 
 plot_trajectory = ~true;
-overwrite_offline_traj_forced = false;
+overwrite_offline_traj_forced = ~false;
 
 % set_param(gcs,'Profile','off'); % turn off profiler when not needed anymore
 
@@ -80,7 +80,7 @@ init_MPC_weights; %% set MPC weights
 
 param_ct_control_init;
 
-overwrite_offline_traj = false; create_trajectories;
+create_trajectories;
 
 change_simulink_traj_combo_box; % saves system!
 

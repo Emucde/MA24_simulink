@@ -1,8 +1,19 @@
 addpath(genpath('../'));
 addpath(genpath('../../utils/matlab_init_general/'));
+addpath(genpath('../../utils/matlab_utils/'));
 
 n=6;
+T_sim = 10;
+
 bus_definitions;
+robot_name = 'fr3_no_hand_6dof';
+param_robot_init;
+param_ct_control_init;
+
+load('../../s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.mat');
+param_traj_data.N = length(param_traj_data.t);
+
+% TODO: robot model bus mit C
 
 robot_ip = '172.16.10.2';
 % restoredefaultpath

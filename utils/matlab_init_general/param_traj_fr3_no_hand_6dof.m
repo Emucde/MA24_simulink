@@ -94,6 +94,30 @@ traj_struct.name = 'Wrist Singularity 1, Sinus, Workspace';
 traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 
+% q_0 = [q1 q2 q4 q5 q6 q7]
+q_0 = [0, -pi/4, -3 * pi/4, 0, pi/2, pi/4]'; % q3 is per default 0 (not used)
+q_T = [0, -pi/4, -3 * pi/4 + 0.1, 0, pi/2, pi/4]'; % q3 is per default 0 (not used)
+H_0 = hom_transform_endeffector_py(q_0);
+R_init = quat2rotm_v2(xe0(4:7));
+
+% Trajectory 5: 2DOF q2, q4 joint space
+traj_struct = struct;
+traj_struct.q_0 = q_0;
+traj_struct.q_0_p = zeros(n,1);
+traj_struct.q_0_pp = zeros(n,1);
+traj_struct.joint_points = [q_0, q_T, q_0];
+traj_struct.pose = [-1, -1, -1].*ones(m+1,1);
+traj_struct.rotation = cat(3, R_init, R_init, R_init);
+traj_struct.time = [0; T_sim/2; T_sim];
+traj_struct.traj_type = [traj_mode.polynomial_jointspace];
+traj_struct.N = 3;
+traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -3.5); % Param differential filter 5th order trajectory
+traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
+traj_struct = create_param_sin_poly(traj_struct, param_global, 'T', 1, 'phi', 0); % Param for sinus poly trajectory
+traj_struct.name = '2DOF Test Trajectory, Polynomial, joint space';
+traj_cell{cnt} = traj_struct;
+cnt = cnt+1;
+
 function out = kin_fun(xe, q)
     H = hom_transform_endeffector_py(q);
     

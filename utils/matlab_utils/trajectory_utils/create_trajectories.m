@@ -19,6 +19,8 @@ traj_mode.polynomial = 4;
 traj_mode.polynomial_jointspace = 5;
 traj_mode.sinus = 6;
 
+overwrite_offline_traj = false; 
+
 %%%%%%%%%%%%%%%%%%%% CREATE TRAJECTORY %%%%%%%%%%%%%%%%%%%%%
 try
     if(overwrite_offline_traj || overwrite_offline_traj_forced)
