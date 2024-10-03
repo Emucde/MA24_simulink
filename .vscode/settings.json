@@ -78,12 +78,12 @@
   "C_Cpp_Runner.useLinkTimeOptimization": false,
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "terminal.integrated.profiles.linux": {
-      "bash": {
-          "path": "/bin/bash",
-          "icon": "terminal-bash",
-          "args": [
-              "-l"
-          ]
-      }
+    "bash": {
+      "path": "/bin/bash",
+      "icon": "terminal-bash",
+      "args": [
+        "-l"
+      ]
+    }
   }
 }

@@ -40,7 +40,8 @@ param_weight_str_cell = sxcell2str(struct2cell(pp)');
 
 %% OUTPUTS
 
-u_opt_indices_new = reshape(u_opt_indices, n, []);
+% u_opt_indices_new = reshape(u_opt_indices, n, []);
+u_opt_indices_new = u_opt_indices(:);
 
 u_opt_sx_vals = w(u_opt_indices_new);
 u_opt_sx_cell = num2cell(u_opt_sx_vals, 1);

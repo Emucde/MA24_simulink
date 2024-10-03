@@ -246,6 +246,8 @@ x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
 uu_indices = reshape(1:numel(u), size(u));
 xx_indices = reshape(1+numel(u):numel(u)+numel(x), size(x));
 
+n=2; %%%%%%%%%%%°!!
+
 qq_indices_arr  = xx_indices(1:n, :);
 qqp_indices_arr = xx_indices(n+1:end, :);
 

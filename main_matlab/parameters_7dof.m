@@ -78,7 +78,7 @@ bus_definitions;
 
 init_MPC_weights; %% set MPC weights
 
-param_ct_pdplus_control_init.m;
+param_ct_pdplus_control_init;
 
 create_trajectories;
 

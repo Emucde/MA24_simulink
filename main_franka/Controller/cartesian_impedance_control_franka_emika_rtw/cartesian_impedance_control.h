@@ -7,9 +7,9 @@
  *
  * Code generation for model "cartesian_impedance_control".
  *
- * Model version              : 8.68
+ * Model version              : 8.98
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Wed Oct  2 17:07:10 2024
+ * C++ source code generated on : Thu Oct  3 17:11:54 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -21,23 +21,19 @@
 #ifndef RTW_HEADER_cartesian_impedance_control_h_
 #define RTW_HEADER_cartesian_impedance_control_h_
 #include "rtwtypes.h"
-#include "simstruc.h"
-#include "fixedpoint.h"
+#include "rtw_extmode.h"
+#include "sysran_types.h"
+#include "rtw_continuous.h"
+#include "rtw_solver.h"
 #include "rt_logging.h"
 #include "ext_work.h"
 #include "robot_api.h"
-#include "franka/model.h"
 #include "control_modes.h"
 #include "gripper_api.h"
-#include "DAHostLib_Network.h"
 #include "cartesian_impedance_control_types.h"
-
-extern "C"
-{
-
-#include "rtGetNaN.h"
-
-}
+#include <float.h>
+#include <stddef.h>
+#include <string.h>
 
 extern "C"
 {
@@ -46,35 +42,7 @@ extern "C"
 
 }
 
-#include <string.h>
-#include <stddef.h>
-
-extern "C"
-{
-
-#include "rtGetInf.h"
-
-}
-
-#include <float.h>
-
 /* Macros for accessing real-time model data structure */
-#ifndef rtmGetContTimeOutputInconsistentWithStateAtMajorStepFlag
-#define rtmGetContTimeOutputInconsistentWithStateAtMajorStepFlag(rtm) ((rtm)->CTOutputIncnstWithState)
-#endif
-
-#ifndef rtmSetContTimeOutputInconsistentWithStateAtMajorStepFlag
-#define rtmSetContTimeOutputInconsistentWithStateAtMajorStepFlag(rtm, val) ((rtm)->CTOutputIncnstWithState = (val))
-#endif
-
-#ifndef rtmGetDerivCacheNeedsReset
-#define rtmGetDerivCacheNeedsReset(rtm) ((rtm)->derivCacheNeedsReset)
-#endif
-
-#ifndef rtmSetDerivCacheNeedsReset
-#define rtmSetDerivCacheNeedsReset(rtm, val) ((rtm)->derivCacheNeedsReset = (val))
-#endif
-
 #ifndef rtmGetFinalTime
 #define rtmGetFinalTime(rtm)           ((rtm)->Timing.tFinal)
 #endif
@@ -85,26 +53,6 @@ extern "C"
 
 #ifndef rtmGetRTWLogInfo
 #define rtmGetRTWLogInfo(rtm)          ((rtm)->rtwLogInfo)
-#endif
-
-#ifndef rtmGetSampleHitArray
-#define rtmGetSampleHitArray(rtm)      ((rtm)->Timing.sampleHitArray)
-#endif
-
-#ifndef rtmGetStepSize
-#define rtmGetStepSize(rtm)            ((rtm)->Timing.stepSize)
-#endif
-
-#ifndef rtmGetZCCacheNeedsReset
-#define rtmGetZCCacheNeedsReset(rtm)   ((rtm)->zCCacheNeedsReset)
-#endif
-
-#ifndef rtmSetZCCacheNeedsReset
-#define rtmSetZCCacheNeedsReset(rtm, val) ((rtm)->zCCacheNeedsReset = (val))
-#endif
-
-#ifndef rtmGet_TimeOfLastOutput
-#define rtmGet_TimeOfLastOutput(rtm)   ((rtm)->Timing.timeOfLastOutput)
 #endif
 
 #ifndef rtmGetErrorStatus
@@ -139,242 +87,78 @@ extern "C"
 #define rtmGetTPtr(rtm)                ((rtm)->Timing.t)
 #endif
 
-#ifndef rtmGetTStart
-#define rtmGetTStart(rtm)              ((rtm)->Timing.tStart)
-#endif
-
-#ifndef rtmGetTimeOfLastOutput
-#define rtmGetTimeOfLastOutput(rtm)    ((rtm)->Timing.timeOfLastOutput)
-#endif
-
 /* Block signals (default storage) */
 struct B_cartesian_impedance_control_T {
-  real_T GetRobotState2_o1[7];         /* '<S7>/Get Robot State2' */
-  real_T GetRobotState2_o2[7];         /* '<S7>/Get Robot State2' */
-  real_T GetRobotState2_o3[6];         /* '<S7>/Get Robot State2' */
-  real_T Switch[7];                    /* '<S7>/Switch' */
-  real_T u_opt[31];                    /* '<Root>/UDP Receive from c 1' */
-  real_T Constant3[6];                 /* '<Root>/Constant3' */
-  real_T SFunction1[6];                /* '<Root>/S-Function1' */
-  real_T H[16];                        /* '<Root>/S-Function2' */
-  real_T J[36];                        /* '<Root>/S-Function2' */
-  real_T J_p[36];                      /* '<Root>/S-Function2' */
-  real_T M[36];                        /* '<Root>/S-Function2' */
-  real_T Cg[6];                        /* '<Root>/S-Function2' */
-  real_T g[6];                         /* '<Root>/S-Function2' */
-  real_T GetModel_o1[16];              /* '<S2>/Get Model' */
-  real_T GetModel_o2[42];              /* '<S2>/Get Model' */
-  real_T GetModel_o3[42];              /* '<S2>/Get Model' */
-  real_T GetModel_o4[49];              /* '<S2>/Get Model' */
-  real_T coriolis[7];                  /* '<S2>/Get Model' */
-  real_T GetModel_o6[7];               /* '<S2>/Get Model' */
-  real_T GetRobotState_o1[16];         /* '<Root>/Get Robot State' */
-  real_T GetRobotState_o2[7];          /* '<Root>/Get Robot State' */
-  real_T GetInitialRobotState[16];     /* '<Root>/Get Initial Robot State' */
-  real_T RateLimiter[7];               /* '<S7>/Rate Limiter' */
-  real_T q_o[6];                       /* '<Root>/get x' */
-  real_T q_p_0[6];                     /* '<Root>/get x' */
-  real_T TmpSignalConversionAtUDPSendInp[15];
-  real_T x;                            /* '<Root>/MATLAB Function2' */
-  real_T y;                            /* '<Root>/MATLAB Function2' */
-  real_T z;                            /* '<Root>/MATLAB Function2' */
-  real_T enable_out;                   /* '<Root>/MATLAB Function1' */
-  real_T cnt_o;                        /* '<Root>/MATLAB Function1' */
-  real_T send_cnt;                     /* '<Root>/MATLAB Function' */
-  real_T init_cnt_o;                   /* '<Root>/MATLAB Function' */
-  real_T data_cnt_o;                   /* '<Root>/MATLAB Function' */
-  real_T tau[6];                       /* '<Root>/CT controller' */
-  uint16_T UDPReceivefromc1_o2;        /* '<Root>/UDP Receive from c 1' */
+  real_T GetRobotState2_o1[7];         /* '<S2>/Get Robot State2' */
+  real_T GetRobotState2_o2[7];         /* '<S2>/Get Robot State2' */
+  real_T GetRobotState2_o3[6];         /* '<S2>/Get Robot State2' */
+  real_T Switch[7];                    /* '<S2>/Switch' */
+  real_T RateLimiter[7];               /* '<S2>/Rate Limiter' */
 };
 
 /* Block states (default storage) for system '<Root>' */
-struct DW_cartesian_impedance_control_T {
-  real_T GetRobotState2_DWORK1;        /* '<S7>/Get Robot State2' */
-  real_T UDPReceivefromc1_NetworkLib[137];/* '<Root>/UDP Receive from c 1' */
-  real_T Memory_PreviousInput;         /* '<Root>/Memory' */
-  real_T Memory1_PreviousInput;        /* '<Root>/Memory1' */
-  real_T Memory2_PreviousInput;        /* '<Root>/Memory2' */
-  real_T GetModel_DWORK1;              /* '<S2>/Get Model' */
-  real_T GetRobotState_DWORK1;         /* '<Root>/Get Robot State' */
-  real_T GetInitialRobotState_DWORK1;  /* '<Root>/Get Initial Robot State' */
-  real_T GetInitialRobotState_DWORK2;  /* '<Root>/Get Initial Robot State' */
-  real_T PrevY[7];                     /* '<S7>/Rate Limiter' */
-  real_T ApplyControl_DWORK1;          /* '<S7>/Apply Control' */
-  real_T ApplyControl_DWORK2;          /* '<S7>/Apply Control' */
-  real_T cnt;                          /* '<Root>/get data' */
-  real_T UDPSend_NetworkLib[137];      /* '<S8>/UDP Send' */
-  void *SFunction1_PWORK[4];           /* '<Root>/S-Function1' */
-  void *SFunction2_PWORK[8];           /* '<Root>/S-Function2' */
+struct DW_cartesian_impedance_contro_T {
+  real_T GetRobotState2_DWORK1;        /* '<S2>/Get Robot State2' */
+  real_T PrevY[7];                     /* '<S2>/Rate Limiter' */
+  real_T ApplyControl_DWORK1;          /* '<S2>/Apply Control' */
+  real_T ApplyControl_DWORK2;          /* '<S2>/Apply Control' */
   struct {
     void *LoggedData[3];
   } Scope_PWORK;                       /* '<Root>/Scope' */
-
-  struct {
-    void *LoggedData;
-  } Scope5_PWORK;                      /* '<Root>/Scope5' */
-
-  struct {
-    void *LoggedData[3];
-  } Scope3_PWORK;                      /* '<Root>/Scope3' */
-
-  struct {
-    void *LoggedData[3];
-  } Scope4_PWORK;                      /* '<Root>/Scope4' */
-
-  struct {
-    void *LoggedData[2];
-  } Scope1_PWORK;                      /* '<Root>/Scope1' */
-
-  int8_T UDPsendtoc_SubsysRanBC;       /* '<Root>/UDP send to c' */
-  boolean_T q_old_not_empty;           /* '<Root>/CT controller' */
-  boolean_T UDPsendtoc_MODE;           /* '<Root>/UDP send to c' */
 };
 
 /* Parameters (default storage) */
 struct P_cartesian_impedance_control_T_ {
-  struct_ORyNrVSSEspV4i2F61GoeD ct_ctrl_param;/* Variable: ct_ctrl_param
-                                               * Referenced by: '<Root>/CT controller'
-                                               */
   real_T q_init[7];                    /* Variable: q_init
-                                        * Referenced by: '<S7>/Constant'
-                                        */
-  int32_T UDPReceivefromc1_localPort;
-                                   /* Mask Parameter: UDPReceivefromc1_localPort
-                                    * Referenced by: '<Root>/UDP Receive from c 1'
-                                    */
-  int32_T UDPSend_remotePort;          /* Mask Parameter: UDPSend_remotePort
-                                        * Referenced by: '<S8>/UDP Send'
+                                        * Referenced by: '<S2>/Constant'
                                         */
   real_T Switch_Threshold;             /* Expression: 0.001
-                                        * Referenced by: '<S7>/Switch'
+                                        * Referenced by: '<S2>/Switch'
                                         */
-  real_T Memory_InitialCondition;      /* Expression: 0
-                                        * Referenced by: '<Root>/Memory'
+  real_T Constant9_Value[7];           /* Expression: [0 0 0 0 0 0 0]
+                                        * Referenced by: '<Root>/Constant9'
                                         */
-  real_T Constant3_Value[6];           /* Expression: zeros(6,1)
-                                        * Referenced by: '<Root>/Constant3'
+  real_T Constant8_Value[7];           /* Expression: [100 200 500 10 0 0 0]
+                                        * Referenced by: '<Root>/Constant8'
                                         */
-  real_T Memory1_InitialCondition;     /* Expression: 0
-                                        * Referenced by: '<Root>/Memory1'
-                                        */
-  real_T Memory2_InitialCondition;     /* Expression: 0
-                                        * Referenced by: '<Root>/Memory2'
-                                        */
-  real_T stiffness_Value[36];
-                          /* Expression: diag([600, 600, 600, 50.0, 50.0, 50.0])
-                           * Referenced by: '<S2>/stiffness'
+  real_T q_d_3_Value[7];  /* Expression: [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]
+                           * Referenced by: '<Root>/q_d_3'
                            */
-  real_T damping_Value[36];
-            /* Expression: diag(2*sqrt([150.0, 150.0, 150.0, 50.0, 50.0, 50.0]))
-             * Referenced by: '<S2>/damping'
-             */
-  real_T Constant5_Value;              /* Expression: 5
-                                        * Referenced by: '<Root>/Constant5'
-                                        */
-  real_T Constant4_Value;              /* Expression: 1
-                                        * Referenced by: '<Root>/Constant4'
-                                        */
   real_T RateLimiter_RisingLim;        /* Expression: 1000
-                                        * Referenced by: '<S7>/Rate Limiter'
+                                        * Referenced by: '<S2>/Rate Limiter'
                                         */
   real_T RateLimiter_FallingLim;       /* Expression: -1000
-                                        * Referenced by: '<S7>/Rate Limiter'
+                                        * Referenced by: '<S2>/Rate Limiter'
                                         */
   real_T RateLimiter_IC;               /* Expression: 0
-                                        * Referenced by: '<S7>/Rate Limiter'
+                                        * Referenced by: '<S2>/Rate Limiter'
                                         */
   real_T ApplyControl_P1[52];          /* Expression: collision_thresholds
-                                        * Referenced by: '<S7>/Apply Control'
+                                        * Referenced by: '<S2>/Apply Control'
                                         */
   real_T ApplyControl_P2[7];           /* Expression: joint_impedance
-                                        * Referenced by: '<S7>/Apply Control'
+                                        * Referenced by: '<S2>/Apply Control'
                                         */
   real_T ApplyControl_P3[6];           /* Expression: cartesian_impedance
-                                        * Referenced by: '<S7>/Apply Control'
+                                        * Referenced by: '<S2>/Apply Control'
                                         */
   real_T ApplyControl_P4[13];          /* Expression: load_inertia
-                                        * Referenced by: '<S7>/Apply Control'
+                                        * Referenced by: '<S2>/Apply Control'
                                         */
   real_T ApplyControl_P5[16];          /* Expression: EE_T_K
-                                        * Referenced by: '<S7>/Apply Control'
+                                        * Referenced by: '<S2>/Apply Control'
                                         */
   real_T ApplyControl_P6[7];           /* Expression: init_joint_configuration
-                                        * Referenced by: '<S7>/Apply Control'
+                                        * Referenced by: '<S2>/Apply Control'
                                         */
 };
 
 /* Real-time Model Data Structure */
-struct tag_RTM_cartesian_impedance_control_T {
-  struct SimStruct_tag * *childSfunctions;
+struct tag_RTM_cartesian_impedance_c_T {
   const char_T *errorStatus;
-  SS_SimMode simMode;
   RTWLogInfo *rtwLogInfo;
   RTWExtModeInfo *extModeInfo;
   RTWSolverInfo solverInfo;
-  RTWSolverInfo *solverInfoPtr;
-  void *sfcnInfo;
-
-  /*
-   * NonInlinedSFcns:
-   * The following substructure contains information regarding
-   * non-inlined s-functions used in the model.
-   */
-  struct {
-    RTWSfcnInfo sfcnInfo;
-    time_T *taskTimePtrs[2];
-    SimStruct childSFunctions[2];
-    SimStruct *childSFunctionPtrs[2];
-    struct _ssBlkInfo2 blkInfo2[2];
-    struct _ssSFcnModelMethods2 methods2[2];
-    struct _ssSFcnModelMethods3 methods3[2];
-    struct _ssSFcnModelMethods4 methods4[2];
-    struct _ssStatesInfo2 statesInfo2[2];
-    ssPeriodicStatesInfo periodicStatesInfo[2];
-    struct _ssPortInfo2 inputOutputPortInfo2[2];
-    struct {
-      time_T sfcnPeriod[1];
-      time_T sfcnOffset[1];
-      int_T sfcnTsMap[1];
-      struct _ssPortInputs inputPortInfo[3];
-      struct _ssInPortUnit inputPortUnits[3];
-      struct _ssInPortCoSimAttribute inputPortCoSimAttribute[3];
-      int_T iDims0[2];
-      int_T iDims1[2];
-      int_T iDims2[2];
-      struct _ssPortOutputs outputPortInfo[1];
-      struct _ssOutPortUnit outputPortUnits[1];
-      struct _ssOutPortCoSimAttribute outputPortCoSimAttribute[1];
-      int_T oDims0[2];
-      struct _ssDWorkRecord dWork[1];
-      struct _ssDWorkAuxRecord dWorkAux[1];
-    } Sfcn0;
-
-    struct {
-      time_T sfcnPeriod[1];
-      time_T sfcnOffset[1];
-      int_T sfcnTsMap[1];
-      struct _ssPortInputs inputPortInfo[2];
-      struct _ssInPortUnit inputPortUnits[2];
-      struct _ssInPortCoSimAttribute inputPortCoSimAttribute[2];
-      int_T iDims0[2];
-      int_T iDims1[2];
-      struct _ssPortOutputs outputPortInfo[6];
-      struct _ssOutPortUnit outputPortUnits[6];
-      struct _ssOutPortCoSimAttribute outputPortCoSimAttribute[6];
-      int_T oDims0[2];
-      int_T oDims1[2];
-      int_T oDims2[2];
-      int_T oDims3[2];
-      int_T oDims4[2];
-      int_T oDims5[2];
-      struct _ssDWorkRecord dWork[1];
-      struct _ssDWorkAuxRecord dWorkAux[1];
-    } Sfcn1;
-  } NonInlinedSFcns;
-
-  boolean_T zCCacheNeedsReset;
-  boolean_T derivCacheNeedsReset;
-  boolean_T CTOutputIncnstWithState;
 
   /*
    * Sizes:
@@ -384,22 +168,6 @@ struct tag_RTM_cartesian_impedance_control_T {
    */
   struct {
     uint32_T checksums[4];
-    uint32_T options;
-    int_T numContStates;
-    int_T numU;
-    int_T numY;
-    int_T numSampTimes;
-    int_T numBlocks;
-    int_T numBlockIO;
-    int_T numBlockPrms;
-    int_T numDwork;
-    int_T numSFcnPrms;
-    int_T numSFcns;
-    int_T numIports;
-    int_T numOports;
-    int_T numNonSampZCs;
-    int_T sysDirFeedThru;
-    int_T rtwGenSfcn;
   } Sizes;
 
   /*
@@ -417,28 +185,15 @@ struct tag_RTM_cartesian_impedance_control_T {
    * the timing information for the model.
    */
   struct {
-    time_T stepSize;
     uint32_T clockTick0;
     uint32_T clockTickH0;
     time_T stepSize0;
     uint32_T clockTick1;
     uint32_T clockTickH1;
-    time_T tStart;
     time_T tFinal;
-    time_T timeOfLastOutput;
     SimTimeStep simTimeStep;
     boolean_T stopRequestedFlag;
-    time_T *sampleTimes;
-    time_T *offsetTimes;
-    int_T *sampleTimeTaskIDPtr;
-    int_T *sampleHits;
-    int_T *perTaskSampleHits;
     time_T *t;
-    time_T sampleTimesArray[2];
-    time_T offsetTimesArray[2];
-    int_T sampleTimeTaskIDArray[2];
-    int_T sampleHitArray[2];
-    int_T perTaskSampleHitsArray[4];
     time_T tArray[2];
   } Timing;
 };
@@ -476,7 +231,7 @@ extern "C"
 #endif
 
 /* Block states (default storage) */
-extern struct DW_cartesian_impedance_control_T cartesian_impedance_control_DW;
+extern struct DW_cartesian_impedance_contro_T cartesian_impedance_control_DW;
 
 #ifdef __cplusplus
 
@@ -504,8 +259,7 @@ extern "C"
 
 #endif
 
-  extern RT_MODEL_cartesian_impedance_control_T *const
-    cartesian_impedance_control_M;
+  extern RT_MODEL_cartesian_impedance__T *const cartesian_impedance_control_M;
 
 #ifdef __cplusplus
 
@@ -528,16 +282,7 @@ extern "C"
  * Here is the system hierarchy for this model
  *
  * '<Root>' : 'cartesian_impedance_control'
- * '<S1>'   : 'cartesian_impedance_control/CT controller'
- * '<S2>'   : 'cartesian_impedance_control/Cartesian Impedance Controller'
- * '<S3>'   : 'cartesian_impedance_control/MATLAB Function'
- * '<S4>'   : 'cartesian_impedance_control/MATLAB Function1'
- * '<S5>'   : 'cartesian_impedance_control/MATLAB Function2'
- * '<S6>'   : 'cartesian_impedance_control/Robot model bus'
- * '<S7>'   : 'cartesian_impedance_control/Subsystem'
- * '<S8>'   : 'cartesian_impedance_control/UDP send to c'
- * '<S9>'   : 'cartesian_impedance_control/get data'
- * '<S10>'  : 'cartesian_impedance_control/get x'
- * '<S11>'  : 'cartesian_impedance_control/Cartesian Impedance Controller/MATLAB Function'
+ * '<S1>'   : 'cartesian_impedance_control/CT controller1'
+ * '<S2>'   : 'cartesian_impedance_control/Subsystem'
  */
 #endif                           /* RTW_HEADER_cartesian_impedance_control_h_ */
