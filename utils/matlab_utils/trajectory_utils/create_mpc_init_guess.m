@@ -1,7 +1,6 @@
 import casadi.*;
 
 % Calculate initial guess for alle trajectories and mpcs
-compile_sfun                    = false;
 weights_and_limits_as_parameter = true;
 plot_null_simu                  = false;
 print_init_guess_cost_functions = false;

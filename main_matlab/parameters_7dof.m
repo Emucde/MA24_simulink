@@ -20,7 +20,7 @@ fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 %x_traj_out_of_workspace_value = 0.1;
 
 plot_trajectory = ~true;
-overwrite_offline_traj_forced = ~false;
+overwrite_offline_traj_forced = false;
 
 % set_param(gcs,'Profile','off'); % turn off profiler when not needed anymore
 
@@ -78,7 +78,7 @@ bus_definitions;
 
 init_MPC_weights; %% set MPC weights
 
-param_ct_control_init;
+param_ct_pdplus_control_init.m;
 
 create_trajectories;
 

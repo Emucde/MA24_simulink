@@ -8,7 +8,7 @@ T_sim = 10;
 bus_definitions;
 robot_name = 'fr3_no_hand_6dof';
 param_robot_init;
-param_ct_control_init;
+param_ct_pdplus_control_init.m;
 
 load('../../s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.mat');
 param_traj_data.N = length(param_traj_data.t);
