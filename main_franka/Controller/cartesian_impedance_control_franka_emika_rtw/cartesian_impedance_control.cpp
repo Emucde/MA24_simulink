@@ -7,9 +7,9 @@
  *
  * Code generation for model "cartesian_impedance_control".
  *
- * Model version              : 8.98
+ * Model version              : 8.158
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Thu Oct  3 17:11:54 2024
+ * C++ source code generated on : Mon Oct  7 11:17:43 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -20,7 +20,9 @@
 
 #include "cartesian_impedance_control.h"
 #include "rtwtypes.h"
+#include <stdio.h>
 #include <string.h>
+#include <stddef.h>
 #include <cstring>
 #include "cartesian_impedance_control_private.h"
 
@@ -46,19 +48,153 @@ RT_MODEL_cartesian_impedance__T cartesian_impedance_control_M_ =
 RT_MODEL_cartesian_impedance__T *const cartesian_impedance_control_M =
   &cartesian_impedance_control_M_;
 
+/* Forward declaration for local functions */
+static int8_T cartesian_impedance_co_filedata(void);
+static int8_T cartesian_impedance_cont_cfopen(const char_T *cfilename, const
+  char_T *cpermission);
+static void cartesian_impedance_getfilestar(real_T fid, FILE* *filestar,
+  boolean_T *autoflush);
+static int32_T cartesian_impedance_con_cfclose(real_T fid);
+
+/* Function for MATLAB Function: '<Root>/MATLAB Function3' */
+static int8_T cartesian_impedance_co_filedata(void)
+{
+  int32_T k;
+  int8_T f;
+  boolean_T exitg1;
+  f = 0;
+  k = 1;
+  exitg1 = false;
+  while ((!exitg1) && (k - 1 < 20)) {
+    if (cartesian_impedance_control_DW.eml_openfiles[static_cast<int8_T>(k) - 1]
+        == NULL) {
+      f = static_cast<int8_T>(k);
+      exitg1 = true;
+    } else {
+      k++;
+    }
+  }
+
+  return f;
+}
+
+/* Function for MATLAB Function: '<Root>/MATLAB Function3' */
+static int8_T cartesian_impedance_cont_cfopen(const char_T *cfilename, const
+  char_T *cpermission)
+{
+  int8_T fileid;
+  int8_T j;
+  fileid = -1;
+  j = cartesian_impedance_co_filedata();
+  if (j >= 1) {
+    FILE* filestar;
+    filestar = fopen(cfilename, cpermission);
+    if (filestar != NULL) {
+      int32_T tmp;
+      cartesian_impedance_control_DW.eml_openfiles[j - 1] = filestar;
+      cartesian_impedance_control_DW.eml_autoflush[j - 1] = true;
+      tmp = j + 2;
+      if (j + 2 > 127) {
+        tmp = 127;
+      }
+
+      fileid = static_cast<int8_T>(tmp);
+    }
+  }
+
+  return fileid;
+}
+
+/* Function for MATLAB Function: '<Root>/MATLAB Function3' */
+static void cartesian_impedance_getfilestar(real_T fid, FILE* *filestar,
+  boolean_T *autoflush)
+{
+  int8_T fileid;
+  fileid = static_cast<int8_T>(fid);
+  if ((static_cast<int8_T>(fid) < 0) || (fid != static_cast<int8_T>(fid))) {
+    fileid = -1;
+  }
+
+  if (fileid >= 3) {
+    *filestar = cartesian_impedance_control_DW.eml_openfiles[fileid - 3];
+    *autoflush = cartesian_impedance_control_DW.eml_autoflush[fileid - 3];
+  } else if (fileid == 0) {
+    *filestar = stdin;
+    *autoflush = true;
+  } else if (fileid == 1) {
+    *filestar = stdout;
+    *autoflush = true;
+  } else if (fileid == 2) {
+    *filestar = stderr;
+    *autoflush = true;
+  } else {
+    *filestar = NULL;
+    *autoflush = true;
+  }
+}
+
+/* Function for MATLAB Function: '<Root>/MATLAB Function3' */
+static int32_T cartesian_impedance_con_cfclose(real_T fid)
+{
+  FILE* filestar;
+  int32_T st;
+  int8_T b_fileid;
+  int8_T fileid;
+  st = -1;
+  fileid = static_cast<int8_T>(fid);
+  if ((static_cast<int8_T>(fid) < 0) || (fid != static_cast<int8_T>(fid))) {
+    fileid = -1;
+  }
+
+  b_fileid = fileid;
+  if (fileid < 0) {
+    b_fileid = -1;
+  }
+
+  if (b_fileid >= 3) {
+    filestar = cartesian_impedance_control_DW.eml_openfiles[b_fileid - 3];
+  } else if (b_fileid == 0) {
+    filestar = stdin;
+  } else if (b_fileid == 1) {
+    filestar = stdout;
+  } else if (b_fileid == 2) {
+    filestar = stderr;
+  } else {
+    filestar = NULL;
+  }
+
+  if ((filestar != NULL) && (fileid >= 3)) {
+    int32_T cst;
+    cst = fclose(filestar);
+    if (cst == 0) {
+      st = 0;
+      cartesian_impedance_control_DW.eml_openfiles[fileid - 3] = NULL;
+      cartesian_impedance_control_DW.eml_autoflush[fileid - 3] = true;
+    }
+  }
+
+  return st;
+}
+
 /* Model step function */
 void cartesian_impedance_control_step(void)
 {
+  FILE* b_filestar;
+  size_t bytesOutSizet;
   real_T a[49];
   real_T d[49];
   real_T d_0[49];
   real_T a_0[7];
   real_T d_1[7];
   real_T tmp[7];
+  real_T A_data;
   real_T rtb_Clock;
   real_T tmp_0;
+  int32_T j;
+  int8_T fileid;
+  boolean_T autoflush;
 
-  /* S-Function (get_robot_state): '<S2>/Get Robot State2' */
+  /* S-Function (get_robot_state): '<S3>/Get Robot State2' */
   {
     // Wait for the control thread signal
     if ((bool)cartesian_impedance_control_DW.GetRobotState2_DWORK1 &&
@@ -82,45 +218,45 @@ void cartesian_impedance_control_step(void)
     }
   }
 
-  /* Clock: '<S2>/Clock' */
+  /* Clock: '<S3>/Clock' */
   rtb_Clock = cartesian_impedance_control_M->Timing.t[0];
   for (int32_T i = 0; i < 7; i++) {
-    /* Switch: '<S2>/Switch' */
+    /* Switch: '<S3>/Switch' */
     if (rtb_Clock > cartesian_impedance_control_P.Switch_Threshold) {
-      /* Switch: '<S2>/Switch' */
+      /* Switch: '<S3>/Switch' */
       cartesian_impedance_control_B.Switch[i] =
         cartesian_impedance_control_B.GetRobotState2_o1[i];
     } else {
-      /* Switch: '<S2>/Switch' incorporates:
-       *  Constant: '<S2>/Constant'
+      /* Switch: '<S3>/Switch' incorporates:
+       *  Constant: '<S3>/Constant'
        */
       cartesian_impedance_control_B.Switch[i] =
         cartesian_impedance_control_P.q_init[i];
     }
 
-    /* End of Switch: '<S2>/Switch' */
+    /* End of Switch: '<S3>/Switch' */
   }
 
-  /* MATLAB Function: '<Root>/CT controller1' incorporates:
+  /* MATLAB Function: '<Root>/Joinspace controller' incorporates:
    *  Constant: '<Root>/Constant8'
    *  Constant: '<Root>/Constant9'
    *  Constant: '<Root>/q_d_3'
    */
   memset(&d[0], 0, 49U * sizeof(real_T));
-  for (int32_T j = 0; j < 7; j++) {
+  for (j = 0; j < 7; j++) {
     d[j + 7 * j] = cartesian_impedance_control_P.Constant9_Value[j];
   }
 
   memset(&a[0], 0, 49U * sizeof(real_T));
-  for (int32_T j = 0; j < 7; j++) {
+  for (j = 0; j < 7; j++) {
     a[j + 7 * j] = cartesian_impedance_control_P.Constant8_Value[j];
   }
 
-  for (int32_T j = 0; j < 49; j++) {
+  for (j = 0; j < 49; j++) {
     d_0[j] = -d[j];
   }
 
-  for (int32_T j = 0; j < 7; j++) {
+  for (j = 0; j < 7; j++) {
     tmp[j] = cartesian_impedance_control_B.Switch[j] -
       cartesian_impedance_control_P.q_d_3_Value[j];
     d_1[j] = 0.0;
@@ -130,7 +266,7 @@ void cartesian_impedance_control_step(void)
     }
   }
 
-  /* RateLimiter: '<S2>/Rate Limiter' */
+  /* RateLimiter: '<S3>/Rate Limiter' */
   rtb_Clock = cartesian_impedance_control_P.RateLimiter_RisingLim *
     cartesian_impedance_cont_period;
   tmp_0 = cartesian_impedance_control_P.RateLimiter_FallingLim *
@@ -138,27 +274,27 @@ void cartesian_impedance_control_step(void)
   for (int32_T i = 0; i < 7; i++) {
     real_T rtb_tau_m;
 
-    /* MATLAB Function: '<Root>/CT controller1' */
+    /* MATLAB Function: '<Root>/Joinspace controller' */
     a_0[i] = 0.0;
-    for (int32_T j = 0; j < 7; j++) {
+    for (j = 0; j < 7; j++) {
       a_0[i] += a[7 * j + i] * tmp[j];
     }
 
     rtb_tau_m = d_1[i] - a_0[i];
 
-    /* RateLimiter: '<S2>/Rate Limiter' */
+    /* RateLimiter: '<S3>/Rate Limiter' */
     cartesian_impedance_control_B.RateLimiter[i] = rtb_tau_m -
       cartesian_impedance_control_DW.PrevY[i];
     if (cartesian_impedance_control_B.RateLimiter[i] > rtb_Clock) {
-      /* RateLimiter: '<S2>/Rate Limiter' */
+      /* RateLimiter: '<S3>/Rate Limiter' */
       cartesian_impedance_control_B.RateLimiter[i] =
         cartesian_impedance_control_DW.PrevY[i] + rtb_Clock;
     } else if (cartesian_impedance_control_B.RateLimiter[i] < tmp_0) {
-      /* RateLimiter: '<S2>/Rate Limiter' */
+      /* RateLimiter: '<S3>/Rate Limiter' */
       cartesian_impedance_control_B.RateLimiter[i] =
         cartesian_impedance_control_DW.PrevY[i] + tmp_0;
     } else {
-      /* RateLimiter: '<S2>/Rate Limiter' */
+      /* RateLimiter: '<S3>/Rate Limiter' */
       cartesian_impedance_control_B.RateLimiter[i] = rtb_tau_m;
     }
 
@@ -166,9 +302,9 @@ void cartesian_impedance_control_step(void)
       cartesian_impedance_control_B.RateLimiter[i];
   }
 
-  /* S-Function (apply_control): '<S2>/Apply Control' */
+  /* S-Function (apply_control): '<S3>/Apply Control' */
   {
-    /* S-Function Block: <S2>/Apply Control */
+    /* S-Function Block: <S3>/Apply Control */
     if ((bool)cartesian_impedance_control_DW.ApplyControl_DWORK1) {
       // Wait for the control thread signal
       if ((bool)cartesian_impedance_control_DW.ApplyControl_DWORK2) {
@@ -193,6 +329,57 @@ void cartesian_impedance_control_step(void)
       cartesian_impedance_control_DW.ApplyControl_DWORK1 = 1;
     }
   }
+
+  /* MATLAB Function: '<Root>/MATLAB Function3' */
+  fileid = cartesian_impedance_cont_cfopen("data_from_simulink.bin", "wb");
+  rtb_Clock = 1.0;
+  cartesian_impedance_getfilestar(static_cast<real_T>(fileid), &b_filestar,
+    &autoflush);
+  if (fileid == 0) {
+    b_filestar = NULL;
+  }
+
+  if (!(b_filestar == NULL)) {
+    bytesOutSizet = fwrite(&rtb_Clock, sizeof(real_T), (size_t)1, b_filestar);
+    if (((real_T)bytesOutSizet > 0.0) && autoflush) {
+      fflush(b_filestar);
+    }
+  }
+
+  cartesian_impedance_con_cfclose(static_cast<real_T>(fileid));
+  fileid = cartesian_impedance_cont_cfopen("data_from_crocoddyl.bin", "rb");
+  cartesian_impedance_getfilestar(static_cast<real_T>(fileid), &b_filestar,
+    &autoflush);
+  if ((fileid == 0) || (fileid == 1) || (fileid == 2)) {
+    b_filestar = NULL;
+  }
+
+  if (b_filestar == NULL) {
+    j = 0;
+  } else {
+    bytesOutSizet = fread(&A_data, sizeof(real_T), (size_t)1, b_filestar);
+    if ((int32_T)bytesOutSizet + 1 <= 1) {
+      A_data = 0.0;
+    }
+
+    j = (int32_T)bytesOutSizet;
+  }
+
+  cartesian_impedance_control_B.bytes = j;
+  cartesian_impedance_con_cfclose(static_cast<real_T>(fileid));
+  if (j == 1) {
+    cartesian_impedance_control_B.data_out = A_data;
+    cartesian_impedance_control_DW.data_prev = A_data;
+  } else {
+    cartesian_impedance_control_B.data_out =
+      cartesian_impedance_control_DW.data_prev;
+    cartesian_impedance_control_DW.missed_data_cnt++;
+  }
+
+  cartesian_impedance_control_B.missed_data_cnt_o =
+    cartesian_impedance_control_DW.missed_data_cnt;
+
+  /* End of MATLAB Function: '<Root>/MATLAB Function3' */
 
   /* Matfile logging */
   rt_UpdateTXYLogVars(cartesian_impedance_control_M->rtwLogInfo,
@@ -318,19 +505,20 @@ void cartesian_impedance_control_initialize(void)
   }
 
   /* External mode info */
-  cartesian_impedance_control_M->Sizes.checksums[0] = (775264798U);
-  cartesian_impedance_control_M->Sizes.checksums[1] = (3867640935U);
-  cartesian_impedance_control_M->Sizes.checksums[2] = (1048543152U);
-  cartesian_impedance_control_M->Sizes.checksums[3] = (4198135272U);
+  cartesian_impedance_control_M->Sizes.checksums[0] = (3792122270U);
+  cartesian_impedance_control_M->Sizes.checksums[1] = (1910117873U);
+  cartesian_impedance_control_M->Sizes.checksums[2] = (382551798U);
+  cartesian_impedance_control_M->Sizes.checksums[3] = (1584822028U);
 
   {
     static const sysRanDType rtAlwaysEnabled = SUBSYS_RAN_BC_ENABLE;
     static RTWExtModeInfo rt_ExtModeInfo;
-    static const sysRanDType *systemRan[2];
+    static const sysRanDType *systemRan[3];
     cartesian_impedance_control_M->extModeInfo = (&rt_ExtModeInfo);
     rteiSetSubSystemActiveVectorAddresses(&rt_ExtModeInfo, systemRan);
     systemRan[0] = &rtAlwaysEnabled;
     systemRan[1] = &rtAlwaysEnabled;
+    systemRan[2] = &rtAlwaysEnabled;
     rteiSetModelMappingInfoPtr(cartesian_impedance_control_M->extModeInfo,
       &cartesian_impedance_control_M->SpecialInfo.mappingInfo);
     rteiSetChecksumsPtr(cartesian_impedance_control_M->extModeInfo,
@@ -371,13 +559,13 @@ void cartesian_impedance_control_initialize(void)
     cartesian_impedance_control_M->Timing.stepSize0, (&rtmGetErrorStatus
     (cartesian_impedance_control_M)));
 
-  /* Start for S-Function (get_robot_state): '<S2>/Get Robot State2' */
+  /* Start for S-Function (get_robot_state): '<S3>/Get Robot State2' */
   {
     cartesian_impedance_control_DW.GetRobotState2_DWORK1 = (double)
       simulinkPandaRobot_17216102.establishIfCurrentBlockFirstToBeComputed();
   }
 
-  /* Start for S-Function (apply_control): '<S2>/Apply Control' */
+  /* Start for S-Function (apply_control): '<S3>/Apply Control' */
   {
     //Flag for performing initialization in first run of main _step();
     cartesian_impedance_control_DW.ApplyControl_DWORK1 = 0;
@@ -385,20 +573,36 @@ void cartesian_impedance_control_initialize(void)
       simulinkPandaRobot_17216102.establishIfCurrentBlockFirstToBeComputed();
   }
 
-  /* InitializeConditions for RateLimiter: '<S2>/Rate Limiter' */
-  for (int32_T i = 0; i < 7; i++) {
-    cartesian_impedance_control_DW.PrevY[i] =
-      cartesian_impedance_control_P.RateLimiter_IC;
-  }
+  {
+    FILE* a;
 
-  /* End of InitializeConditions for RateLimiter: '<S2>/Rate Limiter' */
+    /* InitializeConditions for RateLimiter: '<S3>/Rate Limiter' */
+    for (int32_T i = 0; i < 7; i++) {
+      cartesian_impedance_control_DW.PrevY[i] =
+        cartesian_impedance_control_P.RateLimiter_IC;
+    }
+
+    /* End of InitializeConditions for RateLimiter: '<S3>/Rate Limiter' */
+
+    /* SystemInitialize for MATLAB Function: '<Root>/MATLAB Function3' */
+    a = NULL;
+    for (int32_T i = 0; i < 20; i++) {
+      cartesian_impedance_control_DW.eml_autoflush[i] = false;
+      cartesian_impedance_control_DW.eml_openfiles[i] = a;
+    }
+
+    cartesian_impedance_control_DW.data_prev = 0.0;
+    cartesian_impedance_control_DW.missed_data_cnt = 0.0;
+
+    /* End of SystemInitialize for MATLAB Function: '<Root>/MATLAB Function3' */
+  }
 }
 
 /* Model terminate function */
 void cartesian_impedance_control_terminate(void)
 {
-  /* Terminate for S-Function (apply_control): '<S2>/Apply Control' */
+  /* Terminate for S-Function (apply_control): '<S3>/Apply Control' */
   {
-    /* S-Function Block: <S2>/Apply Control */
+    /* S-Function Block: <S3>/Apply Control */
   }
 }

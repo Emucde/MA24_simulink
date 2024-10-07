@@ -7,9 +7,9 @@
  *
  * Code generation for model "cartesian_impedance_control".
  *
- * Model version              : 8.98
+ * Model version              : 8.158
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Thu Oct  3 17:11:54 2024
+ * C++ source code generated on : Mon Oct  7 11:17:43 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -31,6 +31,7 @@
 #include "control_modes.h"
 #include "gripper_api.h"
 #include "cartesian_impedance_control_types.h"
+#include <stdio.h>
 #include <float.h>
 #include <stddef.h>
 #include <string.h>
@@ -89,67 +90,82 @@ extern "C"
 
 /* Block signals (default storage) */
 struct B_cartesian_impedance_control_T {
-  real_T GetRobotState2_o1[7];         /* '<S2>/Get Robot State2' */
-  real_T GetRobotState2_o2[7];         /* '<S2>/Get Robot State2' */
-  real_T GetRobotState2_o3[6];         /* '<S2>/Get Robot State2' */
-  real_T Switch[7];                    /* '<S2>/Switch' */
-  real_T RateLimiter[7];               /* '<S2>/Rate Limiter' */
+  real_T GetRobotState2_o1[7];         /* '<S3>/Get Robot State2' */
+  real_T GetRobotState2_o2[7];         /* '<S3>/Get Robot State2' */
+  real_T GetRobotState2_o3[6];         /* '<S3>/Get Robot State2' */
+  real_T Switch[7];                    /* '<S3>/Switch' */
+  real_T RateLimiter[7];               /* '<S3>/Rate Limiter' */
+  real_T data_out;                     /* '<Root>/MATLAB Function3' */
+  real_T bytes;                        /* '<Root>/MATLAB Function3' */
+  real_T missed_data_cnt_o;            /* '<Root>/MATLAB Function3' */
 };
 
 /* Block states (default storage) for system '<Root>' */
 struct DW_cartesian_impedance_contro_T {
-  real_T GetRobotState2_DWORK1;        /* '<S2>/Get Robot State2' */
-  real_T PrevY[7];                     /* '<S2>/Rate Limiter' */
-  real_T ApplyControl_DWORK1;          /* '<S2>/Apply Control' */
-  real_T ApplyControl_DWORK2;          /* '<S2>/Apply Control' */
+  real_T GetRobotState2_DWORK1;        /* '<S3>/Get Robot State2' */
+  real_T PrevY[7];                     /* '<S3>/Rate Limiter' */
+  real_T ApplyControl_DWORK1;          /* '<S3>/Apply Control' */
+  real_T ApplyControl_DWORK2;          /* '<S3>/Apply Control' */
+  real_T data_prev;                    /* '<Root>/MATLAB Function3' */
+  real_T missed_data_cnt;              /* '<Root>/MATLAB Function3' */
   struct {
     void *LoggedData[3];
   } Scope_PWORK;                       /* '<Root>/Scope' */
+
+  struct {
+    void *LoggedData[3];
+  } Scope6_PWORK;                      /* '<Root>/Scope6' */
+
+  boolean_T eml_autoflush[20];         /* '<Root>/MATLAB Function3' */
+  FILE* eml_openfiles[20];             /* '<Root>/MATLAB Function3' */
 };
 
 /* Parameters (default storage) */
 struct P_cartesian_impedance_control_T_ {
   real_T q_init[7];                    /* Variable: q_init
-                                        * Referenced by: '<S2>/Constant'
+                                        * Referenced by: '<S3>/Constant'
                                         */
   real_T Switch_Threshold;             /* Expression: 0.001
-                                        * Referenced by: '<S2>/Switch'
+                                        * Referenced by: '<S3>/Switch'
+                                        */
+  real_T Constant8_Value[7];           /* Expression: [100 200 500 200 50 50 10]
+                                        * Referenced by: '<Root>/Constant8'
                                         */
   real_T Constant9_Value[7];           /* Expression: [0 0 0 0 0 0 0]
                                         * Referenced by: '<Root>/Constant9'
-                                        */
-  real_T Constant8_Value[7];           /* Expression: [100 200 500 10 0 0 0]
-                                        * Referenced by: '<Root>/Constant8'
                                         */
   real_T q_d_3_Value[7];  /* Expression: [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]
                            * Referenced by: '<Root>/q_d_3'
                            */
   real_T RateLimiter_RisingLim;        /* Expression: 1000
-                                        * Referenced by: '<S2>/Rate Limiter'
+                                        * Referenced by: '<S3>/Rate Limiter'
                                         */
   real_T RateLimiter_FallingLim;       /* Expression: -1000
-                                        * Referenced by: '<S2>/Rate Limiter'
+                                        * Referenced by: '<S3>/Rate Limiter'
                                         */
   real_T RateLimiter_IC;               /* Expression: 0
-                                        * Referenced by: '<S2>/Rate Limiter'
+                                        * Referenced by: '<S3>/Rate Limiter'
                                         */
   real_T ApplyControl_P1[52];          /* Expression: collision_thresholds
-                                        * Referenced by: '<S2>/Apply Control'
+                                        * Referenced by: '<S3>/Apply Control'
                                         */
   real_T ApplyControl_P2[7];           /* Expression: joint_impedance
-                                        * Referenced by: '<S2>/Apply Control'
+                                        * Referenced by: '<S3>/Apply Control'
                                         */
   real_T ApplyControl_P3[6];           /* Expression: cartesian_impedance
-                                        * Referenced by: '<S2>/Apply Control'
+                                        * Referenced by: '<S3>/Apply Control'
                                         */
   real_T ApplyControl_P4[13];          /* Expression: load_inertia
-                                        * Referenced by: '<S2>/Apply Control'
+                                        * Referenced by: '<S3>/Apply Control'
                                         */
   real_T ApplyControl_P5[16];          /* Expression: EE_T_K
-                                        * Referenced by: '<S2>/Apply Control'
+                                        * Referenced by: '<S3>/Apply Control'
                                         */
   real_T ApplyControl_P6[7];           /* Expression: init_joint_configuration
-                                        * Referenced by: '<S2>/Apply Control'
+                                        * Referenced by: '<S3>/Apply Control'
+                                        */
+  real_T Constant10_Value;             /* Expression: 15
+                                        * Referenced by: '<Root>/Constant10'
                                         */
 };
 
@@ -282,7 +298,8 @@ extern "C"
  * Here is the system hierarchy for this model
  *
  * '<Root>' : 'cartesian_impedance_control'
- * '<S1>'   : 'cartesian_impedance_control/CT controller1'
- * '<S2>'   : 'cartesian_impedance_control/Subsystem'
+ * '<S1>'   : 'cartesian_impedance_control/Joinspace controller'
+ * '<S2>'   : 'cartesian_impedance_control/MATLAB Function3'
+ * '<S3>'   : 'cartesian_impedance_control/Subsystem'
  */
 #endif                           /* RTW_HEADER_cartesian_impedance_control_h_ */

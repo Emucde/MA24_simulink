@@ -7,9 +7,9 @@
  *
  * Code generation for model "cartesian_impedance_control".
  *
- * Model version              : 8.98
+ * Model version              : 8.158
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Thu Oct  3 17:11:54 2024
+ * C++ source code generated on : Mon Oct  7 11:17:43 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -21,24 +21,24 @@
 #ifndef RTW_HEADER_cartesian_impedance_control_types_h_
 #define RTW_HEADER_cartesian_impedance_control_types_h_
 #include "rtwtypes.h"
-#ifndef DEFINED_TYPEDEF_FOR_struct_KEa48IyRUxLtKgH405LUqB_
-#define DEFINED_TYPEDEF_FOR_struct_KEa48IyRUxLtKgH405LUqB_
+#ifndef DEFINED_TYPEDEF_FOR_struct_zgJGJvTOOGEq9ehmj4thTC_
+#define DEFINED_TYPEDEF_FOR_struct_zgJGJvTOOGEq9ehmj4thTC_
 
-struct struct_KEa48IyRUxLtKgH405LUqB
+struct struct_zgJGJvTOOGEq9ehmj4thTC
 {
-  real_T T_sim;
   real_T Ta;
-  real_T traj_buffer_size;
 };
 
 #endif
 
+/* Custom Type definition for MATLAB Function: '<Root>/MATLAB Function3' */
+#include <stdio.h>
 #ifndef SS_UINT64
-#define SS_UINT64                      18
+#define SS_UINT64                      19
 #endif
 
 #ifndef SS_INT64
-#define SS_INT64                       19
+#define SS_INT64                       20
 #endif
 
 /* Parameters (default storage) */
