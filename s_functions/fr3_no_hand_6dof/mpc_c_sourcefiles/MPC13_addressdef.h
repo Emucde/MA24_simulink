@@ -58,11 +58,7 @@ static const uint32_t MPC13_RES[] = {336,366,504,505,506,507,508};
 #define MPC13_IN_PARAM_WEIGHT_ADDR 192        /* param_weight = [Q_y(6x6), Q_yN(6x6), R_q_pp(6x6), x_min(12x1), x_max(12x1), u_min(6x1), u_max(6x1)] */
 
 // OUTPUT DIMENSIONS:
-#define MPC13_U_OPT_LEN 6        /*u_opt: [6 1] array values */
-#define MPC13_U_OPT_LEN 6        /*u_opt: [6 1] array values */
-#define MPC13_U_OPT_LEN 6        /*u_opt: [6 1] array values */
-#define MPC13_U_OPT_LEN 6        /*u_opt: [6 1] array values */
-#define MPC13_U_OPT_LEN 6        /*u_opt: [6 1] array values */
+#define MPC13_U_OPT_LEN 30        /*u_opt: [30 1] array values */
 #define MPC13_U_OUT_LEN 6        /*u_out: [6 1] array values */
 #define MPC13_Q_OUT_LEN 36        /*q_out: 6x6 matrix values */
 #define MPC13_Q_P_OUT_LEN 12        /*q_p_out: 6x2 matrix values */
@@ -77,11 +73,7 @@ static const uint32_t MPC13_RES[] = {336,366,504,505,506,507,508};
 #define MPC13_J_Q_PP_LEN 1        /*J_q_pp: [1 1] array values */
 
 // OUTPUT ADDRESSES:
-#define MPC13_U_OPT_ADDR 336        /*u_opt: [6 1] array values */
-#define MPC13_U_OPT_ADDR 342        /*u_opt: [6 1] array values */
-#define MPC13_U_OPT_ADDR 348        /*u_opt: [6 1] array values */
-#define MPC13_U_OPT_ADDR 354        /*u_opt: [6 1] array values */
-#define MPC13_U_OPT_ADDR 360        /*u_opt: [6 1] array values */
+#define MPC13_U_OPT_ADDR 336        /*u_opt: [30 1] array values */
 #define MPC13_U_OUT_ADDR 366        /*u_out: [6 1] array values */
 #define MPC13_Q_OUT_ADDR 372        /*q_out: 6x6 matrix values */
 #define MPC13_Q_P_OUT_ADDR 408        /*q_p_out: 6x2 matrix values */
@@ -96,7 +88,7 @@ static const uint32_t MPC13_RES[] = {336,366,504,505,506,507,508};
 #define MPC13_J_Q_PP_ADDR 526        /*J_q_pp: [1 1] array values */
 
 // CASADI FUN OUTPUT ADRESSES:
-#define MPC13_OUT_U_OPT_ADDR 336        /* u_opt = [q[0:5](6x1), q_p[30:35](6x1), u[-12:-7](6x1), q[6:11](6x1), q_p[36:41](6x1)] */
+#define MPC13_OUT_U_OPT_ADDR 336        /* u_opt = [q[0:47](30x1)] */
 #define MPC13_OUT_INIT_GUESS_OUT_ADDR 366        /* init_guess_out = [u_out(6x1), q_out(6x6), q_p_out(6x2), lambda_u_out(6x1), lambda_q_out(6x6), lambda_q_p_out(6x2), g_out(12x4)] */
 #define MPC13_OUT_COST_FUN_1_ADDR 504        /* cost_fun_1 = [J_yt(1x1)] */
 #define MPC13_OUT_COST_FUN_2_ADDR 505        /* cost_fun_2 = [J_yt_N(1x1)] */

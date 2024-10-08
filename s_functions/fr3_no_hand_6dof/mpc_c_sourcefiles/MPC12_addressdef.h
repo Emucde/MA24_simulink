@@ -54,11 +54,7 @@ static const uint32_t MPC12_RES[] = {474,504,780,781,782,783,784};
 #define MPC12_IN_PARAM_WEIGHT_ADDR 330        /* param_weight = [Q_y(6x6), Q_yN(6x6), R_q_pp(6x6), x_min(12x1), x_max(12x1), u_min(6x1), u_max(6x1)] */
 
 // OUTPUT DIMENSIONS:
-#define MPC12_U_OPT_LEN 6        /*u_opt: [6 1] array values */
-#define MPC12_U_OPT_LEN 6        /*u_opt: [6 1] array values */
-#define MPC12_U_OPT_LEN 6        /*u_opt: [6 1] array values */
-#define MPC12_U_OPT_LEN 6        /*u_opt: [6 1] array values */
-#define MPC12_U_OPT_LEN 6        /*u_opt: [6 1] array values */
+#define MPC12_U_OPT_LEN 30        /*u_opt: [30 1] array values */
 #define MPC12_U_OUT_LEN 30        /*u_out: 6x5 matrix values */
 #define MPC12_X_OUT_LEN 72        /*x_out: 12x6 matrix values */
 #define MPC12_LAMBDA_U_OUT_LEN 30        /*lambda_u_out: 6x5 matrix values */
@@ -71,11 +67,7 @@ static const uint32_t MPC12_RES[] = {474,504,780,781,782,783,784};
 #define MPC12_J_Q_PP_LEN 1        /*J_q_pp: [1 1] array values */
 
 // OUTPUT ADDRESSES:
-#define MPC12_U_OPT_ADDR 474        /*u_opt: [6 1] array values */
-#define MPC12_U_OPT_ADDR 480        /*u_opt: [6 1] array values */
-#define MPC12_U_OPT_ADDR 486        /*u_opt: [6 1] array values */
-#define MPC12_U_OPT_ADDR 492        /*u_opt: [6 1] array values */
-#define MPC12_U_OPT_ADDR 498        /*u_opt: [6 1] array values */
+#define MPC12_U_OPT_ADDR 474        /*u_opt: [30 1] array values */
 #define MPC12_U_OUT_ADDR 504        /*u_out: 6x5 matrix values */
 #define MPC12_X_OUT_ADDR 534        /*x_out: 12x6 matrix values */
 #define MPC12_LAMBDA_U_OUT_ADDR 606        /*lambda_u_out: 6x5 matrix values */
@@ -88,7 +80,7 @@ static const uint32_t MPC12_RES[] = {474,504,780,781,782,783,784};
 #define MPC12_J_Q_PP_ADDR 784        /*J_q_pp: [1 1] array values */
 
 // CASADI FUN OUTPUT ADRESSES:
-#define MPC12_OUT_U_OPT_ADDR 474        /* u_opt = [x[0:5](6x1), x[6:11](6x1), u[-30:-25](6x1), x[12:17](6x1), x[18:23](6x1)] */
+#define MPC12_OUT_U_OPT_ADDR 474        /* u_opt = [x[0:23](30x1)] */
 #define MPC12_OUT_INIT_GUESS_OUT_ADDR 504        /* init_guess_out = [u_out(6x5), x_out(12x6), lambda_u_out(6x5), lambda_x_out(12x6), g_out(12x6)] */
 #define MPC12_OUT_COST_FUN_1_ADDR 780        /* cost_fun_1 = [J_yt(1x1)] */
 #define MPC12_OUT_COST_FUN_2_ADDR 781        /* cost_fun_2 = [J_yt_N(1x1)] */

@@ -6,8 +6,8 @@ u_max = [param_robot.torque_limit_upper];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 1) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MPC='MPC01';
-param_weight.(MPC).Q_y      = 1e3*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
-param_weight.(MPC).Q_yN     = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
+param_weight.(MPC).Q_y      = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_yN     = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
 param_weight.(MPC).R_q_pp   = 1e-10*diag(ones(n,1));  % c_kpn
 
 param_weight.(MPC).x_min    = x_min;
@@ -75,18 +75,18 @@ param_weight.(MPC).u_min    = -inf(size(u_min)); %u_min
 param_weight.(MPC).u_max    = +inf(size(u_max)); %u_max 
 
 % TESTING FOR 2DOF CASE
-q_pos_indices = [1 3]; % xz plane
-x_pos_indices = [q_pos_indices q_pos_indices+6];
+q_24_indices = [2 3]; % q2, q4 only (q3 ist deaktiviert daher ist q4 an index 3)
+x_24_indices = [q_24_indices q_24_indices+6];
 
-param_weight.(MPC).Q_y = param_weight.(MPC).Q_y(q_pos_indices, q_pos_indices);
-param_weight.(MPC).Q_ykp1 = param_weight.(MPC).Q_ykp1(q_pos_indices, q_pos_indices);
-param_weight.(MPC).Q_yN = param_weight.(MPC).Q_yN(q_pos_indices, q_pos_indices);
-param_weight.(MPC).R_q_pp = param_weight.(MPC).R_q_pp(q_pos_indices, q_pos_indices);
+param_weight.(MPC).Q_y = param_weight.(MPC).Q_y(q_24_indices, q_24_indices);
+param_weight.(MPC).Q_ykp1 = param_weight.(MPC).Q_ykp1(q_24_indices, q_24_indices);
+param_weight.(MPC).Q_yN = param_weight.(MPC).Q_yN(q_24_indices, q_24_indices);
+param_weight.(MPC).R_q_pp = param_weight.(MPC).R_q_pp(q_24_indices, q_24_indices);
 
-param_weight.(MPC).x_min = param_weight.(MPC).x_min(x_pos_indices);
-param_weight.(MPC).x_max = param_weight.(MPC).x_max(x_pos_indices);
-param_weight.(MPC).u_min = param_weight.(MPC).u_min(q_pos_indices);
-param_weight.(MPC).u_max = param_weight.(MPC).u_max(q_pos_indices);
+param_weight.(MPC).x_min = param_weight.(MPC).x_min(x_24_indices);
+param_weight.(MPC).x_max = param_weight.(MPC).x_max(x_24_indices);
+param_weight.(MPC).u_min = param_weight.(MPC).u_min(q_24_indices);
+param_weight.(MPC).u_max = param_weight.(MPC).u_max(q_24_indices);
 
 % param_weight.(MPC).x_min    = x_min.*[ones(n,1); 1*ones(n,1)];
 % param_weight.(MPC).x_max    = x_max.*[ones(n,1); 1*ones(n,1)];
@@ -106,8 +106,8 @@ param_weight.(MPC).u_max = param_weight.(MPC).u_max(q_pos_indices);
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 9) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % kinematic mpc with integration and refsys for u
 MPC='MPC9';
-param_weight.(MPC).Q_y     = diag([1e0*ones(3,1); 1e0*ones(3,1)]);  % d_kpn
-param_weight.(MPC).Q_yN    = diag([1e2*ones(3,1); 1e2*ones(3,1)]);  % D_N
+param_weight.(MPC).Q_y     = diag([1e2*ones(3,1); 1e2*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_yN    = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % D_N
 param_weight.(MPC).R_q_pp  = 1e-10*diag(ones(n,1));  % d_kpn
 param_weight.(MPC).R_v     = 1e-5*diag(ones(n,1));  % d_kpn
 

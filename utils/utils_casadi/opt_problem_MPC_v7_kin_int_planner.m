@@ -32,7 +32,7 @@ F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 
 % Get trajectory data for initial guess
 if(N_step_MPC <= 3)
-    MPC_traj_indices = 1:N_MPC;
+    MPC_traj_indices = 1:(N_MPC+1);
 else
     MPC_traj_indices = [1, 2, 3, N_step_MPC : N_step_MPC : 1 + (N_MPC-2) * N_step_MPC];
 end

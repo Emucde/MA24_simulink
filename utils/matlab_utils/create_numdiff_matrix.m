@@ -6,6 +6,9 @@ arguments
     variant char {mustBeMember(variant, {'fwdbwdcentral', 'bwd', 'savgol', 'fwdbwdcentraltwotimes', 'fwdbwdcentralthreetimes'})} = 'fwdbwdcentral'
     T_a_MPC (1,1) double = 0.01
 end
+    if(T_a == T_a_MPC && (strcmp(variant, 'fwdbwdcentraltwotimes') || strcmp(variant, 'fwdbwdcentralthreetimes')))
+        variant = 'fwdbwdcentral';
+    end
 
     if(strcmp(variant, 'fwdbwdcentral'))
         % Create the matrix S_v

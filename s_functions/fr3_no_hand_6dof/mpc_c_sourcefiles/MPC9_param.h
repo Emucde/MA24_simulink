@@ -20,10 +20,10 @@
 
 //MPC_SETTINGS:
 #define MPC9_N 5
-#define MPC9_N_step 500
-#define MPC9_Ts 0.5
-#define MPC9_T_horizon 2.5
-#define MPC9_rk_iter 50
+#define MPC9_N_step 10
+#define MPC9_Ts 0.01
+#define MPC9_T_horizon 0.05
+#define MPC9_rk_iter 10
 #define MPC9_variant "nlpsol"
 #define MPC9_solver "qrqp"
 #define MPC9_version "v4_kin_int_refsys"
@@ -31,25 +31,25 @@
 #define MPC9_int_method "Euler"
 #define MPC9_fixed_parameter 0
 #define MPC9_traj_data_per_horizon 6
-static const uint32_t MPC9_traj_indices[] = {0,1,499,999,1499,1999};
+static const uint32_t MPC9_traj_indices[] = {0,1,9,19,29,39};
 
 //MPC_WEIGHTS:
 const casadi_real MPC9_param_weight[198] = {
     /* Q_y : 6x6 matrix values */
-    1, 0, 0, 0, 0, 0, 
-    0, 1, 0, 0, 0, 0, 
-    0, 0, 1, 0, 0, 0, 
-    0, 0, 0, 1, 0, 0, 
-    0, 0, 0, 0, 1, 0, 
-    0, 0, 0, 0, 0, 1, 
-
-    /* Q_yN : 6x6 matrix values */
     100, 0, 0, 0, 0, 0, 
     0, 100, 0, 0, 0, 0, 
     0, 0, 100, 0, 0, 0, 
     0, 0, 0, 100, 0, 0, 
     0, 0, 0, 0, 100, 0, 
     0, 0, 0, 0, 0, 100, 
+
+    /* Q_yN : 6x6 matrix values */
+    100000, 0, 0, 0, 0, 0, 
+    0, 100000, 0, 0, 0, 0, 
+    0, 0, 100000, 0, 0, 0, 
+    0, 0, 0, 100000, 0, 0, 
+    0, 0, 0, 0, 100000, 0, 
+    0, 0, 0, 0, 0, 100000, 
 
     /* R_q_pp : 6x6 matrix values */
     1e-10, 0, 0, 0, 0, 0, 

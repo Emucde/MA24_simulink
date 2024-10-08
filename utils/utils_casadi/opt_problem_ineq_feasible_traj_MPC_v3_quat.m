@@ -279,6 +279,7 @@ for i=1:N_MPC
     R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(yr_ref(1:4, 1 + (i)))';
     %q_y_y_err = rotation2quaternion_casadi( R_y_yr );
     q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
+    % q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
 
     if(i < N_MPC)
         J_yr = J_yr + Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6,4:6)  );

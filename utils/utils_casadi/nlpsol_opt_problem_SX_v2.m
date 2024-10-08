@@ -64,7 +64,7 @@ if(strcmp(MPC_solver, 'qrqp'))
     opts.qpsol_options.error_on_fail = false;
     
     opts.print_header = false; % Disable printing of solver header
-    opts.print_iteration = true; % Disable printing of solver iterations
+    opts.print_iteration = false; % Disable printing of solver iterations
     opts.print_time = false; % Disable printing of solver time
     opts.print_status = false;
     opts.error_on_fail = false;
@@ -246,7 +246,7 @@ x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
 uu_indices = reshape(1:numel(u), size(u));
 xx_indices = reshape(1+numel(u):numel(u)+numel(x), size(x));
 
-%n=2; %%%%%%%%%%%°!!
+n=2; %%%%%%%%%%%°!!
 
 qq_indices_arr  = xx_indices(1:n, :);
 qqp_indices_arr = xx_indices(n+1:end, :);

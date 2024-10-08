@@ -47,6 +47,10 @@ H2 = integrate_casadi(h, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 param_traj_pose_idx = param_traj.start_index(2):param_traj.stop_index(2);
 pose = param_traj.pose(1:3, param_traj_pose_idx);
 quat = param_traj.pose(4:7, param_traj_pose_idx);
+rotation = param_traj.rotation(:, :, param_traj_pose_idx);
+rot_ax = param_traj.rot_ax(:, param_traj_pose_idx);
+alpha = param_traj.alpha(:, param_traj_pose_idx);
+t_val       = param_traj.time(param_traj_pose_idx);
 
 param_traj_time = param_traj.time(:, param_traj_pose_idx);
 theta_i = param_traj_time/param_traj_time(end);
@@ -56,24 +60,37 @@ theta_i = param_traj_time/param_traj_time(end);
 % if_else_and = @(cond1, cond2, true_val, false_val) if_else(cond1, if_else(cond2, true_val, false_val), false_val);
 % [TODO]
 if(strcmp(robot_name, 'ur5e_6dof'))
-    sigma_def = if_else(theta < theta_i(1), pose(:,1), ...
-                if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2), theta_i(2)), ...
-                if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), ...
-                if_else(theta < theta_i(4), trajectory_poly(theta-theta_i(3), pose(:,3), pose(:,4), theta_i(4)-theta_i(3)), pose(:,end)))));
+    sigma_t = if_else(theta < theta_i(1), pose(:,1), ...
+              if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2), theta_i(2)), ...
+              if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), ...
+              if_else(theta < theta_i(4), trajectory_poly(theta-theta_i(3), pose(:,3), pose(:,4), theta_i(4)-theta_i(3)), pose(:,end)))));
 else % only 3 points
-    sigma_def = if_else(theta < theta_i(1), pose(:,1), ...
-                if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2), theta_i(2)), ...
-                if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), pose(:,end))));
+    sigma_t = if_else(theta < theta_i(1), pose(:,1), ...
+              if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2), theta_i(2)), ...
+              if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), pose(:,end))));
+
+    alpha_i = trajectory_poly(theta,            alpha(1), alpha(2), theta_i(2));
+    skew_ew = skew(rot_ax(:, 2));
+    RR1 = (eye(3) + sin(alpha_i-alpha(1))*skew_ew + (1-cos(alpha_i-alpha(1)))*skew_ew^2) * rotation(:, :, 1);
+
+    alpha_i = trajectory_poly(theta-theta_i(2), alpha(2), alpha(3), theta_i(3)-theta_i(2));
+    skew_ew = skew(rot_ax(:, 3));
+    RR2 = (eye(3) + sin(alpha_i-alpha(2))*skew_ew + (1-cos(alpha_i-alpha(2)))*skew_ew^2) * rotation(:, :, 2);
+
+    sigma_r = if_else(theta < theta_i(1), rotation(:, :, 1), ...
+              if_else(theta < theta_i(2), RR1, ...
+              if_else(theta < theta_i(3), RR2, rotation(:, :,end))));
 end
 
 if(N_step_MPC == 1)
-    MPC_traj_indices = 1:N_MPC;
+    MPC_traj_indices = 1:(N_MPC+1);
 else
     MPC_traj_indices = [1, 2, N_step_MPC : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC];
 end
 
 T = param_traj_time(end);
-sigma_fun = Function('sigma_fun', {theta}, {sigma_def});
+sigma_t_fun = Function('sigma_t_fun', {theta}, {sigma_t});
+sigma_r_fun = Function('sigma_r_fun', {theta}, {sigma_r});
 quat_d = quat(:, 1); %assumption: constant quaternion for all poses
 
 %% Calculate Initial Guess
@@ -206,7 +223,7 @@ for i=0:N_MPC
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
         if(i == 0)
-            g_theta(1, 1 + (0)) = { y(1:3)' - sigma_fun(theta( 1 + (0) )) };
+            g_theta(1, 1 + (0)) = { y(1:3)' - sigma_t_fun(theta( 1 + (0) )) };
             g_theta(1, 1 + (i+1)) = { H_kp1(theta(1 + (i)), v(1 + (i))) - theta(1 + (i+1)) };
             g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
         elseif(i == 1)
@@ -229,17 +246,17 @@ J_yt = 0;
 J_yr = 0;
 J_theta = 0;
 for i=0:N_MPC
-    % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+    R_y_yr = R_e_arr{1 + (i)} * sigma_r_fun(theta(1 + (i)))';
     % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
-    % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
-    q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(quat_d));
+    q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
+    %q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(quat_d));
 
     if(i < N_MPC)
-        J_yt = J_yt + Q_norm_square( y(1:3, 1 + (i)) - sigma_fun(theta(1 + (i))), pp.Q_y(1:3,1:3)  );
+        J_yt = J_yt + Q_norm_square( y(1:3, 1 + (i)) - sigma_t_fun(theta(1 + (i))), pp.Q_y(1:3,1:3)  );
         J_yr = J_yr + Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6,4:6)  );
         J_theta = J_theta + Q_norm_square( theta(1 + (i)) - theta_d(1 + (i)), pp.Q_theta  );
     else
-        J_yt_N = Q_norm_square( y(1:3, 1 + (i)) - sigma_fun(theta(1 + (i))), pp.Q_yN(1:3,1:3)  );
+        J_yt_N = Q_norm_square( y(1:3, 1 + (i)) - sigma_t_fun(theta(1 + (i))), pp.Q_yN(1:3,1:3)  );
         J_yr_N = Q_norm_square( q_y_yr_err(2:4) , pp.Q_yN(4:6,4:6)  );
         J_thetaN = Q_norm_square( theta(1 + (i)) - theta_d(1 + (i)), pp.Q_thetaN  );
     end

@@ -12,8 +12,8 @@ quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi'
 
 q = SX.sym( 'q',  n,   N_MPC   );
 pos_indices = [1 3]; % xz plane
-q_24_indices = [2 4]; % q2, q4 only
-q_subs = vertcat([q_0(1) q(1) q_0(3) q(2) q_0(5) q_0(6)]);
+q_24_indices = [2 3]; % q2, q4 only (q3 ist deaktiviert daher ist q4 an index 3)
+q_subs = vertcat([q_0(1) q(1) q(2) q_0(4) q_0(5) q_0(6)]);
 H_2dof = Function('H_2dof', {q}, {hom_transform_endeffector_py_fun(q_subs)});
 
 % Discrete system dynamics
@@ -168,9 +168,9 @@ end
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-J_yt   = Q_norm_square( y(:, 1 + (2:N_MPC-1) ) - y_d(:, 1 + (2:N_MPC-1)), pp.Q_y  );
-J_yt   = J_yt + Q_norm_square( y(:, 1 + ( 1       ) ) - y_d(:, 1 + ( 1       )), pp.Q_ykp1);
-J_yt_N = Q_norm_square( y(:, 1 + (  N_MPC  ) ) - y_d(:, 1 + (  N_MPC  )), pp.Q_yN );
+J_yt   = Q_norm_square( y(:, 1 + (2:N_MPC-1) ) - y_d(:, 1 + (2:N_MPC-1)), pp.Q_y   );
+J_yt   = J_yt + Q_norm_square( y(:, 1 + ( 1) ) - y_d(:, 1 + ( 1       )), pp.Q_ykp1);
+J_yt_N = Q_norm_square( y(:, 1 + (  N_MPC  ) ) - y_d(:, 1 + (  N_MPC  )), pp.Q_yN  );
 
 g = g_x;
 

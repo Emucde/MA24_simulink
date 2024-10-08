@@ -19,10 +19,10 @@
 #define MPC10_INIT_GUESS_PATH "../s_functions/fr3_no_hand_6dof/initial_guess/param_MPC10_init_guess.bin"
 
 //MPC_SETTINGS:
-#define MPC10_N 9
-#define MPC10_N_step 250
-#define MPC10_Ts 0.25
-#define MPC10_T_horizon 2.25
+#define MPC10_N 5
+#define MPC10_N_step 100
+#define MPC10_Ts 0.1
+#define MPC10_T_horizon 0.5
 #define MPC10_rk_iter 1
 #define MPC10_variant "nlpsol"
 #define MPC10_solver "qrqp"
@@ -30,8 +30,8 @@
 #define MPC10_name "MPC10"
 #define MPC10_int_method "RK4"
 #define MPC10_fixed_parameter 0
-#define MPC10_traj_data_per_horizon 10
-static const uint32_t MPC10_traj_indices[] = {0,1,249,499,749,999,1249,1499,1749,1999};
+#define MPC10_traj_data_per_horizon 6
+static const uint32_t MPC10_traj_indices[] = {0,1,99,199,299,399};
 
 //MPC_WEIGHTS:
 const casadi_real MPC10_param_weight[144] = {

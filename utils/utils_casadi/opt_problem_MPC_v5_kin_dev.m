@@ -30,19 +30,8 @@ end
 x = SX.sym('x', 2*n);
 
 %% Calculate Initial Guess
-
-% Get trajectory data for initial guess
-p_d_0    = param_trajectory.p_d(    1:3, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (y_0 ... y_N)
-
-q_d_0       = param_trajectory.q_d(       1:4, 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC ); % (q_0 ... q_N)
-
-p_d_0_kp1 = param_trajectory.p_d(1:3, 2);
-q_d_0_kp1 = param_trajectory.q_d(1:4, 2);
-
-% initial guess for reference trajectory
-
 if(N_step_MPC <= 2)
-    MPC_traj_indices = 1:N_MPC;
+    MPC_traj_indices = 1:(N_MPC+1);
 else
     MPC_traj_indices = [1, 2, N_step_MPC : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC];
 end

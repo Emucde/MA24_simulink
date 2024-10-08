@@ -67,7 +67,7 @@ m = param_robot.m; % Dimension of Task Space
 
 % Model equations
 % Forward Dynamics: d/dt x = f(x, u)
-use_aba = false;
+use_aba = true;
 if(use_aba)
     f = Function.load([input_dir, 'sys_fun_x_aba_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
 else
@@ -77,9 +77,6 @@ end
 compute_tau_fun = Function.load([input_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
-J = Function.load([input_dir, 'geo_jacobian_endeffector_py.casadi']);
-J_p = Function.load([input_dir, 'geo_jacobian_endeffector_p_py.casadi']);
-gravity_vector_py_fun = Function.load([input_dir, 'gravitational_forces_py.casadi']);
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
@@ -98,11 +95,13 @@ end
 F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 
 % Get trajectory data for initial guess
-if(N_step_MPC <= 2)
-    MPC_traj_indices = 1:N_MPC;
-else
-    MPC_traj_indices = [1, 2, N_step_MPC : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC];
-end
+% if(N_step_MPC <= 2)
+%     MPC_traj_indices = 1:(N_MPC+1);
+% else
+%     MPC_traj_indices = [1, 2, N_step_MPC : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC];
+% end
+
+MPC_traj_indices = 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC;
 
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
 q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
@@ -115,7 +114,7 @@ q_0    = x_0_0(1   :   n); % useless line...
 dq_0   = x_0_0(1+n : 2*n);
 ddq_0  = q_0_pp;
 xe_k_0 = p_d_0(1:3, 1); % x pos, y pos, defined in parameters_xdof.m
-u_k_0  = compute_tau_fun(q_0, dq_0, ddq_0); % much more faster than above command
+u_k_0  = compute_tau_fun(q_0, dq_0, ddq_0); % gravity compensation
 
 u_init_guess_0 = ones(n, N_MPC).*u_k_0; % fully actuated
 
@@ -127,6 +126,7 @@ x_init_guess_0     = [x_0_0 full(x_init_guess_kp1_0)];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INIT GUESS 1/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
 lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
+
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 % get weights from "init_MPC_weight.m"
@@ -173,13 +173,11 @@ g_x = cell(1, N_MPC+1); % for F
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET Equation Constraint size 5/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if(weights_and_limits_as_parameter)
-    lbg = SX(numel(x), 1);
-    ubg = SX(numel(x), 1);
-    % lbg = SX(numel(x), 1);
-    % ubg = SX(numel(x), 1);
+    lbg = SX(numel(lam_g_init_guess_0), 1);
+    ubg = SX(numel(lam_g_init_guess_0), 1);
 else
-    lbg = zeros(numel(x), 1);
-    ubg = zeros(numel(x), 1);
+    lbg = zeros(numel(lam_g_init_guess_0), 1);
+    ubg = zeros(numel(lam_g_init_guess_0), 1);
 end
 
 % lambda_x0, lambda_g0 initial guess
@@ -207,15 +205,15 @@ for i=0:N_MPC
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        if(i == 0)
-            g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
-        elseif(i == 1)
-            g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
-        else
+        % if(i == 0)
+        %     g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
+        % elseif(i == 1)
+        %     g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
+        % else
             g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
             % runs only to T_horizon-Ts_MPC, i. e. tilde x_{N-1} = x(t0+Ts_MPC*(N-1)) and x_N doesn't exist
             % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(N-1))
-        end
+        % end
 
         dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
         q_pp(:, 1 + (i  )) = dx(n+1:2*n, 1);
@@ -228,30 +226,28 @@ g = g_x;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Cost Function  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-Q_ori = 0;
+J_yt   = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_d(1:3, 1 + (1:N_MPC-1)), pp.Q_y( 1:3,1:3)  );
+J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp.Q_yN(1:3,1:3)  );
+
+J_yr = 0;
 for i=0:N_MPC
-    % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+    R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
     % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
-    % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
-    q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
+    q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
+    %q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
 
     if(i < N_MPC)
-        Q_ori = Q_ori + Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6, 4:6)  );
+        J_yr = J_yr + Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6, 4:6)  );
     else
-        Q_ori_N = Q_norm_square( q_y_yr_err(2:4) , pp.Q_yN(4:6, 4:6)  );
+        J_yr_N = Q_norm_square( q_y_yr_err(2:4) , pp.Q_yN(4:6, 4:6)  );
     end
 end
 
-J_yt = Q_norm_square( y(1:3, 1 + (0:N_MPC-1) ) - y_d(1:3, 1 + (0:N_MPC-1)), pp.Q_y(1:3,1:3)  );
-J_yr = Q_ori;
-
-J_yt_N    = Q_norm_square(  y( 1:3, 1 + (N_MPC) ) - y_d( 1:3, 1 + (N_MPC) ), pp.Q_yN(1:3, 1:3)  );
-J_yr_N    = Q_ori_N;
 
 % J_q_pp = Q_norm_square(u, pp.R_q_pp);
 
 % J_q_d_pp = Q_norm_square(u_d, pp.R_q_d);
-J_q_pp = Q_norm_square(q_pp, pp.R_q_pp);
+J_q_pp = Q_norm_square(u, pp.R_q_pp);
 % J_u = Q_norm_square(u, pp.R_u);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Additional Outputs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

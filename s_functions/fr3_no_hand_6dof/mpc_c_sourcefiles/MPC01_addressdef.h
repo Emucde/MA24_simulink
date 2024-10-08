@@ -7,7 +7,7 @@
 #define MPC01_IW_LEN 870
 #define MPC01_ARG_LEN 23
 #define MPC01_RES_LEN 17
-#define MPC01_W_LEN 28503
+#define MPC01_W_LEN 17812
 static const uint32_t MPC01_ARG[] = {0,54,330};
 static const uint32_t MPC01_RES[] = {474,480,756,757,758,759,760};
 #define MPC01_W_END_ADDRESS 761
