@@ -116,12 +116,7 @@
     </inertial>
   </link>
   
-  <!-- changed joint 3 from revolute to fixed (6dof case) -->
-  <!-- <joint name="fr3_joint3" type="revolute"> -->
-  <joint name="fr3_joint3" type="fixed">
-    <!-- default 7dof -->
-    <!-- <origin rpy="1.57079632679489661923132169163975 0 0" xyz="0 -0.316 0"/> -->
-    <!-- fixed at q3=0: KOS steht am kopf desw. das minus in -0.785398... -->
+  <joint name="fr3_joint3" type="revolute">
     <origin rpy="1.57079632679489661923132169163975 0 0" xyz="0 -0.316 0"/>
     <parent link="fr3_link2"/>
     <child link="fr3_link3"/>
