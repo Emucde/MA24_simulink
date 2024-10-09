@@ -203,6 +203,7 @@ ur5e.param.torque_limit_lower = tau_min;
 ur5e.param.q_n = (q_max + q_min) / 2; % not the best reference pose for fr3
 
 ur5e.param.n_indices = 1:n;
+ur5e.param.n_indices_fixed = [];
 
 % Inertial System
 ur5e.param.p_0 = [0; 0; 0]; % m

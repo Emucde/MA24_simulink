@@ -13,6 +13,7 @@ if(~strcmp(robot_name, robot_name_old))
     rmpath(genpath('./s_functions'));
     rmpath(genpath('./utils/simulink_utils/utils_6dof'));
     rmpath(genpath('./utils/simulink_utils/utils_7dof'));
+    rmpath(genpath('./utils/simulink_utils/utils_pseudo_6dof'));
     rmpath(genpath('./utils/simulink_utils/fr3_visual'));
     rmpath(genpath('./utils/simulink_utils/fr3_no_hand_visual'));
     rmpath(genpath('./utils/simulink_utils/ur5e_visual'));
@@ -28,10 +29,12 @@ if(~strcmp(robot_name, robot_name_old))
     warning('on', 'MATLAB:rmpath:DirNotFound')
 end
 
-if(contains(robot_name, '6dof'))
+if(strcmp(robot_name, 'ur5e_6dof'))
     robot_folder_cell(1) = {'utils/simulink_utils/utils_6dof'};
-elseif(contains(robot_name, '7dof'))
+elseif(strcmp(robot_name, 'fr3_7dof'))
     robot_folder_cell(1) = {'utils/simulink_utils/utils_7dof'};
+elseif(strcmp(robot_name, 'fr3_no_hand_6dof'))
+    robot_folder_cell(1) = {'utils/simulink_utils/utils_pseudo_6dof'};
 else
     error('Invalid robot name: %s', robot_name, 'Valid robot names: fr3_7dof, fr3_6dof, ur5e_6dof');
 end

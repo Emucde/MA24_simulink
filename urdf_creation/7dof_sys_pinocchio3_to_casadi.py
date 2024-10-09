@@ -43,9 +43,9 @@ if "fr3" in robot_name:
         q_0 = [0, 0, -np.pi/2, 0, np.pi/2, 0] # joint q3 fixed at pi/4
         end_link = "fr3_hand_tcp"
     elif robot_name == "fr3_no_hand_6dof":
-        urdf_path = os.path.join(os.path.dirname(__file__), 'fr3_no_hand_6dof.urdf')
+        urdf_path = os.path.join(os.path.dirname(__file__), 'fr3_no_hand_7dof.urdf')
         s_functions_path = './s_functions/fr3_no_hand_6dof/casadi_functions/'
-        q_0 = [0, -np.pi/4, -3 * np.pi/4, 0, np.pi/2, np.pi/4] # joint q3 fixed at 0
+        q_0 = [0, -np.pi/4, 0, -3 * np.pi/4, 0, np.pi/2, np.pi/4] # fixed joint later due to joint space control
         end_link = "fr3_link8_tcp"
     else:
         raise Exception("Unknown robot name '{}'".format(robot_name), "Available robots: 'fr3_7dof', 'fr3_6dof'")

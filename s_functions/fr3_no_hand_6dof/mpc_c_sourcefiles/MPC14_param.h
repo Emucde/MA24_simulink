@@ -1,0 +1,68 @@
+#ifndef MPC14_PARAM_H
+#define MPC14_PARAM_H
+
+#include <stdint.h>
+#include <math.h>
+
+#ifndef Inf
+#define Inf INFINITY
+#endif
+
+#ifndef TRAJ_DATA_PATH
+#define TRAJ_DATA_PATH "../s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.bin"
+#endif
+
+#ifndef X0_INIT_PATH
+#define X0_INIT_PATH "../s_functions/fr3_no_hand_6dof/trajectory_data/param_x0_init.bin"
+#endif
+
+#define MPC14_INIT_GUESS_PATH "../s_functions/fr3_no_hand_6dof/initial_guess/param_MPC14_init_guess.bin"
+
+//MPC_SETTINGS:
+#define MPC14_N 5
+#define MPC14_N_step 1
+#define MPC14_Ts 0.001
+#define MPC14_T_horizon 0.005
+#define MPC14_rk_iter 1
+#define MPC14_variant "nlpsol"
+#define MPC14_solver "qrqp"
+#define MPC14_version "v4_kin_int_2dof"
+#define MPC14_name "MPC14"
+#define MPC14_int_method "Euler"
+#define MPC14_fixed_parameter 0
+#define MPC14_traj_data_per_horizon 6
+static const uint32_t MPC14_traj_indices[] = {0,1,2,3,4,5};
+
+//MPC_WEIGHTS:
+const casadi_real MPC14_param_weight[28] = {
+    /* Q_y : 2x2 matrix values */
+    100, 0, 
+    0, 100, 
+
+    /* Q_ykp1 : 2x2 matrix values */
+    100, 0, 
+    0, 100, 
+
+    /* Q_yN : 2x2 matrix values */
+    100000, 0, 
+    0, 100000, 
+
+    /* R_q_pp : 2x2 matrix values */
+    1e-10, 0, 
+    0, 1e-10, 
+
+    /* x_min : [4 1] array values */
+    -Inf, -Inf, -Inf, -Inf, 
+
+    /* x_max : [4 1] array values */
+    Inf, Inf, Inf, Inf, 
+
+    /* u_min : [2 1] array values */
+    -Inf, -Inf, 
+
+    /* u_max : [2 1] array values */
+    Inf, Inf, 
+};
+
+
+#endif

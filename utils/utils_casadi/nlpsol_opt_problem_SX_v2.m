@@ -246,10 +246,8 @@ x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
 uu_indices = reshape(1:numel(u), size(u));
 xx_indices = reshape(1+numel(u):numel(u)+numel(x), size(x));
 
-n=2; %%%%%%%%%%%°!!
-
-qq_indices_arr  = xx_indices(1:n, :);
-qqp_indices_arr = xx_indices(n+1:end, :);
+qq_indices_arr  = xx_indices(1:size(x,1)/2, :);
+qqp_indices_arr = xx_indices(size(x,1)/2+1:end, :);
 
 tau_indices = uu_indices(:)';
 qq_indices = qq_indices_arr(:)';
@@ -259,7 +257,7 @@ tau_dim = size(uu_indices);
 qq_dim = size(qq_indices_arr);
 qqp_dim = size(qqp_indices_arr);
 
-if(strcmp(casadi_func_name, 'MPC6') || strcmp(casadi_func_name, 'MPC7'))
+if(strcmp(MPC_version, 'v3_quat') || strcmp(MPC_version, 'v3_rpy'))
     
     z_indices = reshape(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z), size(z));
     alpha_indices = reshape(1+numel(u)+numel(x)+numel(z):numel(u)+numel(x)+numel(z)+numel(alpha), size(alpha));

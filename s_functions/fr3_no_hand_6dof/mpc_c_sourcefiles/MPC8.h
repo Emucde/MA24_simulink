@@ -37,7 +37,7 @@ int MPC8_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, c
 #define MPC8_SZ_ARG 23
 #define MPC8_SZ_RES 15
 #define MPC8_SZ_IW 290
-#define MPC8_SZ_W 2640
+#define MPC8_SZ_W 2660
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

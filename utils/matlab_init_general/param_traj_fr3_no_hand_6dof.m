@@ -12,8 +12,12 @@ xeT = [xe0(1:3,1) + [0; 0; -0.5]; rotm2quat_v4( Rz(pi/4)*quat2rotm_v2(xe0(4:7)) 
 
 %q_0 = fsolve(@(q) kin_fun(xe0, q), q_d); % test if the function works
 options = optimoptions('fsolve', 'Algorithm', 'levenberg-marquardt', 'MaxFunctionEvaluations', 1000);
-q_0 = fsolve(@(q) kin_fun(xe0, q), q_d, options); % test if the function works
+q_0_red = fsolve(@(q) kin_fun(xe0, q, q_d, n_indices), q_d, options); % test if the function works
 %[q_0, ~] = inverse_kinematics(param_robot, xe0, q_d, Q_pos, Q_m, Q_q, Q_nl,  1e-2, 100, ct_ctrl_param);
+
+q_0 = param_robot.q_0_ref;
+q_0(n_indices) = q_0_red;
+
 H_0 = hom_transform_endeffector_py(q_0);
 xe0 = [H_0(1:3,4); rotm2quat_v4(H_0(1:3,1:3))]; % better to exact start in point
 
@@ -95,8 +99,8 @@ traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 
 % q_0 = [q1 q2 q4 q5 q6 q7]
-q_0 = [0, -pi/4, -3 * pi/4, 0, pi/2, pi/4]'; % q3 is per default 0 (not used)
-q_T = [0, -pi/4, -3 * pi/4 + 0.1, 0, pi/2, pi/4]'; % q3 is per default 0 (not used)
+q_0 = [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]'; % q3 is per default 0 (not used)
+q_T = [0, -pi/4, 0, -3 * pi/4 + 0.1, 0, pi/2, pi/4]'; % q3 is per default 0 (not used)
 H_0 = hom_transform_endeffector_py(q_0);
 R_init = quat2rotm_v2(xe0(4:7));
 
@@ -118,7 +122,9 @@ traj_struct.name = '2DOF Test Trajectory, Polynomial, joint space';
 traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 
-function out = kin_fun(xe, q)
+function out = kin_fun(xe, q_reduced, q_0, n_indices)
+    q = q_0;
+    q(n_indices) = q_reduced;
     H = hom_transform_endeffector_py(q);
     
     RR = H(1:3,1:3)*quat2rotm_v2(xe(4:7))';

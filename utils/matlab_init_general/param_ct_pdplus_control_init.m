@@ -8,8 +8,28 @@ K_p_r = K_d_r^2/4;
 ctrl_param.ct.Kd1 = blkdiag(K_d_t, K_d_r);
 ctrl_param.ct.Kp1 = blkdiag(K_p_t, K_p_r);
 
-ctrl_param.pd.D_d = 3*eye(6);
-ctrl_param.pd.K_d = 3*eye(6);
+%% Jointspace Control
+% M1: hardcoded
+ctrl_param.pd.D_d = 3*eye(length(param_robot.n_indices_fixed));
+ctrl_param.pd.K_d = 3*eye(length(param_robot.n_indices_fixed));
+%ctrl_param.pd.K_d = ctrl_param.pd.D_d^2/4;
+
+if(~exist('current_traj_value', 'var'))
+    current_traj_value = 1;
+end
+
+% M2: eigenmodes
+K_0 = 100*eye(n);
+xi_0 = 0.1;
+
+q_0_ref = param_traj.q_0(:, current_traj_value);
+M_0 = inertia_matrix_py(q_0_ref);
+m_0 = diag(M_0);
+omega_0 = sqrt(K_0 ./ m_0);
+D_0 = eye(n) * (m_0 * 2 * xi_0 .* omega_0);
+
+ctrl_param.pd.D_d_jointspace = D_0;
+ctrl_param.pd.K_d_jointspace = K_0;
 
 %% Singularity robustness
 % 0: no sing robust

@@ -50,7 +50,7 @@ end
     if(mode == 1) % classic nlpsol s_function
         s_fun_file     = [s_fun_path, 's_function_nlpsol.c']; % TODO: create file if not exists!
         s_fun_name_new = ['s_function_nlpsol_', casadi_fun_name];
-        s_fun_file_new = [output_dir, s_fun_name_new, '.c']; % TODO: create file if not exists!
+        s_fun_file_new = [output_dir, '/', s_fun_name_new, '.c']; % TODO: create file if not exists!
 
         copyfile(s_fun_file, s_fun_file_new, 'f');
         replace_strings_in_casadi_file(s_fun_file_new, ['nlpsol_', casadi_fun_name]);
@@ -80,7 +80,7 @@ end
     elseif(mode == 2) % modified combination of [2] and [3]
         s_fun_file = [s_fun_path, 's_function_opti.c']; % TODO: create file if not exists!
         s_fun_name_new = ['s_function_opti_', casadi_fun_name];
-        s_fun_file_new = [output_dir, s_fun_name_new, '.c']; % TODO: create file if not exists!
+        s_fun_file_new = [output_dir, '/', s_fun_name_new, '.c']; % TODO: create file if not exists!
 
         % Enable Mex Compile
         opts = struct('main', true, ...

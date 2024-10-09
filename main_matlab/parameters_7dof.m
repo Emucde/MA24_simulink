@@ -19,7 +19,7 @@ fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 %trajectory_out_of_workspace = false; % TODO: einfach offset 0 setzten
 %x_traj_out_of_workspace_value = 0.1;
 
-plot_trajectory = ~true;
+plot_trajectory               = ~true;
 overwrite_offline_traj_forced = false;
 
 % set_param(gcs,'Profile','off'); % turn off profiler when not needed anymore
@@ -78,13 +78,13 @@ bus_definitions;
 
 init_MPC_weights; %% set MPC weights
 
-param_ct_pdplus_control_init;
-
 create_trajectories;
 
 change_simulink_traj_combo_box; % saves system!
 
 create_trajectory_frame_data;
+
+param_ct_pdplus_control_init;
 
 param_debug;
 

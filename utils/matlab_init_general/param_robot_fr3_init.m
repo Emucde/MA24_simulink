@@ -339,20 +339,6 @@ fr3.param = struct;
 
 fr3.param.n_DOF = n; % DOF of the robot
 
-% this values are overwritten in parameters_xdof.m. They are only necessary, when
-% less degree of freedom are used as the robot has. Then this values defines which
-% joints are fixed and which are used.
-% Important: now joint 3 is fixed at q = pi/4. Therefore, when the fixed joint or the
-% fixed joint value is changed, the pinocchio to casadi to simulink scripts have to be
-% rerun.
-if(fr3.param.n_DOF == 7)
-    fr3.param.n_indices = [1:7]; % 7 DOF
-elseif(fr3.param.n_DOF == 6)
-    fr3.param.n_indices = [1:2, 4:7]; % 6 DOF, joint indices that are used
-else
-    error('n_indices not correct defined for n = %d', fr3.param.n_DOF);
-end
-
 fr3.param.q_0_ref = [0; 0; pi/4; -pi/2; 0; pi/2; 0]; % only q3=pi/4 is fixed
 fr3.param.q_0_p_ref = zeros(7, 1);
 fr3.param.q_0_pp_ref = zeros(7, 1);
@@ -371,19 +357,19 @@ fr3.param.g_z = fr3.param.g(3);
 %% Robot gravity
 fr3.param.g_vis=[0;0;-9.81]; %m/s^2
 
-fr3.param.q_limit_upper = q_max(fr3.param.n_indices);
-fr3.param.q_limit_lower = q_min(fr3.param.n_indices);
+fr3.param.q_limit_upper = q_max;
+fr3.param.q_limit_lower = q_min;
 
-fr3.param.q_p_limit_upper = q_dot_max(fr3.param.n_indices);
-fr3.param.q_p_limit_lower = q_dot_min(fr3.param.n_indices);
+fr3.param.q_p_limit_upper = q_dot_max;
+fr3.param.q_p_limit_lower = q_dot_min;
 
-fr3.param.q_pp_limit_upper = q_ddot_max(fr3.param.n_indices);
-fr3.param.q_pp_limit_lower = q_ddot_min(fr3.param.n_indices);
+fr3.param.q_pp_limit_upper = q_ddot_max;
+fr3.param.q_pp_limit_lower = q_ddot_min;
 
 fr3.param.q_n = (q_max + q_min) / 2; % not the best reference pose for fr3
 
-fr3.param.torque_limit_upper = tau_max(fr3.param.n_indices);
-fr3.param.torque_limit_lower = tau_min(fr3.param.n_indices);
+fr3.param.torque_limit_upper = tau_max;
+fr3.param.torque_limit_lower = tau_min;
 
 % Inertial System
 fr3.param.p_0 = [0; 0; 0]; % m
@@ -535,4 +521,7 @@ fr3.param.I_finger_zz = 7.5e-07; % kgm^2
 
 % Define sugihara limb vector
 sugihara_limb_vector = [fr3.param.l1^2; fr3.param.l2^2; fr3.param.l3^2; fr3.param.l4^2; fr3.param.l5^2; fr3.param.l6^2; fr3.param.l7^2];
-fr3.param.sugihara_limb_vector = sugihara_limb_vector(fr3.param.n_indices);
+fr3.param.sugihara_limb_vector = sugihara_limb_vector;
+
+fr3.param.n_indices_fixed = [];
+fr3.param.n_indices = 1:n;
