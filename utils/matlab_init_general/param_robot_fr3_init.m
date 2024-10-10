@@ -339,7 +339,8 @@ fr3.param = struct;
 
 fr3.param.n_DOF = n; % DOF of the robot
 
-fr3.param.q_0_ref = [0; 0; pi/4; -pi/2; 0; pi/2; 0]; % only q3=pi/4 is fixed
+% fr3.param.q_0_ref = [0; 0; pi/4; -pi/2; 0; pi/2; 0]; % only q3=pi/4 is fixed
+fr3.param.q_0_ref = [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]; % only q3=pi/4 is fixed
 fr3.param.q_0_p_ref = zeros(7, 1);
 fr3.param.q_0_pp_ref = zeros(7, 1);
 

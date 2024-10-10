@@ -34,7 +34,7 @@
 static const uint32_t MPC10_traj_indices[] = {0,1,99,199,299,399};
 
 //MPC_WEIGHTS:
-const casadi_real MPC10_param_weight[144] = {
+const casadi_real MPC10_param_weight[163] = {
     /* Q_y : 6x6 matrix values */
     1, 0, 0, 0, 0, 0, 
     0, 1, 0, 0, 0, 0, 
@@ -51,25 +51,26 @@ const casadi_real MPC10_param_weight[144] = {
     0, 0, 0, 0, 100, 0, 
     0, 0, 0, 0, 0, 100, 
 
-    /* R_q_pp : 6x6 matrix values */
-    1e-10, 0, 0, 0, 0, 0, 
-    0, 1e-10, 0, 0, 0, 0, 
-    0, 0, 1e-10, 0, 0, 0, 
-    0, 0, 0, 1e-10, 0, 0, 
-    0, 0, 0, 0, 1e-10, 0, 
-    0, 0, 0, 0, 0, 1e-10, 
+    /* R_q_pp : 7x7 matrix values */
+    1e-10, 0, 0, 0, 0, 0, 0, 
+    0, 1e-10, 0, 0, 0, 0, 0, 
+    0, 0, 1e-10, 0, 0, 0, 0, 
+    0, 0, 0, 1e-10, 0, 0, 0, 
+    0, 0, 0, 0, 1e-10, 0, 0, 
+    0, 0, 0, 0, 0, 1e-10, 0, 
+    0, 0, 0, 0, 0, 0, 1e-10, 
 
-    /* x_min : [12 1] array values */
-    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
+    /* x_min : [14 1] array values */
+    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
 
-    /* x_max : [12 1] array values */
-    Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
+    /* x_max : [14 1] array values */
+    Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
 
-    /* u_min : [6 1] array values */
-    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
+    /* u_min : [7 1] array values */
+    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
 
-    /* u_max : [6 1] array values */
-    Inf, Inf, Inf, Inf, Inf, Inf, 
+    /* u_max : [7 1] array values */
+    Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
 };
 
 

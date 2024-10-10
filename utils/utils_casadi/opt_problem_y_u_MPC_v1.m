@@ -63,13 +63,7 @@
 import casadi.*
 
 n = param_robot.n_DOF; % Dimension of joint space
-n_fixed = n - n_red; % Number of fixed joints, n_red is defined in param_robot_init.m
 m = param_robot.m; % Dimension of Task Space
-
-q_red_indices = param_robot.n_indices;
-q_fix_indices = param_robot.n_indices_fixed; % can be empty
-x_red_indices = [q_red_indices q_red_indices+n]; % important: here full ndof amount (n not n_red)
-x_fix_indices = [q_fix_indices q_fix_indices+n]; % important: here full ndof amount (n not n_red)
 
 % Model equations
 % Forward Dynamics: d/dt x = f(x, u)
@@ -85,8 +79,8 @@ hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_ende
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
 % Discrete system dynamics
-M = rk_iter; % steps per interval
-DT = T_horizon_MPC/N_MPC/M; % Time step
+M = rk_iter; % RK4 steps per interval
+DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 
 F = integrate_casadi(f, DT, M, int_method);
 
@@ -100,46 +94,14 @@ else
 end
 F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 
-%% REDUCED STATE SPACE
-% in case of n_red == n alls these lines have no effect:
-q_red = SX.sym( 'q',  n_red,   1   );
-q_fix = SX.sym( 'q_fix',  n_fixed, 1 ); % empty if n_red == n
+%Get trajectory data for initial guess
+if(N_step_MPC <= 2)
+    MPC_traj_indices = 1:(N_MPC+1);
+else
+    MPC_traj_indices = [1, 2, N_step_MPC : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC];
+end
 
-x_red = SX.sym( 'x',  2*n_red, 1 ); % x = [q1, .. qn, d/dt q1 ... d/dt qn]
-x_fix = SX.sym( 'x_fix',  2*n_fixed, 1 ); % empty if n_red == n
-
-u_red = SX.sym( 'u',  n_red, 1   );
-u_fix = SX.sym( 'u_fix',  n_fixed, 1   ); % empty if n_red == n
-
-q_subs = SX(n, 1); % auch wenn ein joint fixed ist wird es nicht perfekt 0 sein sonder abweichen daher muss das mitber. werden
-q_subs(q_red_indices) = q_red;
-q_subs(q_fix_indices) = q_fix;
-
-x_subs = SX(2*n, 1);
-x_subs(x_red_indices) = x_red;
-x_subs(x_fix_indices) = x_fix;
-
-u_subs = SX(n, 1);
-u_subs(q_red_indices) = u_red;
-u_subs(q_fix_indices) = u_fix;
-
-H_red = Function('H_red', {q_red, q_fix}, {hom_transform_endeffector_py_fun(q_subs)});
-quat_fun_red = Function('quat_fun_red', {q_red, q_fix}, {quat_endeffector_py_fun(q_subs)});
-
-F_red = Function('F_red', {x_red, u_red, x_fix, u_fix}, {F(x_subs, u_subs)});
-F2_red = Function('F2_red', {x_red, u_red}, {F2(x_subs, u_subs)});
-F_kp1_red = Function('F_kp1_red', {x_red, u_red}, {F_kp1(x_subs, u_subs)});
-
-%% TRAJECTORY
-
-% Get trajectory data for initial guess
-% if(N_step_MPC <= 2)
-%     MPC_traj_indices = 1:(N_MPC+1);
-% else
-%     MPC_traj_indices = [1, 2, N_step_MPC : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC];
-% end
-
-MPC_traj_indices = 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC;
+% MPC_traj_indices = 1 : N_step_MPC : 1 + (N_MPC) * N_step_MPC;
 
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
 q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
@@ -147,33 +109,29 @@ y_d_0 = [p_d_0; q_d_0];
 
 % initial guess for reference trajectory parameter
 
-q_0_red = q_0(q_red_indices);
-q_0_p_red = q_0_p(q_red_indices);
-q_0_pp_red = q_0_pp(q_red_indices);
+x_0_0  = [q_0; q_0_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
 
-x_0_0 = [q_0; q_0_p]; % q1, .. qn, d/dt q1 ... d/dt qn
-x_0_0_red  = [q_0_red; q_0_p_red]; % reduced state space
-
-xe_k_0 = p_d_0(1:3, 1); % x pos, y pos, defined in parameters_xdof.m
 u_k_0  = compute_tau_fun(q_0, q_0_p, q_0_pp); % gravity compensation
-u_k_0_red = u_k_0(q_red_indices);
 
-u_init_guess_0     = ones(n, N_MPC).*u_k_0; % fully actuated
-u_init_guess_0_red = ones(n_red, N_MPC).*u_k_0_red; % fully actuated
+u_init_guess_0 = ones(n, N_MPC).*u_k_0; % fully actuated
 
 % für die S-funktion ist der Initial Guess wesentlich!
-F_sim              = F.mapaccum(N_MPC);
-x_init_guess_kp1_0 = F_sim(x_0_0, u_init_guess_0);
-x_init_guess_kp1_0_red = x_init_guess_kp1_0(x_red_indices, :);
+F_kp1_sim          = F_kp1.mapaccum(1);
+F2_sim             = F2.mapaccum(1);
+F_sim              = F.mapaccum(N_MPC-2);
 
-x_init_guess_0_red     = [x_0_0_red full(x_init_guess_kp1_0_red)];
-% eig unnoetig, da ich es gravitaionskompensiere bleibt der state einfach konstant... (aber gute probe)
+x_DT_ctl_init_0 = F_kp1_sim(x_0_0,           u_init_guess_0(:, 1)    );
+x_DT2_init_0    = F2_sim(   x_DT_ctl_init_0, u_init_guess_0(:, 2)    );
+x_DT_init_0     = F_sim(    x_DT2_init_0,    u_init_guess_0(:, 3:end));
+
+x_init_guess_0     = [x_0_0 full(x_DT_ctl_init_0) full(x_DT2_init_0) full(x_DT_init_0)];
+% x_init_guess_0     = x_0_0 * ones(1, N_MPC+1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INIT GUESS 1/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lam_x_init_guess_0_red = zeros(numel(u_init_guess_0_red)+numel(x_init_guess_0_red), 1);
-lam_g_init_guess_0_red = zeros(numel(x_init_guess_0_red), 1);
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+ (n-n_red)*(N_MPC-1), 1);
 
-init_guess_0 = [u_init_guess_0_red(:); x_init_guess_0_red(:); lam_x_init_guess_0_red(:); lam_g_init_guess_0_red(:)];
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 % get weights from "init_MPC_weight.m"
 param_weight_init = param_weight.(casadi_func_name);
@@ -186,8 +144,8 @@ else % hardcoded weights
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables 2/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-u   = SX.sym( 'u',    n_red, N_MPC   );
-x   = SX.sym( 'x',  2*n_red, N_MPC+1 );
+u   = SX.sym( 'u',    n, N_MPC   );
+x   = SX.sym( 'x',  2*n, N_MPC+1 );
 
 mpc_opt_var_inputs = {u, x};
 
@@ -196,17 +154,12 @@ w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')'; % optimization variables c
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables Limits 3/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lbw = [repmat(pp.u_min, size(u, 2), 1); repmat(pp.x_min, size(x, 2), 1)];
 ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max, size(x, 2), 1)];
-% lbw = [repmat(pp.u_min, size(u, 2), 1); repmat(pp.x_min, size(x, 2), 1)];
-% ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max, size(x, 2), 1)];
 
-u_opt_indices = 1:n_red;
+u_opt_indices = 1:n;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INPUT Parameter 4/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-x_k    = SX.sym( 'x_k', 2*n, 1       ); % Important: x_k uses full dof state!
+x_k    = SX.sym( 'x_k', 2*n, 1       ); % current x state
 y_d    = SX.sym( 'y_d', m+1, N_MPC+1 ); % (y_d_0 ... y_d_N)
-
-x_k_red = x_k(x_red_indices);
-q_k_fix = x_k(q_fix_indices); % assumption: remains constant
 
 mpc_parameter_inputs = {x_k, y_d};
 mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
@@ -219,14 +172,15 @@ end
 
 % constraints conditions cellarray g
 g_x = cell(1, N_MPC+1); % for F
+g_x_fixed = cell(1, N_MPC); % for F
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET Equation Constraint size 5/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if(weights_and_limits_as_parameter)
-    lbg = SX(numel(lam_g_init_guess_0_red), 1);
-    ubg = SX(numel(lam_g_init_guess_0_red), 1);
+    lbg = SX(numel(lam_g_init_guess_0), 1);
+    ubg = SX(numel(lam_g_init_guess_0), 1);
 else
-    lbg = zeros(numel(lam_g_init_guess_0_red), 1);
-    ubg = zeros(numel(lam_g_init_guess_0_red), 1);
+    lbg = zeros(numel(lam_g_init_guess_0), 1);
+    ubg = zeros(numel(lam_g_init_guess_0), 1);
 end
 
 % lambda_x0, lambda_g0 initial guess
@@ -237,40 +191,42 @@ lambda_g0 = SX.sym('lambda_g0', size(lbg));
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
 y     = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
 
-q_pp = SX( n_red, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
+q_pp = SX( n, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
-g_x(  1, 1 + (0)) = {x_k_red - x(:, 1 + (0))}; % x0 = xk
+g_x(  1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 for i=0:N_MPC
     % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
-    q = x(1:n_red, 1 + (i));
+    q = x(1:n, 1 + (i));
 
     % calculate trajectory values (y_0 ... y_N)
-    H_e = H_red(q, q_k_fix);
+    H_e = hom_transform_endeffector_py_fun(q);
     y(1:3,   1 + (i)) = H_e(1:3, 4);
-    y(4:7,   1 + (i)) = quat_fun_red(q, q_k_fix);
+    y(4:7,   1 + (i)) = quat_endeffector_py_fun(q);
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
     if(i < N_MPC)
-        % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        % if(i == 0)
-        %     g_x(1, 1 + (i+1))  = { F_kp1_red(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
-        % elseif(i == 1)
-        %     g_x(1, 1 + (i+1))  = { F2_red(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
-        % else
-            g_x(1, 1 + (i+1))  = { F_red(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
-            % runs only to T_horizon-Ts_MPC, i. e. tilde x_{n_red-1} = x(t0+Ts_MPC*(n_red-1)) and x_N doesn't exist
-            % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(n_red-1))
-        % end
+        if(i == 0)
+            g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
+        elseif(i == 1)
+            g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
+        else
+            g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
+        end
 
         dx   = f(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
-        q_pp(:, 1 + (i  )) = dx(n_red+1:2*n_red, 1);
+        q_pp(:, 1 + (i  )) = dx(n+1:2*n, 1);
+
+        if(i>0 && n_red < n)
+            % g_x_fixed(1, 1 + (i-1)) = { x([n_indices_fixed+n], 1 + (i)) - 0};
+            g_x_fixed(1, 1 + (i-1)) = { x_k(n_indices_fixed+n) - x(n_indices_fixed+n, 1 + (i))};
+        end
     end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Total number of equation conditions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-g = g_x;
+g = [g_x, g_x_fixed];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Cost Function  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
@@ -280,10 +236,7 @@ J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp
 
 J_yr = 0;
 for i=0:N_MPC
-    R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
-    % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
-    q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
-    %q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
+    q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
 
     if(i < N_MPC)
         J_yr = J_yr + Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6, 4:6)  );

@@ -36,8 +36,8 @@ int MPC01_work(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi
 int MPC01_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_int *sz_w);
 #define MPC01_SZ_ARG 23
 #define MPC01_SZ_RES 17
-#define MPC01_SZ_IW 870
-#define MPC01_SZ_W 17051
+#define MPC01_SZ_IW 1035
+#define MPC01_SZ_W 22274
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

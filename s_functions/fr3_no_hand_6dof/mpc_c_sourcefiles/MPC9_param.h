@@ -34,7 +34,7 @@
 static const uint32_t MPC9_traj_indices[] = {0,1,9,19,29,39};
 
 //MPC_WEIGHTS:
-const casadi_real MPC9_param_weight[198] = {
+const casadi_real MPC9_param_weight[233] = {
     /* Q_y : 6x6 matrix values */
     100, 0, 0, 0, 0, 0, 
     0, 100, 0, 0, 0, 0, 
@@ -51,42 +51,44 @@ const casadi_real MPC9_param_weight[198] = {
     0, 0, 0, 0, 100000, 0, 
     0, 0, 0, 0, 0, 100000, 
 
-    /* R_q_pp : 6x6 matrix values */
-    1e-10, 0, 0, 0, 0, 0, 
-    0, 1e-10, 0, 0, 0, 0, 
-    0, 0, 1e-10, 0, 0, 0, 
-    0, 0, 0, 1e-10, 0, 0, 
-    0, 0, 0, 0, 1e-10, 0, 
-    0, 0, 0, 0, 0, 1e-10, 
+    /* R_q_pp : 7x7 matrix values */
+    1e-10, 0, 0, 0, 0, 0, 0, 
+    0, 1e-10, 0, 0, 0, 0, 0, 
+    0, 0, 1e-10, 0, 0, 0, 0, 
+    0, 0, 0, 1e-10, 0, 0, 0, 
+    0, 0, 0, 0, 1e-10, 0, 0, 
+    0, 0, 0, 0, 0, 1e-10, 0, 
+    0, 0, 0, 0, 0, 0, 1e-10, 
 
-    /* R_v : 6x6 matrix values */
-    1e-05, 0, 0, 0, 0, 0, 
-    0, 1e-05, 0, 0, 0, 0, 
-    0, 0, 1e-05, 0, 0, 0, 
-    0, 0, 0, 1e-05, 0, 0, 
-    0, 0, 0, 0, 1e-05, 0, 
-    0, 0, 0, 0, 0, 1e-05, 
+    /* R_v : 7x7 matrix values */
+    1e-05, 0, 0, 0, 0, 0, 0, 
+    0, 1e-05, 0, 0, 0, 0, 0, 
+    0, 0, 1e-05, 0, 0, 0, 0, 
+    0, 0, 0, 1e-05, 0, 0, 0, 
+    0, 0, 0, 0, 1e-05, 0, 0, 
+    0, 0, 0, 0, 0, 1e-05, 0, 
+    0, 0, 0, 0, 0, 0, 1e-05, 
 
-    /* lambda_u : [6 1] array values */
-    5, 5, 5, 5, 5, 5, 
+    /* lambda_u : [7 1] array values */
+    5, 5, 5, 5, 5, 5, 5, 
 
-    /* x_min : [12 1] array values */
-    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
+    /* x_min : [14 1] array values */
+    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
 
-    /* x_max : [12 1] array values */
-    Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
+    /* x_max : [14 1] array values */
+    Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
 
-    /* u_min : [6 1] array values */
-    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
+    /* u_min : [7 1] array values */
+    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
 
-    /* u_max : [6 1] array values */
-    Inf, Inf, Inf, Inf, Inf, Inf, 
+    /* u_max : [7 1] array values */
+    Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
 
-    /* v_min : [6 1] array values */
-    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
+    /* v_min : [7 1] array values */
+    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
 
-    /* v_max : [6 1] array values */
-    Inf, Inf, Inf, Inf, Inf, Inf, 
+    /* v_max : [7 1] array values */
+    Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
 };
 
 

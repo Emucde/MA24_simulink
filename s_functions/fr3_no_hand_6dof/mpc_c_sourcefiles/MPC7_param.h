@@ -34,7 +34,7 @@
 static const uint32_t MPC7_traj_indices[] = {0,5,10,15,20,25};
 
 //MPC_WEIGHTS:
-const casadi_real MPC7_param_weight[182] = {
+const casadi_real MPC7_param_weight[201] = {
     /* Q_y : 6x6 matrix values */
     1000, 0, 0, 0, 0, 0, 
     0, 1000, 0, 0, 0, 0, 
@@ -43,13 +43,14 @@ const casadi_real MPC7_param_weight[182] = {
     0, 0, 0, 0, 1000, 0, 
     0, 0, 0, 0, 0, 1000, 
 
-    /* R_q_pp : 6x6 matrix values */
-    1e-10, 0, 0, 0, 0, 0, 
-    0, 1e-10, 0, 0, 0, 0, 
-    0, 0, 1e-10, 0, 0, 0, 
-    0, 0, 0, 1e-10, 0, 0, 
-    0, 0, 0, 0, 1e-10, 0, 
-    0, 0, 0, 0, 0, 1e-10, 
+    /* R_q_pp : 7x7 matrix values */
+    1e-10, 0, 0, 0, 0, 0, 0, 
+    0, 1e-10, 0, 0, 0, 0, 0, 
+    0, 0, 1e-10, 0, 0, 0, 0, 
+    0, 0, 0, 1e-10, 0, 0, 0, 
+    0, 0, 0, 0, 1e-10, 0, 0, 
+    0, 0, 0, 0, 0, 1e-10, 0, 
+    0, 0, 0, 0, 0, 0, 1e-10, 
 
     /* Q_y_p_ref : 6x6 matrix values */
     100, 0, 0, 0, 0, 0, 
@@ -73,17 +74,17 @@ const casadi_real MPC7_param_weight[182] = {
     /* epsilon_r : [1 1] array values */
     1e-05, 
 
-    /* x_min : [12 1] array values */
-    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
+    /* x_min : [14 1] array values */
+    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
 
-    /* x_max : [12 1] array values */
-    Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
+    /* x_max : [14 1] array values */
+    Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
 
-    /* u_min : [6 1] array values */
-    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
+    /* u_min : [7 1] array values */
+    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
 
-    /* u_max : [6 1] array values */
-    Inf, Inf, Inf, Inf, Inf, Inf, 
+    /* u_max : [7 1] array values */
+    Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
 };
 
 
