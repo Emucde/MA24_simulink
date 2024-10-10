@@ -597,6 +597,7 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
     umax = param_mpc_weight['umax']
     xmin = param_mpc_weight['xmin']
     xmax = param_mpc_weight['xmax']
+    xref = param_mpc_weight['xref']
 
     running_cost_models = list()
     terminalDifferentialCostModel = crocoddyl.CostModelSum(state) # darf nur eines sein:
@@ -617,7 +618,7 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                 xRegBoundCost = crocoddyl.CostModelResidual(
                     state,
                     activation=activationModel,
-                    residual=crocoddyl.ResidualModelState(state)
+                    residual=crocoddyl.ResidualModelState(state, xref)
                 )
                 runningCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
             if np.sum(q_u_bound_cost) not in [0, None]:
@@ -631,7 +632,7 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                 runningCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
 
         # create classic residual cost models
-        xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state))
+        xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state, xref))
         uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state))
 
         goalTrackingCost = crocoddyl.CostModelResidual(
@@ -719,6 +720,7 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
     umax = param_mpc_weight['umax']
     xmin = param_mpc_weight['xmin']
     xmax = param_mpc_weight['xmax']
+    xref = param_mpc_weight['xref']
 
     running_cost_models = list()
     terminalDifferentialCostModel = crocoddyl.CostModelSum(state) # darf nur eines sein:
@@ -748,7 +750,7 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                 xRegBoundCost = crocoddyl.CostModelResidual(
                     state,
                     activation=activationModel,
-                    residual=crocoddyl.ResidualModelState(state)
+                    residual=crocoddyl.ResidualModelState(state, xref)
                 )
                 runningCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
             if np.sum(q_u_bound_cost) not in [0, None]:
@@ -762,7 +764,7 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                 runningCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
 
         # create classic residual cost models
-        xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state))
+        xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state, xref))
         uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state))
 
         if i < N-N_step:

@@ -100,7 +100,8 @@ param_mpc_weight = {
     'umin': -np.hstack([150, 150, 150, 28, 28, 28]),
     'umax': np.hstack([150, 150, 150, 28, 28, 28]),
     'xmin': -np.hstack([2*np.pi*np.ones(6), np.pi*np.ones(6)]),
-    'xmax': np.hstack([2*np.pi*np.ones(6), np.pi*np.ones(6)])
+    'xmax': np.hstack([2*np.pi*np.ones(6), np.pi*np.ones(6)]),
+    'xref': np.zeros(nx),
 }
 
 # good for mpcv1 soft terminate:
@@ -204,8 +205,8 @@ traj_data['omega_d_p'] = traj_data['omega_d_p'][:, 0:N_traj]
 #########################################################################################################
 
 subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, freq_per_Ta_step)
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html';
 output_file_path = os.path.join(folderpath, outputname)
 plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False)
