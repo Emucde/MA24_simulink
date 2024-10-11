@@ -8,19 +8,19 @@ K_p_r = K_d_r^2/4;
 ctrl_param.ct.Kd1 = blkdiag(K_d_t, K_d_r);
 ctrl_param.ct.Kp1 = blkdiag(K_p_t, K_p_r);
 
-%% Jointspace Control
-% M1: hardcoded
-ctrl_param.pd.D_d = 3*eye(length(param_robot.n_indices_fixed));
-ctrl_param.pd.K_d = 3*eye(length(param_robot.n_indices_fixed));
+% Cartesian PD Control
+ctrl_param.pd.D_d = 3*eye(6);
+ctrl_param.pd.K_d = 3*eye(6);
 %ctrl_param.pd.K_d = ctrl_param.pd.D_d^2/4;
 
 if(~exist('current_traj_value', 'var'))
     current_traj_value = 1;
 end
 
+%% Jointspace Control
 % M2: eigenmodes
 K_0 = 100*eye(n);
-xi_0 = 0.1;
+xi_0 = 0.2;
 
 q_0_ref = param_traj.q_0(:, current_traj_value);
 M_0 = inertia_matrix_py(q_0_ref);
@@ -32,11 +32,13 @@ ctrl_param.pd.D_d_jointspace = D_0;
 ctrl_param.pd.K_d_jointspace = K_0;
 
 %% Singularity robustness
-% 0: no sing robust
+% 0: no sing robust (not fully true, use pinv() from matlab - this commands eliminates too small singular values)
 % 1: simpliy use J_pinv = (J'*J + k*E)^(-1)*J' = (J'*J + k*E)\J'
 % 2: use Sugihara singular robust method: J_pinv = (J'*W_E*J + W_N)^(-1)*J' = (J'*W_E*J + W_N)\J'
 % 3: set sing values sigma_i < eps to sign(sigma_i)/q_i_max
-ctrl_param.regularization.mode = 3;
+% 4: collinearity approach 1: only works if joint is exact replaceable by other joint
+% 5: collinearity approach after steinböck: works for all joints
+ctrl_param.regularization.mode = 1;
 
 % 1:
 ctrl_param.regularization.k = 1e-2;
@@ -44,7 +46,7 @@ ctrl_param.regularization.k = 1e-2;
 % 2:
 ctrl_param.regularization.W_bar_N = 1e-3*param_robot.sugihara_limb_vector;
 % ctrl_param.regularization.W_bar_N = 1e-1*ones(n,1);
-ctrl_param.regularization.W_E = 1 * eye(n); %ctrl_param.regularization.w_bar_N;
+ctrl_param.regularization.W_E = 1 * eye(6); %ctrl_param.regularization.w_bar_N;
 
 % 3:
 ctrl_param.regularization.eps  = 1e-1;

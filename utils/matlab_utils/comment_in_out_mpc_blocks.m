@@ -16,6 +16,7 @@ if(bdIsLoaded(simulink_main_model_name))
     for i=1:length(mpc_subsys_list)
         mpc_subsys_string = [simulink_main_model_name, '/Simulation models/Controller Subsystem/', mpc_subsys_list{i}];
         mpc_sfun_string = [mpc_subsys_string, '/S-Function'];
+        mpc_getdata_string = [simulink_main_model_name, '/Simulation models/Controller Subsystem/', mpc_subsys_list{i}, '/get data subsys/get data'];
         sfun_mpc_modules = get_param(mpc_sfun_string, 'SFunctionModules');
 
         comment_state = get_param(mpc_sfun_string, 'Commented');
@@ -34,10 +35,12 @@ if(bdIsLoaded(simulink_main_model_name))
                     end
                 end
                 set_param(mpc_sfun_string, 'Commented', 'off');
+                set_param(mpc_getdata_string, 'Commented', 'off');
             end
         else
             if(strcmp(comment_state, 'off'))
                 set_param(mpc_sfun_string, 'Commented', 'on');
+                set_param(mpc_getdata_string, 'Commented', 'on');
             end
         end
     end

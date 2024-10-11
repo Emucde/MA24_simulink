@@ -1,25 +1,11 @@
 %% Calculate target positions
 cnt = 1;
 
-Q_pos = 1e0 * eye(m);  % Weight for the position error in the cost function.
-Q_m = 0.5;             % Weight for the manipulability error in the cost function.
-Q_q = 1e5 * eye(n);    % Weight for the deviaton of q_sol to q_d
-Q_nl = 1e-1 * eye(n);  % Weight of nl_spring_force(q, ct_ctrl_param, param_robot) -> pose should not start near to limits!
-q_d = param_robot.q_0_ref(n_indices);
-
-xe0 = [0.3921; 0.3921; 0.5211; 0; 1/sqrt(2); 1/sqrt(2); 0];
-xeT = [xe0(1:3,1) + [0; 0; -0.5]; rotm2quat_v4( Rz(pi/4)*quat2rotm_v2(xe0(4:7)) )]; % rotm2quat (from matlab) is very precise but slow
-
-%q_0 = fsolve(@(q) kin_fun(xe0, q), q_d); % test if the function works
-options = optimoptions('fsolve', 'Algorithm', 'levenberg-marquardt', 'MaxFunctionEvaluations', 1000);
-q_0_red = fsolve(@(q) kin_fun(xe0, q, q_d, n_indices), q_d, options); % test if the function works
-%[q_0, ~] = inverse_kinematics(param_robot, xe0, q_d, Q_pos, Q_m, Q_q, Q_nl,  1e-2, 100, ct_ctrl_param);
-
 q_0 = param_robot.q_0_ref;
-q_0(n_indices) = q_0_red;
-
 H_0 = hom_transform_endeffector_py(q_0);
 xe0 = [H_0(1:3,4); rotm2quat_v4(H_0(1:3,1:3))]; % better to exact start in point
+
+xeT = [xe0(1:3,1) + [0; 0; -0.25]; rotm2quat_v4( Rz(pi/4)*quat2rotm_v2(xe0(4:7)) )]; % rotm2quat (from matlab) is very precise but slow
 
 %tests;
 R_init = quat2rotm_v2(xe0(4:7));
