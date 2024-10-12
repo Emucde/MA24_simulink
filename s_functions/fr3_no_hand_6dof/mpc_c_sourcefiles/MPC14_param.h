@@ -34,34 +34,51 @@
 static const uint32_t MPC14_traj_indices[] = {0,1,2,3,4,5};
 
 //MPC_WEIGHTS:
-const casadi_real MPC14_param_weight[28] = {
-    /* Q_y : 2x2 matrix values */
-    100, 0, 
-    0, 100, 
+const casadi_real MPC14_param_weight[199] = {
+    /* Q_y : 6x6 matrix values */
+    100, 0, 0, 0, 0, 0, 
+    0, 100, 0, 0, 0, 0, 
+    0, 0, 100, 0, 0, 0, 
+    0, 0, 0, 100, 0, 0, 
+    0, 0, 0, 0, 100, 0, 
+    0, 0, 0, 0, 0, 100, 
 
-    /* Q_ykp1 : 2x2 matrix values */
-    100, 0, 
-    0, 100, 
+    /* Q_ykp1 : 6x6 matrix values */
+    100, 0, 0, 0, 0, 0, 
+    0, 100, 0, 0, 0, 0, 
+    0, 0, 100, 0, 0, 0, 
+    0, 0, 0, 100, 0, 0, 
+    0, 0, 0, 0, 100, 0, 
+    0, 0, 0, 0, 0, 100, 
 
-    /* Q_yN : 2x2 matrix values */
-    100000, 0, 
-    0, 100000, 
+    /* Q_yN : 6x6 matrix values */
+    100000, 0, 0, 0, 0, 0, 
+    0, 100000, 0, 0, 0, 0, 
+    0, 0, 100000, 0, 0, 0, 
+    0, 0, 0, 100000, 0, 0, 
+    0, 0, 0, 0, 100000, 0, 
+    0, 0, 0, 0, 0, 100000, 
 
-    /* R_q_pp : 2x2 matrix values */
-    1e-10, 0, 
-    0, 1e-10, 
+    /* R_q_pp : 7x7 matrix values */
+    1e-10, 0, 0, 0, 0, 0, 0, 
+    0, 1e-10, 0, 0, 0, 0, 0, 
+    0, 0, 1e-10, 0, 0, 0, 0, 
+    0, 0, 0, 1e-10, 0, 0, 0, 
+    0, 0, 0, 0, 1e-10, 0, 0, 
+    0, 0, 0, 0, 0, 1e-10, 0, 
+    0, 0, 0, 0, 0, 0, 1e-10, 
 
-    /* x_min : [4 1] array values */
-    -Inf, -Inf, -Inf, -Inf, 
+    /* x_min : [14 1] array values */
+    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
 
-    /* x_max : [4 1] array values */
-    Inf, Inf, Inf, Inf, 
+    /* x_max : [14 1] array values */
+    Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
 
-    /* u_min : [2 1] array values */
-    -Inf, -Inf, 
+    /* u_min : [7 1] array values */
+    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
 
-    /* u_max : [2 1] array values */
-    Inf, Inf, 
+    /* u_max : [7 1] array values */
+    Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
 };
 
 

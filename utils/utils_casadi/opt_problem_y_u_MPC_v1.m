@@ -62,8 +62,11 @@
 
 import casadi.*
 
-n_robot = param_robot.n_DOF; % Dimension of joint space
-n = param_robot.n_red; % Dimension of joint space
+yt_indices = param_robot.yt_indices;
+yr_indices = param_robot.yr_indices;
+
+n = param_robot.n_DOF; % Dimension of joint space
+n_red = param_robot.n_red; % Dimension of joint space
 m = param_robot.m; % Dimension of Task Space
 
 % Model equations
@@ -79,27 +82,25 @@ compute_tau_fun = Function.load([input_dir, 'compute_tau_py.casadi']); % Inverse
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
-q_red = SX.sym( 'q',  n_red,   1   );
-q_red_p = SX.sym( 'q_p',  n_red,   1   );
-q_red_pp = SX.sym( 'q_pp',  n_red,   1   );
-x_red = SX.sym( 'x', 2*n_red, 1);
+q_red    = SX.sym( 'q',     n_red, 1 );
+q_red_p  = SX.sym( 'q_p',   n_red, 1 );
+q_red_pp = SX.sym( 'q_pp',  n_red, 1 );
+x_red    = SX.sym( 'x',   2*n_red, 1 );
+tau_red  = SX.sym( 'tau',   n_red, 1 );
 
-tau_red = SX.sym( 'tau',  n_red,   1   );
+q_subs    = SX(q_0); % assumption: all trajectories have same joint values for locked joints!
+q_subs_p  = SX(q_0_p); % assumption: all trajectories have same joint values for locked joints!
+q_subs_pp = SX(q_0_pp); % assumption: all trajectories have same joint values for locked joints!
+x_subs    = SX([q_0; q_0_p]);
 
-q_subs = SX(q_0); % assumption: all trajectories have joint values for locked joints!
-q_subs_p = SX(q_0_p); % assumption: all trajectories have joint values for locked joints!
-q_subs_pp = SX(q_0_pp); % assumption: all trajectories have joint values for locked joints!
-x_subs = SX([q_0; q_0_p]);
-
-% tau_subs = SX(size(q_0, 1), 1);
 tau_subs = compute_tau_fun(q_subs, q_subs_p, q_subs_pp);
 
-q_subs(n_indices) = q_red;
-q_subs_p(n_indices) = q_red_p;
+q_subs(n_indices)    = q_red;
+q_subs_p(n_indices)  = q_red_p;
 q_subs_pp(n_indices) = q_red_pp;
-tau_subs(n_indices) = tau_red;
+tau_subs(n_indices)  = tau_red;
 
-x_subs([n_indices n_indices+n_robot]) = x_red;
+x_subs([n_indices n_indices+n]) = x_red;
 
 H_red = Function('H_red', {q_red}, {hom_transform_endeffector_py_fun(q_subs)});
 quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs)});
@@ -108,7 +109,7 @@ d_dt_x = f(x_subs, tau_subs);
 tau_full = compute_tau_fun(q_subs, q_subs_p, q_subs_pp);
 
 tau_fun_red = Function('tau_fun_red', {q_red, q_red_p, q_red_pp}, {tau_full(n_indices)});
-f_red = Function('f_red', {x_red, tau_red}, {d_dt_x([n_indices n_indices+n_robot])});
+f_red = Function('f_red', {x_red, tau_red}, {d_dt_x([n_indices n_indices+n])});
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
@@ -140,14 +141,14 @@ q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
 y_d_0 = [p_d_0; q_d_0];
 
 % initial guess for reference trajectory parameter
-q_0_red = q_0(n_indices);
-q_0_red_p = q_0_p(n_indices);
+q_0_red    = q_0(n_indices);
+q_0_red_p  = q_0_p(n_indices);
 q_0_red_pp = q_0_pp(n_indices);
 x_0_0  = [q_0_red; q_0_red_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
 
 u_k_0  = tau_fun_red(q_0_red, q_0_red_p, q_0_red_pp); % gravity compensation
 
-u_init_guess_0 = ones(n, N_MPC).*u_k_0; % fully actuated
+u_init_guess_0 = ones(n_red, N_MPC).*u_k_0; % fully actuated
 
 % für die S-funktion ist der Initial Guess wesentlich!
 F_kp1_sim          = F_kp1.mapaccum(1);
@@ -178,22 +179,22 @@ else % hardcoded weights
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables 2/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-u   = SX.sym( 'u',    n, N_MPC   );
-x   = SX.sym( 'x',  2*n, N_MPC+1 );
+u   = SX.sym( 'u',    n_red, N_MPC   );
+x   = SX.sym( 'x',  2*n_red, N_MPC+1 );
 
 mpc_opt_var_inputs = {u, x};
 
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')'; % optimization variables cellarray w
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables Limits 3/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n_robot]), size(x, 2), 1)];
-ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n_robot]), size(x, 2), 1)];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n]), size(x, 2), 1)];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n]), size(x, 2), 1)];
 
-u_opt_indices = 1:n;
+u_opt_indices = 1:n_red;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INPUT Parameter 4/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-x_k    = SX.sym( 'x_k', 2*n, 1       ); % current x state
-y_d    = SX.sym( 'y_d', m+1, N_MPC+1 ); % (y_d_0 ... y_d_N)
+x_k    = SX.sym( 'x_k', 2*n_red, 1       ); % current x state
+y_d    = SX.sym( 'y_d', m+1,     N_MPC+1 ); % (y_d_0 ... y_d_N)
 
 mpc_parameter_inputs = {x_k, y_d};
 mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
@@ -224,14 +225,14 @@ lambda_g0 = SX.sym('lambda_g0', size(lbg));
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
 y     = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
 
-q_pp = SX( n, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
+q_pp = SX( n_red, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 g_x(  1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 for i=0:N_MPC
     % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
-    q = x(1:n, 1 + (i));
+    q = x(1:n_red, 1 + (i));
 
     % calculate trajectory values (y_0 ... y_N)
     H_e = H_red(q);
@@ -249,7 +250,7 @@ for i=0:N_MPC
         end
 
         dx   = f_red(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
-        q_pp(:, 1 + (i  )) = dx(n+1:2*n, 1);
+        q_pp(:, 1 + (i  )) = dx(n_red+1:2*n_red, 1);
     end
 end
 
@@ -259,17 +260,32 @@ g = g_x;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Cost Function  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-J_yt   = Q_norm_square( y(1:3, 1 + (1:N_MPC-1) ) - y_d(1:3, 1 + (1:N_MPC-1)), pp.Q_y( 1:3,1:3)  );
-J_yt_N = Q_norm_square( y(1:3, 1 + (  N_MPC  ) ) - y_d(1:3, 1 + (  N_MPC  )), pp.Q_yN(1:3,1:3)  );
+if isempty(yt_indices)
+    J_yt = 0;
+    J_yt_N = 0;
+else
+    J_yt   =      Q_norm_square( y(yt_indices, 1 + (1:N_MPC-1) ) - y_d(yt_indices, 1 + (1:N_MPC-1)), pp.Q_y(   yt_indices,yt_indices) );
+    J_yt_N =      Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(  yt_indices,yt_indices) );
+end
 
-J_yr = 0;
-for i=0:N_MPC
-    q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
-
-    if(i < N_MPC)
-        J_yr = J_yr + Q_norm_square( q_y_yr_err(2:4) , pp.Q_y(4:6, 4:6)  );
-    else
-        J_yr_N = Q_norm_square( q_y_yr_err(2:4) , pp.Q_yN(4:6, 4:6)  );
+if isempty(yr_indices)
+    J_yr = 0;
+    J_yr_N = 0;
+else
+    J_yr = 0;
+    for i=1:N_MPC
+        % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+        % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
+        % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
+        q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
+        
+        if(i==1)
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_ykp1(3+yr_indices,3+yr_indices)  );
+        elseif(i < N_MPC)
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
+        else
+            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );
+        end
     end
 end
 
@@ -287,5 +303,3 @@ cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 
 % calculate cost function
 J = sum([cost_vars_SX{:}]);
-
-n = param_robot.n_DOF; %TODO

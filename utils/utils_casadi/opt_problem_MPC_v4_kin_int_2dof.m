@@ -1,26 +1,30 @@
 % MPC v4: Optimization problem 
 % q = [q1, q2, q3, q4, q5, q6, q7]
 % ONLY JOINTS A2 (q2) and A4 (q4) are used!
+% DIFFERENCE to MPC_v4_kin_int: here the full n_DOF state x_k is used to calculate the pose of the TCP
 
 import casadi.*
 
-n_red = 2; % Dimension of joint space
-n_fixed = n - n_red; % Number of fixed joints
-m = 2; % Dimension of Task Space
+yt_indices = param_robot.yt_indices;
+yr_indices = param_robot.yr_indices;
+
+n = param_robot.n_DOF; % Dimension of joint space
+n_red = param_robot.n_red; % Dimension of joint space
+m = param_robot.m; % Dimension of Task Space
 
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']); % here not needed
 
-q_red = SX.sym( 'q',  n_red,   1   );
-q_fix = SX.sym( 'q_fix',  n_fixed, 1 );
-pos_indices = [1 3]; % xz plane
-q_red_indices = [2 4]; % q2, q4 only
-q_fix_indices = setdiff(1:n, q_red_indices);
-x_red_indices = [q_red_indices q_red_indices+n]; % important: here n=7 not n_red=6
+q_red = SX.sym( 'q',     n_red,   1 );
+q_fix = SX.sym( 'q_fix', n-n_red, 1 );
+
+x_red_indices = [n_indices n_indices+n]; % important: here n=7 not n_red=6
 
 q_subs = SX(q_0);
-q_subs(q_red_indices) = q_red;
+q_subs(n_indices) = q_red;
+
 H_red = Function('H_red', {q_red, q_fix}, {hom_transform_endeffector_py_fun(q_subs)});
+quat_fun_red = Function('quat_fun_red', {q_red, q_fix}, {quat_endeffector_py_fun(q_subs)});
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
@@ -61,15 +65,16 @@ else
     MPC_traj_indices = [1, 2, 3, N_step_MPC : N_step_MPC : 1 + (N_MPC-2) * N_step_MPC];
 end
 
-p_d_0 = param_trajectory.p_d( pos_indices, MPC_traj_indices ); % only xz plane
-y_d_0 = p_d_0;
+p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
+q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
+y_d_0 = [p_d_0; q_d_0];
 
 % Robot System: Initial guess
 
 % einige probleme beim simulieren [TODO]
-q_0_red = q_0(q_red_indices);
-q_0_p_red = q_0_p(q_red_indices);
-q_0_pp_red = q_0_pp(q_red_indices);
+q_0_red = q_0(n_indices);
+q_0_p_red = q_0_p(n_indices);
+q_0_pp_red = q_0_pp(n_indices);
 
 x_0_0 = [q_0; q_0_p]; % q1, .. qn, d/dt q1 ... d/dt qn
 x_0_0_red  = [q_0_red; q_0_p_red]; % reduced state space
@@ -115,15 +120,15 @@ u_opt_indices = q0_pp_idx;
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min, size(u, 2), 1); repmat(pp.x_min, size(x, 2), 1)];
-ubw = [repmat(pp.u_max, size(u, 2), 1); repmat(pp.x_max, size(x, 2), 1)];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n]), size(x, 2), 1)];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n]), size(x, 2), 1)];
 
 % input parameter
 x_k    = SX.sym( 'x_k',     2*n, 1       ); % Important: x_k uses full 7dof state!
-y_d    = SX.sym( 'y_d',     m  , N_MPC+1 );
+y_d    = SX.sym( 'y_d',     m+1, N_MPC+1 );
 
 x_k_red = x_k(x_red_indices);
-q_k_fix = x_k(q_fix_indices); % assumption: remains constant
+q_k_fix = x_k(n_indices_fixed); % assumption: remains constant
 
 mpc_parameter_inputs = {x_k, y_d};
 mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
@@ -150,7 +155,9 @@ lambda_x0 = SX.sym('lambda_x0', size(w));
 lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
-y = SX(m, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
+y = SX(m+1, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
+
+R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 g_x(1, 1 + (0)) = {x_k_red - x(:, 1 + (0))}; % x0 = xk
 
@@ -159,7 +166,9 @@ for i=0:N_MPC
 
     % calculate trajectory values (y_0 ... y_N)
     H_e = H_red(q, q_k_fix);
-    y(:,   1 + (i)) = H_e(pos_indices, 4);
+    y(1:3,   1 + (i)) = H_e(1:3, 4);
+    y(4:7,   1 + (i)) = quat_fun_red(q, q_k_fix);
+    R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
@@ -175,18 +184,46 @@ for i=0:N_MPC
     end
 end
 
+g = g_x;
+
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-J_yt   = Q_norm_square( y(:, 1 + (2:N_MPC-1) ) - y_d(:, 1 + (2:N_MPC-1)), pp.Q_y   );
-J_yt   = J_yt + Q_norm_square( y(:, 1 + ( 1) ) - y_d(:, 1 + ( 1       )), pp.Q_ykp1);
-J_yt_N = Q_norm_square( y(:, 1 + (  N_MPC  ) ) - y_d(:, 1 + (  N_MPC  )), pp.Q_yN  );
+if isempty(yt_indices)
+    J_yt = 0;
+    J_yt_N = 0;
+else
+    J_yt   =      Q_norm_square( y(yt_indices, 1 + (2:N_MPC-1) ) - y_d(yt_indices, 1 + (2:N_MPC-1)), pp.Q_y(   yt_indices,yt_indices) );
+    J_yt = J_yt + Q_norm_square( y(yt_indices, 1 + ( 1       ) ) - y_d(yt_indices, 1 + ( 1       )), pp.Q_ykp1(yt_indices,yt_indices) );
+    J_yt_N =      Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(  yt_indices,yt_indices) );
+end
 
-g = g_x;
+if isempty(yr_indices)
+    J_yr = 0;
+    J_yr_N = 0;
+else
+    J_yr = 0;
+    for i=1:N_MPC
+        % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+        % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
+        % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
+        q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
+        
+        if(i==1)
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_ykp1(3+yr_indices,3+yr_indices)  );
+        elseif(i < N_MPC)
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
+        else
+            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );
+        end
+    end
+end
 
-J_q_pp = Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
+J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+% J_q_pp = N_MPC*Q_norm_square(u - q_d_pp, pp.R_y_pp)+Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
+% J_q_pp = Q_norm_square(y_pp - y_d_pp, pp.R_y_pp);
 
-cost_vars_names = '{J_yt, J_yt_N, J_q_pp}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp}';
 
 
 cost_vars_SX = eval(cost_vars_names);
@@ -194,5 +231,3 @@ cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 
 % calculate cost function
 J = sum([cost_vars_SX{:}]);
-
-n_red=6;

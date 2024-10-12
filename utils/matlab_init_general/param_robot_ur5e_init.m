@@ -202,9 +202,6 @@ ur5e.param.torque_limit_lower = tau_min;
 
 ur5e.param.q_n = (q_max + q_min) / 2; % not the best reference pose for fr3
 
-ur5e.param.n_indices = 1:n;
-ur5e.param.n_indices_fixed = [];
-
 % Inertial System
 ur5e.param.p_0 = [0; 0; 0]; % m
 ur5e.param.R_0 = eye(3); % m
@@ -218,5 +215,13 @@ ur5e.param.l5 = 0.110; % m
 ur5e.param.l6 = 0.046; % m
 
 ur5e.param.sugihara_limb_vector = [ur5e.param.l1^2; ur5e.param.l2^2; ur5e.param.l3^2; ur5e.param.l4^2; ur5e.param.l5^2; ur5e.param.l6^2];
+
+% Default: full pose control in MPC
+ur5e.param.yt_indices = [1 2 3]; % [1 2 3]: use x, y and z position
+ur5e.param.yr_indices = [1 2 3]; % [1 2 3] use x, y, z error of quaternion
+
+% Default: use all available joints
+ur5e.param.n_indices = 1:n;
+ur5e.param.n_indices_fixed = [];
 
 % all other parameters are already hardcoded in the casadi functions.

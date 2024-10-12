@@ -16,6 +16,11 @@ elseif(strcmp(robot_name, 'fr3_6dof') || strcmp(robot_name, 'fr3_no_hand_6dof'))
 
     param_robot_fr3_init;
 
+    % it is possible to control more pose dimensions than the robot has joints - in scope of an MPC
+
+    fr3.param.yt_indices = [1 3]; % [1 2 3]: use x, y and z position
+    fr3.param.yr_indices = []; % [1 2 3] use x, y, z error of quaternion
+
     fr3.param.n_indices_fixed = [1 3 5 6 7]; % joint 3 fixed to zero
     % fr3.param.n_indices_fixed = 3; % joint 3 fixed to zero
     fr3.param.n_indices = setdiff(1:n, fr3.param.n_indices_fixed); % joint 3 fixed to zero
@@ -41,5 +46,19 @@ end
 
 n_indices = param_robot.n_indices;
 n_indices_fixed = setdiff(1:n, n_indices);
+
+if(max(n_indices_fixed) > n)
+    error('Fixed joint index exceeds number of joints!');
+elseif(min(n_indices_fixed) < 1)
+    error('Fixed joint index is smaller than 1!');
+elseif(min(param_robot.yt_indices) < 1)
+    error('yt_indices is smaller than 1! [1 2 3] means use x, y and z (default value)!');
+elseif(max(param_robot.yt_indices) > 3)
+    error('yt_indices exceeds 3! [1 2 3] means use x, y and z (default value)!');
+elseif(min(param_robot.yr_indices) < 1)
+    error('yr_indices is smaller than 1! [1 2 3] means use x, y and z quaternion (default value)!');
+elseif(max(param_robot.yr_indices) > 3)
+    error('yr_indices exceeds 3! [1 2 3] means use x, y and z quaternion (default value)!');
+end
 
 disp(['Fixed joint: ', num2str(n_indices_fixed), ', nDOF = ', num2str(n), ', see param_robot_init.m']);

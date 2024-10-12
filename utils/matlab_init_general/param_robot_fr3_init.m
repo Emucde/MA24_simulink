@@ -524,5 +524,10 @@ fr3.param.I_finger_zz = 7.5e-07; % kgm^2
 sugihara_limb_vector = [fr3.param.l1^2; fr3.param.l2^2; fr3.param.l3^2; fr3.param.l4^2; fr3.param.l5^2; fr3.param.l6^2; fr3.param.l7^2];
 fr3.param.sugihara_limb_vector = sugihara_limb_vector;
 
+% Default: full pose control in MPC
+fr3.param.yt_indices = [1 2 3]; % [1 2 3]: use x, y and z position
+fr3.param.yr_indices = [1 2 3]; % [1 2 3] use x, y, z error of quaternion
+
+% Default: use all available joints
 fr3.param.n_indices_fixed = [];
 fr3.param.n_indices = 1:n;
