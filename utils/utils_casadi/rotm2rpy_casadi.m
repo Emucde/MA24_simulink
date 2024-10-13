@@ -20,9 +20,17 @@ function rpy = rotm2rpy_casadi(R)
     %gamma = if_else(beta == pi/2, atan2(r12, r13), if_else(beta == -pi/2, atan2(-r12, -r13), atan2(r32/cos_beta, r33/cos_beta)));
     %alpha = if_else(beta == pi/2, 0,               if_else(beta == -pi/2, 0,                 atan2(r21/cos_beta, r11/cos_beta)));
 
-    beta = if_else(r31 == 1, -pi/2, if_else(r31 == -1, pi/2, -asin(r31))); cos_beta = cos(beta);
-    alpha = if_else(r31 == 1, 0, if_else(r31 == -1, 0, atan2(r21/cos_beta, r11/cos_beta)));
-    gamma = if_else(r31 == 1, atan2(-r12, -r13), if_else(r31 == -1, atan2(r12, r13), atan2(r32/cos_beta, r33/cos_beta)));
+    % ZYX
+    % beta = if_else(r31 == 1, -pi/2, if_else(r31 == -1, pi/2, -asin(r31))); cos_beta = cos(beta);
+    % alpha = if_else(r31 == 1, 0, if_else(r31 == -1, 0, atan2(r21/cos_beta, r11/cos_beta)));
+    % gamma = if_else(r31 == 1, atan2(-r12, -r13), if_else(r31 == -1, atan2(r12, r13), atan2(r32/cos_beta, r33/cos_beta)));
+
+    % see rotm2rpy.m
+    beta = atan2(-r31, sqrt(r32^2 + r33^2));
+    cos_beta = cos(beta);
+    
+    gamma = if_else(beta == pi/2, atan2(r12, r13), if_else(beta == -pi/2, atan2(-r12, -r13), atan2(r32/cos_beta, r33/cos_beta)));
+    alpha = if_else(beta == pi/2, 0, if_else(beta == -pi/2, 0, atan2(r21/cos_beta, r11/cos_beta)));
 
     rpy = vertcat(alpha, beta, gamma);
 end

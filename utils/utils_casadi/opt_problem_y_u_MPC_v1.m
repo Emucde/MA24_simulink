@@ -125,7 +125,7 @@ if(N_step_MPC == 1)
 else
     DT2 = DT - DT_ctl;
 end
-F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-2*Ta
+F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-Ta
 
 %Get trajectory data for initial guess
 if(N_step_MPC <= 2)

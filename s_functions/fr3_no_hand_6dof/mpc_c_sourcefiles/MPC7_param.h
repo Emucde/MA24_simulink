@@ -31,7 +31,7 @@
 #define MPC7_int_method "Euler"
 #define MPC7_fixed_parameter 0
 #define MPC7_traj_data_per_horizon 6
-static const uint32_t MPC7_traj_indices[] = {0,5,10,15,20,25};
+static const uint32_t MPC7_traj_indices[] = {0,1,4,9,14,19};
 
 //MPC_WEIGHTS:
 const casadi_real MPC7_param_weight[201] = {
@@ -39,9 +39,9 @@ const casadi_real MPC7_param_weight[201] = {
     1000, 0, 0, 0, 0, 0, 
     0, 1000, 0, 0, 0, 0, 
     0, 0, 1000, 0, 0, 0, 
-    0, 0, 0, 1000, 0, 0, 
-    0, 0, 0, 0, 1000, 0, 
-    0, 0, 0, 0, 0, 1000, 
+    0, 0, 0, 100, 0, 0, 
+    0, 0, 0, 0, 100, 0, 
+    0, 0, 0, 0, 0, 100, 
 
     /* R_q_pp : 7x7 matrix values */
     1e-10, 0, 0, 0, 0, 0, 0, 
@@ -56,17 +56,17 @@ const casadi_real MPC7_param_weight[201] = {
     100, 0, 0, 0, 0, 0, 
     0, 100, 0, 0, 0, 0, 
     0, 0, 100, 0, 0, 0, 
-    0, 0, 0, 100, 0, 0, 
-    0, 0, 0, 0, 100, 0, 
-    0, 0, 0, 0, 0, 100, 
+    0, 0, 0, 10, 0, 0, 
+    0, 0, 0, 0, 10, 0, 
+    0, 0, 0, 0, 0, 10, 
 
     /* Q_y_ref : 6x6 matrix values */
     100, 0, 0, 0, 0, 0, 
     0, 100, 0, 0, 0, 0, 
     0, 0, 100, 0, 0, 0, 
-    0, 0, 0, 100, 0, 0, 
-    0, 0, 0, 0, 100, 0, 
-    0, 0, 0, 0, 0, 100, 
+    0, 0, 0, 10, 0, 0, 
+    0, 0, 0, 0, 10, 0, 
+    0, 0, 0, 0, 0, 10, 
 
     /* epsilon_t : [1 1] array values */
     1e-05, 
