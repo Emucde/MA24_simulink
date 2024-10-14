@@ -44,7 +44,7 @@ yr_indices = param_robot.yr_indices;
 
 n = param_robot.n_DOF; % Dimension of joint space
 n_red = param_robot.n_red; % Dimension of joint space
-m = param_robot.m; % Dimension of Task Space
+m = param_robot.m; % Dimension of Task Space [TODO: not correct, m = numel(yt_indices) + numel(yr_indices)]
 
 % Robot model Forward Dynamics: d/dt x = f(x, u)
 use_aba = false; % aba ist langsamer! (357s vs 335s)
@@ -239,6 +239,10 @@ lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(z_init_guess_0)+eps_t_cnt
 
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
+if(any(isnan(full(init_guess_0))))
+    error('init_guess_0 contains NaN values!');
+end
+
 % get weights from "init_MPC_weight.m"
 param_weight_init = param_weight.(casadi_func_name);
 
@@ -315,7 +319,6 @@ elseif(~isempty(yt_indices) && ~isempty(yr_indices))
     ubg(end-1:end) = [pp.epsilon_t; pp.epsilon_r];
 end
 
-
 % lambda_x0, lambda_g0 initial guess
 lambda_x0 = SX.sym('lambda_x0', size(w));
 lambda_g0 = SX.sym('lambda_g0', size(lbg));
@@ -330,7 +333,7 @@ yt_p_ref  = SX( n_yt_red, N_MPC+1 ); % TCP velocity:      (yt_p_ref_0 ... yt_p_r
 yt_pp_ref = SX( n_yt_red, N_MPC+1 ); % TCP acceleration:  (yt_pp_ref_0 ... yt_pp_ref_N)
 
 yr_ref    = SX( n_yr_red, N_MPC+1 ); % TCP orientation:                (y_qw_ref_0 ... y_qw_ref_N)
-yr_p_ref  = SX( n_yr_red, N_MPC+1 ); % TCP orietnation velocity:      (y_qw_p_ref_0 ... y_qw_p_ref_N)
+yr_p_ref  = SX( n_yr_red, N_MPC+1 ); % TCP orientation velocity:      (y_qw_p_ref_0 ... y_qw_p_ref_N)
 yr_pp_ref = SX( n_yr_red, N_MPC+1 ); % TCP orientation acceleration:  (y_qw_pp_ref_0 ... y_qw_pp_ref_N)
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)

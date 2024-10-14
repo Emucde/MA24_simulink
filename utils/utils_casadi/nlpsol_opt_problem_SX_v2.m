@@ -262,14 +262,8 @@ if(strcmp(MPC_version, 'v3_quat') || strcmp(MPC_version, 'v3_rpy'))
     z_indices = reshape(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z), size(z));
     alpha_indices = reshape(1+numel(u)+numel(x)+numel(z):numel(u)+numel(x)+numel(z)+numel(alpha), size(alpha));
 
-    if(strcmp(MPC_version, 'v3_quat'))
-        pp_indices_arr = [z_indices(1:m, :); alpha_indices(1:3, :)];
-        rr_indices_arr = [z_indices(m+1:end, :); alpha_indices(4:end, :)];
-    elseif(strcmp(MPC_version, 'v3_rpy'))
-        pp_indices_arr = [z_indices(1:2*n_yt_red, :); alpha_indices(1:n_yt_red, :)];
-        rr_indices_arr = [z_indices(2*n_yt_red+1:end, :); alpha_indices(n_yt_red+1:end, :)];
-    end
-
+    pp_indices_arr = [z_indices(1:2*n_yt_red, :); alpha_indices(1:n_yt_red, :)];
+    rr_indices_arr = [z_indices(2*n_yt_red+1:end, :); alpha_indices(n_yt_red+1:end, :)];
 
     pp_indices = pp_indices_arr(:)';
     rr_indices = rr_indices_arr(:)';

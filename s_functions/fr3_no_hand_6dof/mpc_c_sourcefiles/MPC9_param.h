@@ -20,10 +20,10 @@
 
 //MPC_SETTINGS:
 #define MPC9_N 5
-#define MPC9_N_step 10
-#define MPC9_Ts 0.01
-#define MPC9_T_horizon 0.05
-#define MPC9_rk_iter 10
+#define MPC9_N_step 5
+#define MPC9_Ts 0.005
+#define MPC9_T_horizon 0.025
+#define MPC9_rk_iter 1
 #define MPC9_variant "nlpsol"
 #define MPC9_solver "qrqp"
 #define MPC9_version "v4_kin_int_refsys"
@@ -31,7 +31,7 @@
 #define MPC9_int_method "Euler"
 #define MPC9_fixed_parameter 0
 #define MPC9_traj_data_per_horizon 6
-static const uint32_t MPC9_traj_indices[] = {0,1,9,19,29,39};
+static const uint32_t MPC9_traj_indices[] = {0,1,4,9,14,19};
 
 //MPC_WEIGHTS:
 const casadi_real MPC9_param_weight[233] = {
@@ -61,13 +61,13 @@ const casadi_real MPC9_param_weight[233] = {
     0, 0, 0, 0, 0, 0, 1e-10, 
 
     /* R_v : 7x7 matrix values */
-    1e-05, 0, 0, 0, 0, 0, 0, 
-    0, 1e-05, 0, 0, 0, 0, 0, 
-    0, 0, 1e-05, 0, 0, 0, 0, 
-    0, 0, 0, 1e-05, 0, 0, 0, 
-    0, 0, 0, 0, 1e-05, 0, 0, 
-    0, 0, 0, 0, 0, 1e-05, 0, 
-    0, 0, 0, 0, 0, 0, 1e-05, 
+    1e-10, 0, 0, 0, 0, 0, 0, 
+    0, 1e-10, 0, 0, 0, 0, 0, 
+    0, 0, 1e-10, 0, 0, 0, 0, 
+    0, 0, 0, 1e-10, 0, 0, 0, 
+    0, 0, 0, 0, 1e-10, 0, 0, 
+    0, 0, 0, 0, 0, 1e-10, 0, 
+    0, 0, 0, 0, 0, 0, 1e-10, 
 
     /* lambda_u : [7 1] array values */
     5, 5, 5, 5, 5, 5, 5, 

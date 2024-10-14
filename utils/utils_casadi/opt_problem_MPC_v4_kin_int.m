@@ -13,38 +13,33 @@ m = param_robot.m; % Dimension of Task Space
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
-q_red    = SX.sym( 'q',     n_red, 1 );
-x_red    = SX.sym( 'x',   2*n_red, 1 );
-u_red    = SX.sym( 'u',     n_red, 1 );
+q_red = SX.sym( 'q',     n_red, 1 );
+x_red = SX.sym( 'x',   2*n_red, 1 );
+u_red = SX.sym( 'u',     n_red, 1 );
 
-q_subs    = SX(q_0);
-q_subs(n_indices)    = q_red;
+q_subs            = SX(q_0);
+q_subs(n_indices) = q_red;
 
 H_red = Function('H_red', {q_red}, {hom_transform_endeffector_py_fun(q_subs)});
 quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs)});
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
-DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
-
-% du = SX.sym('du', 2*n_red);
-% dx = SX.sym('dx', 2*n_red); % x = [q1, ... qn, dq1, ... dqn]
-% f = Function('f', {dx, du}, {dx});
-% F = integrate_casadi(f, DT, M, int_method);
+DT = T_horizon_MPC/N_MPC/M; % Time step
 
 % integrator for x
-f = Function('f', {x_red, u_red}, {[x_red(n_red+1:2*n_red); u_red]});
-F = integrate_casadi(f, DT, M, int_method); % runs with Ts_MPC
+f_red = Function('f_red', {x_red, u_red}, {[x_red(n_red+1:2*n_red); u_red]});
+F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
 
 DT_ctl = param_global.Ta/M;
-F_kp1 = integrate_casadi(f, DT_ctl, M, int_method); % runs with Ta from sensors
+F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
 
 if(N_step_MPC == 1)
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
-    DT2 = DT - 2*DT_ctl;
+    DT2 = DT - DT_ctl;
 end
-F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-2*Ta
+F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 
 lambda = -1;
 A = [zeros(n_red), eye(n_red); -eye(n_red)*lambda^2, 2*eye(n_red)*lambda]; % = d/dt x = Ax + Bu = (A + BC)x, u=Cx
@@ -52,17 +47,17 @@ Q = 1*eye(2*n_red); % d/dt V = -x'Qx
 P = lyap(A, Q); % V = x'Px => Idea: Use V as end cost term
 
 %% Calculate Initial Guess
-if(N_step_MPC <= 3)
+if(N_step_MPC <= 2)
     MPC_traj_indices = 1:(N_MPC+1);
 else
-    MPC_traj_indices = [1, 2, 3, N_step_MPC : N_step_MPC : 1 + (N_MPC-2) * N_step_MPC];
+    MPC_traj_indices = [1, 2, N_step_MPC : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC];
 end
 
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
 q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
 y_d_0 = [p_d_0; q_d_0];
 
-% initial guess for reference trajectory parameter
+% Robot System: Initial guess
 q_0_red    = q_0(n_indices);
 q_0_red_p  = q_0_p(n_indices);
 q_0_red_pp = q_0_pp(n_indices);
@@ -160,9 +155,9 @@ for i=0:N_MPC
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        if(i == 0 || i == 1)
+        if(i == 0)
             g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
-        elseif(i == 2)
+        elseif(i == 1)
             g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
         else
             g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
@@ -181,9 +176,9 @@ if isempty(yt_indices)
     J_yt = 0;
     J_yt_N = 0;
 else
-    J_yt   =      Q_norm_square( y(yt_indices, 1 + (2:N_MPC-1) ) - y_d(yt_indices, 1 + (2:N_MPC-1)), pp.Q_y(   yt_indices,yt_indices) );
-    J_yt = J_yt + Q_norm_square( y(yt_indices, 1 + ( 1       ) ) - y_d(yt_indices, 1 + ( 1       )), pp.Q_ykp1(yt_indices,yt_indices) );
-    J_yt_N =      Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(  yt_indices,yt_indices) );
+    J_yt   =        Q_norm_square( y(yt_indices, 1 + ( 1       ) ) - y_d(yt_indices, 1 + ( 1       )), pp.Q_ykp1(yt_indices,yt_indices) );
+    J_yt   = J_yt + Q_norm_square( y(yt_indices, 1 + (2:N_MPC-1) ) - y_d(yt_indices, 1 + (2:N_MPC-1)), pp.Q_y(   yt_indices,yt_indices) );
+    J_yt_N =        Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(  yt_indices,yt_indices) );
 end
 
 if isempty(yr_indices)
@@ -192,9 +187,6 @@ if isempty(yr_indices)
 else
     J_yr = 0;
     for i=1:N_MPC
-        % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
-        % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
-        % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
         if(i==1)

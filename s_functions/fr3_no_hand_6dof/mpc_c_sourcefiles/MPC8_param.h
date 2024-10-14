@@ -20,9 +20,9 @@
 
 //MPC_SETTINGS:
 #define MPC8_N 5
-#define MPC8_N_step 1
-#define MPC8_Ts 0.001
-#define MPC8_T_horizon 0.005
+#define MPC8_N_step 5
+#define MPC8_Ts 0.005
+#define MPC8_T_horizon 0.025
 #define MPC8_rk_iter 1
 #define MPC8_variant "nlpsol"
 #define MPC8_solver "qrqp"
@@ -31,7 +31,7 @@
 #define MPC8_int_method "Euler"
 #define MPC8_fixed_parameter 0
 #define MPC8_traj_data_per_horizon 6
-static const uint32_t MPC8_traj_indices[] = {0,1,2,3,4,5};
+static const uint32_t MPC8_traj_indices[] = {0,1,4,9,14,19};
 
 //MPC_WEIGHTS:
 const casadi_real MPC8_param_weight[199] = {

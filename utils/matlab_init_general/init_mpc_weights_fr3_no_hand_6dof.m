@@ -80,7 +80,7 @@ MPC='MPC9';
 param_weight.(MPC).Q_y     = diag([1e2*ones(3,1); 1e2*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_yN    = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % D_N
 param_weight.(MPC).R_q_pp  = 1e-10*diag(ones(n,1));  % d_kpn
-param_weight.(MPC).R_v     = 1e-5*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).R_v     = 1e-10*diag(ones(n,1));  % d_kpn
 
 param_weight.(MPC).lambda_u  = 5*ones(n,1);
 
