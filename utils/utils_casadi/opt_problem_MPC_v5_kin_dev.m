@@ -39,8 +39,6 @@ else
     DT2 = DT - DT_ctl;
 end
 
-x = SX.sym('x', 2*n_red);
-
 %% Calculate Initial Guess
 if(N_step_MPC <= 2)
     MPC_traj_indices = 1:(N_MPC+1);

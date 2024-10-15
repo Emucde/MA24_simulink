@@ -20,9 +20,9 @@
 
 //MPC_SETTINGS:
 #define MPC6_N 5
-#define MPC6_N_step 1
-#define MPC6_Ts 0.001
-#define MPC6_T_horizon 0.005
+#define MPC6_N_step 5
+#define MPC6_Ts 0.005
+#define MPC6_T_horizon 0.025
 #define MPC6_rk_iter 1
 #define MPC6_variant "nlpsol"
 #define MPC6_solver "qrqp"
@@ -31,17 +31,17 @@
 #define MPC6_int_method "Euler"
 #define MPC6_fixed_parameter 0
 #define MPC6_traj_data_per_horizon 6
-static const uint32_t MPC6_traj_indices[] = {0,1,2,3,4,5};
+static const uint32_t MPC6_traj_indices[] = {0,1,4,9,14,19};
 
 //MPC_WEIGHTS:
 const casadi_real MPC6_param_weight[201] = {
     /* Q_y : 6x6 matrix values */
-    1000, 0, 0, 0, 0, 0, 
-    0, 1000, 0, 0, 0, 0, 
-    0, 0, 1000, 0, 0, 0, 
-    0, 0, 0, 1000, 0, 0, 
-    0, 0, 0, 0, 1000, 0, 
-    0, 0, 0, 0, 0, 1000, 
+    10, 0, 0, 0, 0, 0, 
+    0, 10, 0, 0, 0, 0, 
+    0, 0, 10, 0, 0, 0, 
+    0, 0, 0, 10, 0, 0, 
+    0, 0, 0, 0, 10, 0, 
+    0, 0, 0, 0, 0, 10, 
 
     /* R_q_pp : 7x7 matrix values */
     1e-10, 0, 0, 0, 0, 0, 0, 
@@ -53,20 +53,20 @@ const casadi_real MPC6_param_weight[201] = {
     0, 0, 0, 0, 0, 0, 1e-10, 
 
     /* Q_y_p_ref : 6x6 matrix values */
-    100, 0, 0, 0, 0, 0, 
-    0, 100, 0, 0, 0, 0, 
-    0, 0, 100, 0, 0, 0, 
-    0, 0, 0, 100, 0, 0, 
-    0, 0, 0, 0, 100, 0, 
-    0, 0, 0, 0, 0, 100, 
+    10, 0, 0, 0, 0, 0, 
+    0, 10, 0, 0, 0, 0, 
+    0, 0, 10, 0, 0, 0, 
+    0, 0, 0, 10, 0, 0, 
+    0, 0, 0, 0, 10, 0, 
+    0, 0, 0, 0, 0, 10, 
 
     /* Q_y_ref : 6x6 matrix values */
-    100, 0, 0, 0, 0, 0, 
-    0, 100, 0, 0, 0, 0, 
-    0, 0, 100, 0, 0, 0, 
-    0, 0, 0, 100, 0, 0, 
-    0, 0, 0, 0, 100, 0, 
-    0, 0, 0, 0, 0, 100, 
+    10, 0, 0, 0, 0, 0, 
+    0, 10, 0, 0, 0, 0, 
+    0, 0, 10, 0, 0, 0, 
+    0, 0, 0, 10, 0, 0, 
+    0, 0, 0, 0, 10, 0, 
+    0, 0, 0, 0, 0, 10, 
 
     /* epsilon_t : [1 1] array values */
     1e-05, 

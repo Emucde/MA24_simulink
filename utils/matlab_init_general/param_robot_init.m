@@ -19,8 +19,8 @@ elseif(strcmp(robot_name, 'fr3_6dof') || strcmp(robot_name, 'fr3_no_hand_6dof'))
 
     % it is possible to control more pose dimensions than the robot has joints - in scope of an MPC
 
-    fr3.param.yt_indices = [1 2 3]; % default [1 2 3]: use x, y and z position
-    fr3.param.yr_indices = [1 2 3]; % default [1 2 3] use x, y, z error of quaternion
+    fr3.param.yt_indices = [1 3]; % default [1 2 3]: use x, y and z position
+    fr3.param.yr_indices = []; % default [1 2 3] use x, y, z error of quaternion
 
     fr3.param.n_indices_fixed = [1 3 5 6 7]; % joint 3 fixed to zero
     % fr3.param.n_indices_fixed = 3; % joint 3 fixed to zero

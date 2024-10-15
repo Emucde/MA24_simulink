@@ -420,13 +420,13 @@ if isempty(yr_indices)
     Jr_yy_ref = 0;
 else
     J_yr = 0;
-    er   = SX(3, N_MPC+1);
+    er   = SX(numel(yr_indices), N_MPC+1);
     for i=1:N_MPC
-        % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+        % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(yr_ref(:, 1 + (i))))';
         % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
         % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
-        q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
-        er(:, 1 + (i)) = q_yr_yd_err(2:4);
+        q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(yr_ref(:, 1 + (i))));
+        er(:, 1 + (i)) = q_y_yr_err(1+yr_indices);
 
         if(i < N_MPC)
             J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
@@ -435,14 +435,22 @@ else
         end
     end
 
-    er_pp = yr_pp_ref( :, 1 + (0:N_MPC) ) - y_d_pp( 4:6, 1 + (0:N_MPC) );
-    er_p  = yr_p_ref(  :, 1 + (0:N_MPC) ) - y_d_p(  4:6, 1 + (0:N_MPC) );
-    er    = yr_ref(    :, 1 + (0:N_MPC) ) - y_d(    3+yr_indices, 1 + (0:N_MPC) );
+    er_pp = yr_pp_ref( yr_indices, 1 + (0:N_MPC) ) - y_d_pp( 3+yr_indices, 1 + (0:N_MPC) );
+    er_p  = yr_p_ref(  yr_indices, 1 + (0:N_MPC) ) - y_d_p(  3+yr_indices, 1 + (0:N_MPC) );
+
+    er    = SX(numel(yr_indices), N_MPC+1);
+    for i=0:N_MPC
+        % R_yr_yd = quat2rotm_v2(yr_ref(:, 1 + (i))) * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+        %q_err = rotation2quaternion_casadi( R_yr_yd );
+        % q_yr_yd_err = [1; R_yr_yd(3,2) - R_yr_yd(2,3); R_yr_yd(1,3) - R_yr_yd(3,1); R_yr_yd(2,1) - R_yr_yd(1,2)];
+        q_yr_yd_err = quat_mult(yr_ref(:, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
+        er(:, 1 + (i)) = q_yr_yd_err(1+yr_indices);
+    end
 
     Jr_yy_ref = Q_norm_square( er_pp + ...
-                               mtimes(pp.Q_y_p_ref(4:6, 4:6), er_p) + ...
-                               mtimes(pp.Q_y_ref(  4:6, 4:6), er), ...
-                               eye(3)...
+                               mtimes(pp.Q_y_p_ref(3+yt_indices, 3+yt_indices), er_p) + ...
+                               mtimes(pp.Q_y_ref(  3+yt_indices, 3+yt_indices), er), ...
+                               eye(numel(yr_indices))...
                              );
 end
 
