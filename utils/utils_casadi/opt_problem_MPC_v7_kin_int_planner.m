@@ -2,11 +2,25 @@
 
 import casadi.*
 
+yt_indices = param_robot.yt_indices;
+yr_indices = param_robot.yr_indices;
+
 n = param_robot.n_DOF; % Dimension of joint space
+n_red = param_robot.n_red; % Dimension of joint space
 m = param_robot.m; % Dimension of Task Space
 
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
+
+q_red = SX.sym( 'q',     n_red, 1 );
+x_red = SX.sym( 'x',   2*n_red, 1 );
+u_red = SX.sym( 'u',     n_red, 1 );
+
+q_subs            = SX(q_0);
+q_subs(n_indices) = q_red;
+
+H_red = Function('H_red', {q_red}, {hom_transform_endeffector_py_fun(q_subs)});
+quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs)});
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval

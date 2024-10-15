@@ -34,7 +34,7 @@
 static const uint32_t MPC11_traj_indices[] = {0,1,4,9,14,19};
 
 //MPC_WEIGHTS:
-const casadi_real MPC11_param_weight[165] = {
+const casadi_real MPC11_param_weight[166] = {
     /* Q_y : 6x6 matrix values */
     1, 0, 0, 0, 0, 0, 
     0, 1, 0, 0, 0, 0, 
@@ -56,6 +56,9 @@ const casadi_real MPC11_param_weight[165] = {
 
     /* Q_thetaN : [1 1] array values */
     100000, 
+
+    /* lambda_theta : [1 1] array values */
+    1, 
 
     /* R_q_pp : 7x7 matrix values */
     1e-10, 0, 0, 0, 0, 0, 0, 

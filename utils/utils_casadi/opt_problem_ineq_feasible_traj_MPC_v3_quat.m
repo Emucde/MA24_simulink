@@ -295,7 +295,7 @@ z_0 = [zt_0; zr_0];
 
 mpc_parameter_inputs = {x_k, z_0, y_d, y_d_p, y_d_pp};
 mpc_init_reference_values = [x_0_0(:); z_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:)];
-asdf
+
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
 if(weights_and_limits_as_parameter) % debug input parameter

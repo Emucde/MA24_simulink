@@ -93,6 +93,7 @@ u_opt_indices = 1:n_red; % q_0_pp needed for joint space CT control
 % TODO: So kann man q_p eigentlich nicht limitieren!!! vgl. mpc v8
 
 % optimization variables cellarray w
+% [TODO]: es wird nicht geprüft ob d/dt q auch die limits einhält!!!
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
 lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min(n_indices), size(q, 2), 1)];
 ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max(n_indices), size(q, 2), 1)];
