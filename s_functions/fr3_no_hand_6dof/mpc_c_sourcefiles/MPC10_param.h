@@ -20,9 +20,9 @@
 
 //MPC_SETTINGS:
 #define MPC10_N 5
-#define MPC10_N_step 100
-#define MPC10_Ts 0.1
-#define MPC10_T_horizon 0.5
+#define MPC10_N_step 5
+#define MPC10_Ts 0.005
+#define MPC10_T_horizon 0.025
 #define MPC10_rk_iter 1
 #define MPC10_variant "nlpsol"
 #define MPC10_solver "qrqp"
@@ -31,7 +31,7 @@
 #define MPC10_int_method "RK4"
 #define MPC10_fixed_parameter 0
 #define MPC10_traj_data_per_horizon 6
-static const uint32_t MPC10_traj_indices[] = {0,1,99,199,299,399};
+static const uint32_t MPC10_traj_indices[] = {0,1,4,9,14,19};
 
 //MPC_WEIGHTS:
 const casadi_real MPC10_param_weight[163] = {
