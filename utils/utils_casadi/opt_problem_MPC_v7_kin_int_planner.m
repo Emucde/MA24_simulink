@@ -21,24 +21,22 @@ q_subs(n_indices) = q_red;
 
 H_red = Function('H_red', {q_red}, {hom_transform_endeffector_py_fun(q_subs)});
 quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs)});
+f_red = Function('f_red', {x_red, u_red}, {[x_red(n_red+1:2*n_red); u_red]});
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
-DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
-
-% integrator for x
-f_red = Function('f_red', {x_red, u_red}, {[x_red(n_red+1:2*n_red); u_red]});
-F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
-
 DT_ctl = param_global.Ta/M;
-F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
-
-if(N_step_MPC == 1)
+if(N_step_MPC <= 3)
+    DT = DT_ctl; % special case if Ts_MPC = Ta
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
-    DT2 = DT - 2*DT_ctl;
+    DT = N_step_MPC * DT_ctl; % = Ts_MPC
+    DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 end
-F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-2*Ta
+
+F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
+F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-Ta
+F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
 
 % Get trajectory data for initial guess
 if(N_step_MPC <= 3)

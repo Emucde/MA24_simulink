@@ -70,7 +70,7 @@ const casadi_real MPC9_param_weight[233] = {
     0, 0, 0, 0, 0, 0, 1e-10, 
 
     /* lambda_u : [7 1] array values */
-    5, 5, 5, 5, 5, 5, 5, 
+    10, 10, 10, 10, 10, 10, 10, 
 
     /* x_min : [14 1] array values */
     -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 

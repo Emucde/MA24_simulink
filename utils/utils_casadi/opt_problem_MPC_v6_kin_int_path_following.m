@@ -27,12 +27,13 @@ quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
-DT = T_horizon_MPC/N_MPC/M;
 DT_ctl = param_global.Ta/M;
-if(N_step_MPC == 1)
+if(N_step_MPC <= 2)
+    DT = DT_ctl; % special case if Ts_MPC = Ta
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
-    DT2 = DT - DT_ctl;
+    DT = N_step_MPC * DT_ctl; % = Ts_MPC
+    DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 end
 
 opt = struct;
@@ -145,11 +146,11 @@ theta_init_guess_0 = t_init_guess/T;
 theta_0_0 = theta_init_guess_0(1);
 v_init_guess_0 = zeros(1, N_MPC);
 
-theta_sys = false; % funktioniert zwar, aber macht keinen sinn da theta_k nicht korrekt ist!
+theta_sys = true; % funktioniert zwar, aber macht keinen sinn da theta_k nicht korrekt ist!
 
 if(theta_sys)
     lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(theta_init_guess_0)+numel(v_init_guess_0), 1);
-    lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(theta_init_guess_0)-1, 1); %-1 because theta_i(0) - theta_d(0) is not weighted
+    lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(theta_init_guess_0), 1); %-1 because theta_i(0) - theta_d(0) is not weighted
     % The core idea here:
     % Only if a dynamic for theta is used it is important to determine theta_0 so that y - sigma(theta_0) is as small as possible.
     % this and only this theta value is the true path parameter at the beginning of the MPC horizon.
@@ -204,6 +205,7 @@ u_opt_indices = q0_pp_idx;
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
+
 if(theta_sys)
     lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n]), size(x, 2), 1); -inf(numel(theta), 1); -inf(numel(v), 1)];
     ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n]), size(x, 2), 1);  inf(numel(theta), 1);  inf(numel(v), 1)];
@@ -214,10 +216,11 @@ end
 
 % input parameter
 x_k = SX.sym( 'x_k', 2*n_red, 1 ); % current x state = initial x state
+theta_k = SX.sym( 'theta_k', 1, 1 ); % next theta state
 t_k = SX.sym( 't_k', 1, 1 ); % current time
 
-mpc_parameter_inputs = {x_k, t_k};
-mpc_init_reference_values = [x_0_0(:); 0];
+mpc_parameter_inputs = {x_k, theta_k, t_k};
+mpc_init_reference_values = [x_0_0(:); theta_0_0; 0];
 
 theta_d = (t_k+t_init_guess)/T;
 
@@ -249,9 +252,7 @@ y       = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
-% g_theta(1, 1 + (0)) = {theta_k - theta(1)}; % ich glaub ich brauche es nicht wenn ich
-% theta_i(0) - theta_d(0) nicht gewichte, denn dann bleibt nur ||y_0 - sigma(theta_0)|| als soft constrained
-% uebrig und theta_0 wird als theta* gewählt, wenn ein Minimum gefunden wurde.
+g_theta(1, 1 + (0)) = {theta_k - theta(1)};
 
 for i=0:N_MPC
     q = x(1:n_red, 1 + (i));

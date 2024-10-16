@@ -30,8 +30,12 @@ H_red = Function('H_red', {q_red}, {hom_transform_endeffector_py_fun(q_subs)});
 quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs)});
 
 M = 1; % RK4 steps per interval
-DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 DT_ctl = param_global.Ta/M;
+if(N_step_MPC <= 3)
+    DT = DT_ctl; % special case if Ts_MPC = Ta
+else
+    DT = N_step_MPC * DT_ctl; % = Ts_MPC
+end
 
 % initial guess for reference trajectory parameter
 if(N_step_MPC <= 3)
@@ -84,7 +88,7 @@ q     = SX.sym( 'q',    n_red, N_MPC+1 );
 q_p_out = SX.sym( 'q_p',  n_red, 2 );
 x     = [q, q_p_out];
 
-mpc_opt_var_inputs = {u, q, q_p_out};
+mpc_opt_var_inputs = {u, q, q_p_out}; % = {u, x}
 
 N_u = numel(u);
 N_q = numel(q);

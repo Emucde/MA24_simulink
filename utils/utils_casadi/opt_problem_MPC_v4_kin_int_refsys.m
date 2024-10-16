@@ -15,7 +15,6 @@ quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi'
 
 q_red = SX.sym( 'q',     n_red, 1 );
 x_red = SX.sym( 'x',   2*n_red, 1 );
-%u_red = SX.sym( 'u',     n_red, 1 );
 
 q_subs            = SX(q_0);
 q_subs(n_indices) = q_red;
@@ -36,13 +35,13 @@ x3 = x(2*n_red+1:3*n_red); % x3 = d^2/dt^2 q = u
 % d/dt x3 = d^3/dt^3 q = -lambda_u x3 + v
 
 M = rk_iter; % RK4 steps per interval
-DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 DT_ctl = param_global.Ta/M;
-
-if(N_step_MPC == 1)
+if(N_step_MPC <= 2)
+    DT = DT_ctl; % special case if Ts_MPC = Ta
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
-    DT2 = DT - DT_ctl;
+    DT = N_step_MPC * DT_ctl; % = Ts_MPC
+    DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 end
 
 opt = struct;
@@ -50,7 +49,7 @@ opt.allow_free = true;
 
 %f_red = Function('f_red', {x, v}, {[x2; x3; x4; K_p*v - K_p*x3 - K_d*x4]}, opt);
 %f_red = Function('f_red', {x, v}, {[x2; K_p*x3; x4; v - K_p*x3 - K_d*x4]}, opt);
-f_red = Function('f_red', {x, v}, {[x2; x3; -diag(lambda_u) * x3  + v]}, opt);
+f_red = Function('f_red', {x, v}, {[x2; x3; -diag(lambda_u) * (x3  - v)]}, opt);
 
 F_int = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
 F = Function('F', {x, v, lambda_u}, {F_int(x, v)});
@@ -87,7 +86,8 @@ v_init_guess_0 = zeros(n_red, N_MPC); % macht mehr sinn da v = d/dt u ist
 x_init_guess_0 = ones(N_x, N_MPC+1) .* x_0_0;
 
 lam_x_init_guess_0 = zeros(numel(x_init_guess_0)+numel(v_init_guess_0), 1);
-lam_g_init_guess_0 = zeros(numel(x_init_guess_0)-n_red, 1);
+% lam_g_init_guess_0 = zeros(numel(x_init_guess_0)-n_red, 1);
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
 
 init_guess_0 = [x_init_guess_0(:); v_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
@@ -162,7 +162,8 @@ y       = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
-g_x(1, 1 + (0)) = {x_k(1:2*n_red) - x(1:2*n_red, 1 + (0))}; % x0 = xk
+% g_x(1, 1 + (0)) = {x_k(1:2*n_red) - x(1:2*n_red, 1 + (0))}; % x0 = xk
+g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 
 for i=0:N_MPC
     q = x(1:n_red, 1 + (i));
@@ -217,7 +218,7 @@ else
     end
 end
 
-J_q_pp = Q_norm_square(x(2*n_red+1:3*n_red, :), pp.R_q_pp(n_indices, n_indices));% + Q_norm_square(x(1:n_red, :), pp.R_q_pp) + Q_norm_square(x(n_red+1:2*n_red, :), pp.R_q_pp);
+J_q_pp = 0*Q_norm_square(x(2*n_red+1:3*n_red, :), pp.R_q_pp(n_indices, n_indices));% + Q_norm_square(x(1:n_red, :), pp.R_q_pp) + Q_norm_square(x(n_red+1:2*n_red, :), pp.R_q_pp);
 J_v = Q_norm_square(v, pp.R_v(n_indices, n_indices));
 %J_v = Q_norm_square(v - pp.K_P_u*x(2*n_red+1:3*n_red,1:N_MPC ), pp.R_v); % weight in relation to stationary value: v == K_p*u
 

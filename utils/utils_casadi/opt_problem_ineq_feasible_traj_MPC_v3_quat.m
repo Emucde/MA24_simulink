@@ -84,25 +84,26 @@ tau_subs = gravity_fun(x_subs(1:n)); % assumption: PD controller ensures gravity
 tau_subs(n_indices) = tau_red; % only actuated joints are controlled
 d_dt_x = f(x_subs, tau_subs);
 tau_full = compute_tau_fun(q_subs, q_subs_p, q_subs_pp);
+g_vec_subs = gravity_fun(q_subs);
+g_fun_red = Function('g_fun_red', {q_red}, {g_vec_subs(n_indices)});
 
 tau_fun_red = Function('tau_fun_red', {q_red, q_red_p, q_red_pp}, {tau_full(n_indices)});
 f_red = Function('f_red', {x_red, tau_red}, {d_dt_x([n_indices n_indices+n])});
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
-DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
-
-F = integrate_casadi(f_red, DT, M, int_method);
-
 DT_ctl = param_global.Ta/M;
-F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
-
-if(N_step_MPC == 1)
+if(N_step_MPC <= 2)
+    DT = DT_ctl; % special case if Ts_MPC = Ta
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
-    DT2 = DT - DT_ctl;
+    DT = N_step_MPC * DT_ctl; % = Ts_MPC
+    DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 end
+
+F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
 F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-Ta
+F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
 
 %Get trajectory data for initial guess
 if(N_step_MPC <= 2)
@@ -332,7 +333,8 @@ lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
 y    = SX( m+1, N_MPC+1 ); % transl. TCP position:      (y_0 ... y_N)
-q_pp = SX( n_red, N_MPC   ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
+q_pp = SX( n_red, N_MPC ); % joint acceleration: (q_pp_0 ... q_pp_N-1) % last makes no sense: q_pp_N depends on u_N, wich is not known
+q_p = SX( n_red, N_MPC ); % joint velocity
 
 % reference trajectory values
 yt_ref    = SX( n_yt_red, N_MPC+1 ); % TCP position:      (yt_ref_0 ... yt_ref_N)
@@ -344,6 +346,8 @@ yr_p_ref  = SX( 3, N_MPC+1 ); % TCP orientation velocity:      (y_qw_p_ref_0 ...
 yr_pp_ref = SX( 3, N_MPC+1 ); % TCP orientation acceleration:  (y_qw_pp_ref_0 ... y_qw_pp_ref_N)
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
+
+g_vec = SX(n_red, N_MPC);
 
 g_x(1, 1 + (0))  = {x_k                    - x(:,              1 + (0))}; % x0 = xk
 g_zt(1, 1 + (0)) = {z_0(1:n_zt_red, 1)     - z(1:n_zt_red,     1 + (0))}; % zt0
@@ -366,6 +370,7 @@ for i=0:N_MPC
         yt_pp_ref(:, 1 + (i)) = alpha_t( 1:n_yt_red,            1 + (i));
 
         if(i < N_MPC)
+            g_vec(:, 1 + (i)) = g_fun_red(q);
             if(i == 0)
                 g_zt(1, 1 + (i+1)) = { Ht_kp1(zt(:, 1 + (i)), alpha_t(:, 1 + (i)) ) - zt(:, 1 + (i+1)) }; % Set the translational refsys dynamics constraints for ztk = zt(t0) = tilde zt0 to ztk+1 = zt(t0+Ta)
             elseif(i == 1)
@@ -403,6 +408,7 @@ for i=0:N_MPC
         end
 
         dx   = f_red(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
+        q_p(:,  1 + (i)) = dx(      1:  n_red, 1);
         q_pp(:, 1 + (i)) = dx(n_red+1:2*n_red, 1);
     end
 end
@@ -439,9 +445,6 @@ else
     J_yr = 0;
     er   = SX(numel(yr_indices), N_MPC+1);
     for i=1:N_MPC
-        % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(yr_ref(:, 1 + (i))))';
-        % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
-        % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(yr_ref(:, 1 + (i))));
         er(:, 1 + (i)) = q_y_yr_err(1+yr_indices);
 
@@ -484,7 +487,10 @@ end
 g_z = [g_zt, g_zr];
 g = [g_x, g_z, g_eps]; % merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
 
-J_q_pp = Q_norm_square(q_pp, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_q_pp = Q_norm_square(u-g_vec, pp.R_q_pp(n_indices, n_indices)); % ist dann eig ziemlich equivalent zu qpp + qp gewichtung (aber am Schnellsten)
+% J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); % besser gg. gravitation gewichten
+% J_q_pp = Q_norm_square(q_pp, pp.R_q_pp(n_indices, n_indices));
+% J_q_pp = Q_norm_square(q_pp, pp.R_q_pp(n_indices, n_indices)) + Q_norm_square(q_p, pp.R_q_pp(n_indices, n_indices));
 
 cost_vars_names = '{J_yt, Jt_yy_ref, J_yr, Jr_yy_ref, J_q_pp}';
 cost_vars_SX = eval(cost_vars_names);

@@ -233,9 +233,13 @@ catch ME
     error(getReport(ME));
 end
 
-u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
-x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
+x_full = full(reshape(xx_full_opt_sol(1:numel(x)), size(x)));
+u_full = full(reshape(xx_full_opt_sol(1+numel(x):numel(x)+numel(u)), size(u)));
 
+% u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
+% x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
+
+% asdf
 % show stats
 
 %z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z)), size(z)));

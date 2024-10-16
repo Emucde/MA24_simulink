@@ -26,32 +26,27 @@ q_subs(n_indices) = q_red;
 H_red = Function('H_red', {q_red, q_fix}, {hom_transform_endeffector_py_fun(q_subs)});
 quat_fun_red = Function('quat_fun_red', {q_red, q_fix}, {quat_endeffector_py_fun(q_subs)});
 
-% Discrete system dynamics
-M = rk_iter; % RK4 steps per interval
-DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
-
-% du = SX.sym('du', 2*n_red);
-% dx = SX.sym('dx', 2*n_red); % x = [q1, ... qn, dq1, ... dqn]
-% f = Function('f', {dx, du}, {dx});
-% F = integrate_casadi(f, DT, M, int_method);
-
-% Discrete yt_ref system
 x = SX.sym('x', 2*n_red);
 u = SX.sym('u', n_red);
 
 % integrator for x
 f = Function('f', {x, u}, {[x(n_red+1:2*n_red); u]});
-F = integrate_casadi(f, DT, M, int_method); % runs with Ts_MPC
+f_red = Function('f_red', {x_red, u_red}, {[x_red(n_red+1:2*n_red); u_red]});
 
+% Discrete system dynamics
+M = rk_iter; % RK4 steps per interval
 DT_ctl = param_global.Ta/M;
-F_kp1 = integrate_casadi(f, DT_ctl, M, int_method); % runs with Ta from sensors
-
-if(N_step_MPC == 1)
+if(N_step_MPC <= 2)
+    DT = DT_ctl; % special case if Ts_MPC = Ta
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
-    DT2 = DT - 2*DT_ctl;
+    DT = N_step_MPC * DT_ctl; % = Ts_MPC
+    DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 end
-F2 = integrate_casadi(f, DT2, M, int_method); % runs with Ts_MPC-2*Ta
+
+F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
+F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-Ta
+F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
 
 lambda = -1;
 A = [zeros(n_red), eye(n_red); -eye(n_red)*lambda^2, 2*eye(n_red)*lambda]; % = d/dt x = Ax + Bu = (A + BC)x, u=Cx
@@ -59,10 +54,10 @@ Q = 1*eye(2*n_red); % d/dt V = -x'Qx
 P = lyap(A, Q); % V = x'Px => Idea: Use V as end cost term
 
 %% Calculate Initial Guess
-if(N_step_MPC <= 3)
+if(N_step_MPC <= 2)
     MPC_traj_indices = 1:(N_MPC+1);
 else
-    MPC_traj_indices = [1, 2, 3, N_step_MPC : N_step_MPC : 1 + (N_MPC-2) * N_step_MPC];
+    MPC_traj_indices = [1, 2, N_step_MPC : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC];
 end
 
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
@@ -172,9 +167,9 @@ for i=0:N_MPC
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        if(i == 0 || i == 1)
+        if(i == 0)
             g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
-        elseif(i == 2)
+        elseif(i == 1)
             g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
         else
             g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))

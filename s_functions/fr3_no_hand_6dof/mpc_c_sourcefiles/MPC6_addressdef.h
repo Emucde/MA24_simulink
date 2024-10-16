@@ -7,7 +7,7 @@
 #define MPC6_IW_LEN 595
 #define MPC6_ARG_LEN 24
 #define MPC6_RES_LEN 17
-#define MPC6_W_LEN 15555
+#define MPC6_W_LEN 8920
 static const uint32_t MPC6_ARG[] = {0,122,311};
 static const uint32_t MPC6_RES[] = {512,514,703,704,705,706,707};
 #define MPC6_W_END_ADDRESS 708

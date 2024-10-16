@@ -20,8 +20,6 @@ hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_ende
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
 q_red = SX.sym( 'q',     n_red, 1 );
-x_red = SX.sym( 'x',   2*n_red, 1 );
-u_red = SX.sym( 'u',     n_red, 1 );
 
 q_subs            = SX(q_0);
 q_subs(n_indices) = q_red;
@@ -30,13 +28,13 @@ H_red = Function('H_red', {q_red}, {hom_transform_endeffector_py_fun(q_subs)});
 quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs)});
 
 M = 1; % RK4 steps per interval
-DT = T_horizon_MPC/N_MPC/M; % Time step - KEINE ZWISCHENST.
 DT_ctl = param_global.Ta/M;
-
-if(N_step_MPC == 1)
+if(N_step_MPC <= 2)
+    DT = DT_ctl; % special case if Ts_MPC = Ta
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
-    DT2 = DT - DT_ctl;
+    DT = N_step_MPC * DT_ctl; % = Ts_MPC
+    DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 end
 
 %% Calculate Initial Guess
@@ -83,8 +81,9 @@ end
 % Optimization Variables:
 u     = SX.sym( 'u',    n_red,       1 ); % %u0=q0pp (0 to Ta)
 q     = SX.sym( 'q',    n_red, N_MPC+1 );
+x = q;
 
-mpc_opt_var_inputs = {u, q};
+mpc_opt_var_inputs = {u, x};
 
 u_opt_indices = 1:n_red; % q_0_pp needed for joint space CT control
 
