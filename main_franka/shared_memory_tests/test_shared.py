@@ -19,6 +19,16 @@ shm_write_name = "my_custom_shm_write"
 shm_write = create_shared_memory(shm_write_name, 100 * 8)  # 8 bytes pro double
 data_write = np.ndarray((100,), dtype=np.float64, buffer=shm_write.buf)
 
+shm_data_from_python_valid_name   = "data_from_python_valid"
+shm_data_from_python_name         = "data_from_python"
+shm_data_from_simulink_valid_name = "data_from_simulink_valid"
+shm_data_from_simulink_name       = "data_from_simulink"
+
+shm_read = create_shared_memory(shm_data_from_python_valid_name, 1000 * 8)  # 8 bytes pro double
+shm_read = create_shared_memory(shm_data_from_python_name, 1)  # 1 bytes (bit possible?)
+shm_read = create_shared_memory(shm_data_from_simulink_valid_name, 3 * 8 * 8)  # 8 bytes pro double
+shm_read = create_shared_memory(shm_data_from_simulink_name, 1)  # 1 bytes pro double
+
 try:
     while True:
         # Daten aus dem ersten Shared Memory lesen
