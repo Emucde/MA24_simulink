@@ -79,6 +79,7 @@ else
 end
 
 compute_tau_fun = Function.load([input_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
+gravity_fun = Function.load([input_dir, 'gravitational_forces_py.casadi']); % Inverse Dynamics (ID)
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
@@ -93,18 +94,16 @@ q_subs_p  = SX(q_0_p); % assumption: all trajectories have same joint values for
 q_subs_pp = SX(q_0_pp); % assumption: all trajectories have same joint values for locked joints!
 x_subs    = SX([q_0; q_0_p]);
 
-tau_subs = compute_tau_fun(q_subs, q_subs_p, q_subs_pp);
-
 q_subs(n_indices)    = q_red;
 q_subs_p(n_indices)  = q_red_p;
 q_subs_pp(n_indices) = q_red_pp;
-tau_subs(n_indices)  = tau_red;
-
 x_subs([n_indices n_indices+n]) = x_red;
 
 H_red = Function('H_red', {q_red}, {hom_transform_endeffector_py_fun(q_subs)});
 quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs)});
 
+tau_subs = gravity_fun(x_subs(1:n)); % assumption: PD controller ensures gravity compensation on fixed joints
+tau_subs(n_indices) = tau_red; % only actuated joints are controlled
 d_dt_x = f(x_subs, tau_subs);
 tau_full = compute_tau_fun(q_subs, q_subs_p, q_subs_pp);
 
@@ -120,7 +119,7 @@ F = integrate_casadi(f_red, DT, M, int_method);
 DT_ctl = param_global.Ta/M;
 F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
 
-if(N_step_MPC == 1)
+if(N_step_MPC <= 2)
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
     DT2 = DT - DT_ctl;
@@ -277,9 +276,7 @@ else
         % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
-        if(i==1)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_ykp1(3+yr_indices,3+yr_indices)  );
-        elseif(i < N_MPC)
+        if(i < N_MPC)
             J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
         else
             J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );

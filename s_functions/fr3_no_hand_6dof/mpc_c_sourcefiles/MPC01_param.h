@@ -34,16 +34,8 @@
 static const uint32_t MPC01_traj_indices[] = {0,1,49,99,149,199};
 
 //MPC_WEIGHTS:
-const casadi_real MPC01_param_weight[199] = {
+const casadi_real MPC01_param_weight[163] = {
     /* Q_y : 6x6 matrix values */
-    100, 0, 0, 0, 0, 0, 
-    0, 100, 0, 0, 0, 0, 
-    0, 0, 100, 0, 0, 0, 
-    0, 0, 0, 100, 0, 0, 
-    0, 0, 0, 0, 100, 0, 
-    0, 0, 0, 0, 0, 100, 
-
-    /* Q_ykp1 : 6x6 matrix values */
     100, 0, 0, 0, 0, 0, 
     0, 100, 0, 0, 0, 0, 
     0, 0, 100, 0, 0, 0, 

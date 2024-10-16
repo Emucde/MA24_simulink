@@ -55,6 +55,7 @@ else
 end
 
 compute_tau_fun = Function.load([input_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
+gravity_fun = Function.load([input_dir, 'gravitational_forces_py.casadi']); % gravity vector
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
@@ -71,18 +72,16 @@ q_subs_p  = SX(q_0_p); % assumption: all trajectories have same joint values for
 q_subs_pp = SX(q_0_pp); % assumption: all trajectories have same joint values for locked joints!
 x_subs    = SX([q_0; q_0_p]);
 
-tau_subs = compute_tau_fun(q_subs, q_subs_p, q_subs_pp);
-
 q_subs(n_indices)    = q_red;
 q_subs_p(n_indices)  = q_red_p;
 q_subs_pp(n_indices) = q_red_pp;
-tau_subs(n_indices)  = tau_red;
-
 x_subs([n_indices n_indices+n]) = x_red;
 
 H_red = Function('H_red', {q_red}, {hom_transform_endeffector_py_fun(q_subs)});
 quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs)});
 
+tau_subs = gravity_fun(x_subs(1:n)); % assumption: PD controller ensures gravity compensation on fixed joints
+tau_subs(n_indices) = tau_red; % only actuated joints are controlled
 d_dt_x = f(x_subs, tau_subs);
 tau_full = compute_tau_fun(q_subs, q_subs_p, q_subs_pp);
 
@@ -359,7 +358,13 @@ for i=0:N_MPC
         yt_pp_ref(:, 1 + (i)) = alpha_t( 1:n_yt_red,            1 + (i));
 
         if(i < N_MPC)
-            g_zt(1, 1 + (i+1)) = { Ht(zt(:, 1 + (i)), alpha_t(:, 1 + (i)) ) - zt(:, 1 + (i+1)) }; % Set the yref_t dynamics constraints
+            if(i == 0)
+                g_zt(1, 1 + (i+1)) = { Ht_kp1(zt(:, 1 + (i)), alpha_t(:, 1 + (i)) ) - zt(:, 1 + (i+1)) }; % Set the translational refsys dynamics constraints for ztk = zt(t0) = tilde zt0 to ztk+1 = zt(t0+Ta)
+            elseif(i == 1)
+                g_zt(1, 1 + (i+1)) = { Ht2(zt(:, 1 + (i)), alpha_t(:, 1 + (i)) ) - zt(:, 1 + (i+1)) }; % Set the translational refsys dynamics constraints for ztk+1 = zt(t0+Ta) to zt(t0+Ts_MPC) = tilde zt1
+            else
+                g_zt(1, 1 + (i+1)) = { Ht(zt(:, 1 + (i)), alpha_t(:, 1 + (i)) ) - zt(:, 1 + (i+1)) }; % Set the translational refsys dynamics constraints for zt(t0+Ts_MPC*i) to zt(t0+Ts_MPC*(i+1))
+            end
         end
     end
 
@@ -369,7 +374,13 @@ for i=0:N_MPC
         yr_pp_ref(:, 1 + (i)) = alpha_r( 1:n_yr_red,            1 + (i));
 
         if(i < N_MPC)
-            g_zr(1, 1 + (i+1)) = { Hr(zr(:, 1 + (i)), alpha_r(:, 1 + (i)) ) - zr(:, 1 + (i+1)) }; % Set the yref_r dynamics constraints
+            if(i == 0)
+                g_zr(1, 1 + (i+1)) = { Hr_kp1(zr(:, 1 + (i)), alpha_r(:, 1 + (i)) ) - zr(:, 1 + (i+1)) }; % Set the rotational refsys dynamics constraints for zrk = zr(t0) = tilde zr0 to zrk+1 = zr(t0+Ta)
+            elseif(i == 1)
+                g_zr(1, 1 + (i+1)) = { Hr2(zr(:, 1 + (i)), alpha_r(:, 1 + (i)) ) - zr(:, 1 + (i+1)) }; % Set the rotational refsys dynamics constraints for zrk+1 = zr(t0+Ta) to zr(t0+Ts_MPC) = tilde zr1
+            else
+                g_zr(1, 1 + (i+1)) = { Hr(zr(:, 1 + (i)), alpha_r(:, 1 + (i)) ) - zr(:, 1 + (i+1)) }; % Set the rotational refsys dynamics constraints for zr(t0+Ts_MPC*i) to zr(t0+Ts_MPC*(i+1))
+            end
         end
     end
 

@@ -37,7 +37,7 @@ int MPC7_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, c
 #define MPC7_SZ_ARG 24
 #define MPC7_SZ_RES 17
 #define MPC7_SZ_IW 595
-#define MPC7_SZ_W 14648
+#define MPC7_SZ_W 14835
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
