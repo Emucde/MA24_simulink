@@ -7,11 +7,15 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define SHM_SIZE 2000  // Größe in Bytes, anpassen nach Bedarf
+#define SHM_DATA_SIZE 250
+#define SHM_DATA_SIZE_BYTES (SHM_DATA_SIZE * sizeof(double))
+
+#define SHM_VALID_FLAG_SIZE 1
+#define SHM_VALID_FLAG_SIZE_BYTES (SHM_VALID_FLAG_SIZE * sizeof(SS_DOUBLE))
 
 static void mdlInitializeSizes(SimStruct *S)
 {
-    ssSetNumSFcnParams(S, 1);  // Ein Parameter: Name des Shared Memory
+    ssSetNumSFcnParams(S, 2);  // Two parameters: first: shared memory name of data, second: shared memory name of valid flag
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) {
         return;
     }
@@ -21,14 +25,17 @@ static void mdlInitializeSizes(SimStruct *S)
 
     if (!ssSetNumInputPorts(S, 0)) return;
     
-    if (!ssSetNumOutputPorts(S, 1)) return;
-    ssSetOutputPortWidth(S, 0, 250);  // 250 double-Werte
+    if (!ssSetNumOutputPorts(S, 2)) return;
+    ssSetOutputPortWidth(S, 0, SHM_DATA_SIZE);  // 250 double values for first output
     ssSetOutputPortDataType(S, 0, SS_DOUBLE);
+
+    ssSetOutputPortWidth(S, 1, SHM_VALID_FLAG_SIZE);  // 250 double values for second output
+    ssSetOutputPortDataType(S, 1, SS_DOUBLE);
     
     ssSetNumSampleTimes(S, 1);
     ssSetNumRWork(S, 0);
     ssSetNumIWork(S, 0);
-    ssSetNumPWork(S, 2);  // Für Shared Memory Pointer und Dateideskriptor
+    ssSetNumPWork(S, 4);  // For two Shared Memory Pointers and two File Descriptors
     ssSetNumModes(S, 0);
     ssSetNumNonsampledZCs(S, 0);
 
@@ -44,45 +51,61 @@ static void mdlInitializeSampleTimes(SimStruct *S)
 #define MDL_START
 static void mdlStart(SimStruct *S)
 {
-    char_T *shm_name = mxArrayToString(ssGetSFcnParam(S, 0));
-    int fd = shm_open(shm_name, O_RDONLY, 0666);
-    if (fd == -1) {
-        ssSetErrorStatus(S, "Failed to open shared memory");
-        return;
+    int shm_size_bytes[2] = {SHM_DATA_SIZE_BYTES, SHM_VALID_FLAG_SIZE_BYTES};
+    // Open two shared memory and map it to the process
+    for (int i = 0; i < 2; i++) {
+        char_T *shm_name = mxArrayToString(ssGetSFcnParam(S, i));
+        int fd = shm_open(shm_name, O_RDONLY, 0666);
+        if (fd == -1) {
+            ssSetErrorStatus(S, "Failed to open shared memory");
+            return;
+        }
+        
+        double *shared_data = (double*)mmap(0, shm_size_bytes[i], PROT_READ, MAP_SHARED, fd, 0);
+        if (shared_data == MAP_FAILED) {
+            ssSetErrorStatus(S, "Failed to map shared memory");
+            close(fd);
+            return;
+        }
+        
+        ssSetPWorkValue(S, i*2, shared_data);
+        ssSetPWorkValue(S, i*2+1, (void*)(intptr_t)fd);
+        mxFree(shm_name);
     }
-    
-    double *shared_data = (double*)mmap(0, SHM_SIZE, PROT_READ, MAP_SHARED, fd, 0);
-    if (shared_data == MAP_FAILED) {
-        ssSetErrorStatus(S, "Failed to map shared memory");
-        close(fd);
-        return;
-    }
-    
-    ssSetPWorkValue(S, 0, shared_data);
-    ssSetPWorkValue(S, 1, (void*)(intptr_t)fd);
-    mxFree(shm_name);
 }
 
 static void mdlOutputs(SimStruct *S, int_T tid)
 {
-    double *y = ssGetOutputPortSignal(S, 0);
-    double *shared_data = (double*)ssGetPWorkValue(S, 0);
-    
-    for (int i = 0; i < 250; i++) {
-        y[i] = shared_data[i];
+    // Copy the shared memory data to the output
+    double *y = 0;
+    double *shared_data = 0;
+    int shm_size[2] = {SHM_DATA_SIZE, SHM_VALID_FLAG_SIZE};
+    int i,j;
+
+    for (i = 0; i < 2; i++) {
+        y = (double*)ssGetOutputPortSignal(S, i);
+        shared_data = (double*)ssGetPWorkValue(S, i*2);
+        
+        for (j = 0; j < shm_size[i]; j++) {
+            y[j] = shared_data[j];
+        }
     }
 }
 
 static void mdlTerminate(SimStruct *S)
 {
-    double *shared_data = (double*)ssGetPWorkValue(S, 0);
-    int fd = (int)(intptr_t)ssGetPWorkValue(S, 1);
-    
-    if (shared_data) {
-        munmap(shared_data, SHM_SIZE);
-    }
-    if (fd != -1) {
-        close(fd);
+    int shm_size_bytes[2] = {SHM_DATA_SIZE_BYTES, SHM_VALID_FLAG_SIZE_BYTES};
+    // Unmap and close the shared memory
+    for (int i = 0; i < 2; i++) {
+        double *shared_data = (double*)ssGetPWorkValue(S, i*2);
+        int fd = (int)(intptr_t)ssGetPWorkValue(S, i*2+1);
+        
+        if (shared_data) {
+            munmap(shared_data, shm_size_bytes[i]);
+        }
+        if (fd != -1) {
+            close(fd);
+        }
     }
 }
 
