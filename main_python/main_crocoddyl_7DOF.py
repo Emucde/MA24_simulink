@@ -8,12 +8,48 @@ import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
 from scipy.optimize import minimize
 import scipy.io as sio
+from multiprocessing import shared_memory
 
 sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
 from utils_python.utils import *
 
 mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_ur5e')
 urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'ur5e.urdf')
+
+################################################ REALTIME ###############################################
+
+use_data_from_simulink = True
+if use_data_from_simulink:
+    n_indices = np.array([0, 1, 3, 4, 5, 6]) # don't use joint 3
+    n_dof = 7
+    def create_shared_memory(name, size):
+        try:
+            shm = shared_memory.SharedMemory(name=name, create=True, size=size)
+        except FileExistsError:
+            shm = shared_memory.SharedMemory(name=name)
+        return shm
+
+    shm_data_from_python_name         = "data_from_python"
+    shm_data_from_python_valid_name   = "data_from_python_valid"
+
+    shm_data_from_simulink_name       = "data_from_simulink"
+    shm_data_from_simulink_valid_name = "data_from_simulink_valid"
+
+    python_buffer_bytes = 250 * 8 # 8 bytes pro double
+    python_flag_bytes = 1 * 8 # 1 byte
+    simulink_buffer_bytes = 2 * 7 * 8 # 14 states, 8 bytes pro double
+    simulink_flag_bytes = 1 * 8# 1 byte
+
+    shm_data_from_python = create_shared_memory(shm_data_from_python_name, python_buffer_bytes)  # 8 bytes pro double
+    shm_data_from_python_valid = create_shared_memory(shm_data_from_python_valid_name, python_flag_bytes)  # 1 bytes (bit possible?)
+    shm_data_from_simulink = create_shared_memory(shm_data_from_simulink_name, simulink_buffer_bytes)  # 8 bytes pro double
+    shm_data_from_simulink_valid = create_shared_memory(shm_data_from_simulink_valid_name, simulink_flag_bytes)  # 1 bytes pro double
+
+    data_from_python = np.ndarray((python_buffer_bytes//8,), dtype=np.float64, buffer=shm_data_from_python.buf)
+    data_from_python_valid = np.ndarray((python_flag_bytes//8,), dtype=np.float64, buffer=shm_data_from_python_valid.buf)
+
+    data_from_simulink = np.ndarray((simulink_buffer_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink.buf)
+    data_from_simulink_valid = np.ndarray((simulink_flag_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink_valid.buf)
 
 ######################################### Build Robot Model #############################################
 
@@ -136,6 +172,26 @@ state.ub = param_mpc_weight['xmax']
 ############################################# INIT MPC ##################################################
 #########################################################################################################
 
+try:
+    while True:
+        # Daten für Simulink schreiben
+        # time.sleep(3e-3)
+        if(data_from_python_valid[:] == 0):
+            data_from_python_valid[:] = 1
+            data_from_python[:] = np.random.rand(250)
+            print("Daten von Python:", data_from_python[:5], "...")  # Zeige die ersten 5 Werte
+        
+        # Daten von Simulink lesen
+        if(data_from_simulink_valid[:] == 1):
+            print("Daten von Simulink:", data_from_simulink[:])  # Zeige die ersten 5 Werte
+            data_from_simulink_valid[:] = 0
+            data_from_python_valid[:] = 0
+            xk = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+        # time.sleep(1e-9)
+except KeyboardInterrupt:
+    print("\nStart Solving")
+
+
 solver, init_guess_fun, create_ocp_problem, simulate_model  = get_mpc_funs(opt_type)
 
 N_step = int(Ts_MPC/dt)
@@ -186,6 +242,18 @@ for i in range(N_traj):
     elapsed_time = measureSimu.toc()
     freq_per_Ta_step[i] = 1/elapsed_time
 
+    if use_data_from_simulink:
+        if(data_from_python_valid[:] == 0):
+            data_from_python_valid[:] = 1
+            data_from_python[:] = np.random.rand(250)
+        
+        # Daten von Simulink lesen
+        if(data_from_simulink_valid[:] == 1):
+            data_from_simulink_valid[:] = 0
+            data_from_python_valid[:] = 0
+        
+        xk = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+
 measureSolver.print_time(additional_text='Total Solver time')
 measureTotal.print_time(additional_text='Total MPC time')
 
@@ -205,8 +273,8 @@ traj_data['omega_d_p'] = traj_data['omega_d_p'][:, 0:N_traj]
 #########################################################################################################
 
 subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, freq_per_Ta_step)
-folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html';
 output_file_path = os.path.join(folderpath, outputname)
 plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False)
@@ -222,3 +290,14 @@ print("Minimum Found:", hasConverged)
 # visualize=False
 # if visualize==True:
 #     visualize_robot(robot, q, traj_data, dt, 3, 1)
+
+if use_data_from_simulink:
+    shm_data_from_python.close()
+    shm_data_from_python.unlink()
+    shm_data_from_python_valid.close()
+    shm_data_from_python_valid.unlink()
+    shm_data_from_simulink.close()
+    shm_data_from_simulink.unlink()
+    shm_data_from_simulink_valid.close()
+    shm_data_from_simulink_valid.unlink()
+    print("Shared Memory freigegeben.")

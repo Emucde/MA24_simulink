@@ -2,8 +2,10 @@ addpath(genpath('../'));
 addpath(genpath('../../utils/matlab_init_general/'));
 addpath(genpath('../../utils/matlab_utils/'));
 
+cd /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/Controller
+
 param_global.Ta = 1e-3;
-n=6;
+n=7;
 T_sim = 10;
 
 bus_definitions;
@@ -36,7 +38,11 @@ param_traj_data.N = length(param_traj_data.t);
 robot_ip = '172.16.10.2';
 % restoredefaultpath
 % addpath(genpath('./s_functions'));
-% init_franka_matlab('0.13.0')
+
+if(~exist('init_franka_flag', 'var'))
+    init_franka_matlab('0.13.0');
+    init_franka_flag = true;
+end
 
 q_init = [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]';
 param_global.Ta = 1e-3;

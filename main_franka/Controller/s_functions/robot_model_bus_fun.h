@@ -37,7 +37,7 @@ int robot_model_bus_fun_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, casad
 #define robot_model_bus_fun_SZ_ARG 2
 #define robot_model_bus_fun_SZ_RES 7
 #define robot_model_bus_fun_SZ_IW 0
-#define robot_model_bus_fun_SZ_W 384
+#define robot_model_bus_fun_SZ_W 459
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

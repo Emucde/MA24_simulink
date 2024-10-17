@@ -1,0 +1,137 @@
+%implements s9_b0_hij8o_Terminate "C"
+
+%function Terminate(block, system) Output
+%assign cfgTxt = ""
+%openfile cfgTxt
+%assign localVarDecl = ""
+%assign tlcTerminateFcnOfS9B0 = OpaqueTLCBlockFcn("Terminate", 9, 0, 0, 17, 0)
+%assign tlcTerminateFcnOfS9B1 = OpaqueTLCBlockFcn("Terminate", 9, 1, 0, 17, 1)
+%assign tlcTerminateFcnOfS9B4 = OpaqueTLCBlockFcn("Terminate", 9, 4, 0, 17, 2)
+%assign tlcTerminateFcnOfS9B7 = OpaqueTLCBlockFcn("Terminate", 9, 7, 0, 17, 3)
+%assign tlcTerminateFcnOfS9B22 = OpaqueTLCBlockFcn("Terminate", 9, 22, 0, 17, 4)
+%assign tlcTerminateFcnOfS9B23 = OpaqueTLCBlockFcn("Terminate", 9, 23, 0, 17, 5)
+%assign tlcTerminateFcnOfS9B24 = OpaqueTLCBlockFcn("Terminate", 9, 24, 0, 17, 6)
+%assign tlcTerminateFcnOfS9B26 = OpaqueTLCBlockFcn("Terminate", 9, 26, 0, 17, 7)
+%assign tlcTerminateFcnOfS9B27 = OpaqueTLCBlockFcn("Terminate", 9, 27, 0, 17, 8)
+%assign tlcTerminateFcnOfS9B29 = OpaqueTLCBlockFcn("Terminate", 9, 29, 0, 17, 9)
+%assign tlcTerminateFcnOfS9B31 = OpaqueTLCBlockFcn("Terminate", 9, 31, 0, 17, 10)
+%assign tlcTerminateFcnOfS9B32 = OpaqueTLCBlockFcn("Terminate", 9, 32, 0, 17, 11)
+%assign tlcTerminateFcnOfS9B34 = OpaqueTLCBlockFcn("Terminate", 9, 34, 0, 17, 12)
+%assign tlcCleanupRuntimeResourcesFcnOfS9B1 = OpaqueTLCBlockFcn("CleanupRuntimeResources", 9, 1, 0, 17, 13)
+%assign tlcCleanupRuntimeResourcesFcnOfS9B4 = OpaqueTLCBlockFcn("CleanupRuntimeResources", 9, 4, 0, 17, 14)
+%assign tlcCleanupRuntimeResourcesFcnOfS9B7 = OpaqueTLCBlockFcn("CleanupRuntimeResources", 9, 7, 0, 17, 15)
+%assign tlcCleanupRuntimeResourcesFcnOfS9B22 = OpaqueTLCBlockFcn("CleanupRuntimeResources", 9, 22, 0, 17, 16)
+%assign tlcCleanupRuntimeResourcesFcnOfS9B24 = OpaqueTLCBlockFcn("CleanupRuntimeResources", 9, 24, 0, 17, 17)
+%assign tlcCleanupRuntimeResourcesFcnOfS9B26 = OpaqueTLCBlockFcn("CleanupRuntimeResources", 9, 26, 0, 17, 18)
+%assign tlcCleanupRuntimeResourcesFcnOfS9B27 = OpaqueTLCBlockFcn("CleanupRuntimeResources", 9, 27, 0, 17, 19)
+%assign tlcCleanupRuntimeResourcesFcnOfS9B29 = OpaqueTLCBlockFcn("CleanupRuntimeResources", 9, 29, 0, 17, 20)
+%assign tlcCleanupRuntimeResourcesFcnOfS9B31 = OpaqueTLCBlockFcn("CleanupRuntimeResources", 9, 31, 0, 17, 21)
+%assign tlcCleanupRuntimeResourcesFcnOfS9B32 = OpaqueTLCBlockFcn("CleanupRuntimeResources", 9, 32, 0, 17, 22)
+%assign tlcCleanupRuntimeResourcesFcnOfS9B34 = OpaqueTLCBlockFcn("CleanupRuntimeResources", 9, 34, 0, 17, 23)
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B0)
+/* Terminate for S-Function (get_robot_state): '<S6>/Get Robot State2' */
+%<tlcTerminateFcnOfS9B0>\
+%endif
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B1)
+/* Terminate for S-Function (shm_reader_sfun): '<Root>/S-Function3' */
+%<tlcTerminateFcnOfS9B1>\
+%endif
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B4)
+/* Terminate for S-Function (shm_writer_sfun): '<Root>/S-Function4' */
+%<tlcTerminateFcnOfS9B4>\
+%endif
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B7)
+/* Terminate for S-Function (s_function_opti_robot_model_bus_fun): '<Root>/S-Function2' */
+%<tlcTerminateFcnOfS9B7>\
+%endif
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B22)
+/* Terminate for ToAsyncQueueBlock generated from: '<Root>/From31' */
+%<tlcTerminateFcnOfS9B22>\
+%endif
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B23)
+/* Terminate for S-Function (apply_control): '<S6>/Apply Control' */
+%<tlcTerminateFcnOfS9B23>\
+%endif
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B24)
+/* Terminate for ToAsyncQueueBlock generated from: '<Root>/From30' */
+%<tlcTerminateFcnOfS9B24>\
+%endif
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B26)
+/* Terminate for ToAsyncQueueBlock generated from: '<Root>/Subsystem' */
+%<tlcTerminateFcnOfS9B26>\
+%endif
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B27)
+/* Terminate for ToAsyncQueueBlock generated from: '<Root>/Subsystem' */
+%<tlcTerminateFcnOfS9B27>\
+%endif
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B29)
+/* Terminate for ToAsyncQueueBlock generated from: '<Root>/Mux2' */
+%<tlcTerminateFcnOfS9B29>\
+%endif
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B31)
+/* Terminate for ToAsyncQueueBlock generated from: '<Root>/Subsystem' */
+%<tlcTerminateFcnOfS9B31>\
+%endif
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B32)
+/* Terminate for ToAsyncQueueBlock generated from: '<Root>/PD+ controller reduced' */
+%<tlcTerminateFcnOfS9B32>\
+%endif
+%if !WHITE_SPACE(tlcTerminateFcnOfS9B34)
+/* Terminate for ToAsyncQueueBlock generated from: '<Root>/S-Function3' */
+%<tlcTerminateFcnOfS9B34>\
+%endif
+%if !WHITE_SPACE(tlcCleanupRuntimeResourcesFcnOfS9B1)
+/* CleanupRuntimeResources for S-Function (shm_reader_sfun): '<Root>/S-Function3' */
+%<tlcCleanupRuntimeResourcesFcnOfS9B1>\
+%endif
+%if !WHITE_SPACE(tlcCleanupRuntimeResourcesFcnOfS9B4)
+/* CleanupRuntimeResources for S-Function (shm_writer_sfun): '<Root>/S-Function4' */
+%<tlcCleanupRuntimeResourcesFcnOfS9B4>\
+%endif
+%if !WHITE_SPACE(tlcCleanupRuntimeResourcesFcnOfS9B7)
+/* CleanupRuntimeResources for S-Function (s_function_opti_robot_model_bus_fun): '<Root>/S-Function2' */
+%<tlcCleanupRuntimeResourcesFcnOfS9B7>\
+%endif
+%if !WHITE_SPACE(tlcCleanupRuntimeResourcesFcnOfS9B22)
+/* CleanupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/From31' */
+%<tlcCleanupRuntimeResourcesFcnOfS9B22>\
+%endif
+%if !WHITE_SPACE(tlcCleanupRuntimeResourcesFcnOfS9B24)
+/* CleanupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/From30' */
+%<tlcCleanupRuntimeResourcesFcnOfS9B24>\
+%endif
+%if !WHITE_SPACE(tlcCleanupRuntimeResourcesFcnOfS9B26)
+/* CleanupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/Subsystem' */
+%<tlcCleanupRuntimeResourcesFcnOfS9B26>\
+%endif
+%if !WHITE_SPACE(tlcCleanupRuntimeResourcesFcnOfS9B27)
+/* CleanupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/Subsystem' */
+%<tlcCleanupRuntimeResourcesFcnOfS9B27>\
+%endif
+%if !WHITE_SPACE(tlcCleanupRuntimeResourcesFcnOfS9B29)
+/* CleanupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/Mux2' */
+%<tlcCleanupRuntimeResourcesFcnOfS9B29>\
+%endif
+%if !WHITE_SPACE(tlcCleanupRuntimeResourcesFcnOfS9B31)
+/* CleanupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/Subsystem' */
+%<tlcCleanupRuntimeResourcesFcnOfS9B31>\
+%endif
+%if !WHITE_SPACE(tlcCleanupRuntimeResourcesFcnOfS9B32)
+/* CleanupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/PD+ controller reduced' */
+%<tlcCleanupRuntimeResourcesFcnOfS9B32>\
+%endif
+%if !WHITE_SPACE(tlcCleanupRuntimeResourcesFcnOfS9B34)
+/* CleanupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/S-Function3' */
+%<tlcCleanupRuntimeResourcesFcnOfS9B34>\
+%endif
+%closefile cfgTxt
+%<cfgTxt>
+%endfunction
+%function TerminateFcnProtoType(block, system) Output
+%assign fcnProtoType = ""
+%openfile fcnProtoType
+static void Terminate(\
+%assign comma = ""
+%closefile fcnProtoType
+%<SLibCG_SetFcnProtoType(0, 17, fcnProtoType)>
+%endfunction

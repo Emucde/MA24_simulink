@@ -1,0 +1,157 @@
+%implements s9_b0_hij8o_Start "C"
+
+%function Start(block, system) Output
+%assign cfgTxt = ""
+%openfile cfgTxt
+%assign localVarDecl = ""
+%assign tlcSetupRuntimeResourcesFcnOfS9B1 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 1, 0, 14, 0)
+%assign tlcSetupRuntimeResourcesFcnOfS9B4 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 4, 0, 14, 1)
+%assign tlcSetupRuntimeResourcesFcnOfS9B7 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 7, 0, 14, 2)
+%assign tlcSetupRuntimeResourcesFcnOfS9B21 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 21, 0, 14, 3)
+%assign tlcSetupRuntimeResourcesFcnOfS9B22 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 22, 0, 14, 4)
+%assign tlcSetupRuntimeResourcesFcnOfS9B24 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 24, 0, 14, 5)
+%assign tlcSetupRuntimeResourcesFcnOfS9B25 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 25, 0, 14, 6)
+%assign tlcSetupRuntimeResourcesFcnOfS9B26 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 26, 0, 14, 7)
+%assign tlcSetupRuntimeResourcesFcnOfS9B27 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 27, 0, 14, 8)
+%assign tlcSetupRuntimeResourcesFcnOfS9B29 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 29, 0, 14, 9)
+%assign tlcSetupRuntimeResourcesFcnOfS9B30 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 30, 0, 14, 10)
+%assign tlcSetupRuntimeResourcesFcnOfS9B31 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 31, 0, 14, 11)
+%assign tlcSetupRuntimeResourcesFcnOfS9B32 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 32, 0, 14, 12)
+%assign tlcSetupRuntimeResourcesFcnOfS9B33 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 33, 0, 14, 13)
+%assign tlcSetupRuntimeResourcesFcnOfS9B34 = OpaqueTLCBlockFcn("SetupRuntimeResources", 9, 34, 0, 14, 14)
+%assign tlcStartFcnOfS9B0 = OpaqueTLCBlockFcn("Start", 9, 0, 0, 14, 15)
+%assign tlcStartFcnOfS9B1 = OpaqueTLCBlockFcn("Start", 9, 1, 0, 14, 16)
+%assign tlcStartFcnOfS9B4 = OpaqueTLCBlockFcn("Start", 9, 4, 0, 14, 17)
+%assign tlcStartFcnOfS9B7 = OpaqueTLCBlockFcn("Start", 9, 7, 0, 14, 18)
+%assign tlcStartFcnOfS9B22 = OpaqueTLCBlockFcn("Start", 9, 22, 0, 14, 19)
+%assign tlcStartFcnOfS9B23 = OpaqueTLCBlockFcn("Start", 9, 23, 0, 14, 20)
+%assign tlcStartFcnOfS9B24 = OpaqueTLCBlockFcn("Start", 9, 24, 0, 14, 21)
+%assign tlcStartFcnOfS9B26 = OpaqueTLCBlockFcn("Start", 9, 26, 0, 14, 22)
+%assign tlcStartFcnOfS9B27 = OpaqueTLCBlockFcn("Start", 9, 27, 0, 14, 23)
+%assign tlcStartFcnOfS9B29 = OpaqueTLCBlockFcn("Start", 9, 29, 0, 14, 24)
+%assign tlcStartFcnOfS9B31 = OpaqueTLCBlockFcn("Start", 9, 31, 0, 14, 25)
+%assign tlcStartFcnOfS9B32 = OpaqueTLCBlockFcn("Start", 9, 32, 0, 14, 26)
+%assign tlcStartFcnOfS9B34 = OpaqueTLCBlockFcn("Start", 9, 34, 0, 14, 27)
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B1)
+/* SetupRuntimeResources for S-Function (shm_reader_sfun): '<Root>/S-Function3' */
+%<tlcSetupRuntimeResourcesFcnOfS9B1>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B4)
+/* SetupRuntimeResources for S-Function (shm_writer_sfun): '<Root>/S-Function4' */
+%<tlcSetupRuntimeResourcesFcnOfS9B4>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B7)
+/* SetupRuntimeResources for S-Function (s_function_opti_robot_model_bus_fun): '<Root>/S-Function2' */
+%<tlcSetupRuntimeResourcesFcnOfS9B7>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B21)
+/* SetupRuntimeResources for Scope: '<Root>/Scope5' */
+%<tlcSetupRuntimeResourcesFcnOfS9B21>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B22)
+/* SetupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/From31' */
+%<tlcSetupRuntimeResourcesFcnOfS9B22>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B24)
+/* SetupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/From30' */
+%<tlcSetupRuntimeResourcesFcnOfS9B24>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B25)
+/* SetupRuntimeResources for Scope: '<Root>/Scope' */
+%<tlcSetupRuntimeResourcesFcnOfS9B25>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B26)
+/* SetupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/Subsystem' */
+%<tlcSetupRuntimeResourcesFcnOfS9B26>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B27)
+/* SetupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/Subsystem' */
+%<tlcSetupRuntimeResourcesFcnOfS9B27>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B29)
+/* SetupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/Mux2' */
+%<tlcSetupRuntimeResourcesFcnOfS9B29>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B30)
+/* SetupRuntimeResources for Scope: '<Root>/err scope all' */
+%<tlcSetupRuntimeResourcesFcnOfS9B30>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B31)
+/* SetupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/Subsystem' */
+%<tlcSetupRuntimeResourcesFcnOfS9B31>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B32)
+/* SetupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/PD+ controller reduced' */
+%<tlcSetupRuntimeResourcesFcnOfS9B32>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B33)
+/* SetupRuntimeResources for Scope: '<Root>/Scope6' */
+%<tlcSetupRuntimeResourcesFcnOfS9B33>\
+%endif
+%if !WHITE_SPACE(tlcSetupRuntimeResourcesFcnOfS9B34)
+/* SetupRuntimeResources for ToAsyncQueueBlock generated from: '<Root>/S-Function3' */
+%<tlcSetupRuntimeResourcesFcnOfS9B34>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B0)
+/* Start for S-Function (get_robot_state): '<S6>/Get Robot State2' */
+%<tlcStartFcnOfS9B0>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B1)
+/* Start for S-Function (shm_reader_sfun): '<Root>/S-Function3' */
+%<tlcStartFcnOfS9B1>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B4)
+/* Start for S-Function (shm_writer_sfun): '<Root>/S-Function4' */
+%<tlcStartFcnOfS9B4>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B7)
+/* Start for S-Function (s_function_opti_robot_model_bus_fun): '<Root>/S-Function2' */
+%<tlcStartFcnOfS9B7>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B22)
+/* Start for ToAsyncQueueBlock generated from: '<Root>/From31' */
+%<tlcStartFcnOfS9B22>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B23)
+/* Start for S-Function (apply_control): '<S6>/Apply Control' */
+%<tlcStartFcnOfS9B23>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B24)
+/* Start for ToAsyncQueueBlock generated from: '<Root>/From30' */
+%<tlcStartFcnOfS9B24>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B26)
+/* Start for ToAsyncQueueBlock generated from: '<Root>/Subsystem' */
+%<tlcStartFcnOfS9B26>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B27)
+/* Start for ToAsyncQueueBlock generated from: '<Root>/Subsystem' */
+%<tlcStartFcnOfS9B27>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B29)
+/* Start for ToAsyncQueueBlock generated from: '<Root>/Mux2' */
+%<tlcStartFcnOfS9B29>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B31)
+/* Start for ToAsyncQueueBlock generated from: '<Root>/Subsystem' */
+%<tlcStartFcnOfS9B31>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B32)
+/* Start for ToAsyncQueueBlock generated from: '<Root>/PD+ controller reduced' */
+%<tlcStartFcnOfS9B32>\
+%endif
+%if !WHITE_SPACE(tlcStartFcnOfS9B34)
+/* Start for ToAsyncQueueBlock generated from: '<Root>/S-Function3' */
+%<tlcStartFcnOfS9B34>\
+%endif
+%closefile cfgTxt
+%<cfgTxt>
+%endfunction
+%function StartFcnProtoType(block, system) Output
+%assign fcnProtoType = ""
+%openfile fcnProtoType
+static void Start(\
+%assign comma = ""
+%closefile fcnProtoType
+%<SLibCG_SetFcnProtoType(0, 14, fcnProtoType)>
+%endfunction

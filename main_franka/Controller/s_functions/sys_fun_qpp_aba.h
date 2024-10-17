@@ -37,7 +37,7 @@ int sys_fun_qpp_aba_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, casadi_in
 #define sys_fun_qpp_aba_SZ_ARG 3
 #define sys_fun_qpp_aba_SZ_RES 1
 #define sys_fun_qpp_aba_SZ_IW 0
-#define sys_fun_qpp_aba_SZ_W 157
+#define sys_fun_qpp_aba_SZ_W 178
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

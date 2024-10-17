@@ -1,0 +1,29 @@
+%implements s9_b0_hij8o_SystemInitialize "C"
+
+%function SystemInitialize(block, system) Output
+%assign cfgTxt = ""
+%openfile cfgTxt
+%assign localVarDecl = ""
+%<SLibInsertAsyncTaskInitializeCode(system)>
+%<SLibWriteMachineInitialize()>
+/* {S!d1470}InitializeConditions for RateLimiter: '<S6>/Rate Limiter' */
+for ( int32_T i = 0; i < 7; i++) {
+    cartesian_impedance_control_DW.PrevY[i] = cartesian_impedance_control_P.RateLimiter_IC;
+}
+/* {E!d1470}End of InitializeConditions for RateLimiter: '<S6>/Rate Limiter' */
+
+/* {S!d1472}SystemInitialize for MATLAB Function: '<Root>/get data' */
+cartesian_impedance_control_DW.cnt = 1.0;
+%<SLibInsertInitPeriodicCStatesFcn(system)>
+%closefile cfgTxt
+%<cfgTxt>
+%<LibSetSystemField(system, "CachedSystemInitializeLocalVars", localVarDecl)>
+%endfunction
+%function SystemInitializeFcnProtoType(block, system) Output
+%assign fcnProtoType = ""
+%openfile fcnProtoType
+static void SystemInitialize(\
+%assign comma = ""
+%closefile fcnProtoType
+%<SLibCG_SetFcnProtoType(0, 15, fcnProtoType)>
+%endfunction

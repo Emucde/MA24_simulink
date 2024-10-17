@@ -106,7 +106,7 @@ tool.setFileExtension(  'Executable',           '');
 tool.setFileExtension(  'Shared Library',       '.so');
 
 % % project dependencies
-tool.Libraries = {[custom_library,' -lPocoNet -lPocoFoundation -lPocoUtil -lmx -lmex -lmat -lm -lstdc++ -lpthread']};
+tool.Libraries = {[custom_library,' -lPocoNet -lPocoFoundation -lPocoUtil -lmx -lmex -lmat -lm -lstdc++ -lpthread -lrt']};
 
 % % ------------------------------
 % % C++ Linker
