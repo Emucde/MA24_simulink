@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define SHM_DATA_SIZE 250
+#define SHM_DATA_SIZE 6
 #define SHM_DATA_SIZE_BYTES (SHM_DATA_SIZE * sizeof(double))
 
 #define SHM_VALID_FLAG_SIZE 1

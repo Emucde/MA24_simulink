@@ -13,15 +13,30 @@ from multiprocessing import shared_memory
 sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
 from utils_python.utils import *
 
-mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_ur5e')
-urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'ur5e.urdf')
+# robot_name = 'ur5e_6dof'
+robot_name = 'fr3_6dof_no_hand'
+
+if robot_name == 'ur5e_6dof':
+    mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_ur5e')
+    urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'ur5e.urdf')
+    urdf_tcp_frame_name = 'ur5e_tcp'
+
+    trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/ur5e_6dof/trajectory_data/param_traj_data.mat')
+    trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/ur5e_6dof/trajectory_data/param_traj.mat')
+    n_indices = np.array([0, 1, 2, 3, 4, 5]) # use all joints
+elif robot_name == 'fr3_6dof_no_hand':
+    mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_FR3')
+    urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'fr3_no_hand_6dof.urdf')
+    urdf_tcp_frame_name = 'fr3_link8_tcp'
+    trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.mat')
+    trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj.mat')
+    n_indices = np.array([0, 1, 3, 4, 5, 6]) # don't use joint 3
 
 ################################################ REALTIME ###############################################
 
 use_data_from_simulink = True
 if use_data_from_simulink:
-    n_indices = np.array([0, 1, 3, 4, 5, 6]) # don't use joint 3
-    n_dof = 7
+    # n_dof = 7 (input data from simulink are 7dof states q, qp)
     def create_shared_memory(name, size):
         try:
             shm = shared_memory.SharedMemory(name=name, create=True, size=size)
@@ -35,9 +50,9 @@ if use_data_from_simulink:
     shm_data_from_simulink_name       = "data_from_simulink"
     shm_data_from_simulink_valid_name = "data_from_simulink_valid"
 
-    python_buffer_bytes = 250 * 8 # 8 bytes pro double
+    python_buffer_bytes = 6 * 8 # 1x6 torque inputs, 8 bytes per double
     python_flag_bytes = 1 * 8 # 1 byte
-    simulink_buffer_bytes = 2 * 7 * 8 # 14 states, 8 bytes pro double
+    simulink_buffer_bytes = 2 * 7 * 8 # 2x7 states q, qp, 8 bytes per double
     simulink_flag_bytes = 1 * 8# 1 byte
 
     shm_data_from_python = create_shared_memory(shm_data_from_python_name, python_buffer_bytes)  # 8 bytes pro double
@@ -64,7 +79,7 @@ robot_model.gravity.linear[:] = [0, 0, -9.81]
 
 robot_data = robot_model.createData()
 
-TCP_frame_id = robot_model.getFrameId('ur5e_tcp')
+TCP_frame_id = robot_model.getFrameId(urdf_tcp_frame_name)
 
 # The model loaded from urdf (via pinicchio)
 print(robot_model)
@@ -73,12 +88,10 @@ print(robot_model)
 ################################## Get Trajectory from mat file #########################################
 #########################################################################################################
 
-trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/ur5e_6dof/trajectory_data/param_traj_data.mat')
-trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/ur5e_6dof/trajectory_data/param_traj.mat')
-
 traj_data_all = sio.loadmat(trajectory_data_mat_file)['param_traj_data']
 traj_param_all = sio.loadmat(trajectory_param_mat_file)['param_traj']
 
+# in case of ur5e_6dof
 '''
 traj_select 0: Wrist Singularity 1, Polynomial, Workspace
 traj_select 1: Allsingularity, Polynomial, Workspace
@@ -88,7 +101,17 @@ traj_select 4: ELLBOW Singularity 2, Polynomial, joint space
 traj_select 5: Shoulder Sing 1, Polynomial, Workspace
 traj_select 6: Shoulder Sing 2, Polynomial, Workspace
 '''
-traj_select = 0
+
+# in case of fr3_6dof_no_hand
+'''
+traj_select 0: Wrist Singularity 1, Equilibrium, Workspace
+traj_select 1: Wrist Singularity 1, Diff filt, Workspace
+traj_select 2: Wrist Singularity 1, Polynomial, Workspace
+traj_select 3: Wrist Singularity 1, Sinus, Workspace
+traj_select 4: 2DOF Test Trajectory, Polynomial, joint space
+'''
+
+traj_select = 4
 
 t = traj_data_all['t'][0,0][0, :]
 p_d = traj_data_all['p_d'][0,0][:, :, traj_select]
@@ -101,9 +124,9 @@ omega_d_p = traj_data_all['omega_d_p'][0,0][:, :, traj_select]
 
 traj_data = {'p_d': p_d, 'p_d_p': p_d_p, 'p_d_pp': p_d_pp, 'R_d': R_d, 'q_d': q_d, 'omega_d': omega_d, 'omega_d_p': omega_d_p}
 
-q_0 = traj_param_all['q_0'][0,0][:, traj_select]
-q_0_p = traj_param_all['q_0_p'][0,0][:, traj_select]
-q_0_pp = traj_param_all['q_0_pp'][0,0][:, traj_select]
+q_0 = traj_param_all['q_0'][0,0][n_indices, traj_select]
+q_0_p = traj_param_all['q_0_p'][0,0][n_indices, traj_select]
+q_0_pp = traj_param_all['q_0_pp'][0,0][n_indices, traj_select]
 
 T_start = 0
 T_end = 10
@@ -172,26 +195,6 @@ state.ub = param_mpc_weight['xmax']
 ############################################# INIT MPC ##################################################
 #########################################################################################################
 
-try:
-    while True:
-        # Daten für Simulink schreiben
-        # time.sleep(3e-3)
-        if(data_from_python_valid[:] == 0):
-            data_from_python_valid[:] = 1
-            data_from_python[:] = np.random.rand(250)
-            print("Daten von Python:", data_from_python[:5], "...")  # Zeige die ersten 5 Werte
-        
-        # Daten von Simulink lesen
-        if(data_from_simulink_valid[:] == 1):
-            print("Daten von Simulink:", data_from_simulink[:])  # Zeige die ersten 5 Werte
-            data_from_simulink_valid[:] = 0
-            data_from_python_valid[:] = 0
-            xk = data_from_simulink[np.hstack([n_indices, n_indices+7])]
-        # time.sleep(1e-9)
-except KeyboardInterrupt:
-    print("\nStart Solving")
-
-
 solver, init_guess_fun, create_ocp_problem, simulate_model  = get_mpc_funs(opt_type)
 
 N_step = int(Ts_MPC/dt)
@@ -201,7 +204,38 @@ N_traj = int(T_end/dt)
 t = np.arange(T_start, T, dt)
 print(f'T_horizon: {T_horizon} s, dt: {dt} s, N_MPC: {N_MPC}\n')
 
-x_init_robot = np.hstack([q_0, q_0_p])
+x_init_robot = None
+err_state = False
+
+if use_data_from_simulink:
+    print("Warte auf Daten von Simulink...\n")
+    try:
+        while True:
+            # Daten für Simulink schreiben
+            # time.sleep(3e-3)
+            if(data_from_python_valid[:] == 0):
+                data_from_python_valid[:] = 1
+                data_from_python[:] = np.zeros(6)
+                print("Daten von Python:", data_from_python[:5])  # Zeige die ersten 5 Werte
+            
+            # Daten von Simulink lesen
+            if(data_from_simulink_valid[:] == 1):
+                print("Daten von Simulink:", data_from_simulink[:])  # Zeige die ersten 5 Werte
+                data_from_simulink_valid[:] = 0
+                data_from_python_valid[:] = 0
+                x_init_robot = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+            # time.sleep(1e-9)
+    except KeyboardInterrupt:
+        if(x_init_robot is None):
+            x_init_robot = np.hstack([q_0, q_0_p])
+            err_state = True
+            print("\033[31mError: Keine Daten von Simulink erhalten. Beende Programm...\033[0m")
+        else:
+            print("\nStart Solving\n")
+else:
+    x_init_robot = np.hstack([q_0, q_0_p])
+
+
 tau_init_robot = pin.rnea(robot_model, robot_data, q_0, q_0_p, q_0_pp)
 
 xk, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_init_robot, N_traj, N_MPC, nx, nu, traj_data)
@@ -221,38 +255,53 @@ measureSolver = TicToc()
 measureSimu = TicToc()
 measureTotal = TicToc()
 measureTotal.tic()
-for i in range(N_traj):
-    measureSimu.tic()
-    problem = create_ocp_problem(i, i+N_MPC, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = int_type)
-    ddp = solver(problem)
-    # ddp.setCallbacks([cro.CallbackVerbose()])
 
-    measureSolver.tic()
-    hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
-    measureSolver.toc()
+i = 0
+run_loop = True
+try:
+    while run_loop and err_state == False:
+    # for i in range(N_traj):
+        measureSimu.tic()
+        problem = create_ocp_problem(i, i+N_MPC, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = int_type)
+        ddp = solver(problem)
+        # ddp.setCallbacks([cro.CallbackVerbose()])
+
+        measureSolver.tic()
+        hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
+        measureSolver.toc()
+        
+
+        warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
+
+        xk, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data)
+
+        if (i+1) % update_interval == 0:
+            print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()}    ", end='\r')
     
+        elapsed_time = measureSimu.toc()
+        freq_per_Ta_step[i] = 1/elapsed_time
 
-    warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
-
-    xk, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data)
-
-    if (i+1) % update_interval == 0:
-        print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()}    ", end='\r')
-   
-    elapsed_time = measureSimu.toc()
-    freq_per_Ta_step[i] = 1/elapsed_time
-
-    if use_data_from_simulink:
-        if(data_from_python_valid[:] == 0):
-            data_from_python_valid[:] = 1
-            data_from_python[:] = np.random.rand(250)
+        if i < N_traj-1:
+            i += 1 # last value of i is N_traj-1
+            # in case of use_data_from_simulink == True, the last trajectory value
+            # is used for all further calculations (stay on the last position)
         
-        # Daten von Simulink lesen
-        if(data_from_simulink_valid[:] == 1):
-            data_from_simulink_valid[:] = 0
-            data_from_python_valid[:] = 0
-        
-        xk = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+        if i == N_traj-1 and use_data_from_simulink == False:
+            run_loop = False
+
+        if use_data_from_simulink:
+            if(data_from_python_valid[:] == 0):
+                data_from_python_valid[:] = 1
+                data_from_python[:] = us[i]
+            
+            # Daten von Simulink lesen
+            if(data_from_simulink_valid[:] == 1):
+                data_from_simulink_valid[:] = 0
+                data_from_python_valid[:] = 0
+            
+            xk = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+except KeyboardInterrupt:
+    print("\nFinish Solving!")
 
 measureSolver.print_time(additional_text='Total Solver time')
 measureTotal.print_time(additional_text='Total MPC time')
@@ -277,15 +326,17 @@ subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, f
 folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html';
 output_file_path = os.path.join(folderpath, outputname)
-plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False)
 
-plot_sol=False
+plot_sol=True
+if plot_sol == True and err_state == False:
+    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False)
 
 # print('Max error:       y - y_d = {:.2e}'.format(np.max(np.abs(e))), 'm')
 # print('Max error:   y_p - y_d_p = {:.2e}'.format(np.max(np.abs(e_p))), 'm/s')
 # print('Max error: y_pp - y_d_pp = {:.2e}'.format(np.max(np.abs(e_pp))), 'm/s^2')
 #print("\nTotal cost:", ddp.cost)
-print("Minimum Found:", hasConverged)
+if err_state == False:
+    print("Minimum Found:", hasConverged)
 
 # visualize=False
 # if visualize==True:

@@ -11,7 +11,10 @@ if(  ~( exist('mpc_casadi_main_state', 'var') && strcmp(mpc_casadi_main_state, "
     %close all
     clc;
 end
-clear;
+
+if(~exist('dont_clear', 'var'))
+    clear;
+end
 
 fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 

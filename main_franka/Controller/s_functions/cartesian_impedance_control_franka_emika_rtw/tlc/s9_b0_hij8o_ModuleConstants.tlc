@@ -1,6 +1,0 @@
-%implements s9_b0_hij8o_ModuleConstants "C"
-
-%function ModuleConstants(block) Output
-
-const real_T cartesian_impedance_cont_period = 0.001;
-%endfunction

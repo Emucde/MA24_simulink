@@ -21,17 +21,17 @@ ctrl_param.ct.Kp1 = blkdiag(K_p_t, K_p_r);
 % ctrl_param.pd.D_d = D_0;
 % ctrl_param.pd.K_d = K_0;
 
-ctrl_param.pd.D_d = 3*eye(6);
-% ctrl_param.pd.K_d = 3*eye(6);
-ctrl_param.pd.K_d = ctrl_param.pd.D_d^2/4;
+ctrl_param.pd.D_d = 3*eye(6); % (NOT USED)
+% ctrl_param.pd.K_d = 3*eye(6); % (NOT USED)
+ctrl_param.pd.K_d = ctrl_param.pd.D_d^2/4; % (NOT USED)
 
 if(~exist('current_traj_value', 'var'))
     current_traj_value = 1;
 end
 
 %% Jointspace Control
-ctrl_param.pd.D_d_jointspace = 3*eye(n);
-ctrl_param.pd.K_d_jointspace = ctrl_param.pd.D_d_jointspace^2/4;
+ctrl_param.pd.D_d_jointspace = 3*eye(n); % (NOT USED)
+ctrl_param.pd.K_d_jointspace = ctrl_param.pd.D_d_jointspace^2/4; % (NOT USED)
 
 %% Singularity robustness
 % 0: no sing robust (not fully true, use pinv() from matlab - this commands eliminates too small singular values)
