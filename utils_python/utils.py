@@ -100,12 +100,12 @@ def generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, T
             T_start = T_start_end
             flag = 1
 
-    param_trajectory = {'p_d': p_d, 'p_d_p': p_d_p, 'p_d_pp': p_d_pp, 'q_d': q_d, 'omega_d': omega_d, 'omega_d_p': omega_d_p}
+    traj_data = {'p_d': p_d, 'p_d_p': p_d_p, 'p_d_pp': p_d_pp, 'q_d': q_d, 'omega_d': omega_d, 'omega_d_p': omega_d_p}
 
     if plot_traj:
-        plot_trajectory(param_trajectory)
+        plot_trajectory(traj_data)
 
-    return param_trajectory
+    return traj_data
 
 def tic():
     global start_time
@@ -569,20 +569,20 @@ def get_int_type(int_type):
     else:
         raise ValueError("int_type must be 'euler', 'RK2', 'RK3' or 'RK4'")
 
-def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type='euler', use_bounds=False):
+
+# def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type='euler', use_bounds=False):
+def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=False):
+    int_type = mpc_settings['int_method']
+    N_MPC = mpc_settings['N_MPC']
+
+    int_time = param_traj['int_time']
+
     IntegratedActionModel = get_int_type(int_type)
 
-    y_d_data    = param_trajectory['p_d'].T
-    y_d_p_data  = param_trajectory['p_d_p'].T
-    y_d_pp_data = param_trajectory['p_d_pp'].T
+    p_d_ref = y_d_ref['p_d'].T
 
     if state.nq >= 6:
-        # y_d_r_data = param_trajectory['q_d'].T
-        # y_d_r_p_data = param_trajectory['omega_d'].T
-        # y_d_r_pp_data = param_trajectory['omega_d_p'].T
-        R_d_data = param_trajectory['R_d']
-
-    N = start_index + (end_index-start_index)*N_step
+        R_d_ref = y_d_ref['R_d']
 
     # weights
     q_tracking_cost = param_mpc_weight['q_tracking_cost']
@@ -603,10 +603,11 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
     terminalDifferentialCostModel = crocoddyl.CostModelSum(state) # darf nur eines sein:
     actuationModel = crocoddyl.ActuationModelFull(state)
 
-    for i in range(start_index, N, N_step):
-        y_d    = y_d_data[i]
+    for i in range(0, N_MPC):
+        dt = int_time[i]
+        p_d = p_d_ref[i]
         if state.nq >= 6:
-            R_d  = R_d_data[:,:,i] # rotation matrix!
+            R_d  = R_d_ref[:,:,i] # rotation matrix!
         
         runningCostModel = crocoddyl.CostModelSum(state)
 
@@ -638,7 +639,7 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
         goalTrackingCost = crocoddyl.CostModelResidual(
             state,
             residual=crocoddyl.ResidualModelFrameTranslation(
-                state, TCP_frame_id, y_d
+                state, TCP_frame_id, p_d
             ),
         )
 
@@ -650,7 +651,7 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                 ),
             )
 
-        if i < N-N_step:
+        if i < N_MPC-1:
             runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
             if state.nq >= 6:
                 runningCostModel.addCost("TCP_rot", goalTrackingCost_r, q_tracking_cost)
@@ -663,7 +664,7 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
                 crocoddyl.DifferentialActionModelFreeFwdDynamics(
                     state, actuationModel, runningCostModel
                 ),
-                dt*N_step
+                dt
             ))
         else: # i == N: # Endkostenterm
             terminalDifferentialCostModel.addCost("TCP_pose", goalTrackingCost, q_terminate_tracking_cost)
@@ -674,20 +675,21 @@ def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, para
             if np.sum(q_ureg_terminate_cost) not in [0, None]:
                 terminalDifferentialCostModel.addCost("ctrlReg", uRegCost, q_ureg_terminate_cost)
 
+    dt = int_time[-1]
     # integrate terminal cost model (necessary?)
     terminalCostModel = IntegratedActionModel(
         crocoddyl.DifferentialActionModelFreeFwdDynamics(
             state, actuationModel, terminalDifferentialCostModel
         ),
-        dt*N_step
+        dt
     )
 
     # Create the shooting problem
     seq = running_cost_models
-    problem = crocoddyl.ShootingProblem(x0, seq, terminalCostModel)
+    problem = crocoddyl.ShootingProblem(x_k, seq, terminalCostModel)
     return problem
 
-def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type='euler', use_bounds=False):
+def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type='euler', use_bounds=False):
 
     ###################
     # Reihenfolge beachten:
@@ -696,9 +698,9 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, para
 
     IntegratedActionModel = get_int_type(int_type)
 
-    y_d_data    = param_trajectory['p_d'].T
-    y_d_p_data  = param_trajectory['p_d_p'].T
-    y_d_pp_data = param_trajectory['p_d_pp'].T
+    y_d_data    = traj_data['p_d'].T
+    y_d_p_data  = traj_data['p_d_p'].T
+    y_d_pp_data = traj_data['p_d_pp'].T
 
     N = start_index + (end_index-start_index)*N_step
 
@@ -862,21 +864,21 @@ def get_mpc_funs(problem_name):
     else:
         raise ValueError("problem_name must be 'MPC_v1' | 'MPC_v3_soft_yN_ref' | 'MPC_v3_bounds_yN_ref'")
 
-def create_ocp_problem_v1_soft(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
-    return ocp_problem_v1(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type, use_bounds=False)
+def create_ocp_problem_v1_soft(start_index, end_index, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = 'euler'):
+    return ocp_problem_v1(start_index, end_index, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type, use_bounds=False)
 
-def create_ocp_problem_v1_bounds(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
-    return ocp_problem_v1(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type, use_bounds=True)
+def create_ocp_problem_v1_bounds(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings):
+    return ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=True)
 
-def create_ocp_problem_v3_soft_yN_ref(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
-    return ocp_problem_v3(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type, use_bounds=False)
+def create_ocp_problem_v3_soft_yN_ref(start_index, end_index, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = 'euler'):
+    return ocp_problem_v3(start_index, end_index, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type, use_bounds=False)
 
-def create_ocp_problem_v3_bounds_yN_ref(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type = 'euler'):
-    return ocp_problem_v3(start_index, end_index, N_step, state, xk, TCP_frame_id, param_trajectory, param_mpc_weight, dt, int_type, use_bounds=True)
+def create_ocp_problem_v3_bounds_yN_ref(start_index, end_index, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = 'euler'):
+    return ocp_problem_v3(start_index, end_index, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type, use_bounds=True)
 
 ##############
 
-def simulate_model_mpc_v1(ddp, i, dt, nq, nx, robot_model, robot_data, param_trajectory):
+def simulate_model_mpc_v1(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data):
 
     xk = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
     uk = ddp.us[0]
@@ -899,7 +901,7 @@ def simulate_model_mpc_v1(ddp, i, dt, nq, nx, robot_model, robot_data, param_tra
 
     return xk, xs_i, us_i, xs_init_guess, us_init_guess
 
-def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, param_trajectory):
+def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data):
 
     xk = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
     uk = ddp.us[0]
@@ -911,7 +913,7 @@ def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, param_tra
 
     q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
 
-    xk[0:6]      = np.hstack([param_trajectory['p_d'][:, i+1], param_trajectory['p_d_p'][:, i+1]])
+    xk[0:6]      = np.hstack([traj_data['p_d'][:, i+1], traj_data['p_d_p'][:, i+1]])
     xk[6:6+nq]   = q_next
     xk[6+nq:6+nx] = q_p_next
 
@@ -935,7 +937,7 @@ def sim_model(robot_model, robot_data, q, q_p, tau, dt):
 
 ###############
 
-def first_init_guess_mpc_v1(tau_init_robot, x_init_robot, N_traj, N_horizon, nx, nu, param_trajectory):
+def first_init_guess_mpc_v1(tau_init_robot, x_init_robot, N_traj, N_horizon, nx, nu, traj_data):
     xk = x_init_robot
 
     xs_init_guess = [x_init_robot]  * (N_horizon)
@@ -945,12 +947,12 @@ def first_init_guess_mpc_v1(tau_init_robot, x_init_robot, N_traj, N_horizon, nx,
     us = np.zeros((N_traj, nu))
     return xk, xs, us, xs_init_guess, us_init_guess
 
-def first_init_guess_mpc_v3(tau_init_robot, x_init_robot, N_traj, N_horizon, nx, nu, param_trajectory):
-    x0_init = np.hstack([param_trajectory['p_d'][:, 0], param_trajectory['p_d_p'][:, 0], x_init_robot])
+def first_init_guess_mpc_v3(tau_init_robot, x_init_robot, N_traj, N_horizon, nx, nu, traj_data):
+    x0_init = np.hstack([traj_data['p_d'][:, 0], traj_data['p_d_p'][:, 0], x_init_robot])
     xk = x0_init
 
     xs_init_guess = [x0_init] * (N_horizon)
-    us_init_guess = [np.hstack([param_trajectory['p_d_pp'][:, 0], tau_init_robot])] * (N_horizon-1)
+    us_init_guess = [np.hstack([traj_data['p_d_pp'][:, 0], tau_init_robot])] * (N_horizon-1)
 
     xs = np.zeros((N_traj, 6+nx))
     us = np.zeros((N_traj, 3+nu))
@@ -959,13 +961,13 @@ def first_init_guess_mpc_v3(tau_init_robot, x_init_robot, N_traj, N_horizon, nx,
 ###################################################################################################################
 
 
-def check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory, conv_max_limit=5, plot_sol = False):
+def check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_horizon, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol = False):
     error = 0
     
     if not hasConverged:
         print("\033[43mWarning: Solver did not converge at time t =", f"{i*dt:.3f}", "\033[0m")
         warn_cnt += 1
-        # plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory)
+        # plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, traj_data)
         if warn_cnt > conv_max_limit:
             print("\033[91mError: Solver failed to converge", f"{conv_max_limit}", "times in a row. Exiting...\033[0m")
             error = 1
@@ -982,19 +984,19 @@ def check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_horizon
         error = 1
     if error:
         if plot_sol:
-            plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory)
-            plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, param_trajectory)
+            plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, traj_data)
+            plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, traj_data)
         exit()
     return warn_cnt
 
 #######################################
 
-def plot_trajectory(param_trajectory):
+def plot_trajectory(traj_data):
     plt.figure(figsize=(10, 6))  # Adjust figure size as needed
 
-    plt.plot(param_trajectory['p_d'].T, label='y_d')
-    plt.plot(param_trajectory['p_d_p'].T, label='y_d_p')
-    plt.plot(param_trajectory['p_d_pp'].T, label='y_d_pp')
+    plt.plot(traj_data['p_d'].T, label='y_d')
+    plt.plot(traj_data['p_d_p'].T, label='y_d_p')
+    plt.plot(traj_data['p_d_pp'].T, label='y_d_pp')
 
     # Add labels and title
     plt.xlabel('Time Step (Assuming data represents time series)')
@@ -1009,7 +1011,7 @@ def plot_trajectory(param_trajectory):
     plt.tight_layout()
     plt.show()
 
-def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, param_trajectory, frep_per_Ta_step):
+def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, frep_per_Ta_step):
     robot_data = robot_model.createData()
 
     N = len(xs)
@@ -1023,13 +1025,13 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, param_trajectory, frep_
     omega_e = np.zeros((N, 3))
     omega_e_p = np.zeros((N, 3))
 
-    p_d = param_trajectory['p_d']
-    p_d_p = param_trajectory['p_d_p']
-    p_d_pp = param_trajectory['p_d_pp']
+    p_d = traj_data['p_d']
+    p_d_p = traj_data['p_d_p']
+    p_d_pp = traj_data['p_d_pp']
 
-    quat_d = param_trajectory['q_d']
-    omega_d = param_trajectory['omega_d']
-    omega_d_p = param_trajectory['omega_d_p']
+    quat_d = traj_data['q_d']
+    omega_d = traj_data['omega_d']
+    omega_d_p = traj_data['omega_d_p']
 
     w = np.zeros(N)  # manipulability
 
@@ -1115,9 +1117,9 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, param_trajectory, frep_
         quat_err_temp = quat_e_xyzw * q_d_xyzw_inv
         quat_err[i] = np.array([quat_err_temp.w, quat_err_temp.x, quat_err_temp.y, quat_err_temp.z])
 
-        omega_err[i] = omega_e[i] - param_trajectory['omega_d'][:, i]
+        omega_err[i] = omega_e[i] - traj_data['omega_d'][:, i]
 
-        omega_err_p[i] = omega_e_p[i] - param_trajectory['omega_d_p'][:, i]
+        omega_err_p[i] = omega_e_p[i] - traj_data['omega_d_p'][:, i]
 
     # make data shorter, use only each N_dec sample
     N_dec = 1
@@ -1530,7 +1532,7 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
                     file.write(str(soup))
         webbrowser.open('file://' + file_name)
 
-def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_plot=False, file_name='plot_saved', plot_fig=True):
+def plot_solution(us, xs, t, TCP_frame_id, robot_model, traj_data, save_plot=False, file_name='plot_saved', plot_fig=True):
     robot_data = robot_model.createData()
 
     line_dict_y        = dict(width=1, color='#ffff11')
@@ -1551,9 +1553,9 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
     q_pp     = np.zeros((N, n))
     w        = np.zeros(N) # manipulability
 
-    y_d    = param_trajectory['p_d'].T
-    y_d_p  = param_trajectory['p_d_p'].T
-    y_d_pp = param_trajectory['p_d_pp'].T
+    y_d    = traj_data['p_d'].T
+    y_d_p  = traj_data['p_d_p'].T
+    y_d_pp = traj_data['p_d_pp'].T
 
     if xs.shape[1] == 2*n+6:
         y_ref    = xs[:, 0:3]
@@ -1723,33 +1725,33 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory, save_p
     
     return y_opt, y_opt_p, y_opt_pp, e, e_p, e_pp, w, q, q_p, q_pp, tau
 
-def plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, param_trajectory):
+def plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, traj_data):
     xs = np.array(ddp.xs)
     us = np.array(ddp.us)
     t = np.arange(i*dt, (i+N_horizon)*dt, dt)
     param_trajectory_copy = {
-        'p_d':    param_trajectory['p_d'][:,    i:i+N_step*N_horizon:N_step],
-        'p_d_p':  param_trajectory['p_d_p'][:,  i:i+N_step*N_horizon:N_step],
-        'p_d_pp': param_trajectory['p_d_pp'][:, i:i+N_step*N_horizon:N_step]
+        'p_d':    traj_data['p_d'][:,    i:i+N_step*N_horizon:N_step],
+        'p_d_p':  traj_data['p_d_p'][:,  i:i+N_step*N_horizon:N_step],
+        'p_d_pp': traj_data['p_d_pp'][:, i:i+N_step*N_horizon:N_step]
     }
     plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory_copy)
     
-def plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, param_trajectory):
+def plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, traj_data):
     param_trajectory_copy = {
-        'p_d':    param_trajectory['p_d'][:,    0:i],
-        'p_d_p':  param_trajectory['p_d_p'][:,  0:i],
-        'p_d_pp': param_trajectory['p_d_pp'][:, 0:i]
+        'p_d':    traj_data['p_d'][:,    0:i],
+        'p_d_p':  traj_data['p_d_p'][:,  0:i],
+        'p_d_pp': traj_data['p_d_pp'][:, 0:i]
     }
     plot_solution(us[0:i], xs[0:i], t[0:i], TCP_frame_id, robot_model, param_trajectory_copy)
 ####################################################### VIS ROBOT #################################################
 
-def visualize_robot(robot, q_sol, param_trajectory, dt, rep_cnt = np.inf, rep_delay_sec=1):
+def visualize_robot(robot, q_sol, traj_data, dt, rep_cnt = np.inf, rep_delay_sec=1):
     # Meshcat Visualize
     robot_model = robot.model
     robot_display = MeshcatVisualizer(robot.model)
     robot_display.initViewer(open=False)
 
-    y_d_data = param_trajectory['p_d'].T
+    y_d_data = traj_data['p_d'].T
 
     # Display points:
     # N_traj = len(y_d_data)

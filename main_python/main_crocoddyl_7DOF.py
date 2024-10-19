@@ -128,19 +128,24 @@ q_0 = traj_param_all['q_0'][0,0][n_indices, traj_select]
 q_0_p = traj_param_all['q_0_p'][0,0][n_indices, traj_select]
 q_0_pp = traj_param_all['q_0_pp'][0,0][n_indices, traj_select]
 
+# SIMULATION SETTINGS
+
 T_start = 0
 T_end = 10
-dt = 1e-3  # Time step # y_offset nicht vergessen!!!
+Ts = 1e-3  # Time step of control
 
 #########################################################################################################
 ############################################ MPC Settings ###############################################
 #########################################################################################################
 
-opt_type = 'MPC_v1_bounds_terminate' # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' 
-int_type = 'euler' # 'euler' | 'RK2' | 'RK3' | 'RK4'
-N_solver_steps = 1000
-N_MPC = 5 # anzahl der Stützstellen innerhalb des Prädiktionshorizont
-Ts_MPC = 50e-3 # Interne Abtastzeit der MPC muss vielfaches von dt sein
+
+mpc_settings = {
+    'version' : 'MPC_v1_bounds_terminate', # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' ,
+    'Ts_MPC' : 50e-3, # Interne Abtastzeit der MPC muss vielfaches von Ts sein
+    'N_MPC': 5, # anzahl der Stützstellen innerhalb des Prädiktionshorizont
+    'int_method': 'euler', # 'euler' | 'RK2' | 'RK3' | 'RK4'
+    'solver_steps': 1000
+    }
 
 param_mpc_weight = {
     'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
@@ -184,7 +189,6 @@ param_mpc_weight = {
 # }
 
 
-
 # Create a multibody state from the pinocchio model.
 state = cro.StateMultibody(robot_model)
 state.lb = param_mpc_weight['xmin']
@@ -195,14 +199,47 @@ state.ub = param_mpc_weight['xmax']
 ############################################# INIT MPC ##################################################
 #########################################################################################################
 
+opt_type = mpc_settings['version']
+int_type = mpc_settings['int_method']
+N_solver_steps = mpc_settings['solver_steps']
+N_MPC = mpc_settings['N_MPC']
+Ts_MPC = mpc_settings['Ts_MPC']
+
 solver, init_guess_fun, create_ocp_problem, simulate_model  = get_mpc_funs(opt_type)
 
-N_step = int(Ts_MPC/dt)
-T_horizon = N_MPC*Ts_MPC
+# param_casadi_fun_name.(MPC).variant = 'nlpsol';
+# param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+# param_casadi_fun_name.(MPC).version  = 'v6_kin_int_path_following'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v6_kin_int_path_following )
+# param_casadi_fun_name.(MPC).Ts      = 5e-3;
+# param_casadi_fun_name.(MPC).rk_iter = 1;
+# param_casadi_fun_name.(MPC).N_MPC   = 5;
+# param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+# param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
+# param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
+
+N_step = int(Ts_MPC/Ts)
+T_horizon = (N_MPC-1) * Ts_MPC
 T = T_end+T_horizon-T_start # need more trajectory points for mpc
-N_traj = int(T_end/dt)
-t = np.arange(T_start, T, dt)
-print(f'T_horizon: {T_horizon} s, dt: {dt} s, N_MPC: {N_MPC}\n')
+N_traj = int(T_end/Ts)
+t = np.arange(T_start, T, Ts)
+print(f'T_horizon: {T_horizon} s, Ts: {Ts} s, N_MPC: {N_MPC}\n')
+
+if N_step <= 2:
+    MPC_traj_indices = np.arange(0, N_MPC)
+    MPC_int_time = Ts*np.ones(N_MPC)
+else:
+    MPC_traj_indices = np.hstack([[0, 1], np.arange(N_step, (N_MPC-1) * N_step, N_step)-1])
+    MPC_int_time = np.hstack([Ts, Ts_MPC-Ts, np.ones(N_MPC-2)*Ts_MPC])
+
+# TODO: MPC solvt es nur wenn man equidistante Werte nimmt!!
+MPC_traj_indices = np.arange(1, (N_MPC) * N_step, N_step)
+MPC_int_time = np.ones(N_MPC)*Ts_MPC
+
+param_traj = {
+    'traj_indices': MPC_traj_indices,
+    'int_time': MPC_int_time,
+}
+
 
 x_init_robot = None
 err_state = False
@@ -238,7 +275,7 @@ else:
 
 tau_init_robot = pin.rnea(robot_model, robot_data, q_0, q_0_p, q_0_pp)
 
-xk, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_init_robot, N_traj, N_MPC, nx, nu, traj_data)
+x_k, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_init_robot, N_traj, N_MPC, nx, nu, traj_data)
 
 #########################################################################################################
 ######################################### MPC Calcuations ###############################################
@@ -258,7 +295,13 @@ measureTotal.tic()
 
 i = 0
 # create first problem:
-problem = create_ocp_problem(i, i+N_MPC, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = int_type)
+y_d_ref = {
+    'p_d': p_d[:, i+MPC_traj_indices],
+    'R_d': R_d[:, :, i+MPC_traj_indices]
+}
+
+problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
+# problem = create_ocp_problem(i, i+N_MPC, N_step, state, x_k, TCP_frame_id, traj_data, param_mpc_weight, Ts, int_type = int_type)
 
 run_loop = True
 try:
@@ -271,21 +314,25 @@ try:
             if(data_from_simulink_valid[:] == 1):
                 data_from_simulink_valid[:] = 0
                 data_from_python_valid[:] = 0
-                xk = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+                x_k = data_from_simulink[np.hstack([n_indices, n_indices+7])]
 
         # v1: inefficient: create new problem every time
-        # problem = create_ocp_problem(i, i+N_MPC, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = int_type)
+        # problem = create_ocp_problem(i, i+N_MPC, N_step, state, x_k, TCP_frame_id, traj_data, param_mpc_weight, Ts, int_type = int_type)
         # v1 end
         
         # v2: update reference values
         for j, runningModel in enumerate(problem.runningModels):
-            problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = traj_data['p_d'][:, i+j*N_step]
-            problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = traj_data['R_d'][:, :, i+j*N_step]
+            problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
+            problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
+            # problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(6)])
+            problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = x_k
 
-        problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = traj_data['p_d'][:, i+(j+1)*N_step]
-        problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = traj_data['R_d'][:, :, i+(j+1)*N_step]
+        problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
+        problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
+        # problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(6)])
+        problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = x_k
 
-        problem.x0 = xk
+        problem.x0 = x_k
         # v2 end
 
         ddp = solver(problem)
@@ -296,7 +343,7 @@ try:
         measureSolver.toc()
         
 
-        warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
+        warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, Ts, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
 
         if i < N_traj-1:
             i += 1 # last value of i is N_traj-1
@@ -317,7 +364,7 @@ try:
                 data_from_python_valid[:] = 1
                 data_from_python[:] = us[i]
         else:
-            xk, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data)
+            x_k, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, Ts, nq, nx, robot_model, robot_data, traj_data)
 
         if (i+1) % update_interval == 0:
             print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()}    ", end='\r')
@@ -364,7 +411,7 @@ if err_state == False:
 
 # visualize=False
 # if visualize==True:
-#     visualize_robot(robot, q, traj_data, dt, 3, 1)
+#     visualize_robot(robot, q, traj_data, Ts, 3, 1)
 
 if use_data_from_simulink:
     shm_data_from_python.close()
