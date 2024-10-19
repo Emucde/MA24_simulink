@@ -34,7 +34,7 @@ elif robot_name == 'fr3_6dof_no_hand':
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = True
+use_data_from_simulink = False
 if use_data_from_simulink:
     # n_dof = 7 (input data from simulink are 7dof states q, qp)
     def create_shared_memory(name, size):
@@ -257,12 +257,37 @@ measureTotal = TicToc()
 measureTotal.tic()
 
 i = 0
+# create first problem:
+problem = create_ocp_problem(i, i+N_MPC, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = int_type)
+
 run_loop = True
 try:
     while run_loop and err_state == False:
     # for i in range(N_traj):
         measureSimu.tic()
-        problem = create_ocp_problem(i, i+N_MPC, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = int_type)
+
+        if use_data_from_simulink:           
+            # Daten von Simulink lesen
+            if(data_from_simulink_valid[:] == 1):
+                data_from_simulink_valid[:] = 0
+                data_from_python_valid[:] = 0
+                xk = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+
+        # v1: inefficient: create new problem every time
+        # problem = create_ocp_problem(i, i+N_MPC, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = int_type)
+        # v1 end
+        
+        # v2: update reference values
+        for j, runningModel in enumerate(problem.runningModels):
+            problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = traj_data['p_d'][:, i+j*N_step]
+            problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = traj_data['R_d'][:, :, i+j*N_step]
+
+        problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = traj_data['p_d'][:, i+(j+1)*N_step]
+        problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = traj_data['R_d'][:, :, i+(j+1)*N_step]
+
+        problem.x0 = xk
+        # v2 end
+
         ddp = solver(problem)
         # ddp.setCallbacks([cro.CallbackVerbose()])
 
@@ -273,14 +298,6 @@ try:
 
         warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
 
-        xk, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data)
-
-        if (i+1) % update_interval == 0:
-            print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()}    ", end='\r')
-    
-        elapsed_time = measureSimu.toc()
-        freq_per_Ta_step[i] = 1/elapsed_time
-
         if i < N_traj-1:
             i += 1 # last value of i is N_traj-1
             # in case of use_data_from_simulink == True, the last trajectory value
@@ -290,16 +307,23 @@ try:
             run_loop = False
 
         if use_data_from_simulink:
+            xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
+            us[i] = ddp.us[0]
+
+            xs_init_guess = ddp.xs
+            us_init_guess = ddp.us
+            # Daten von Python an Simulink schreiben
             if(data_from_python_valid[:] == 0):
                 data_from_python_valid[:] = 1
                 data_from_python[:] = us[i]
-            
-            # Daten von Simulink lesen
-            if(data_from_simulink_valid[:] == 1):
-                data_from_simulink_valid[:] = 0
-                data_from_python_valid[:] = 0
-            
-            xk = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+        else:
+            xk, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data)
+
+        if (i+1) % update_interval == 0:
+            print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()}    ", end='\r')
+    
+        elapsed_time = measureSimu.toc()
+        freq_per_Ta_step[i] = 1/elapsed_time
 except KeyboardInterrupt:
     print("\nFinish Solving!")
 
@@ -322,8 +346,8 @@ traj_data['omega_d_p'] = traj_data['omega_d_p'][:, 0:N_traj]
 #########################################################################################################
 
 subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, freq_per_Ta_step)
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html';
 output_file_path = os.path.join(folderpath, outputname)
 
