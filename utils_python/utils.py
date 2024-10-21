@@ -598,6 +598,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     xmin = param_mpc_weight['xmin']
     xmax = param_mpc_weight['xmax']
     xref = param_mpc_weight['xref']
+    uref = param_mpc_weight['uref']
 
     running_cost_models = list()
     terminalDifferentialCostModel = crocoddyl.CostModelSum(state) # darf nur eines sein:
@@ -621,20 +622,26 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                     activation=activationModel,
                     residual=crocoddyl.ResidualModelState(state, xref)
                 )
-                runningCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
+                if i < N_MPC-1:
+                    runningCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
+                else:
+                    terminalDifferentialCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
             if np.sum(q_u_bound_cost) not in [0, None]:
                 bounds = crocoddyl.ActivationBounds(umin, umax)
                 activationModel = crocoddyl.ActivationModelQuadraticBarrier(bounds)
                 uRegBoundCost = crocoddyl.CostModelResidual(
                     state,
                     activation=activationModel,
-                    residual=crocoddyl.ResidualModelControl(state)
+                    residual=crocoddyl.ResidualModelControl(state, uref)
                 )
-                runningCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
+                if i < N_MPC-1:
+                    runningCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
+                else:
+                    terminalDifferentialCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
 
         # create classic residual cost models
         xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state, xref))
-        uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state))
+        uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state, uref))
 
         goalTrackingCost = crocoddyl.CostModelResidual(
             state,
@@ -890,8 +897,7 @@ def simulate_model_mpc_v1(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data
 
     q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
 
-    xk[:nq]   = q_next
-    xk[nq:nx] = q_p_next
+    xkp1 = np.hstack([q_next, q_p_next])
 
     xs_init_guess = ddp.xs
     us_init_guess = ddp.us
@@ -899,7 +905,7 @@ def simulate_model_mpc_v1(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data
     us_i = uk
     xs_i = xk
 
-    return xk, xs_i, us_i, xs_init_guess, us_init_guess
+    return xkp1, xs_i, us_i, xs_init_guess, us_init_guess
 
 def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data):
 
@@ -922,6 +928,8 @@ def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data
 
     us_i = uk
     xs_i = xk
+
+    print('xs_i und us_i sind nicht richtig hier! TODO')
 
     # debug for ref trajectory: show only terminal state
     # us_i = ddp.us[-1]
@@ -1519,7 +1527,8 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
         setTimeout(autoscale_function, rec_time);
         '''
 
-        py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False, include_plotlyjs='cdn') # , include_plotlyjs='cdn'
+        # py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False, include_plotlyjs='cdn') # , include_plotlyjs='cdn'
+        py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False) # , include_plotlyjs='cdn'
         with open(file_name, 'r', encoding='utf-8') as file:
             html_content = file.read()
             soup = BeautifulSoup(html_content, 'html.parser')

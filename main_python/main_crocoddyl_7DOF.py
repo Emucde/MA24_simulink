@@ -141,7 +141,7 @@ Ts = 1e-3  # Time step of control
 
 mpc_settings = {
     'version' : 'MPC_v1_bounds_terminate', # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' ,
-    'Ts_MPC' : 50e-3, # Interne Abtastzeit der MPC muss vielfaches von Ts sein
+    'Ts_MPC' : 1e-3, # Interne Abtastzeit der MPC muss vielfaches von Ts sein
     'N_MPC': 5, # anzahl der Stützstellen innerhalb des Prädiktionshorizont
     'int_method': 'euler', # 'euler' | 'RK2' | 'RK3' | 'RK4'
     'solver_steps': 1000
@@ -151,10 +151,10 @@ param_mpc_weight = {
     'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
     'q_terminate_tracking_cost': 1e8,  # penalizes deviations from the trajectory at the end
     'q_terminate_tracking_bound_cost': 1e5,  # penalizes deviations from the bounds of | y_N - y_N_ref | < eps
-    'q_xreg_terminate_cost': 1e-3,  # penalizes deviations from the trajectory at the end
+    'q_xreg_terminate_cost': 1e-5,  # penalizes deviations from the trajectory at the end
     'q_ureg_terminate_cost': 1e-5,  # penalizes deviations from the trajectory at the end
-    'q_xreg_cost': 1e-3,              # penalizes changes from the current state
-    'q_ureg_cost': 1e-5,              # penalizes changes from the current input
+    'q_xreg_cost': 1e-10,              # penalizes changes from the current state
+    'q_ureg_cost': 1e-10,              # penalizes changes from the current input
     'q_x_bound_cost': 1e5,              # penalizes ignoring the bounds
     'q_u_bound_cost': 1e5,              # penalizes ignoring the bounds
     'Kd': 100*np.eye(3),
@@ -166,6 +166,7 @@ param_mpc_weight = {
     'xmin': -np.hstack([2*np.pi*np.ones(6), np.pi*np.ones(6)]),
     'xmax': np.hstack([2*np.pi*np.ones(6), np.pi*np.ones(6)]),
     'xref': np.zeros(nx),
+    'uref': np.zeros(nq)
 }
 
 # good for mpcv1 soft terminate:
@@ -228,12 +229,12 @@ if N_step <= 2:
     MPC_traj_indices = np.arange(0, N_MPC)
     MPC_int_time = Ts*np.ones(N_MPC)
 else:
-    MPC_traj_indices = np.hstack([[0, 1], np.arange(N_step, (N_MPC-1) * N_step, N_step)-1])
+    MPC_traj_indices = np.hstack([[0, 1], N_step* np.arange(1, (N_MPC-1))])
     MPC_int_time = np.hstack([Ts, Ts_MPC-Ts, np.ones(N_MPC-2)*Ts_MPC])
 
 # TODO: MPC solvt es nur wenn man equidistante Werte nimmt!!
-MPC_traj_indices = np.arange(1, (N_MPC) * N_step, N_step)
-MPC_int_time = np.ones(N_MPC)*Ts_MPC
+# MPC_traj_indices = np.arange(1, (N_MPC) * N_step, N_step)
+# MPC_int_time = np.ones(N_MPC)*Ts_MPC
 
 param_traj = {
     'traj_indices': MPC_traj_indices,
@@ -296,12 +297,25 @@ measureTotal.tic()
 i = 0
 # create first problem:
 y_d_ref = {
-    'p_d': p_d[:, i+MPC_traj_indices],
-    'R_d': R_d[:, :, i+MPC_traj_indices]
+    'p_d': p_d[:, 0+MPC_traj_indices],
+    'R_d': R_d[:, :, 0+MPC_traj_indices]
 }
 
+param_mpc_weight['xref'] = x_k
+param_mpc_weight['uref'] = us_init_guess[0]
 problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
 # problem = create_ocp_problem(i, i+N_MPC, N_step, state, x_k, TCP_frame_id, traj_data, param_mpc_weight, Ts, int_type = int_type)
+
+# Solve first optimization Problem for warm start
+ddp = solver(problem)
+hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
+warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, Ts, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
+
+xs[0] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
+us[0] = ddp.us[0]
+
+xs_init_guess = ddp.xs
+us_init_guess = ddp.us
 
 run_loop = True
 try:
@@ -317,7 +331,13 @@ try:
                 x_k = data_from_simulink[np.hstack([n_indices, n_indices+7])]
 
         # v1: inefficient: create new problem every time
-        # problem = create_ocp_problem(i, i+N_MPC, N_step, state, x_k, TCP_frame_id, traj_data, param_mpc_weight, Ts, int_type = int_type)
+        # param_mpc_weight['xref'] = x_k
+        # param_mpc_weight['uref'] = us[i]
+
+        # y_d_ref['p_d'] = p_d[:, i+MPC_traj_indices]
+        # y_d_ref['pR_d_d'] = R_d[:, :, i+MPC_traj_indices]
+
+        # problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
         # v1 end
         
         # v2: update reference values
@@ -326,11 +346,17 @@ try:
             problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
             # problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(6)])
             problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = x_k
+            problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
+            problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
+            problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
 
         problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
         problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
         # problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(6)])
         problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = x_k
+        problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
+        problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
+        problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
 
         problem.x0 = x_k
         # v2 end
@@ -345,14 +371,6 @@ try:
 
         warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, Ts, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
 
-        if i < N_traj-1:
-            i += 1 # last value of i is N_traj-1
-            # in case of use_data_from_simulink == True, the last trajectory value
-            # is used for all further calculations (stay on the last position)
-        
-        if i == N_traj-1 and use_data_from_simulink == False:
-            run_loop = False
-
         if use_data_from_simulink:
             xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
             us[i] = ddp.us[0]
@@ -365,14 +383,34 @@ try:
                 data_from_python[:] = us[i]
         else:
             x_k, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, Ts, nq, nx, robot_model, robot_data, traj_data)
+            
+            # alternative: Use only solver values (perfect tracking)
+            # xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
+            # us[i] = ddp.us[0]
+
+            # xs_init_guess = ddp.xs
+            # us_init_guess = ddp.us
+
+            # x_k = ddp.xs[1]
 
         if (i+1) % update_interval == 0:
             print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()}    ", end='\r')
+
+        if i < N_traj-1:
+            i += 1 # last value of i is N_traj-1
+            # in case of use_data_from_simulink == True, the last trajectory value
+            # is used for all further calculations (stay on the last position)
+        
+        if i == N_traj-1 and use_data_from_simulink == False:
+            run_loop = False
     
         elapsed_time = measureSimu.toc()
         freq_per_Ta_step[i] = 1/elapsed_time
 except KeyboardInterrupt:
     print("\nFinish Solving!")
+
+xs[N_traj-1] = x_k
+us[N_traj-1] = us[N_traj-2] # simply use previous value for display (does not exist)
 
 measureSolver.print_time(additional_text='Total Solver time')
 measureTotal.print_time(additional_text='Total MPC time')
@@ -393,8 +431,8 @@ traj_data['omega_d_p'] = traj_data['omega_d_p'][:, 0:N_traj]
 #########################################################################################################
 
 subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, freq_per_Ta_step)
-folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html';
 output_file_path = os.path.join(folderpath, outputname)
 
