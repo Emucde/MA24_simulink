@@ -141,18 +141,18 @@ Ts = 1e-3  # Time step of control
 
 mpc_settings = {
     'version' : 'MPC_v1_bounds_terminate', # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' ,
-    'Ts_MPC' : 1e-3, # Interne Abtastzeit der MPC muss vielfaches von Ts sein
+    'Ts_MPC' : 5e-3, # Interne Abtastzeit der MPC muss vielfaches von Ts sein
     'N_MPC': 5, # anzahl der Stützstellen innerhalb des Prädiktionshorizont
     'int_method': 'euler', # 'euler' | 'RK2' | 'RK3' | 'RK4'
     'solver_steps': 1000
     }
 
 param_mpc_weight = {
-    'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
-    'q_terminate_tracking_cost': 1e8,  # penalizes deviations from the trajectory at the end
+    'q_tracking_cost': 1e8,            # penalizes deviations from the trajectory
+    'q_terminate_tracking_cost': 1e10    ,  # penalizes deviations from the trajectory at the end
     'q_terminate_tracking_bound_cost': 1e5,  # penalizes deviations from the bounds of | y_N - y_N_ref | < eps
-    'q_xreg_terminate_cost': 1e-5,  # penalizes deviations from the trajectory at the end
-    'q_ureg_terminate_cost': 1e-5,  # penalizes deviations from the trajectory at the end
+    'q_xreg_terminate_cost': 1e-10,  # penalizes deviations from the trajectory at the end
+    'q_ureg_terminate_cost': 1e-10,  # penalizes deviations from the trajectory at the end
     'q_xreg_cost': 1e-10,              # penalizes changes from the current state
     'q_ureg_cost': 1e-10,              # penalizes changes from the current input
     'q_x_bound_cost': 1e5,              # penalizes ignoring the bounds

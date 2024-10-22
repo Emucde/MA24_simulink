@@ -136,6 +136,7 @@ if(N_step_MPC <= 2)
 else
     MPC_traj_indices = [1, 2, N_step_MPC : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC];
 end
+dt_int_arr = MPC_traj_indices*DT_ctl;
 
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
 q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
@@ -270,8 +271,16 @@ if isempty(yt_indices)
     J_yt = 0;
     J_yt_N = 0;
 else
-    J_yt   =      Q_norm_square( y(yt_indices, 1 + (1:N_MPC-1) ) - y_d(yt_indices, 1 + (1:N_MPC-1)), pp.Q_y(   yt_indices,yt_indices) );
-    J_yt_N =      Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(  yt_indices,yt_indices) );
+    J_yt = 0;
+    for i=1:N_MPC
+        e_pos_err = y(yt_indices, 1 + (i) ) - y_d(yt_indices, 1 + (i));
+        
+        if(i < N_MPC)
+            J_yt = J_yt + 1/dt_int_arr(1 + (i)) * Q_norm_square( e_pos_err, pp.Q_y(yt_indices,yt_indices) );
+        else
+            J_yt_N = 1/dt_int_arr(1 + (i)) * Q_norm_square( e_pos_err, pp.Q_y(yt_indices,yt_indices) );
+        end
+    end
 end
 
 if isempty(yr_indices)
@@ -283,9 +292,9 @@ else
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
         if(i < N_MPC)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
+            J_yr = J_yr + 1/dt_int_arr(1 + (i)) * Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
         else
-            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );
+            J_yr_N = 1/dt_int_arr(1 + (i)) * Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );
         end
     end
 end

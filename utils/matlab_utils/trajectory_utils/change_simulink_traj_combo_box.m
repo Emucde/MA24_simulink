@@ -60,4 +60,5 @@ if(bdIsLoaded(simulink_main_model_name))
         save_system(simulink_main_model_name, 'SaveDirtyReferencedModels','on');
     end
 
+    q_init = param_traj.q_0(:, current_traj_value); % testing for simscape
 end
