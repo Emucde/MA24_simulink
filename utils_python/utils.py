@@ -990,12 +990,12 @@ def check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_horizon
         # print("\033[93mWarning: NaN values detected in xs or us arrays at time t = ", f"{i*dt:.3f}", "\033[0m")
         print("\033[91mError: NaN values detected in xs or us arrays at time t =", f"{i*dt:.3f}", "\033[0m")
         error = 1
-    if error:
-        if plot_sol:
-            plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, traj_data)
-            plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, traj_data)
-        exit()
-    return warn_cnt
+    # if error:
+    #     if plot_sol:
+    #         plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, traj_data)
+    #         plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, traj_data)
+    #     exit()
+    return warn_cnt, error
 
 #######################################
 

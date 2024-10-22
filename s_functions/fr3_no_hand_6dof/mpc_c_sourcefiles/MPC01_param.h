@@ -28,13 +28,13 @@
 #define MPC01_solver "qrqp"
 #define MPC01_version "v1"
 #define MPC01_name "MPC01"
-#define MPC01_int_method "Euler"
+#define MPC01_int_method "RK4"
 #define MPC01_fixed_parameter 0
 #define MPC01_traj_data_per_horizon 6
-static const uint32_t MPC01_traj_indices[] = {0,1,4,9,14,19};
+static const uint32_t MPC01_traj_indices[] = {0,1,5,10,15,20};
 
 //MPC_WEIGHTS:
-const casadi_real MPC01_param_weight[163] = {
+const casadi_real MPC01_param_weight[359] = {
     /* Q_y : 6x6 matrix values */
     100, 0, 0, 0, 0, 0, 
     0, 100, 0, 0, 0, 0, 
@@ -59,6 +59,22 @@ const casadi_real MPC01_param_weight[163] = {
     0, 0, 0, 0, 1e-10, 0, 0, 
     0, 0, 0, 0, 0, 1e-10, 0, 
     0, 0, 0, 0, 0, 0, 1e-10, 
+
+    /* R_x : 14x14 matrix values */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 
     /* x_min : [14 1] array values */
     -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 

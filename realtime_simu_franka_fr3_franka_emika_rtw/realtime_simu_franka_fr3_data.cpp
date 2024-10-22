@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.274
+ * Model version              : 8.276
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Fri Oct 18 18:06:57 2024
+ * C++ source code generated on : Tue Oct 22 15:30:43 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -168,15 +168,15 @@ P_realtime_simu_franka_fr3_T realtime_simu_franka_fr3_P = {
    */
   1.0,
 
-  /* Expression: [2.25    2.25    2.25    2.25    2.25    2.25]
+  /* Expression: 100*[2.25    2.25    2.25    2.25    2.25    2.25]
    * Referenced by: '<Root>/K_d'
    */
-  { 2.25, 2.25, 2.25, 2.25, 2.25, 2.25 },
+  { 225.0, 225.0, 225.0, 225.0, 225.0, 225.0 },
 
-  /* Expression: [3     3     3     3     3     3]
+  /* Expression: 8*[3     3     3     3     3     3]
    * Referenced by: '<Root>/D_d'
    */
-  { 3.0, 3.0, 3.0, 3.0, 3.0, 3.0 },
+  { 24.0, 24.0, 24.0, 24.0, 24.0, 24.0 },
 
   /* Expression: [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]
    * Referenced by: '<Root>/q_ref'
@@ -263,5 +263,5 @@ P_realtime_simu_franka_fr3_T realtime_simu_franka_fr3_P = {
   /* Computed Parameter: ManualSwitch1_CurrentSetting
    * Referenced by: '<Root>/Manual Switch1'
    */
-  1U
+  0U
 };

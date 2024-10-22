@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.274
+ * Model version              : 8.276
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Fri Oct 18 18:06:57 2024
+ * C++ source code generated on : Tue Oct 22 15:30:43 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -250,12 +250,12 @@ struct P_realtime_simu_franka_fr3_T_ {
                                         * Referenced by: '<Root>/Constant4'
                                         */
   real_T K_d_Value[6];
-                   /* Expression: [2.25    2.25    2.25    2.25    2.25    2.25]
-                    * Referenced by: '<Root>/K_d'
-                    */
-  real_T D_d_Value[6];          /* Expression: [3     3     3     3     3     3]
-                                 * Referenced by: '<Root>/D_d'
-                                 */
+               /* Expression: 100*[2.25    2.25    2.25    2.25    2.25    2.25]
+                * Referenced by: '<Root>/K_d'
+                */
+  real_T D_d_Value[6];        /* Expression: 8*[3     3     3     3     3     3]
+                               * Referenced by: '<Root>/D_d'
+                               */
   real_T q_ref_Value[7];  /* Expression: [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]
                            * Referenced by: '<Root>/q_ref'
                            */

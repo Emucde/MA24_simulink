@@ -9,6 +9,7 @@ MPC='MPC01';
 param_weight.(MPC).Q_y      = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_yN     = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
 param_weight.(MPC).R_q_pp   = 1e-10*diag(ones(n,1));  % c_kpn
+param_weight.(MPC).R_x      = 0*diag(ones(2*n,1));  % c_kpn
 
 % param_weight.(MPC).x_min    = x_min;
 % param_weight.(MPC).x_max    = x_max;

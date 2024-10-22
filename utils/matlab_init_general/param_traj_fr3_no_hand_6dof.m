@@ -86,7 +86,7 @@ cnt = cnt+1;
 
 % q_0 = [q1 q2 q4 q5 q6 q7]
 q_0 = [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]'; % q3 is per default 0 (not used)
-q_T = [0, -pi/4, 0, -3 * pi/4 + 0.1, 0, pi/2, pi/4]'; % q3 is per default 0 (not used)
+q_T = [0, -pi/4, 0, -3 * pi/4 + 0.5236, 0, pi/2, pi/4]'; % q3 is per default 0 (not used)
 H_0 = hom_transform_endeffector_py(q_0);
 R_init = quat2rotm_v2(xe0(4:7));
 

@@ -34,7 +34,7 @@ elif robot_name == 'fr3_6dof_no_hand':
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = False
+use_data_from_simulink = True
 if use_data_from_simulink:
     # n_dof = 7 (input data from simulink are 7dof states q, qp)
     def create_shared_memory(name, size):
@@ -148,13 +148,13 @@ mpc_settings = {
     }
 
 param_mpc_weight = {
-    'q_tracking_cost': 1e8,            # penalizes deviations from the trajectory
-    'q_terminate_tracking_cost': 1e10    ,  # penalizes deviations from the trajectory at the end
+    'q_tracking_cost': 1e2,            # penalizes deviations from the trajectory
+    'q_terminate_tracking_cost': 1e5    ,  # penalizes deviations from the trajectory at the end
     'q_terminate_tracking_bound_cost': 1e5,  # penalizes deviations from the bounds of | y_N - y_N_ref | < eps
-    'q_xreg_terminate_cost': 1e-10,  # penalizes deviations from the trajectory at the end
-    'q_ureg_terminate_cost': 1e-10,  # penalizes deviations from the trajectory at the end
-    'q_xreg_cost': 1e-10,              # penalizes changes from the current state
-    'q_ureg_cost': 1e-10,              # penalizes changes from the current input
+    'q_xreg_terminate_cost': 1e-3,  # penalizes deviations from the trajectory at the end
+    'q_ureg_terminate_cost': 1e-0,  # penalizes deviations from the trajectory at the end
+    'q_xreg_cost': 1e-3,              # penalizes changes from the current state
+    'q_ureg_cost': 1e-0,              # penalizes changes from the current input
     'q_x_bound_cost': 1e5,              # penalizes ignoring the bounds
     'q_u_bound_cost': 1e5,              # penalizes ignoring the bounds
     'Kd': 100*np.eye(3),
@@ -262,6 +262,7 @@ if use_data_from_simulink:
                 data_from_simulink_valid[:] = 0
                 data_from_python_valid[:] = 0
                 x_init_robot = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+                break
             # time.sleep(1e-9)
     except KeyboardInterrupt:
         if(x_init_robot is None):
@@ -369,7 +370,7 @@ try:
         measureSolver.toc()
         
 
-        warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, Ts, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
+        warn_cnt, err_state = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, Ts, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
 
         if use_data_from_simulink:
             xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
@@ -437,7 +438,7 @@ outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html';
 output_file_path = os.path.join(folderpath, outputname)
 
 plot_sol=True
-if plot_sol == True and err_state == False:
+if plot_sol == True:# and err_state == False:
     plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False)
 
 # print('Max error:       y - y_d = {:.2e}'.format(np.max(np.abs(e))), 'm')

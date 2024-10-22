@@ -65,6 +65,7 @@ if(strcmp(MPC_solver, 'qrqp'))
     
     opts.print_header = false; % Disable printing of solver header
     opts.print_iteration = false; % Disable printing of solver iterations
+    % opts.print_iteration = true; % Disable printing of solver iterations
     opts.print_time = false; % Disable printing of solver time
     opts.print_status = false;
     opts.error_on_fail = false;
@@ -233,13 +234,15 @@ catch ME
     error(getReport(ME));
 end
 
-x_full = full(reshape(xx_full_opt_sol(1:numel(x)), size(x)));
-u_full = full(reshape(xx_full_opt_sol(1+numel(x):numel(x)+numel(u)), size(u)));
+% x_full = full(reshape(xx_full_opt_sol(1:numel(x)), size(x)));
+% u_full = full(reshape(xx_full_opt_sol(1+numel(x):numel(x)+numel(u)), size(u)));
 
-% u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
-% x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
+u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
+x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
 
-% asdf
+disp(u_full);
+disp(x_full);
+
 % show stats
 
 %z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z)), size(z)));
