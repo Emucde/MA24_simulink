@@ -574,6 +574,8 @@ def get_int_type(int_type):
 def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=False):
     int_type = mpc_settings['int_method']
     N_MPC = mpc_settings['N_MPC']
+    
+    Ts_MPC = mpc_settings['Ts_MPC']/N_MPC
 
     int_time = param_traj['int_time']
 
@@ -606,6 +608,9 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
 
     for i in range(0, N_MPC):
         dt = int_time[i]
+
+        scale = 1
+
         p_d = p_d_ref[i]
         if state.nq >= 6:
             R_d  = R_d_ref[:,:,i] # rotation matrix!
@@ -623,9 +628,9 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                     residual=crocoddyl.ResidualModelState(state, xref)
                 )
                 if i < N_MPC-1:
-                    runningCostModel.addCost("stateRegBound", xRegBoundCost, 1/dt * q_x_bound_cost)
+                    runningCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
                 else:
-                    terminalDifferentialCostModel.addCost("stateRegBound", xRegBoundCost, 1/dt * q_x_bound_cost)
+                    terminalDifferentialCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
             if np.sum(q_u_bound_cost) not in [0, None]:
                 bounds = crocoddyl.ActivationBounds(umin, umax)
                 activationModel = crocoddyl.ActivationModelQuadraticBarrier(bounds)
@@ -635,9 +640,9 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                     residual=crocoddyl.ResidualModelControl(state, uref)
                 )
                 if i < N_MPC-1:
-                    runningCostModel.addCost("ctrlRegBound", uRegBoundCost, 1/dt * q_u_bound_cost)
+                    runningCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
                 else:
-                    terminalDifferentialCostModel.addCost("ctrlRegBound", uRegBoundCost, 1/dt * q_u_bound_cost)
+                    terminalDifferentialCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
 
         # create classic residual cost models
         xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state, xref))
@@ -659,13 +664,13 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
             )
 
         if i < N_MPC-1:
-            runningCostModel.addCost("TCP_pose", goalTrackingCost, 1/dt * q_tracking_cost)
+            runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
             if state.nq >= 6:
-                runningCostModel.addCost("TCP_rot", goalTrackingCost_r, 1/dt * q_tracking_cost)
+                runningCostModel.addCost("TCP_rot", goalTrackingCost_r, q_tracking_cost)
             if np.sum(q_xreg_cost) not in [0, None]:
-                runningCostModel.addCost("stateReg", xRegCost, 1/dt * q_xreg_cost)
+                runningCostModel.addCost("stateReg", xRegCost, scale * q_xreg_cost)
             if np.sum(q_ureg_cost) not in [0, None]:
-                runningCostModel.addCost("ctrlReg", uRegCost, 1/dt * q_ureg_cost)
+                runningCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_cost)
 
             running_cost_models.append(IntegratedActionModel(
                 crocoddyl.DifferentialActionModelFreeFwdDynamics(
@@ -674,13 +679,13 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                 dt
             ))
         else: # i == N: # Endkostenterm
-            terminalDifferentialCostModel.addCost("TCP_pose", goalTrackingCost, 1/dt * q_terminate_tracking_cost)
+            terminalDifferentialCostModel.addCost("TCP_pose", goalTrackingCost, scale * q_terminate_tracking_cost)
             if state.nq >= 6:
-                terminalDifferentialCostModel.addCost("TCP_rot", goalTrackingCost_r, 1/dt * q_terminate_tracking_cost)
+                terminalDifferentialCostModel.addCost("TCP_rot", goalTrackingCost_r, scale * q_terminate_tracking_cost)
             if np.sum(q_xreg_terminate_cost) not in [0, None]:
-                terminalDifferentialCostModel.addCost("stateReg", xRegCost, 1/dt * q_xreg_terminate_cost)
+                terminalDifferentialCostModel.addCost("stateReg", xRegCost, scale * q_xreg_terminate_cost)
             if np.sum(q_ureg_terminate_cost) not in [0, None]:
-                terminalDifferentialCostModel.addCost("ctrlReg", uRegCost, 1/dt * q_ureg_terminate_cost)
+                terminalDifferentialCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_terminate_cost)
 
     dt = int_time[-1]
     # integrate terminal cost model (necessary?)

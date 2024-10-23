@@ -66,7 +66,7 @@ F2 = Function('F2', {x, v, lambda_u}, {F2_int(x, v)});
 if(N_step_MPC <= 2)
     MPC_traj_indices = 1:(N_MPC+1);
 else
-    MPC_traj_indices = [1, 2, N_step_MPC : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC];
+    MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
 end
 
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)

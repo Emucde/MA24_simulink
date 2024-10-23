@@ -138,8 +138,8 @@ if(N_step_MPC <= 2)
 else
     MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
 end
-dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
-dt_int_arr(:) = 1; % for debugging
+% dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
+% dt_int_arr(:) = 1; % for debugging
 
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
 q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
@@ -282,9 +282,9 @@ else
         e_pos_err = y(yt_indices, 1 + (i) ) - y_d(yt_indices, 1 + (i));
         
         if(i < N_MPC)
-            J_yt = J_yt + 1/dt_int_arr(i) * Q_norm_square( e_pos_err, pp.Q_y(yt_indices,yt_indices) );
+            J_yt = J_yt + Q_norm_square( e_pos_err, pp.Q_y(yt_indices,yt_indices) );
         else
-            J_yt_N = 1/dt_int_arr(i) * Q_norm_square( e_pos_err, pp.Q_y(yt_indices,yt_indices) );
+            J_yt_N = Q_norm_square( e_pos_err, pp.Q_y(yt_indices,yt_indices) );
         end
     end
 end
@@ -298,41 +298,39 @@ else
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
         if(i < N_MPC)
-            J_yr = J_yr + 1/dt_int_arr(i) * Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
         else
-            J_yr_N = 1/dt_int_arr(i) * Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );
+            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );
         end
     end
 end
 
-u_err = u-u_prev;
+% u_err = u-u_prev;
 x_err = x-x_prev;
 
 % u_err = u-u_prev(:, 1);
 % x_err = x-x_k;
 
-% u_err = u-g_vec;
+u_err = u-g_vec; % es ist stabiler es nicht gegenüber der vorherigen Lösung zu gewichten!
 %u_err = u;
 %u_err = q_pp;
 
-J_q_pp = 0;
+J_u = 0;
 for i=0:N_MPC-1
-    J_q_pp = J_q_pp + 1/dt_int_arr(1 + (i)) * Q_norm_square(q_pp(:, 1 + (i)), pp.R_q_pp(n_indices, n_indices)); % ist dann eig ziemlich equivalent zu qpp + qp gewichtung (aber am Schnellsten)
+    J_u = J_u + Q_norm_square(u_err(:, 1 + (i)), pp.R_u(n_indices, n_indices)); % ist dann eig ziemlich equivalent zu qpp + qp gewichtung (aber am Schnellsten)
 end
 
 J_x = 0;
 for i=1:N_MPC
     if(i < N_MPC)
-        J_x = J_x + 1/dt_int_arr(i) * Q_norm_square(x_err(:, 1 + (i)), pp.R_x(n_x_indices, n_x_indices));
-    else
-        J_x = J_x + 1/dt_int_arr(end) * Q_norm_square(x_err(:, 1 + (i)), pp.R_x(n_x_indices, n_x_indices));
+        J_x = J_x + Q_norm_square(x_err(:, 1 + (i)), pp.R_x(n_x_indices, n_x_indices));
     end
 end
 
-% J_q_pp = Q_norm_square(q_pp, pp.R_q_pp(n_indices, n_indices)) + Q_norm_square(q_p, pp.R_q_pp(n_indices, n_indices));
+% J_u = Q_norm_square(q_pp, pp.R_q_pp(n_indices, n_indices)) + Q_norm_square(q_p, pp.R_q_pp(n_indices, n_indices));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Additional Outputs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_q_pp, J_x}';
+cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_u, J_x}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 

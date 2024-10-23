@@ -31,7 +31,7 @@
 #define MPC7_int_method "Euler"
 #define MPC7_fixed_parameter 0
 #define MPC7_traj_data_per_horizon 6
-static const uint32_t MPC7_traj_indices[] = {0,1,4,9,14,19};
+static const uint32_t MPC7_traj_indices[] = {0,1,5,10,15,20};
 
 //MPC_WEIGHTS:
 const casadi_real MPC7_param_weight[201] = {

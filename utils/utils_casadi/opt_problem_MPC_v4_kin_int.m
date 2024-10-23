@@ -10,6 +10,8 @@ n = param_robot.n_DOF; % Dimension of joint space
 n_red = param_robot.n_red; % Dimension of joint space
 m = param_robot.m; % Dimension of Task Space
 
+n_x_indices = [n_indices n_indices+n];
+
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
@@ -48,7 +50,7 @@ P = lyap(A, Q); % V = x'Px => Idea: Use V as end cost term
 if(N_step_MPC <= 2)
     MPC_traj_indices = 1:(N_MPC+1);
 else
-    MPC_traj_indices = [1, 2, N_step_MPC : N_step_MPC : 1 + (N_MPC-1) * N_step_MPC];
+    MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
 end
 
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
@@ -86,8 +88,8 @@ else % hardcoded weights
 end
 
 % Optimization Variables:
-u     = SX.sym( 'u',  n_red,   N_MPC   ); % u = q_0_pp
-x     = SX.sym( 'x',  2*n_red, N_MPC+1 );
+u      = SX.sym( 'u',  n_red,   N_MPC   ); % u = q_0_pp
+x      = SX.sym( 'x',  2*n_red, N_MPC+1 );
 
 mpc_opt_var_inputs = {u, x};
 
@@ -103,15 +105,16 @@ u_opt_indices = q0_pp_idx;
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n]), size(x, 2), 1)];
-ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n]), size(x, 2), 1)];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min(n_x_indices), size(x, 2), 1)];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max(n_x_indices), size(x, 2), 1)];
 
 % input parameter
 x_k    = SX.sym( 'x_k',     2*n_red, 1 ); % current x state = initial x state
 y_d    = SX.sym( 'y_d',     m+1, N_MPC+1 );
+x_prev = SX.sym( 'x_prev',  2*n_red, N_MPC+1 );
 
-mpc_parameter_inputs = {x_k, y_d};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
+mpc_parameter_inputs = {x_k, y_d, x_prev};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:); x_init_guess_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -201,7 +204,16 @@ J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp
 % J_q_pp = N_MPC*Q_norm_square(u - q_d_pp, pp.R_y_pp)+Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
 % J_q_pp = Q_norm_square(y_pp - y_d_pp, pp.R_y_pp);
 
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp}';
+x_err = x-x_prev;
+
+J_x = 0;
+for i=1:N_MPC
+    if(i < N_MPC)
+        J_x = J_x + Q_norm_square(x_err(:, 1 + (i)), pp.R_x(n_x_indices, n_x_indices));
+    end
+end
+
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_x}';
 
 
 cost_vars_SX = eval(cost_vars_names);

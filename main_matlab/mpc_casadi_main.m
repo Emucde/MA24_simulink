@@ -21,7 +21,7 @@ traj_select_mpc                 = 3; % (1: equilibrium, 2: 5th order diff filt, 
 create_init_guess_for_all_traj  = true; % create init guess for all trajectories
 compile_sfun                    = ~false; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
-compile_all_mpc_sfunctions      = false;
+compile_all_mpc_sfunctions      = ~false;
 generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
 reload_parameters_m             = true; % reload parameters.m at the end (clears all variables!)
 
@@ -70,7 +70,7 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v4_kin_int'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
-param_casadi_fun_name.(MPC).Ts      = 5e-3;
+param_casadi_fun_name.(MPC).Ts      = 50e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
@@ -150,7 +150,7 @@ param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true:
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC01;
+param_casadi_fun_struct = param_casadi_fun_name.MPC8;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if(compile_all_mpc_sfunctions)

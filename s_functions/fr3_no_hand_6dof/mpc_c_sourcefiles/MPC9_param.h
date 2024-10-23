@@ -31,7 +31,7 @@
 #define MPC9_int_method "Euler"
 #define MPC9_fixed_parameter 0
 #define MPC9_traj_data_per_horizon 6
-static const uint32_t MPC9_traj_indices[] = {0,1,4,9,14,19};
+static const uint32_t MPC9_traj_indices[] = {0,1,5,10,15,20};
 
 //MPC_WEIGHTS:
 const casadi_real MPC9_param_weight[233] = {

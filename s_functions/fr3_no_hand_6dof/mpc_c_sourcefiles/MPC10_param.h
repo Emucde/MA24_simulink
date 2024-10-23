@@ -31,7 +31,7 @@
 #define MPC10_int_method "RK4"
 #define MPC10_fixed_parameter 0
 #define MPC10_traj_data_per_horizon 6
-static const uint32_t MPC10_traj_indices[] = {0,1,4,9,14,19};
+static const uint32_t MPC10_traj_indices[] = {0,1,5,10,15,20};
 
 //MPC_WEIGHTS:
 const casadi_real MPC10_param_weight[163] = {

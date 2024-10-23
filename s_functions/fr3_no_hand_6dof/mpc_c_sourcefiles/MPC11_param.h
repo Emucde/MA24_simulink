@@ -20,18 +20,18 @@
 
 //MPC_SETTINGS:
 #define MPC11_N 5
-#define MPC11_N_step 1000
-#define MPC11_Ts 1
-#define MPC11_T_horizon 5
+#define MPC11_N_step 5
+#define MPC11_Ts 0.005
+#define MPC11_T_horizon 0.025
 #define MPC11_rk_iter 1
 #define MPC11_variant "nlpsol"
 #define MPC11_solver "qrqp"
-#define MPC11_version "v4_kin_int_refsys"
-#define MPC11_name "MPC9"
+#define MPC11_version "v6_kin_int_path_following"
+#define MPC11_name "MPC11"
 #define MPC11_int_method "Euler"
 #define MPC11_fixed_parameter 0
 #define MPC11_traj_data_per_horizon 6
-static const uint32_t MPC11_traj_indices[] = {0,1,999,1999,2999,3999};
+static const uint32_t MPC11_traj_indices[] = {0,1,5,10,15,20};
 
 //MPC_WEIGHTS:
 const casadi_real MPC11_param_weight[166] = {

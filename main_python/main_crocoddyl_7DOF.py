@@ -24,17 +24,26 @@ if robot_name == 'ur5e_6dof':
     trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/ur5e_6dof/trajectory_data/param_traj_data.mat')
     trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/ur5e_6dof/trajectory_data/param_traj.mat')
     n_indices = np.array([0, 1, 2, 3, 4, 5]) # use all joints
+
+    q_0_ref = np.array([0, 0, 0, 0, 0, 0])
+   
+   # Create a list of joints to lock
+    jointsToLock = []
 elif robot_name == 'fr3_6dof_no_hand':
     mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_FR3')
-    urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'fr3_no_hand_6dof.urdf')
+    urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'fr3_no_hand_7dof.urdf')
     urdf_tcp_frame_name = 'fr3_link8_tcp'
     trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.mat')
     trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj.mat')
     n_indices = np.array([0, 1, 3, 4, 5, 6]) # don't use joint 3
+    q_0_ref = np.array([0, -np.pi/4, 0, -3 * np.pi/4, 0, np.pi/2, np.pi/4])
+
+    # Create a list of joints to lock
+    jointsToLock = ["fr3_joint3"]
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = True
+use_data_from_simulink = False
 if use_data_from_simulink:
     # n_dof = 7 (input data from simulink are 7dof states q, qp)
     def create_shared_memory(name, size):
@@ -65,24 +74,6 @@ if use_data_from_simulink:
 
     data_from_simulink = np.ndarray((simulink_buffer_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink.buf)
     data_from_simulink_valid = np.ndarray((simulink_flag_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink_valid.buf)
-
-######################################### Build Robot Model #############################################
-
-robot_model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_model_path, mesh_dir)
-
-nq = robot_model.nq
-nx = 2*nq
-nu = nq # fully actuated
-
-# Gravity should be in -y direction
-robot_model.gravity.linear[:] = [0, 0, -9.81]
-
-robot_data = robot_model.createData()
-
-TCP_frame_id = robot_model.getFrameId(urdf_tcp_frame_name)
-
-# The model loaded from urdf (via pinicchio)
-print(robot_model)
 
 #########################################################################################################
 ################################## Get Trajectory from mat file #########################################
@@ -138,35 +129,34 @@ Ts = 1e-3  # Time step of control
 ############################################ MPC Settings ###############################################
 #########################################################################################################
 
-
 mpc_settings = {
     'version' : 'MPC_v1_bounds_terminate', # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' ,
-    'Ts_MPC' : 5e-3, # Interne Abtastzeit der MPC muss vielfaches von Ts sein
-    'N_MPC': 5, # anzahl der Stützstellen innerhalb des Prädiktionshorizont
+    'Ts_MPC' : 10e-3, # Interne Abtastzeit der MPC muss vielfaches von Ts sein
+    'N_MPC': 10, # anzahl der Stützstellen innerhalb des Prädiktionshorizont
     'int_method': 'euler', # 'euler' | 'RK2' | 'RK3' | 'RK4'
     'solver_steps': 1000
     }
 
 param_mpc_weight = {
-    'q_tracking_cost': 1e2,            # penalizes deviations from the trajectory
-    'q_terminate_tracking_cost': 1e5    ,  # penalizes deviations from the trajectory at the end
-    'q_terminate_tracking_bound_cost': 1e5,  # penalizes deviations from the bounds of | y_N - y_N_ref | < eps
-    'q_xreg_terminate_cost': 1e-3,  # penalizes deviations from the trajectory at the end
-    'q_ureg_terminate_cost': 1e-0,  # penalizes deviations from the trajectory at the end
-    'q_xreg_cost': 1e-3,              # penalizes changes from the current state
-    'q_ureg_cost': 1e-0,              # penalizes changes from the current input
-    'q_x_bound_cost': 1e5,              # penalizes ignoring the bounds
-    'q_u_bound_cost': 1e5,              # penalizes ignoring the bounds
+    'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
+    'q_terminate_tracking_cost': 1e8    ,  # penalizes deviations from the trajectory at the end
+    'q_terminate_tracking_bound_cost': 1e-10,  # penalizes deviations from the bounds of | y_N - y_N_ref | < eps
+    'q_xreg_terminate_cost': 1e2,  # penalizes deviations from the trajectory at the end
+    'q_ureg_terminate_cost': 1e-10,  # penalizes deviations from the trajectory at the end
+    'q_xreg_cost': 1e2,              # penalizes changes from the current state
+    'q_ureg_cost': 1e-10,              # penalizes changes from the current input
+    'q_x_bound_cost': 1e-10,              # penalizes ignoring the bounds
+    'q_u_bound_cost': 1e-10,              # penalizes ignoring the bounds
     'Kd': 100*np.eye(3),
     'Kp': 100*np.eye(3),
     'lb_y_ref_N': -1e-6*np.ones(3), # only used if MPC_v3_bounds_yN_ref
     'ub_y_ref_N': 1e-6*np.ones(3),
-    'umin': -np.hstack([150, 150, 150, 28, 28, 28]),
-    'umax': np.hstack([150, 150, 150, 28, 28, 28]),
-    'xmin': -np.hstack([2*np.pi*np.ones(6), np.pi*np.ones(6)]),
-    'xmax': np.hstack([2*np.pi*np.ones(6), np.pi*np.ones(6)]),
-    'xref': np.zeros(nx),
-    'uref': np.zeros(nq)
+    'umin': [],
+    'umax': [],
+    'xmin': [],
+    'xmax': [],
+    'xref': [],
+    'uref': []
 }
 
 # good for mpcv1 soft terminate:
@@ -189,12 +179,41 @@ param_mpc_weight = {
     # 'xmax': np.hstack([np.pi*np.ones(2), 5*np.ones(2)])
 # }
 
+######################################### Build Robot Model #############################################
 
-# Create a multibody state from the pinocchio model.
-state = cro.StateMultibody(robot_model)
-state.lb = param_mpc_weight['xmin']
-state.ub = param_mpc_weight['xmax']
+robot_model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_model_path, mesh_dir)
 
+# https://gepettoweb.laas.fr/doc/stack-of-tasks/pinocchio/master/doxygen-html/md_doc_b_examples_e_reduced_model.html
+# create reduced model:
+ 
+if len(n_indices) != robot_model.nq:
+    # Get the ID of all existing joints
+    jointsToLockIDs = []
+    for jn in jointsToLock:
+        if robot_model.existJointName(jn):
+            jointsToLockIDs.append(robot_model.getJointId(jn))
+        else:
+            print("Warning: joint " + str(jn) + " does not belong to the model!")
+    
+    # Set initial position of both fixed and revoulte joints
+    initialJointConfig = q_0_ref
+    initialJointConfig[n_indices] = q_0
+
+    robot_model = pin.buildReducedModel(robot_model, jointsToLockIDs, initialJointConfig)
+
+nq = robot_model.nq
+nx = 2*nq
+nu = nq # fully actuated
+
+# Gravity should be in -y direction
+robot_model.gravity.linear[:] = [0, 0, -9.81]
+
+robot_data = robot_model.createData()
+
+TCP_frame_id = robot_model.getFrameId(urdf_tcp_frame_name)
+
+# The model loaded from urdf (via pinicchio)
+print(robot_model)
 
 #########################################################################################################
 ############################################# INIT MPC ##################################################
@@ -304,6 +323,17 @@ y_d_ref = {
 
 param_mpc_weight['xref'] = x_k
 param_mpc_weight['uref'] = us_init_guess[0]
+
+param_mpc_weight['umin'] = -robot_model.effortLimit
+param_mpc_weight['umax'] = robot_model.effortLimit
+param_mpc_weight['xmin'] = np.hstack([robot_model.lowerPositionLimit, -robot_model.velocityLimit])
+param_mpc_weight['xmax'] = np.hstack([robot_model.upperPositionLimit, robot_model.velocityLimit])
+
+# Create a multibody state from the pinocchio model.
+state = cro.StateMultibody(robot_model)
+state.lb = param_mpc_weight['xmin']
+state.ub = param_mpc_weight['xmax']
+
 problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
 # problem = create_ocp_problem(i, i+N_MPC, N_step, state, x_k, TCP_frame_id, traj_data, param_mpc_weight, Ts, int_type = int_type)
 

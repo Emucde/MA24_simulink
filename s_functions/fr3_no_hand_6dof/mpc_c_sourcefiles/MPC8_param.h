@@ -20,9 +20,9 @@
 
 //MPC_SETTINGS:
 #define MPC8_N 5
-#define MPC8_N_step 5
-#define MPC8_Ts 0.005
-#define MPC8_T_horizon 0.025
+#define MPC8_N_step 50
+#define MPC8_Ts 0.05
+#define MPC8_T_horizon 0.25
 #define MPC8_rk_iter 1
 #define MPC8_variant "nlpsol"
 #define MPC8_solver "qrqp"
@@ -31,10 +31,10 @@
 #define MPC8_int_method "Euler"
 #define MPC8_fixed_parameter 0
 #define MPC8_traj_data_per_horizon 6
-static const uint32_t MPC8_traj_indices[] = {0,1,4,9,14,19};
+static const uint32_t MPC8_traj_indices[] = {0,1,50,100,150,200};
 
 //MPC_WEIGHTS:
-const casadi_real MPC8_param_weight[199] = {
+const casadi_real MPC8_param_weight[395] = {
     /* Q_y : 6x6 matrix values */
     100, 0, 0, 0, 0, 0, 
     0, 100, 0, 0, 0, 0, 
@@ -60,13 +60,29 @@ const casadi_real MPC8_param_weight[199] = {
     0, 0, 0, 0, 0, 100000, 
 
     /* R_q_pp : 7x7 matrix values */
-    1e-10, 0, 0, 0, 0, 0, 0, 
-    0, 1e-10, 0, 0, 0, 0, 0, 
-    0, 0, 1e-10, 0, 0, 0, 0, 
-    0, 0, 0, 1e-10, 0, 0, 0, 
-    0, 0, 0, 0, 1e-10, 0, 0, 
-    0, 0, 0, 0, 0, 1e-10, 0, 
-    0, 0, 0, 0, 0, 0, 1e-10, 
+    1e-08, 0, 0, 0, 0, 0, 0, 
+    0, 1e-08, 0, 0, 0, 0, 0, 
+    0, 0, 1e-08, 0, 0, 0, 0, 
+    0, 0, 0, 1e-08, 0, 0, 0, 
+    0, 0, 0, 0, 1e-08, 0, 0, 
+    0, 0, 0, 0, 0, 1e-08, 0, 
+    0, 0, 0, 0, 0, 0, 1e-08, 
+
+    /* R_x : 14x14 matrix values */
+    1e-08, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 1e-08, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 1e-08, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 1e-08, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 1e-08, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 1e-08, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 1e-08, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 1e-08, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 1e-08, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1e-08, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1e-08, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1e-08, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1e-08, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1e-08, 
 
     /* x_min : [14 1] array values */
     -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 

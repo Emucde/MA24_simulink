@@ -31,7 +31,7 @@
 #define MPC12_int_method "Euler"
 #define MPC12_fixed_parameter 0
 #define MPC12_traj_data_per_horizon 6
-static const uint32_t MPC12_traj_indices[] = {0,1,2,4,9,14};
+static const uint32_t MPC12_traj_indices[] = {0,1,2,5,10,15};
 
 //MPC_WEIGHTS:
 const casadi_real MPC12_param_weight[163] = {
