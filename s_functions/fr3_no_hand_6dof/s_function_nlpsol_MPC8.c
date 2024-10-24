@@ -24,9 +24,9 @@ void cleanup() {
 static void mdlInitializeSizes(SimStruct *S)
 {
     int_T i;
-    const casadi_int* sp;
-    const char *file_name;
-    const char *function_name;
+    char_T file_name[256];
+    char_T function_name[256];
+
     ssSetNumSFcnParams(S, 2);
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) {
         return; /* Parameter mismatch will be reported by Simulink */
@@ -41,13 +41,16 @@ static void mdlInitializeSizes(SimStruct *S)
     //                      "function name must be a string.");
     // }
     
-    file_name = mxArrayToString(ssGetSFcnParam(S, 0));
+    mxGetString(ssGetSFcnParam(S, 0), file_name, sizeof(file_name));
+    // file_name = mxArrayToString(ssGetSFcnParam(S, 0));
 
     if (!file_name) {
       mexErrMsgIdAndTxt( "MATLAB:s_function_nlpsol_MPC8:invalidParameter",
                          "file name must be a string.");
     }
-    function_name = mxArrayToString(ssGetSFcnParam(S, 1));
+
+    mxGetString(ssGetSFcnParam(S, 1), function_name, sizeof(function_name));
+    // function_name = mxArrayToString(ssGetSFcnParam(S, 1));
     if (!function_name) {
       mexErrMsgIdAndTxt( "MATLAB:s_function_nlpsol_MPC8:invalidParameter",
                          "function name must be a string.");
@@ -70,7 +73,9 @@ static void mdlInitializeSizes(SimStruct *S)
     // Load function
     ssPrintf("Locating function '%s'...", function_name);
     id = casadi_c_id(function_name);
-    mxFree((void *) function_name); // casted as void * to get rid of warnings
+
+
+    // mxFree((void *) function_name); // casted as void * to get rid of warnings // this commands causes a crash in realtime environment
     if (id<0) {
       casadi_c_pop();
       mexErrMsgIdAndTxt( "MATLAB:s_function_nlpsol_MPC8:Load",
