@@ -35,11 +35,13 @@ elif robot_name == 'fr3_6dof_no_hand':
     urdf_tcp_frame_name = 'fr3_link8_tcp'
     trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.mat')
     trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj.mat')
-    n_indices = np.array([0, 1, 3, 4, 5, 6]) # don't use joint 3
+    n_indices = -1 + np.array([1, 2, 4, 5, 6, 7]) # list of used joints
+    # n_indices = -1 + np.array([2, 4]) # list of used joints
     q_0_ref = np.array([0, -np.pi/4, 0, -3 * np.pi/4, 0, np.pi/2, np.pi/4])
 
-    # Create a list of joints to lock
-    jointsToLock = ["fr3_joint3"]
+    # Create a list of joints to lock (starts with joint 1)
+    jointsToLockIndex = np.setdiff1d(np.arange(0,7), n_indices) # at first use 7dof Model (will be later reduced)
+    jointsToLock = jointsToLock = [f"fr3_joint{i+1}" for i in jointsToLockIndex] # list of joints to lock
 
 ################################################ REALTIME ###############################################
 
@@ -131,20 +133,20 @@ Ts = 1e-3  # Time step of control
 
 mpc_settings = {
     'version' : 'MPC_v1_bounds_terminate', # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' ,
-    'Ts_MPC' : 10e-3, # Interne Abtastzeit der MPC muss vielfaches von Ts sein
+    'Ts_MPC' : 100e-3, # Interne Abtastzeit der MPC muss vielfaches von Ts sein
     'N_MPC': 10, # anzahl der Stützstellen innerhalb des Prädiktionshorizont
     'int_method': 'euler', # 'euler' | 'RK2' | 'RK3' | 'RK4'
     'solver_steps': 1000
     }
 
 param_mpc_weight = {
-    'q_tracking_cost': 1e5,            # penalizes deviations from the trajectory
-    'q_terminate_tracking_cost': 1e8    ,  # penalizes deviations from the trajectory at the end
+    'q_tracking_cost': 1e2,            # penalizes deviations from the trajectory
+    'q_terminate_tracking_cost': 1e5    ,  # penalizes deviations from the trajectory at the end
     'q_terminate_tracking_bound_cost': 1e-10,  # penalizes deviations from the bounds of | y_N - y_N_ref | < eps
-    'q_xreg_terminate_cost': 1e2,  # penalizes deviations from the trajectory at the end
-    'q_ureg_terminate_cost': 1e-10,  # penalizes deviations from the trajectory at the end
-    'q_xreg_cost': 1e2,              # penalizes changes from the current state
-    'q_ureg_cost': 1e-10,              # penalizes changes from the current input
+    'q_xreg_terminate_cost': 1e-2,  # penalizes deviations from the trajectory at the end
+    'q_ureg_terminate_cost': 1e-2,  # penalizes deviations from the trajectory at the end
+    'q_xreg_cost': 1e-2,              # penalizes changes from the current state
+    'q_ureg_cost': 1e-2,              # penalizes changes from the current input
     'q_x_bound_cost': 1e-10,              # penalizes ignoring the bounds
     'q_u_bound_cost': 1e-10,              # penalizes ignoring the bounds
     'Kd': 100*np.eye(3),
@@ -181,17 +183,17 @@ param_mpc_weight = {
 
 ######################################### Build Robot Model #############################################
 
-robot_model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_model_path, mesh_dir)
+robot_model_full, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_model_path, mesh_dir)
 
 # https://gepettoweb.laas.fr/doc/stack-of-tasks/pinocchio/master/doxygen-html/md_doc_b_examples_e_reduced_model.html
 # create reduced model:
  
-if len(n_indices) != robot_model.nq:
+if len(n_indices) != robot_model_full.nq:
     # Get the ID of all existing joints
     jointsToLockIDs = []
     for jn in jointsToLock:
-        if robot_model.existJointName(jn):
-            jointsToLockIDs.append(robot_model.getJointId(jn))
+        if robot_model_full.existJointName(jn):
+            jointsToLockIDs.append(robot_model_full.getJointId(jn))
         else:
             print("Warning: joint " + str(jn) + " does not belong to the model!")
     
@@ -199,7 +201,9 @@ if len(n_indices) != robot_model.nq:
     initialJointConfig = q_0_ref
     initialJointConfig[n_indices] = q_0
 
-    robot_model = pin.buildReducedModel(robot_model, jointsToLockIDs, initialJointConfig)
+    robot_model = pin.buildReducedModel(robot_model_full, jointsToLockIDs, initialJointConfig)
+else:
+    robot_model = robot_model_full
 
 nq = robot_model.nq
 nx = 2*nq
@@ -214,6 +218,8 @@ TCP_frame_id = robot_model.getFrameId(urdf_tcp_frame_name)
 
 # The model loaded from urdf (via pinicchio)
 print(robot_model)
+
+pin_data = robot_model.createData()
 
 #########################################################################################################
 ############################################# INIT MPC ##################################################
@@ -370,24 +376,36 @@ try:
 
         # problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
         # v1 end
+
+        g_k = pin.computeGeneralizedGravity(robot_model, pin_data, x_k[:nq])
         
         # v2: update reference values
         for j, runningModel in enumerate(problem.runningModels):
             problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
-            problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
+            if(nq >= 6):
+                problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
             # problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(6)])
-            problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = x_k
-            problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
-            problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
-            problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
+            # problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = x_k
+            # problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
+            problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess[j]
+            problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess[j]
+            # problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
+            # problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
+            problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+            problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
 
         problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
-        problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
+        if(nq >= 6):
+            problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
         # problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(6)])
-        problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = x_k
-        problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
-        problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
-        problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
+        # problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = x_k
+        # problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
+        problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess[j+1]
+        problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess[j+1]
+        # problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
+        # problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
+        problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+        problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
 
         problem.x0 = x_k
         # v2 end
@@ -461,9 +479,24 @@ traj_data['omega_d_p'] = traj_data['omega_d_p'][:, 0:N_traj]
 ############################################# Plot Results ##############################################
 #########################################################################################################
 
-subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, freq_per_Ta_step)
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+pin_data_full = robot_model_full.createData()
+
+n_full = len(q_0_ref)
+x_indiced = np.hstack([n_indices, n_indices+n_full])
+us_full = np.zeros((N_traj,   n_full))
+xs_full = np.zeros((N_traj, 2*n_full))
+x_i = np.hstack([q_0_ref, np.zeros(n_full)])
+for i in range(N_traj):
+    x_i[x_indiced] = xs[i]
+    us_full[i] = pin.computeGeneralizedGravity(robot_model_full, pin_data_full, x_i[:n_full])
+    us_full[i, n_indices] = us[i]
+    xs_full[i] = x_i
+
+
+subplot_data = calc_7dof_data(us_full, xs_full, t, TCP_frame_id, robot_model_full, traj_data, freq_per_Ta_step)
+# subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, freq_per_Ta_step)
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html';
 output_file_path = os.path.join(folderpath, outputname)
 

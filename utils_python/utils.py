@@ -1532,8 +1532,8 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
         setTimeout(autoscale_function, rec_time);
         '''
 
-        py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False, include_plotlyjs='cdn') # online use
-        # py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False) # offline use
+        # py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False, include_plotlyjs='cdn') # online use
+        py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False) # offline use
         with open(file_name, 'r', encoding='utf-8') as file:
             html_content = file.read()
             soup = BeautifulSoup(html_content, 'html.parser')
