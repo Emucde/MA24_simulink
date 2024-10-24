@@ -1024,9 +1024,7 @@ def plot_trajectory(traj_data):
     plt.tight_layout()
     plt.show()
 
-def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, frep_per_Ta_step):
-    robot_data = robot_model.createData()
-
+def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, frep_per_Ta_step):
     N = len(xs)
     n = robot_model.nq
 
@@ -1104,7 +1102,7 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, frep_per_Ta_
         quat_e[i] = np.hstack([quat_e_7val[6], quat_e_7val[3:6]]) #wxyz
 
         omega_e[i] = pinocchio.getFrameVelocity(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
-        omega_e_p[i] = pinocchio.getFrameAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
+        omega_e_p[i] = pinocchio.getFrameClassicalAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
 
         w[i] = np.sqrt(sp.linalg.det(J @ J.T))
 
@@ -1233,12 +1231,14 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, frep_per_Ta_
                 'sig_linestyles': ['-'],
                 'sig_colors': ['rgb(255,255,17)']}
     
+    color_7dof_rgb_arr = ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(100,212,19)', 'rgb(183,70,255)', 'rgb(15,255,255)', 'rgb(255,19,166)']
+    
     subplot8 = {'title': 'q (rad)',
-                'sig_labels': ['q1', 'q2', 'q3', 'q4', 'q5', 'q6'],
+                'sig_labels': [f"q{i+1}" for i in range(n)],
                 'sig_xdata': t,
-                'sig_ydata': [q[:, 0], q[:, 1], q[:, 2], q[:, 3], q[:, 4], q[:, 5]],
+                'sig_ydata': [q[:, i] for i in range(n)],
                 'sig_linestyles': ['-', '-', '-', '-', '-', '-'],
-                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(100,212,19)', 'rgb(183,70,255)', 'rgb(15,255,255)']}
+                'sig_colors': color_7dof_rgb_arr[:n]}
 
     subplot9 = {'title': 'e_y (m)',
                 'sig_labels': ['e_y (m)'],
@@ -1262,11 +1262,11 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, frep_per_Ta_
                 'sig_colors': ['rgb(19,159,255)']}
     
     subplot12 = {'title': 'q̇ (rad/s)',
-                'sig_labels': ['q̇_1', 'q̇_2', 'q̇_3', 'q̇_4', 'q̇_5', 'q̇_6'],
+                'sig_labels': [f"q̇_{i+1}" for i in range(n)],
                 'sig_xdata': t,
-                'sig_ydata': [q_p[:, 0], q_p[:, 1], q_p[:, 2], q_p[:, 3], q_p[:, 4], q_p[:, 5]],
+                'sig_ydata': [q_p[:, i] for i in range(n)],
                 'sig_linestyles': ['-', '-', '-', '-', '-', '-'],
-                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(100,212,19)', 'rgb(183,70,255)', 'rgb(15,255,255)']}
+                'sig_colors': color_7dof_rgb_arr[:n]}
                  
     subplot13 = {'title': 'e_z (m)',
                 'sig_labels': ['e_z (m)'],
@@ -1290,11 +1290,11 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, frep_per_Ta_
                 'sig_colors': ['rgb(255,153,200)']}
     
     subplot16 = {'title': 'q̈ (rad/s²)',
-                'sig_labels': ['q̈_1', 'q̈_2', 'q̈_3', 'q̈_4', 'q̈_5', 'q̈_6'],
+                'sig_labels': [f"q̈_{i+1}" for i in range(n)],
                 'sig_xdata': t,
-                'sig_ydata': [q_pp[:, 0], q_pp[:, 1], q_pp[:, 2], q_pp[:, 3], q_pp[:, 4], q_pp[:, 5]],
+                'sig_ydata': [q_pp[:, i] for i in range(n)],
                 'sig_linestyles': ['-', '-', '-', '-', '-', '-'],
-                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(100,212,19)', 'rgb(183,70,255)', 'rgb(15,255,255)']}
+                'sig_colors': color_7dof_rgb_arr[:n]}
     
     subplot17 = {'title': 'quat_e(2:4)',
                 'sig_labels': ['quat_e_2', 'quat_e_3', 'quat_e_4', 'quat_d_2', 'quat_d_3', 'quat_d_4'],
@@ -1346,11 +1346,11 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, frep_per_Ta_
                 'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)']}
     
     subplot24 = {'title': 'tau (Nm)',
-                'sig_labels': ['tau_1', 'tau_2', 'tau_3', 'tau_4', 'tau_5', 'tau_6'],
+                'sig_labels': [f"tau_{i+1}" for i in range(n)],
                 'sig_xdata': t,
-                'sig_ydata': [tau[:, 0], tau[:, 1], tau[:, 2], tau[:, 3], tau[:, 4], tau[:, 5]],
+                'sig_ydata': [tau[:, i] for i in range(n)],
                 'sig_linestyles': ['-', '-', '-', '-', '-', '-'],
-                'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(100,212,19)', 'rgb(183,70,255)', 'rgb(15,255,255)']}
+                'sig_colors': color_7dof_rgb_arr[:n]}
 
     subplot_data = [subplot1, subplot2, subplot3, subplot4, subplot5, subplot6, subplot7, subplot8, subplot9, subplot10, subplot11, subplot12, subplot13, subplot14, subplot15, subplot16, subplot17, subplot18, subplot19, subplot20, subplot21, subplot22, subplot23, subplot24]
 

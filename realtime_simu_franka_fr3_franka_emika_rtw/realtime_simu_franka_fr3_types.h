@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.276
+ * Model version              : 8.320
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Tue Oct 22 15:30:43 2024
+ * C++ source code generated on : Thu Oct 24 16:17:01 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -65,6 +65,64 @@ struct x_d
   real_T rot_ax_d[3];
   real_T alpha_d_offset;
   real_T q_d_rel[4];
+};
+
+#endif
+
+#ifndef DEFINED_TYPEDEF_FOR_struct_Yw0vgIQ6yZpeProSkAAsrC_
+#define DEFINED_TYPEDEF_FOR_struct_Yw0vgIQ6yZpeProSkAAsrC_
+
+struct struct_Yw0vgIQ6yZpeProSkAAsrC
+{
+  real_T MPC01[359];
+  real_T MPC6[201];
+  real_T MPC7[201];
+  real_T MPC8[395];
+  real_T MPC9[233];
+  real_T MPC10[163];
+  real_T MPC11[166];
+  real_T MPC12[163];
+  real_T MPC13[163];
+  real_T MPC14[199];
+};
+
+#endif
+
+#ifndef DEFINED_TYPEDEF_FOR_struct_gymYY5gpJPgFiiq3HdUc1G_
+#define DEFINED_TYPEDEF_FOR_struct_gymYY5gpJPgFiiq3HdUc1G_
+
+struct struct_gymYY5gpJPgFiiq3HdUc1G
+{
+  real_T t[15001];
+  real_T p_d[225015];
+  real_T p_d_p[225015];
+  real_T p_d_pp[225015];
+  real_T Phi_d[225015];
+  real_T Phi_d_p[225015];
+  real_T Phi_d_pp[225015];
+  real_T R_d[675045];
+  real_T q_d[300020];
+  real_T q_d_p[300020];
+  real_T q_d_pp[300020];
+  real_T omega_d[225015];
+  real_T omega_d_p[225015];
+  real_T alpha_d[75005];
+  real_T alpha_d_p[75005];
+  real_T alpha_d_pp[75005];
+  real_T rot_ax_d[225015];
+  real_T alpha_d_offset[75005];
+  real_T q_d_rel[300020];
+  real_T N;
+};
+
+#endif
+
+#ifndef DEFINED_TYPEDEF_FOR_struct_l1Nsuu0XOOc6U6jDqXw0mE_
+#define DEFINED_TYPEDEF_FOR_struct_l1Nsuu0XOOc6U6jDqXw0mE_
+
+struct struct_l1Nsuu0XOOc6U6jDqXw0mE
+{
+  real_T init_guess[460];
 };
 
 #endif
@@ -126,35 +184,6 @@ struct struct_RCS9FomuFmdbboJvGAYmbB
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_BbQI3KfNspcpNIEjGA7IuG_
-#define DEFINED_TYPEDEF_FOR_struct_BbQI3KfNspcpNIEjGA7IuG_
-
-struct struct_BbQI3KfNspcpNIEjGA7IuG
-{
-  real_T t[10026];
-  real_T p_d[150390];
-  real_T p_d_p[150390];
-  real_T p_d_pp[150390];
-  real_T Phi_d[150390];
-  real_T Phi_d_p[150390];
-  real_T Phi_d_pp[150390];
-  real_T R_d[451170];
-  real_T q_d[200520];
-  real_T q_d_p[200520];
-  real_T q_d_pp[200520];
-  real_T omega_d[150390];
-  real_T omega_d_p[150390];
-  real_T alpha_d[50130];
-  real_T alpha_d_p[50130];
-  real_T alpha_d_pp[50130];
-  real_T rot_ax_d[150390];
-  real_T alpha_d_offset[50130];
-  real_T q_d_rel[200520];
-  real_T N;
-};
-
-#endif
-
 #ifndef DEFINED_TYPEDEF_FOR_struct_KEa48IyRUxLtKgH405LUqB_
 #define DEFINED_TYPEDEF_FOR_struct_KEa48IyRUxLtKgH405LUqB_
 
@@ -168,11 +197,11 @@ struct struct_KEa48IyRUxLtKgH405LUqB
 #endif
 
 #ifndef SS_UINT64
-#define SS_UINT64                      25
+#define SS_UINT64                      27
 #endif
 
 #ifndef SS_INT64
-#define SS_INT64                       26
+#define SS_INT64                       28
 #endif
 
 /* Parameters (default storage) */

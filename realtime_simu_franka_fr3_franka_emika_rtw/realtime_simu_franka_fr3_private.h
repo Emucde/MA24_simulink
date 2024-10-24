@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.276
+ * Model version              : 8.320
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Tue Oct 22 15:30:43 2024
+ * C++ source code generated on : Thu Oct 24 16:17:01 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -44,6 +44,7 @@
 #endif
 
 extern real_T rt_hypotd_snf(real_T u0, real_T u1);
+extern "C" void s_function_opti_MPC8(SimStruct *rts);
 extern "C" void shm_reader_sfun(SimStruct *rts);
 extern "C" void shm_writer_sfun(SimStruct *rts);
 extern "C" void s_function_opti_sys_fun_qpp_aba(SimStruct *rts);

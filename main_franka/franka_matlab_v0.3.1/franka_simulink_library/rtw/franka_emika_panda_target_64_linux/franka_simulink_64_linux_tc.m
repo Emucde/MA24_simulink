@@ -22,7 +22,7 @@ custom_include = strjoin( {  ['-I',fullfile(franka_matlab_configs.libfranka_path
                              fullfile(project_root,'franka_simulink_library','blocks'),...
                              fullfile(matlabroot,'toolbox','coder','rtiostream','src'),...
                              fullfile(matlabroot,'toolbox','coder','rtiostream','src','utils'),...
-                             eigen3Path}, ' -I');   % Include directories 
+                             eigen3Path}, ' -I');   % Include directories
                          
 custom_library = strjoin({fullfile(franka_matlab_configs.libfranka_path,'build','examples','libexamples_common.a'),...
        fullfile(franka_matlab_configs.libfranka_path,'build','libfranka.so')},' ');
@@ -106,7 +106,7 @@ tool.setFileExtension(  'Executable',           '');
 tool.setFileExtension(  'Shared Library',       '.so');
 
 % % project dependencies
-tool.Libraries = {[custom_library,' -lPocoNet -lPocoFoundation -lPocoUtil -lmx -lmex -lmat -lm -lstdc++ -lpthread -lrt']};
+tool.Libraries = {[custom_library,' -lPocoNet -lPocoFoundation -lPocoUtil -lmx -lmex -lmat -lm -lstdc++ -lpthread -lrt']}; % -lrt custom emu
 
 % % ------------------------------
 % % C++ Linker
@@ -168,7 +168,7 @@ cfg.setCommandPattern('|>TOOL<| |>TOOL_OPTIONS<|');
 optimsOffOpts = {'-O0'};
 optimsOnOpts = {'-O3 -march=native -fno-loop-optimize'};
 
-cCompilerOpts           = {'-c -fPIC $(ANSI_OPTS) $(FRANKA_INCLUDE_DIRECTORIES)'};
+cCompilerOpts           = {'-c -fPIC -L/home/rslstudent/Students/Emanuel/casadi-3.6.6-linux64-matlab2018b -I/home/rslstudent/Students/Emanuel/casadi-3.6.6-linux64-matlab2018b/include -lcasadi $(ANSI_OPTS) $(FRANKA_INCLUDE_DIRECTORIES)'}; % casadi path custom emu
 cppCompilerOpts         = {'-c -fPIC $(CPP_17_OPTS) $(FRANKA_INCLUDE_DIRECTORIES)'};
 linkerOpts              = {'-Wl,-rpath,"$(MW_BIN_DIR)",-L"$(MW_BIN_DIR)"'};
 sharedLinkerOpts        = {'-shared -Wl,-rpath,"$(MW_BIN_DIR)",-L"$(MW_BIN_DIR)"'};

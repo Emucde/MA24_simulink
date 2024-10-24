@@ -35,8 +35,8 @@ elif robot_name == 'fr3_6dof_no_hand':
     urdf_tcp_frame_name = 'fr3_link8_tcp'
     trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.mat')
     trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj.mat')
-    n_indices = -1 + np.array([1, 2, 4, 5, 6, 7]) # list of used joints
-    # n_indices = -1 + np.array([2, 4]) # list of used joints
+    # n_indices = -1 + np.array([1, 2, 4, 5, 6, 7]) # list of used joints
+    n_indices = -1 + np.array([2, 4]) # list of used joints
     q_0_ref = np.array([0, -np.pi/4, 0, -3 * np.pi/4, 0, np.pi/2, np.pi/4])
 
     # Create a list of joints to lock (starts with joint 1)
@@ -45,7 +45,7 @@ elif robot_name == 'fr3_6dof_no_hand':
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = False
+use_data_from_simulink = True
 if use_data_from_simulink:
     # n_dof = 7 (input data from simulink are 7dof states q, qp)
     def create_shared_memory(name, size):
@@ -133,11 +133,11 @@ Ts = 1e-3  # Time step of control
 
 mpc_settings = {
     'version' : 'MPC_v1_bounds_terminate', # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' ,
-    'Ts_MPC' : 100e-3, # Interne Abtastzeit der MPC muss vielfaches von Ts sein
+    'Ts_MPC' : 10e-3, # Interne Abtastzeit der MPC muss vielfaches von Ts sein
     'N_MPC': 10, # anzahl der Stützstellen innerhalb des Prädiktionshorizont
     'int_method': 'euler', # 'euler' | 'RK2' | 'RK3' | 'RK4'
     'solver_steps': 1000
-    }
+}
 
 param_mpc_weight = {
     'q_tracking_cost': 1e2,            # penalizes deviations from the trajectory
@@ -278,7 +278,7 @@ if use_data_from_simulink:
             # time.sleep(3e-3)
             if(data_from_python_valid[:] == 0):
                 data_from_python_valid[:] = 1
-                data_from_python[:] = np.zeros(6)
+                data_from_python[:] = np.zeros(6) # TODO: hier hardcoded
                 print("Daten von Python:", data_from_python[:5])  # Zeige die ersten 5 Werte
             
             # Daten von Simulink lesen
@@ -354,107 +354,121 @@ us[0] = ddp.us[0]
 xs_init_guess = ddp.xs
 us_init_guess = ddp.us
 
+if use_data_from_simulink:
+    start_solving = False
+    data_from_python_valid[:] = 1
+    us_temp = np.zeros(6)
+    us_temp[n_indices] = us[i]
+    data_from_python[:] = us_temp
+else:
+    start_solving = True
+
 run_loop = True
 try:
     while run_loop and err_state == False:
     # for i in range(N_traj):
-        measureSimu.tic()
 
-        if use_data_from_simulink:           
+        if use_data_from_simulink:
             # Daten von Simulink lesen
             if(data_from_simulink_valid[:] == 1):
                 data_from_simulink_valid[:] = 0
                 data_from_python_valid[:] = 0
                 x_k = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+                start_solving = True
 
-        # v1: inefficient: create new problem every time
-        # param_mpc_weight['xref'] = x_k
-        # param_mpc_weight['uref'] = us[i]
+        if start_solving:
+            measureSimu.tic()
+            # v1: inefficient: create new problem every time
+            # param_mpc_weight['xref'] = x_k
+            # param_mpc_weight['uref'] = us[i]
 
-        # y_d_ref['p_d'] = p_d[:, i+MPC_traj_indices]
-        # y_d_ref['pR_d_d'] = R_d[:, :, i+MPC_traj_indices]
+            # y_d_ref['p_d'] = p_d[:, i+MPC_traj_indices]
+            # y_d_ref['pR_d_d'] = R_d[:, :, i+MPC_traj_indices]
 
-        # problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
-        # v1 end
+            # problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
+            # v1 end
 
-        g_k = pin.computeGeneralizedGravity(robot_model, pin_data, x_k[:nq])
-        
-        # v2: update reference values
-        for j, runningModel in enumerate(problem.runningModels):
-            problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
-            if(nq >= 6):
-                problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
-            # problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(6)])
-            # problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = x_k
-            # problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
-            problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess[j]
-            problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess[j]
-            # problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
-            # problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
-            problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-            problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-
-        problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
-        if(nq >= 6):
-            problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
-        # problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(6)])
-        # problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = x_k
-        # problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
-        problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess[j+1]
-        problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess[j+1]
-        # problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
-        # problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
-        problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-        problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-
-        problem.x0 = x_k
-        # v2 end
-
-        ddp = solver(problem)
-        # ddp.setCallbacks([cro.CallbackVerbose()])
-
-        measureSolver.tic()
-        hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
-        measureSolver.toc()
-        
-
-        warn_cnt, err_state = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, Ts, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
-
-        if use_data_from_simulink:
-            xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
-            us[i] = ddp.us[0]
-
-            xs_init_guess = ddp.xs
-            us_init_guess = ddp.us
-            # Daten von Python an Simulink schreiben
-            if(data_from_python_valid[:] == 0):
-                data_from_python_valid[:] = 1
-                data_from_python[:] = us[i]
-        else:
-            x_k, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, Ts, nq, nx, robot_model, robot_data, traj_data)
+            g_k = pin.computeGeneralizedGravity(robot_model, pin_data, x_k[:nq])
             
-            # alternative: Use only solver values (perfect tracking)
-            # xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
-            # us[i] = ddp.us[0]
+            # v2: update reference values
+            for j, runningModel in enumerate(problem.runningModels):
+                problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
+                if(nq >= 6):
+                    problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
+                # problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(6)])
+                # problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = x_k
+                # problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
+                problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess[j]
+                problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess[j]
+                # problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
+                # problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
+                problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
 
-            # xs_init_guess = ddp.xs
-            # us_init_guess = ddp.us
+            problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
+            if(nq >= 6):
+                problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
+            # problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(6)])
+            # problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = x_k
+            # problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
+            problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess[j+1]
+            problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess[j+1]
+            # problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
+            # problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
+            problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+            problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
 
-            # x_k = ddp.xs[1]
+            problem.x0 = x_k
+            # v2 end
 
-        if (i+1) % update_interval == 0:
-            print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()}    ", end='\r')
+            ddp = solver(problem)
+            # ddp.setCallbacks([cro.CallbackVerbose()])
 
-        if i < N_traj-1:
-            i += 1 # last value of i is N_traj-1
-            # in case of use_data_from_simulink == True, the last trajectory value
-            # is used for all further calculations (stay on the last position)
+            measureSolver.tic()
+            hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
+            measureSolver.toc()
+            
+
+            warn_cnt, err_state = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, Ts, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
+
+            if use_data_from_simulink:
+                xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
+                us[i] = ddp.us[0]
+
+                xs_init_guess = ddp.xs
+                us_init_guess = ddp.us
+                # Daten von Python an Simulink schreiben
+                if(data_from_python_valid[:] == 0):
+                    us_temp = np.zeros(6)
+                    us_temp[n_indices] = us[i]
+                    data_from_python[:] = us_temp
+                    data_from_python_valid[:] = 1
+                    start_solving = False
+            else:
+                x_k, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, Ts, nq, nx, robot_model, robot_data, traj_data)
+                
+                # alternative: Use only solver values (perfect tracking)
+                # xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
+                # us[i] = ddp.us[0]
+
+                # xs_init_guess = ddp.xs
+                # us_init_guess = ddp.us
+
+                # x_k = ddp.xs[1]
+
+            if (i+1) % update_interval == 0:
+                print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()}    ", end='\r')
+
+            if i < N_traj-1:
+                i += 1 # last value of i is N_traj-1
+                # in case of use_data_from_simulink == True, the last trajectory value
+                # is used for all further calculations (stay on the last position)
+            
+            if i == N_traj-1 and use_data_from_simulink == False:
+                run_loop = False
         
-        if i == N_traj-1 and use_data_from_simulink == False:
-            run_loop = False
-    
-        elapsed_time = measureSimu.toc()
-        freq_per_Ta_step[i] = 1/elapsed_time
+            elapsed_time = measureSimu.toc()
+            freq_per_Ta_step[i] = 1/elapsed_time
 except KeyboardInterrupt:
     print("\nFinish Solving!")
 
@@ -479,25 +493,43 @@ traj_data['omega_d_p'] = traj_data['omega_d_p'][:, 0:N_traj]
 ############################################# Plot Results ##############################################
 #########################################################################################################
 
-pin_data_full = robot_model_full.createData()
+plot_full_model = False
 
-n_full = len(q_0_ref)
-x_indiced = np.hstack([n_indices, n_indices+n_full])
-us_full = np.zeros((N_traj,   n_full))
-xs_full = np.zeros((N_traj, 2*n_full))
-x_i = np.hstack([q_0_ref, np.zeros(n_full)])
-for i in range(N_traj):
-    x_i[x_indiced] = xs[i]
-    us_full[i] = pin.computeGeneralizedGravity(robot_model_full, pin_data_full, x_i[:n_full])
-    us_full[i, n_indices] = us[i]
-    xs_full[i] = x_i
+if plot_full_model:
+    pin_data_full = robot_model_full.createData()
+
+    n_full = len(q_0_ref)
+    x_indiced = np.hstack([n_indices, n_indices+n_full])
+    us_full = np.zeros((N_traj,   n_full))
+    xs_full = np.zeros((N_traj, 2*n_full))
+    x_i = np.hstack([q_0_ref, np.zeros(n_full)])
+    for i in range(N_traj):
+        q = x_i[:n_full]
+        q_p = x_i[n_full::]
+
+        x_i[x_indiced] = xs[i]
+
+        q_red = xs[i][:nq]
+        q_p_red = xs[i][nq::]
+        u_red = us[i]
+
+        q_pp_red = pin.aba(robot_model, pin_data, q_red, q_p_red, u_red)
+        q_pp = np.zeros(n_full)
+        q_pp[n_indices] = q_pp_red
+
+        us_full[i] = pin.rnea(robot_model_full, pin_data_full, q, q_p, q_pp)
+
+        # us_full[i, n_indices] = us[i]
+        xs_full[i] = x_i
+    
+    subplot_data = calc_7dof_data(us_full, xs_full, t, TCP_frame_id, robot_model_full, pin_data_full, traj_data, freq_per_Ta_step)
+else:
+    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, freq_per_Ta_step)
 
 
-subplot_data = calc_7dof_data(us_full, xs_full, t, TCP_frame_id, robot_model_full, traj_data, freq_per_Ta_step)
-# subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, traj_data, freq_per_Ta_step)
-folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
-outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html';
+# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
 output_file_path = os.path.join(folderpath, outputname)
 
 plot_sol=True

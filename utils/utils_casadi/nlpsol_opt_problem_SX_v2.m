@@ -320,11 +320,11 @@ end
 if(compile_sfun)
     if(compile_mode == 1)
         tic;
-        compile_casadi_sfunction(f_opt, [s_fun_path, '/'], output_dir, MPC_solver, '-O3', compile_mode); % default nlpsol s-function
+        compile_casadi_sfunction(f_opt, [s_fun_path, '/'], output_dir, MPC_solver, '-O3', compile_mode, remove_sourcefiles); % default nlpsol s-function
         disp(['Compile time for casadi s-function (nlpsol): ', num2str(toc), ' s']);
     elseif(compile_mode == 2)
         tic;
-        compile_casadi_sfunction(f_opt, [s_fun_path, '/'], output_dir, MPC_solver, '-O2', compile_mode); % default opti s-function
+        compile_casadi_sfunction(f_opt, [s_fun_path, '/'], output_dir, MPC_solver, '-O2', compile_mode, remove_sourcefiles); % default opti s-function
         disp(['Compile time for casadi s-function (opti for nlpsol): ', num2str(toc), ' s']);
     end
 end

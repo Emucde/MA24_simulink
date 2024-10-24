@@ -54,14 +54,6 @@ end
 q_init = [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]';
 param_global.Ta = 1e-3;
 
-% dämpfung über diagonalterme der massenmatrix
-
-load('mpc_init_ref_test.mat');
-% load('mpc_init_guess_test.mat');
-load('param_MPC8_init_guess.mat');
-init_guess_0 = param_MPC8_init_guess.init_guess(2,:);
-load('mpc_init_weight_test.mat');
-
 open_simulink_on_start = true;
 %if(~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && sum(strfind([getenv().keys{:}], 'VSCODE')) == 0)
 % && ~isSimulinkStarted funktioniert einfach nicht.
