@@ -61,6 +61,10 @@ if use_data_from_simulink:
     shm_data_from_simulink_name       = "data_from_simulink"
     shm_data_from_simulink_valid_name = "data_from_simulink_valid"
 
+    shm_data_from_simulink_start_name = "data_from_simulink_start"
+    shm_data_from_simulink_reset_name = "data_from_simulink_reset"
+    shm_data_from_simulink_stop_name  = "data_from_simulink_stop"
+
     python_buffer_bytes = 6 * 8 # 1x6 torque inputs, 8 bytes per double
     python_flag_bytes = 1 * 8 # 1 byte
     simulink_buffer_bytes = 2 * 7 * 8 # 2x7 states q, qp, 8 bytes per double
@@ -70,12 +74,20 @@ if use_data_from_simulink:
     shm_data_from_python_valid = create_shared_memory(shm_data_from_python_valid_name, python_flag_bytes)  # 1 bytes (bit possible?)
     shm_data_from_simulink = create_shared_memory(shm_data_from_simulink_name, simulink_buffer_bytes)  # 8 bytes pro double
     shm_data_from_simulink_valid = create_shared_memory(shm_data_from_simulink_valid_name, simulink_flag_bytes)  # 1 bytes pro double
+    
+    shm_data_from_simulink_start = create_shared_memory(shm_data_from_simulink_start_name, simulink_flag_bytes)  # 1 bytes pro double
+    shm_data_from_simulink_reset = create_shared_memory(shm_data_from_simulink_reset_name, simulink_flag_bytes)  # 1 bytes pro double
+    shm_data_from_simulink_stop = create_shared_memory(shm_data_from_simulink_stop_name, simulink_flag_bytes)  # 1 bytes pro double
 
     data_from_python = np.ndarray((python_buffer_bytes//8,), dtype=np.float64, buffer=shm_data_from_python.buf)
     data_from_python_valid = np.ndarray((python_flag_bytes//8,), dtype=np.float64, buffer=shm_data_from_python_valid.buf)
 
     data_from_simulink = np.ndarray((simulink_buffer_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink.buf)
     data_from_simulink_valid = np.ndarray((simulink_flag_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink_valid.buf)
+
+    data_from_simulink_start = np.ndarray((simulink_flag_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink_start.buf)
+    data_from_simulink_stop = np.ndarray((simulink_flag_bytes//8,),  dtype=np.float64, buffer=shm_data_from_simulink_stop.buf)
+    data_from_simulink_reset = np.ndarray((simulink_flag_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink_reset.buf)
 
 #########################################################################################################
 ################################## Get Trajectory from mat file #########################################
@@ -106,6 +118,7 @@ traj_select 4: 2DOF Test Trajectory, Polynomial, joint space
 
 traj_select = 4
 
+N_traj_true = traj_data_all['N'][0, 0][0, 0]
 t = traj_data_all['t'][0,0][0, :]
 p_d = traj_data_all['p_d'][0,0][:, :, traj_select]
 p_d_p = traj_data_all['p_d_p'][0,0][:, :, traj_select]
@@ -116,6 +129,8 @@ omega_d = traj_data_all['omega_d'][0,0][:, :, traj_select]
 omega_d_p = traj_data_all['omega_d_p'][0,0][:, :, traj_select]
 
 traj_data = {'p_d': p_d, 'p_d_p': p_d_p, 'p_d_pp': p_d_pp, 'R_d': R_d, 'q_d': q_d, 'omega_d': omega_d, 'omega_d_p': omega_d_p}
+traj_data_true = {'p_d': p_d[:, 0:N_traj_true], 'p_d_p': p_d_p[:, 0:N_traj_true], 'p_d_pp': p_d_pp[:, 0:N_traj_true], 'R_d': R_d[:, :, 0:N_traj_true], 'q_d': q_d[:, 0:N_traj_true], 'omega_d': omega_d[:, 0:N_traj_true], 'omega_d_p': omega_d_p[:, 0:N_traj_true]}
+t_true = t[0:N_traj_true]
 
 q_0 = traj_param_all['q_0'][0,0][n_indices, traj_select]
 q_0_p = traj_param_all['q_0_p'][0,0][n_indices, traj_select]
@@ -210,7 +225,8 @@ nx = 2*nq
 nu = nq # fully actuated
 
 # Gravity should be in -y direction
-robot_model.gravity.linear[:] = [0, 0, -9.81]
+# robot_model.gravity.linear[:] = [0, 0, -9.81]
+robot_model.gravity.linear[:] = [0, 0, 0]
 
 robot_data = robot_model.createData()
 
@@ -246,7 +262,8 @@ solver, init_guess_fun, create_ocp_problem, simulate_model  = get_mpc_funs(opt_t
 N_step = int(Ts_MPC/Ts)
 T_horizon = (N_MPC-1) * Ts_MPC
 T = T_end+T_horizon-T_start # need more trajectory points for mpc
-N_traj = int(T_end/Ts)
+# N_traj = int(T_end/Ts)
+N_traj = N_traj_true
 t = np.arange(T_start, T, Ts)
 print(f'T_horizon: {T_horizon} s, Ts: {Ts} s, N_MPC: {N_MPC}\n')
 
@@ -282,11 +299,12 @@ if use_data_from_simulink:
                 print("Daten von Python:", data_from_python[:5])  # Zeige die ersten 5 Werte
             
             # Daten von Simulink lesen
-            if(data_from_simulink_valid[:] == 1):
+            if(data_from_simulink_valid[:] == 1 and data_from_simulink_start[:] == 1):
                 print("Daten von Simulink:", data_from_simulink[:])  # Zeige die ersten 5 Werte
                 data_from_simulink_valid[:] = 0
                 data_from_python_valid[:] = 0
                 x_init_robot = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+                run_flag = True
                 break
             # time.sleep(1e-9)
     except KeyboardInterrupt:
@@ -298,6 +316,7 @@ if use_data_from_simulink:
             print("\nStart Solving\n")
 else:
     x_init_robot = np.hstack([q_0, q_0_p])
+    run_flag = True
 
 
 tau_init_robot = pin.rnea(robot_model, robot_data, q_0, q_0_p, q_0_pp)
@@ -363,6 +382,9 @@ if use_data_from_simulink:
 else:
     start_solving = True
 
+folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+outputname = 'test.html'
+output_file_path = os.path.join(folderpath, outputname)
 run_loop = True
 try:
     while run_loop and err_state == False:
@@ -370,12 +392,38 @@ try:
 
         if use_data_from_simulink:
             # Daten von Simulink lesen
-            if(data_from_simulink_valid[:] == 1):
+            start = data_from_simulink_start[:]
+            reset = data_from_simulink_reset[:]
+            stop = data_from_simulink_stop[:]
+
+            if(data_from_simulink_valid[:] == 1 and run_flag == True):
                 data_from_simulink_valid[:] = 0
                 data_from_python_valid[:] = 0
                 x_k = data_from_simulink[np.hstack([n_indices, n_indices+7])]
                 start_solving = True
-
+            
+            if run_flag == False:
+                if start == 1 and reset == 0 and stop == 0:
+                    run_flag = True
+                    print("MPC started by Simulink")
+                    data_from_simulink_start[:] = 0
+                    data_from_python[:] = np.zeros(6)
+                    data_from_python_valid[:] = 1
+                elif reset == 1 and i == N_traj-1:
+                    i = 0
+                    print("MPC reset by Simulink")
+                    subplot_data = calc_7dof_data(us, xs, t_true, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
+                    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False)
+                    data_from_simulink_reset[:] = 0
+                    data_from_python_valid[:] = 0
+                    data_from_python[:] = np.zeros(6)
+            elif run_flag == True and stop == 1:
+                run_flag = False
+                print("MPC stopped by Simulink")
+                data_from_python[:] = np.zeros(6)
+                data_from_simulink_stop[:] = 0
+                data_from_python_valid[:] = 0
+                # TODO: STOP DOES NOT WORK!!!!
         if start_solving:
             measureSimu.tic()
             # v1: inefficient: create new problem every time
@@ -459,10 +507,12 @@ try:
             if (i+1) % update_interval == 0:
                 print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()}    ", end='\r')
 
-            if i < N_traj-1:
+            if i < N_traj-1 and run_flag == True:
                 i += 1 # last value of i is N_traj-1
                 # in case of use_data_from_simulink == True, the last trajectory value
                 # is used for all further calculations (stay on the last position)
+            else:
+                run_flag = False
             
             if i == N_traj-1 and use_data_from_simulink == False:
                 run_loop = False
@@ -475,18 +525,11 @@ except KeyboardInterrupt:
 xs[N_traj-1] = x_k
 us[N_traj-1] = us[N_traj-2] # simply use previous value for display (does not exist)
 
+traj_data = traj_data_true
+t = t_true
+
 measureSolver.print_time(additional_text='Total Solver time')
 measureTotal.print_time(additional_text='Total MPC time')
-
-t = t[:N_traj]
-
-traj_data['p_d']    = traj_data['p_d'][   :, 0:N_traj]
-traj_data['p_d_p']  = traj_data['p_d_p'][ :, 0:N_traj]
-traj_data['p_d_pp'] = traj_data['p_d_pp'][:, 0:N_traj]
-
-traj_data['q_d']    = traj_data['q_d'][   :, 0:N_traj]
-traj_data['omega_d']  = traj_data['omega_d'][ :, 0:N_traj]
-traj_data['omega_d_p'] = traj_data['omega_d_p'][:, 0:N_traj]
 
 
 #########################################################################################################
@@ -556,4 +599,10 @@ if use_data_from_simulink:
     shm_data_from_simulink.unlink()
     shm_data_from_simulink_valid.close()
     shm_data_from_simulink_valid.unlink()
+    shm_data_from_simulink_start.close()
+    shm_data_from_simulink_start.unlink()
+    shm_data_from_simulink_reset.close()
+    shm_data_from_simulink_reset.unlink()
+    shm_data_from_simulink_stop.close()
+    shm_data_from_simulink_stop.unlink()
     print("Shared Memory freigegeben.")

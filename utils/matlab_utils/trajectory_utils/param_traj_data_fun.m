@@ -13,6 +13,7 @@ function param_traj_data_out = param_traj_data_fun(traj_settings, method, data_i
         % Create high dimensional struct from the trajectory bus
         
         bus_temp_struct = struct;
+        bus_temp_struct.N = traj_settings.N_data_real;
         bus_temp_struct.t = traj_settings.t;
         for i = 1:numel(fields)
             val = traj_settings.x_d.(fields{i});

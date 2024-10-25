@@ -15,15 +15,26 @@
 #define SHM_VALID_FLAG_SIZE 1
 #define SHM_VALID_FLAG_SIZE_BYTES (SHM_VALID_FLAG_SIZE * sizeof(double))
 
+#define SHM_START_FLAG_SIZE 1
+#define SHM_START_FLAG_SIZE_BYTES (SHM_START_FLAG_SIZE * sizeof(double))
+
+#define SHM_RESET_FLAG_SIZE 1
+#define SHM_RESET_FLAG_SIZE_BYTES (SHM_RESET_FLAG_SIZE * sizeof(double))
+
+#define SHM_STOP_FLAG_SIZE 1
+#define SHM_STOP_FLAG_SIZE_BYTES (SHM_STOP_FLAG_SIZE * sizeof(double))
+
+#define INPUT_NUM 5
+
 static void mdlInitializeSizes(SimStruct *S)
 {
-    ssSetNumSFcnParams(S, 2); // Two parameters: first: shared memory name of data, second: shared memory name of valid flag
+    ssSetNumSFcnParams(S, INPUT_NUM); // Two parameters: first: shared memory name of data, second: shared memory name of valid flag
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) {
         return;
     }
-    if (!ssSetNumInputPorts(S, 2)) return;  // two inputs: data and valid flag
-    int shm_size[2] = {SHM_DATA_SIZE, SHM_VALID_FLAG_SIZE};
-    for (int i = 0; i < 2; i++) {
+    if (!ssSetNumInputPorts(S, INPUT_NUM)) return;  // INPUT_NUM inputs: data and valid flag
+    int shm_size[INPUT_NUM] = {SHM_DATA_SIZE, SHM_VALID_FLAG_SIZE, SHM_START_FLAG_SIZE, SHM_RESET_FLAG_SIZE, SHM_STOP_FLAG_SIZE};
+    for (int i = 0; i < INPUT_NUM; i++) {
         ssSetInputPortWidth(S, i, shm_size[i]);
         ssSetInputPortDataType(S, i, SS_DOUBLE);
         ssSetInputPortDirectFeedThrough(S, i, 1);
@@ -35,7 +46,7 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetNumSampleTimes(S, 1);
     ssSetNumRWork(S, 0);
     ssSetNumIWork(S, 0);
-    ssSetNumPWork(S, 4);   // For two Shared Memory Pointers and two File Descriptors
+    ssSetNumPWork(S, INPUT_NUM*2);   // For INPUT_NUM*2 Shared Memory Pointers and two File Descriptors
     ssSetNumModes(S, 0);
     ssSetNumNonsampledZCs(S, 0);
 
@@ -51,8 +62,8 @@ static void mdlInitializeSampleTimes(SimStruct *S)
 #define MDL_START
 static void mdlStart(SimStruct *S)
 {
-    int shm_size_bytes[2] = {SHM_DATA_SIZE_BYTES, SHM_VALID_FLAG_SIZE_BYTES};
-    for (int i = 0; i < 2; i++) {
+    int shm_size_bytes[INPUT_NUM] = {SHM_DATA_SIZE_BYTES, SHM_VALID_FLAG_SIZE_BYTES, SHM_START_FLAG_SIZE_BYTES, SHM_RESET_FLAG_SIZE_BYTES, SHM_STOP_FLAG_SIZE_BYTES};
+    for (int i = 0; i < INPUT_NUM; i++) {
         char_T shm_name[256];
         mxGetString(ssGetSFcnParam(S, i), shm_name, sizeof(shm_name));
         ssPrintf("Attempting to open shared memory %d: %s\n", i, shm_name);
@@ -99,8 +110,8 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     //ssPrintf("Number of input ports: %d\n", ssGetNumInputPorts(S));
     //ssPrintf("Input port width: %d\n", ssGetInputPortWidth(S, 0));
     
-    int shm_size_bytes[2] = {SHM_DATA_SIZE_BYTES, SHM_VALID_FLAG_SIZE_BYTES};
-    for (int i = 0; i < 2; i++) {
+    int shm_size_bytes[INPUT_NUM] = {SHM_DATA_SIZE_BYTES, SHM_VALID_FLAG_SIZE_BYTES, SHM_START_FLAG_SIZE_BYTES, SHM_RESET_FLAG_SIZE_BYTES, SHM_STOP_FLAG_SIZE_BYTES};
+    for (int i = 0; i < INPUT_NUM; i++) {
         double *u = (double*)ssGetInputPortSignal(S, i);
         double *shared_data = (double*)ssGetPWorkValue(S, i*2);
         
@@ -124,7 +135,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 
 static void mdlTerminate(SimStruct *S)
 {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < INPUT_NUM; i++) {
         double *shared_data = (double*)ssGetPWorkValue(S, i*2);
         int fd = (int)(intptr_t)ssGetPWorkValue(S, i*2+1);
         

@@ -1104,7 +1104,7 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, 
         omega_e[i] = pinocchio.getFrameVelocity(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
         omega_e_p[i] = pinocchio.getFrameClassicalAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
 
-        w[i] = np.sqrt(sp.linalg.det(J @ J.T))
+        w[i] = np.sqrt(np.abs(sp.linalg.det(J @ J.T)))
 
         p_err[i] = p_e[i] - p_d[:, i]
         p_err_p[i] = p_e_p[i] - p_d_p[:, i]

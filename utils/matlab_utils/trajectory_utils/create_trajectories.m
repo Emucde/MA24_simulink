@@ -74,6 +74,7 @@ try
         t = 0 : param_global.Ta : T_sim + T_horizon_max;
 
         traj_settings.N_data = ceil( 1 + (T_sim + T_horizon_max) / param_global.Ta );
+        traj_settings.N_data_real = ceil( T_sim / param_global.Ta );
         traj_settings.N_traj = param_traj.N_traj;
         traj_settings.t = t;
         traj_settings.x_d = init_bus_param.x_d;

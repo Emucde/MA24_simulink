@@ -106,7 +106,7 @@ tool.setFileExtension(  'Executable',           '');
 tool.setFileExtension(  'Shared Library',       '.so');
 
 % % project dependencies
-tool.Libraries = {[custom_library,' -lPocoNet -lPocoFoundation -lPocoUtil -lmx -lmex -lmat -lm -lstdc++ -lpthread -lrt']}; % -lrt custom emu
+tool.Libraries = {[custom_library,' -lPocoNet -lPocoFoundation -lPocoUtil -lmx -lmex -lmat -lm -lstdc++ -lpthread -lrt -L/home/rslstudent/Students/Emanuel/casadi-3.6.6-linux64-matlab2018b -I/home/rslstudent/Students/Emanuel/casadi-3.6.6-linux64-matlab2018b/include -lcasadi']}; % -lrt custom emu
 
 % % ------------------------------
 % % C++ Linker

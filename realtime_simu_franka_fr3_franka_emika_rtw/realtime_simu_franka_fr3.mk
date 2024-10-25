@@ -2,7 +2,7 @@
 ## Makefile generated for component 'realtime_simu_franka_fr3'. 
 ## 
 ## Makefile     : realtime_simu_franka_fr3.mk
-## Generated on : Thu Oct 24 16:17:03 2024
+## Generated on : Fri Oct 25 14:40:25 2024
 ## Final product: $(RELATIVE_PATH_TO_ANCHOR)/realtime_simu_franka_fr3
 ## Product type : executable
 ## 
@@ -63,7 +63,7 @@ FRANKA_INCLUDE_DIRECTORIES = -I/home/rslstudent/Students/Emanuel/MA24_simulink/m
 
 TOOLCHAIN_SRCS = 
 TOOLCHAIN_INCS = 
-TOOLCHAIN_LIBS = /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka/build/examples/libexamples_common.a /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka/build/libfranka.so -lPocoNet -lPocoFoundation -lPocoUtil -lmx -lmex -lmat -lm -lstdc++ -lpthread -lrt
+TOOLCHAIN_LIBS = /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka/build/examples/libexamples_common.a /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka/build/libfranka.so -lPocoNet -lPocoFoundation -lPocoUtil -lmx -lmex -lmat -lm -lstdc++ -lpthread -lrt -L/home/rslstudent/Students/Emanuel/casadi-3.6.6-linux64-matlab2018b -I/home/rslstudent/Students/Emanuel/casadi-3.6.6-linux64-matlab2018b/include -lcasadi
 
 #------------------------
 # BUILD TOOL COMMANDS
@@ -176,7 +176,7 @@ INCLUDES = $(INCLUDES_BUILDINFO)
 
 DEFINES_BUILD_ARGS = -DCLASSIC_INTERFACE=0 -DALLOCATIONFCN=0 -DEXT_MODE=1 -DMAT_FILE=1 -DONESTEPFCN=1 -DTERMFCN=1 -DMULTI_INSTANCE_CODE=0 -DINTEGER_CODE=0 -DMT=0
 DEFINES_CUSTOM = 
-DEFINES_OPTS = -DXCP_DAQ_SUPPORT -DXCP_CALIBRATION_SUPPORT -DXCP_TIMESTAMP_SUPPORT -DXCP_TIMESTAMP_BASED_ON_SIMULATION_TIME -DXCP_SET_MTA_SUPPORT -DEXTMODE_XCP_TRIGGER_SUPPORT -DINTERNAL_XCP_MEM_BLOCK_1_SIZE=128 -DINTERNAL_XCP_MEM_BLOCK_1_NUMBER=1 -DINTERNAL_XCP_MEM_BLOCK_2_SIZE=144 -DINTERNAL_XCP_MEM_BLOCK_2_NUMBER=4 -DINTERNAL_XCP_MEM_BLOCK_3_SIZE=144 -DINTERNAL_XCP_MEM_BLOCK_3_NUMBER=4 -DINTERNAL_XCP_MEM_RESERVED_POOLS_TOTAL_SIZE=15310 -DINTERNAL_XCP_MEM_RESERVED_POOLS_NUMBER=5 -DXCP_MEM_DAQ_RESERVED_POOL_BLOCKS_NUMBER=3 -DXCP_MEM_DAQ_RESERVED_POOLS_NUMBER=1 -DXCP_MIN_EVENT_NO_RESERVED_POOL=2 -DXCP_EXTMODE_RUN_BACKGROUND_FLUSH -DEXTMODE_STATIC -DEXTMODE_STATIC_SIZE=1000000 -DON_TARGET_WAIT_FOR_START=1 -DTID01EQ=1
+DEFINES_OPTS = -DXCP_DAQ_SUPPORT -DXCP_CALIBRATION_SUPPORT -DXCP_TIMESTAMP_SUPPORT -DXCP_TIMESTAMP_BASED_ON_SIMULATION_TIME -DXCP_SET_MTA_SUPPORT -DEXTMODE_XCP_TRIGGER_SUPPORT -DINTERNAL_XCP_MEM_BLOCK_1_SIZE=128 -DINTERNAL_XCP_MEM_BLOCK_1_NUMBER=1 -DINTERNAL_XCP_MEM_BLOCK_2_SIZE=144 -DINTERNAL_XCP_MEM_BLOCK_2_NUMBER=4 -DINTERNAL_XCP_MEM_BLOCK_3_SIZE=120 -DINTERNAL_XCP_MEM_BLOCK_3_NUMBER=4 -DINTERNAL_XCP_MEM_RESERVED_POOLS_TOTAL_SIZE=14110 -DINTERNAL_XCP_MEM_RESERVED_POOLS_NUMBER=5 -DXCP_MEM_DAQ_RESERVED_POOL_BLOCKS_NUMBER=3 -DXCP_MEM_DAQ_RESERVED_POOLS_NUMBER=1 -DXCP_MIN_EVENT_NO_RESERVED_POOL=2 -DXCP_EXTMODE_RUN_BACKGROUND_FLUSH -DEXTMODE_STATIC -DEXTMODE_STATIC_SIZE=1000000 -DON_TARGET_WAIT_FOR_START=1 -DTID01EQ=1
 DEFINES_STANDARD = -DMODEL=realtime_simu_franka_fr3 -DNUMST=2 -DNCSTATES=0 -DHAVESTDIO -DRT -DUSE_RTMODEL
 
 DEFINES = $(DEFINES_BUILD_ARGS) $(DEFINES_CUSTOM) $(DEFINES_OPTS) $(DEFINES_STANDARD)
@@ -319,19 +319,19 @@ $(PRODUCT) : $(OBJS) $(PREBUILT_OBJS) $(MAIN_OBJ)
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
 
 
-%.o : $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/blocks/%.c
-	$(CC) $(CFLAGS) -o"$@" "$<"
-
-
-%.o : $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/blocks/%.cpp
-	$(CPP) $(CPPFLAGS) -o "$@" "$<"
-
-
 %.o : $(START_DIR)/main_franka/Controller/s_functions/%.c
 	$(CC) $(CFLAGS) -o"$@" "$<"
 
 
 %.o : $(START_DIR)/main_franka/Controller/s_functions/%.cpp
+	$(CPP) $(CPPFLAGS) -o "$@" "$<"
+
+
+%.o : $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/blocks/%.c
+	$(CC) $(CFLAGS) -o"$@" "$<"
+
+
+%.o : $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/blocks/%.cpp
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
 
 

@@ -53,6 +53,17 @@ init_bus_param.x_d = bus_temp_struct;
 x_d = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
 clear -regexp slBus; clear bus_temp_struct;
 
+%% Trajectory state machine bus
+bus_temp_struct = struct;
+bus_temp_struct.start = 0;
+bus_temp_struct.reset = 0;
+bus_temp_struct.stop = 0;
+
+init_bus_param.state_traj_bus = bus_temp_struct;
+
+state_traj_bus = eval(Simulink.Bus.createObject(bus_temp_struct).busName);
+clear -regexp slBus; clear bus_temp_struct;
+
 %% debug position and orientation bus for ct control
 clear bus_temp_struct;
 

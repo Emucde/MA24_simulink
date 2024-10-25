@@ -24,8 +24,9 @@ void cleanup() {
 static void mdlInitializeSizes(SimStruct *S)
 {
     int_T i;
-    char_T file_name[256];
-    char_T function_name[256];
+    const casadi_int* sp;
+    char_T file_name[256]="s_functions/fr3_no_hand_6dof/MPC8.casadi";
+    char_T function_name[256]="MPC8";
 
     ssSetNumSFcnParams(S, 2);
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) {
@@ -33,27 +34,25 @@ static void mdlInitializeSizes(SimStruct *S)
     }
 
     // if (!mxIsChar(ssGetSFcnParam(S, 0))) {
-    //   mexErrMsgIdAndTxt( "MATLAB:s_function_nlpsol_MPC8:invalidParameter",
+    //   ssPrintf( "MATLAB:s_function_nlpsol_MPC8:invalidParameter",
     //                      "file name must be a string.");
     // }
     // if (!mxIsChar(ssGetSFcnParam(S, 1))) {
-    //   mexErrMsgIdAndTxt( "MATLAB:s_function_nlpsol_MPC8:invalidParameter",
+    //   ssPrintf( "MATLAB:s_function_nlpsol_MPC8:invalidParameter",
     //                      "function name must be a string.");
     // }
     
-    mxGetString(ssGetSFcnParam(S, 0), file_name, sizeof(file_name));
+    // mxGetString(ssGetSFcnParam(S, 0), file_name, sizeof(file_name));
     // file_name = mxArrayToString(ssGetSFcnParam(S, 0));
 
     if (!file_name) {
-      mexErrMsgIdAndTxt( "MATLAB:s_function_nlpsol_MPC8:invalidParameter",
-                         "file name must be a string.");
+      ssPrintf( "MATLAB:s_function_nlpsol_MPC8:invalidParameter\nfile name must be a string.\n");
     }
 
-    mxGetString(ssGetSFcnParam(S, 1), function_name, sizeof(function_name));
+    // mxGetString(ssGetSFcnParam(S, 1), function_name, sizeof(function_name));
     // function_name = mxArrayToString(ssGetSFcnParam(S, 1));
     if (!function_name) {
-      mexErrMsgIdAndTxt( "MATLAB:s_function_nlpsol_MPC8:invalidParameter",
-                         "function name must be a string.");
+      ssPrintf( "MATLAB:s_function_nlpsol_MPC8:invalidParameter\nfunction name must be a string.\n");
     }
 
     // Simulink does not provide a cleanup-hook when parameters are changed
@@ -62,11 +61,10 @@ static void mdlInitializeSizes(SimStruct *S)
     // Load file
     ssPrintf("Loading file '%s'...", file_name);
     ret = casadi_c_push_file(file_name);
-    mxFree((void *) file_name); // casted as void * to get rid of warnings
+    // mxFree((void *) file_name); // casted as void * to get rid of warnings // this commands causes a crash in realtime environment
 
     if (ret) {
-      mexErrMsgIdAndTxt( "MATLAB:s_function_nlpsol_MPC8:Load",
-                         "Failed to load file.");
+      ssPrintf( "MATLAB:s_function_nlpsol_MPC8:Load\nFailed to load file.\n");
     }
     ssPrintf("success\n");
 
@@ -78,8 +76,7 @@ static void mdlInitializeSizes(SimStruct *S)
     // mxFree((void *) function_name); // casted as void * to get rid of warnings // this commands causes a crash in realtime environment
     if (id<0) {
       casadi_c_pop();
-      mexErrMsgIdAndTxt( "MATLAB:s_function_nlpsol_MPC8:Load",
-                         "Failed to locate function in loaded file.");
+      ssPrintf( "MATLAB:s_function_nlpsol_MPC8:Load\nFailed to locate function in loaded file.\n");
     }
     ssPrintf("success\n");
 
@@ -98,8 +95,7 @@ static void mdlInitializeSizes(SimStruct *S)
       casadi_int nnz = sp[2+sp[1]];
       if (nnz!=sp[0]*sp[1]) {
         casadi_c_pop();
-        mexErrMsgIdAndTxt( "MATLAB:s_function_nlpsol_MPC8:sparsity",
-                         "This example only supports dense inputs.");
+        ssPrintf( "MATLAB:s_function_nlpsol_MPC8:sparsity\nThis example only supports dense inputs.\n");
       }
       ssSetInputPortMatrixDimensions(S, i, sp[0], sp[1]);
     }
@@ -111,8 +107,7 @@ static void mdlInitializeSizes(SimStruct *S)
       /* Dense outputs assumed here */
       if (nnz!=sp[0]*sp[1]) {
         casadi_c_pop();
-        mexErrMsgIdAndTxt( "MATLAB:s_function_nlpsol_MPC8:sparsity",
-                         "This example only supports dense outputs. Use 'densify'.");
+        ssPrintf( "MATLAB:s_function_nlpsol_MPC8:sparsity\nThis example only supports dense outputs. Use 'densify'.\n");
       }
       ssSetOutputPortMatrixDimensions(S, i, sp[0], sp[1]);
     }
@@ -177,13 +172,13 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     }
 }
 
-/*static void mdlStart(SimStruct *S)
+static void mdlStart(SimStruct *S)
 {
     // Allocate memory (thread-safe)
     casadi_c_incref_id(id);
     // Checkout thread-local memory (not thread-safe)
     mem = casadi_c_checkout_id(id);
-}*/
+}
 
 static void mdlTerminate(SimStruct *S) {
   /* Free memory (thread-safe) */
