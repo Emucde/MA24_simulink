@@ -403,11 +403,12 @@ try:
                 start_solving = True
             
             if run_flag == False:
+                start_solving = False
+                data_from_python[:] = np.zeros(6)
                 if start == 1 and reset == 0 and stop == 0:
                     run_flag = True
                     print("MPC started by Simulink")
                     data_from_simulink_start[:] = 0
-                    data_from_python[:] = np.zeros(6)
                     data_from_python_valid[:] = 1
                 elif reset == 1 and i == N_traj-1:
                     i = 0
@@ -416,14 +417,13 @@ try:
                     plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False)
                     data_from_simulink_reset[:] = 0
                     data_from_python_valid[:] = 0
-                    data_from_python[:] = np.zeros(6)
             elif run_flag == True and stop == 1:
-                run_flag = False
                 print("MPC stopped by Simulink")
                 data_from_python[:] = np.zeros(6)
                 data_from_simulink_stop[:] = 0
                 data_from_python_valid[:] = 0
-                # TODO: STOP DOES NOT WORK!!!!
+                run_flag = False
+                start_solving = False
         if start_solving:
             measureSimu.tic()
             # v1: inefficient: create new problem every time
