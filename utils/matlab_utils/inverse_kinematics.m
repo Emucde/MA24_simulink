@@ -52,11 +52,11 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
         ub = param_robot.q_limit_upper; % Define the upper bounds for the joint angles.
         
         % Define the cost function as a combination of position error and manipulability error.
-        if(n > 6)
-            nl_spring = @(q) nl_spring_force(q, ct_ctrl_param, param_robot);
-        else
+        %if(n > 6)
+        %    nl_spring = @(q) nl_spring_force(q, ct_ctrl_param, param_robot);
+        %else
             nl_spring = @(q) zeros(n,1);
-        end
+        %end
         
         x_pos_err = @(q) forward_kinematics(q) - xe0;
         fun = @(q) 1/2*dot(x_pos_err(q), Q1*x_pos_err(q)) ... 

@@ -79,7 +79,7 @@ traj_struct.traj_type = [traj_mode.sinus];
 traj_struct.N = 3;
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -3.5); % Param differential filter 5th order trajectory
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
-traj_struct = create_param_sin_poly(traj_struct, param_global, 'T', 1, 'phi', 0); % Param for sinus poly trajectory
+traj_struct = create_param_sin_poly(traj_struct, param_global, 'T', 5, 'phi', 0); % Param for sinus poly trajectory
 traj_struct.name = 'Wrist Singularity 1, Sinus, Workspace';
 traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
@@ -107,6 +107,17 @@ traj_struct = create_param_sin_poly(traj_struct, param_global, 'T', 1, 'phi', 0)
 traj_struct.name = '2DOF Test Trajectory, Polynomial, joint space';
 traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
+
+%% Trajectory 6: fr3 singularity...
+Q_pos = 1e5*diag([1,1,1e-5,1,1,1]);  % Weight for the position error in the cost function.
+Q_m = 1e8;             % Weight for the manipulability error in the cost function.
+Q_q = 1e5*diag([1,1,1,1,1,1,1]);    % Weight for the deviaton of q_sol to q_d
+Q_nl = 1e-1 * eye(n);  % Weight of nl_spring_force(q, ct_ctrl_param, param_robot) -> pose should not start near to limits!
+q_d = param_robot.q_0_ref';
+H_d = hom_transform_endeffector_py(q_d);
+xe_d = [H_d(1:3,4); rotm2quat_v4(H_d(1:3,1:3))];
+
+[q_init, ~] = inverse_kinematics(param_robot, xe_d, q_d, Q_pos, Q_m, Q_q, Q_nl, 1e-3, 100, ctrl_param.ct);
 
 function out = kin_fun(xe, q_reduced, q_0, n_indices)
     q = q_0;
