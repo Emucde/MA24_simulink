@@ -10,8 +10,6 @@ from scipy.optimize import minimize
 import scipy.io as sio
 from multiprocessing import shared_memory
 
-use_data_from_simulink = True
-
 sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
 from utils_python.utils import *
 
@@ -47,6 +45,7 @@ elif robot_name == 'fr3_6dof_no_hand':
 
 ################################################ REALTIME ###############################################
 
+use_data_from_simulink = False
 if use_data_from_simulink:
     # n_dof = 7 (input data from simulink are 7dof states q, qp)
     def create_shared_memory(name, size):
@@ -163,8 +162,8 @@ param_mpc_weight = {
     'q_ureg_terminate_cost': 1e-2,  # penalizes deviations from the trajectory at the end
     'q_xreg_cost': 1e-2,              # penalizes changes from the current state
     'q_ureg_cost': 1e-2,              # penalizes changes from the current input
-    'q_x_bound_cost': 1e-10,              # penalizes ignoring the bounds
-    'q_u_bound_cost': 1e-10,              # penalizes ignoring the bounds
+    'q_x_bound_cost': 1e2,              # penalizes ignoring the bounds
+    'q_u_bound_cost': 1e2,              # penalizes ignoring the bounds
     'Kd': 100*np.eye(3),
     'Kp': 100*np.eye(3),
     'lb_y_ref_N': -1e-6*np.ones(3), # only used if MPC_v3_bounds_yN_ref
@@ -284,42 +283,8 @@ param_traj = {
     'int_time': MPC_int_time,
 }
 
-
-x_init_robot = None
-err_state = False
-
-if use_data_from_simulink:
-    print("Warte auf Daten von Simulink...\n")
-    try:
-        while True:
-            # Daten für Simulink schreiben
-            # time.sleep(3e-3)
-            if(data_from_python_valid[:] == 0):
-                data_from_python_valid[:] = 1
-                data_from_python[:] = np.zeros(6) # TODO: hier hardcoded
-                print("Daten von Python:", data_from_python[:5])  # Zeige die ersten 5 Werte
-            
-            # Daten von Simulink lesen
-            if(data_from_simulink_valid[:] == 1 and data_from_simulink_start[:] == 1):
-                print("Daten von Simulink:", data_from_simulink[:])  # Zeige die ersten 5 Werte
-                data_from_simulink_valid[:] = 0
-                data_from_python_valid[:] = 0
-                x_init_robot = data_from_simulink[np.hstack([n_indices, n_indices+7])]
-                run_flag = False
-                break
-            # time.sleep(1e-9)
-    except KeyboardInterrupt:
-        if(x_init_robot is None):
-            x_init_robot = np.hstack([q_0, q_0_p])
-            err_state = True
-            print("\033[31mError: Keine Daten von Simulink erhalten. Beende Programm...\033[0m")
-        else:
-            print("\nStart Solving\n")
-else:
-    x_init_robot = np.hstack([q_0, q_0_p])
-    run_flag = True
-
-
+# use start pose at trajectory for first init guess
+x_init_robot = np.hstack([q_0, q_0_p])
 tau_init_robot = pin.rnea(robot_model, robot_data, q_0, q_0_p, q_0_pp)
 
 x_k, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_init_robot, N_traj, N_MPC, nx, nu, traj_data)
@@ -328,7 +293,14 @@ x_k, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_ini
 ######################################### MPC Calcuations ###############################################
 #########################################################################################################
 
-error = False
+if use_data_from_simulink:
+    run_flag = False
+    data_from_python_valid[:] = 0
+    data_from_python[:] = np.zeros(6)
+else:
+    run_flag = True
+
+err_state = False
 warn_cnt = 0
 conv_max_limit = 10
 update_interval = N_traj//100
@@ -343,15 +315,15 @@ measureTotal.tic()
 i = 0
 # create first problem:
 y_d_ref = {
-    'p_d': p_d[:, 0+MPC_traj_indices],
+    'p_d': p_d[:,    0+MPC_traj_indices],
     'R_d': R_d[:, :, 0+MPC_traj_indices]
 }
 
 param_mpc_weight['xref'] = x_k
 param_mpc_weight['uref'] = us_init_guess[0]
 
-param_mpc_weight['umin'] = -robot_model.effortLimit
-param_mpc_weight['umax'] = robot_model.effortLimit
+param_mpc_weight['umin'] = -robot_model.effortLimit*0.05
+param_mpc_weight['umax'] = robot_model.effortLimit*0.05
 param_mpc_weight['xmin'] = np.hstack([robot_model.lowerPositionLimit, -robot_model.velocityLimit])
 param_mpc_weight['xmax'] = np.hstack([robot_model.upperPositionLimit, robot_model.velocityLimit])
 
@@ -377,9 +349,9 @@ us_init_guess = ddp.us
 if use_data_from_simulink:
     start_solving = False
     data_from_python_valid[:] = 1
-    # us_temp = np.zeros(6)
-    # us_temp[n_indices] = us[i]
-    data_from_python[:] = np.zeros(6)
+    us_temp = np.zeros(6)
+    us_temp[n_indices] = us[i]
+    data_from_python[:] = us_temp
 else:
     start_solving = True
 
@@ -487,14 +459,16 @@ try:
                 xs_init_guess = ddp.xs
                 us_init_guess = ddp.us
                 # Daten von Python an Simulink schreiben
-                if(data_from_python_valid[:] == 0):
-                    us_temp = np.zeros(6)
-                    us_temp[n_indices] = us[i]
-                    data_from_python[:] = us_temp
-                    data_from_python_valid[:] = 1
-                    start_solving = False
+
+                us_temp = np.zeros(6)
+                us_temp[n_indices] = us[i]
+                data_from_python[:] = us_temp
+                data_from_python_valid[:] = 1
+                start_solving = False
             else:
+                # x_k_old = x_k
                 x_k, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, Ts, nq, nx, robot_model, robot_data, traj_data)
+                # x_k = x_k_old
                 
                 # alternative: Use only solver values (perfect tracking)
                 # xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
@@ -571,8 +545,8 @@ else:
     subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, freq_per_Ta_step)
 
 
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
 output_file_path = os.path.join(folderpath, outputname)
 
