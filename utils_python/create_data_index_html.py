@@ -432,5 +432,5 @@ def create_html_structure(base_path, title_text='index.html'):
         f.write(html_str)
 
 # Verwendung:
-base_path = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"  # Ersetzen Sie dies durch Ihren tatsächlichen Pfad
+base_path = "/home/rslstudent/Students/Emanuel/bespr_29_oct/241023_messungen/"  # Ersetzen Sie dies durch Ihren tatsächlichen Pfad
 create_html_structure(base_path)

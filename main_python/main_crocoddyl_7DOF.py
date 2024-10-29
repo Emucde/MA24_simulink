@@ -35,8 +35,12 @@ elif robot_name == 'fr3_6dof_no_hand':
     urdf_tcp_frame_name = 'fr3_link8_tcp'
     trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.mat')
     trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj.mat')
-    # n_indices = -1 + np.array([1, 2, 4, 5, 6, 7]) # list of used joints
-    n_indices = -1 + np.array([2, 4]) # list of used joints
+
+    use_only_q2q4 = False
+    if use_only_q2q4:
+        n_indices = -1 + np.array([2, 4]) # list of used joints
+    else:
+        n_indices = -1 + np.array([1, 2, 4, 5, 6, 7])
     q_0_ref = np.array([0, -np.pi/4, 0, -3 * np.pi/4, 0, np.pi/2, np.pi/4])
 
     # Create a list of joints to lock (starts with joint 1)
@@ -45,9 +49,9 @@ elif robot_name == 'fr3_6dof_no_hand':
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = False
+use_data_from_simulink = True
 if use_data_from_simulink:
-    # n_dof = 7 (input data from simulink are 7dof states q, qp)
+    n_dof = 7 # (input data from simulink are 7dof states q, qp)
     def create_shared_memory(name, size):
         try:
             shm = shared_memory.SharedMemory(name=name, create=True, size=size)
@@ -64,11 +68,12 @@ if use_data_from_simulink:
     shm_data_from_simulink_start_name = "data_from_simulink_start"
     shm_data_from_simulink_reset_name = "data_from_simulink_reset"
     shm_data_from_simulink_stop_name  = "data_from_simulink_stop"
+    shm_data_from_simulink_traj_switch_name  = "data_from_simulink_traj_switch"
 
-    python_buffer_bytes = 6 * 8 # 1x6 torque inputs, 8 bytes per double
-    python_flag_bytes = 1 * 8 # 1 byte
-    simulink_buffer_bytes = 2 * 7 * 8 # 2x7 states q, qp, 8 bytes per double
-    simulink_flag_bytes = 1 * 8# 1 byte
+    python_buffer_bytes = n_dof * 8 # 1x7 torque inputs, 8 bytes per double
+    python_flag_bytes = 1 * 8 # 8 byte
+    simulink_buffer_bytes = 2 * n_dof * 8 # 2x7 states q, qp, 8 bytes per double
+    simulink_flag_bytes = 1# 1 byte
 
     shm_data_from_python = create_shared_memory(shm_data_from_python_name, python_buffer_bytes)  # 8 bytes pro double
     shm_data_from_python_valid = create_shared_memory(shm_data_from_python_valid_name, python_flag_bytes)  # 1 bytes (bit possible?)
@@ -78,16 +83,18 @@ if use_data_from_simulink:
     shm_data_from_simulink_start = create_shared_memory(shm_data_from_simulink_start_name, simulink_flag_bytes)  # 1 bytes pro double
     shm_data_from_simulink_reset = create_shared_memory(shm_data_from_simulink_reset_name, simulink_flag_bytes)  # 1 bytes pro double
     shm_data_from_simulink_stop = create_shared_memory(shm_data_from_simulink_stop_name, simulink_flag_bytes)  # 1 bytes pro double
+    shm_data_from_simulink_traj_switch = create_shared_memory(shm_data_from_simulink_traj_switch_name, simulink_flag_bytes)  # 1 bytes pro double
 
     data_from_python = np.ndarray((python_buffer_bytes//8,), dtype=np.float64, buffer=shm_data_from_python.buf)
     data_from_python_valid = np.ndarray((python_flag_bytes//8,), dtype=np.float64, buffer=shm_data_from_python_valid.buf)
 
     data_from_simulink = np.ndarray((simulink_buffer_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink.buf)
-    data_from_simulink_valid = np.ndarray((simulink_flag_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink_valid.buf)
 
-    data_from_simulink_start = np.ndarray((simulink_flag_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink_start.buf)
-    data_from_simulink_stop = np.ndarray((simulink_flag_bytes//8,),  dtype=np.float64, buffer=shm_data_from_simulink_stop.buf)
-    data_from_simulink_reset = np.ndarray((simulink_flag_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink_reset.buf)
+    data_from_simulink_valid = np.ndarray((simulink_flag_bytes,), dtype=np.int8, buffer=shm_data_from_simulink_valid.buf)
+    data_from_simulink_start = np.ndarray((simulink_flag_bytes,), dtype=np.int8, buffer=shm_data_from_simulink_start.buf)
+    data_from_simulink_reset = np.ndarray((simulink_flag_bytes,), dtype=np.int8, buffer=shm_data_from_simulink_reset.buf)
+    data_from_simulink_stop = np.ndarray((simulink_flag_bytes,),  dtype=np.int8, buffer=shm_data_from_simulink_stop.buf)
+    data_from_simulink_traj_switch = np.ndarray((simulink_flag_bytes,),  dtype=np.int8, buffer=shm_data_from_simulink_traj_switch.buf)
 
 #########################################################################################################
 ################################## Get Trajectory from mat file #########################################
@@ -109,32 +116,27 @@ traj_select 6: Shoulder Sing 2, Polynomial, Workspace
 
 # in case of fr3_6dof_no_hand
 '''
-traj_select 0: Wrist Singularity 1, Equilibrium, Workspace
-traj_select 1: Wrist Singularity 1, Diff filt, Workspace
-traj_select 2: Wrist Singularity 1, Polynomial, Workspace
-traj_select 3: Wrist Singularity 1, Sinus, Workspace
-traj_select 4: 2DOF Test Trajectory, Polynomial, joint space
+traj_select 1: Wrist Singularity 1, Equilibrium, Workspace
+traj_select 2: Wrist Singularity 1, Diff filt, Workspace
+traj_select 3: Wrist Singularity 1, Polynomial, Workspace
+traj_select 4: Wrist Singularity 1, Sinus, Workspace
+traj_select 5: 2DOF Test Trajectory, Polynomial, joint space
+traj_select 6: Sing test, Polynomial, joint space
 '''
 
-traj_select = 4
+curent_traj_select = 3
+traj_data, traj_data_true, traj_init_config = process_trajectory_data(curent_traj_select-1, traj_data_all, traj_param_all)
 
-N_traj_true = traj_data_all['N'][0, 0][0, 0]
-t = traj_data_all['t'][0,0][0, :]
-p_d = traj_data_all['p_d'][0,0][:, :, traj_select]
-p_d_p = traj_data_all['p_d_p'][0,0][:, :, traj_select]
-p_d_pp = traj_data_all['p_d_pp'][0,0][:, :, traj_select]
-R_d = traj_data_all['R_d'][0,0][:, :, :, traj_select]
-q_d = traj_data_all['q_d'][0,0][:, :, traj_select]
-omega_d = traj_data_all['omega_d'][0,0][:, :, traj_select]
-omega_d_p = traj_data_all['omega_d_p'][0,0][:, :, traj_select]
+p_d = traj_data['p_d']
+R_d = traj_data['R_d']
 
-traj_data = {'p_d': p_d, 'p_d_p': p_d_p, 'p_d_pp': p_d_pp, 'R_d': R_d, 'q_d': q_d, 'omega_d': omega_d, 'omega_d_p': omega_d_p}
-traj_data_true = {'p_d': p_d[:, 0:N_traj_true], 'p_d_p': p_d_p[:, 0:N_traj_true], 'p_d_pp': p_d_pp[:, 0:N_traj_true], 'R_d': R_d[:, :, 0:N_traj_true], 'q_d': q_d[:, 0:N_traj_true], 'omega_d': omega_d[:, 0:N_traj_true], 'omega_d_p': omega_d_p[:, 0:N_traj_true]}
-t_true = t[0:N_traj_true]
+t = traj_data_true['t_true']
 
-q_0 = traj_param_all['q_0'][0,0][n_indices, traj_select]
-q_0_p = traj_param_all['q_0_p'][0,0][n_indices, traj_select]
-q_0_pp = traj_param_all['q_0_pp'][0,0][n_indices, traj_select]
+q_0 = traj_init_config['q_0'][n_indices]
+q_0_p = traj_init_config['q_0_p'][n_indices]
+q_0_pp = traj_init_config['q_0_pp'][n_indices]
+
+N_traj = traj_init_config['N_traj_true']
 
 # SIMULATION SETTINGS
 
@@ -162,8 +164,8 @@ param_mpc_weight = {
     'q_ureg_terminate_cost': 1e-2,  # penalizes deviations from the trajectory at the end
     'q_xreg_cost': 1e-2,              # penalizes changes from the current state
     'q_ureg_cost': 1e-2,              # penalizes changes from the current input
-    'q_x_bound_cost': 1e2,              # penalizes ignoring the bounds
-    'q_u_bound_cost': 1e2,              # penalizes ignoring the bounds
+    'q_x_bound_cost': 1e-10,              # penalizes ignoring the bounds
+    'q_u_bound_cost': 1e-10,              # penalizes ignoring the bounds
     'Kd': 100*np.eye(3),
     'Kp': 100*np.eye(3),
     'lb_y_ref_N': -1e-6*np.ones(3), # only used if MPC_v3_bounds_yN_ref
@@ -175,26 +177,6 @@ param_mpc_weight = {
     'xref': [],
     'uref': []
 }
-
-# good for mpcv1 soft terminate:
-# N_MPC = 5
-# N_step = 20
-# param_mpc_weight = {
-    # 'q_tracking_cost': 1e0,            # penalizes deviations from the trajectory
-    # 'q_terminate_tracking_cost': 1e5,  # penalizes deviations from the trajectory at the end
-    # 'q_xreg_terminate_cost': 1e1,  # penalizes deviations from the trajectory at the end
-    # 'q_ureg_terminate_cost': 1e3,  # penalizes deviations from the trajectory at the end
-    # 'q_xreg_cost': 1e1,              # penalizes changes from the current state
-    # 'q_ureg_cost': 1e3,              # penalizes changes from the current input
-    # 'Kd': 8*np.eye(3),
-    # 'Kp': 8**2/4*np.eye(3),
-    # 'lb_y_ref_N': -1e-6*np.ones(3), # only used if MPC_v3_bounds_yN_ref
-    # 'ub_y_ref_N': 1e-6*np.ones(3),
-    # 'umin': -1.5*np.ones(2),
-    # 'umax': 1.5*np.ones(2),
-    # 'xmin': -np.hstack([np.pi*np.ones(2), 5*np.ones(2)]),
-    # 'xmax': np.hstack([np.pi*np.ones(2), 5*np.ones(2)])
-# }
 
 ######################################### Build Robot Model #############################################
 
@@ -261,10 +243,7 @@ solver, init_guess_fun, create_ocp_problem, simulate_model  = get_mpc_funs(opt_t
 
 N_step = int(Ts_MPC/Ts)
 T_horizon = (N_MPC-1) * Ts_MPC
-T = T_end+T_horizon-T_start # need more trajectory points for mpc
-# N_traj = int(T_end/Ts)
-N_traj = N_traj_true
-t = np.arange(T_start, T, Ts)
+
 print(f'T_horizon: {T_horizon} s, Ts: {Ts} s, N_MPC: {N_MPC}\n')
 
 if N_step <= 2:
@@ -296,7 +275,7 @@ x_k, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_ini
 if use_data_from_simulink:
     run_flag = False
     data_from_python_valid[:] = 0
-    data_from_python[:] = np.zeros(6)
+    data_from_python[:] = np.zeros(n_dof)
 else:
     run_flag = True
 
@@ -322,8 +301,8 @@ y_d_ref = {
 param_mpc_weight['xref'] = x_k
 param_mpc_weight['uref'] = us_init_guess[0]
 
-param_mpc_weight['umin'] = -robot_model.effortLimit*0.05
-param_mpc_weight['umax'] = robot_model.effortLimit*0.05
+param_mpc_weight['umin'] = -robot_model.effortLimit#*0.05
+param_mpc_weight['umax'] = robot_model.effortLimit#*0.05
 param_mpc_weight['xmin'] = np.hstack([robot_model.lowerPositionLimit, -robot_model.velocityLimit])
 param_mpc_weight['xmax'] = np.hstack([robot_model.upperPositionLimit, robot_model.velocityLimit])
 
@@ -333,12 +312,11 @@ state.lb = param_mpc_weight['xmin']
 state.ub = param_mpc_weight['xmax']
 
 problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
-# problem = create_ocp_problem(i, i+N_MPC, N_step, state, x_k, TCP_frame_id, traj_data, param_mpc_weight, Ts, int_type = int_type)
 
 # Solve first optimization Problem for warm start
 ddp = solver(problem)
 hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
-warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, Ts, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
+warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, i, Ts, conv_max_limit=5)
 
 xs[0] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
 us[0] = ddp.us[0]
@@ -349,7 +327,7 @@ us_init_guess = ddp.us
 if use_data_from_simulink:
     start_solving = False
     data_from_python_valid[:] = 1
-    us_temp = np.zeros(6)
+    us_temp = np.zeros(n_dof)
     us_temp[n_indices] = us[i]
     data_from_python[:] = us_temp
 else:
@@ -368,17 +346,24 @@ try:
             start = data_from_simulink_start[:]
             reset = data_from_simulink_reset[:]
             stop = data_from_simulink_stop[:]
-
-            if(data_from_simulink_valid[:] == 1 and run_flag == True):
-                data_from_simulink_valid[:] = 0
-                data_from_python_valid[:] = 0
-                x_k = data_from_simulink[np.hstack([n_indices, n_indices+7])]
-                start_solving = True
+            new_traj_select = data_from_simulink_traj_switch[0]
             
             if run_flag == False:
                 start_solving = False
-                data_from_python[:] = np.zeros(6)
+                data_from_python[:] = np.zeros(n_dof)
                 if start == 1 and reset == 0 and stop == 0:
+                    if( i == N_traj-1): # autoreset but then no data is printed
+                        i = 0
+
+                    if curent_traj_select != new_traj_select:
+                        curent_traj_select = new_traj_select
+                        traj_data, traj_data_true, traj_init_config = process_trajectory_data(curent_traj_select-1, traj_data_all, traj_param_all)
+                        p_d = traj_data['p_d']
+                        R_d = traj_data['R_d']
+                        t = traj_data_true['t_true']
+                        N_traj = traj_init_config['N_traj_true']
+                        print(f'New Trajectory selected: {curent_traj_select}')
+
                     run_flag = True
                     print("MPC started by Simulink")
                     data_from_simulink_start[:] = 0
@@ -386,29 +371,26 @@ try:
                 elif reset == 1 and i == N_traj-1:
                     i = 0
                     print("MPC reset by Simulink")
-                    subplot_data = calc_7dof_data(us, xs, t_true, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
+                    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
                     plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False)
                     data_from_simulink_reset[:] = 0
                     data_from_python_valid[:] = 0
             elif run_flag == True and stop == 1:
                 print("MPC stopped by Simulink")
-                data_from_python[:] = np.zeros(6)
+                data_from_python[:] = np.zeros(n_dof)
                 data_from_simulink_stop[:] = 0
                 data_from_python_valid[:] = 0
                 run_flag = False
                 start_solving = False
+
+            if(data_from_simulink_valid[:] == 1 and run_flag == True):
+                data_from_simulink_valid[:] = 0
+                data_from_python_valid[:] = 0
+                x_k = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+                start_solving = True
         if start_solving:
             measureSimu.tic()
-            # v1: inefficient: create new problem every time
-            # param_mpc_weight['xref'] = x_k
-            # param_mpc_weight['uref'] = us[i]
-
-            # y_d_ref['p_d'] = p_d[:, i+MPC_traj_indices]
-            # y_d_ref['pR_d_d'] = R_d[:, :, i+MPC_traj_indices]
-
-            # problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
-            # v1 end
-
+            
             g_k = pin.computeGeneralizedGravity(robot_model, pin_data, x_k[:nq])
             
             # v2: update reference values
@@ -416,7 +398,7 @@ try:
                 problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
                 if(nq >= 6):
                     problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
-                # problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(6)])
+                # problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(n_dof)])
                 # problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = x_k
                 # problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
                 problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess[j]
@@ -429,7 +411,7 @@ try:
             problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
             if(nq >= 6):
                 problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
-            # problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(6)])
+            # problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(n_dof)])
             # problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = x_k
             # problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
             problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess[j+1]
@@ -450,7 +432,7 @@ try:
             measureSolver.toc()
             
 
-            warn_cnt, err_state = check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, Ts, N_MPC, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol=not False)
+            warn_cnt, err_state = check_solver_status(warn_cnt, hasConverged, ddp, i, Ts, conv_max_limit=5)
 
             if use_data_from_simulink:
                 xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
@@ -460,10 +442,16 @@ try:
                 us_init_guess = ddp.us
                 # Daten von Python an Simulink schreiben
 
-                us_temp = np.zeros(6)
-                us_temp[n_indices] = us[i]
-                data_from_python[:] = us_temp
-                data_from_python_valid[:] = 1
+                if(any(abs(us[i])-1 > param_mpc_weight['umax'])):
+                    print("Torque Limit reached!")
+                    data_from_python[:] = np.zeros(n_dof)
+                    data_from_python_valid[:] = 0
+                    err_state = True
+                else:
+                    us_temp = np.zeros(n_dof)
+                    us_temp[n_indices] = us[i]
+                    data_from_python[:] = us_temp
+                    data_from_python_valid[:] = 1
                 start_solving = False
             else:
                 # x_k_old = x_k
@@ -486,8 +474,8 @@ try:
                 i += 1 # last value of i is N_traj-1
                 # in case of use_data_from_simulink == True, the last trajectory value
                 # is used for all further calculations (stay on the last position)
-            else:
-                run_flag = False
+            # else:
+            #     run_flag = False
             
             if i == N_traj-1 and use_data_from_simulink == False:
                 run_loop = False
@@ -497,11 +485,16 @@ try:
 except KeyboardInterrupt:
     print("\nFinish Solving!")
 
+if err_state:
+    print("Error Occured, output zero torque:", hasConverged)
+    data_from_python[:] = np.zeros(n_dof)
+    data_from_python_valid[:] = 0
+else:
+    print("Minimum Found:", hasConverged)
+
+
 xs[N_traj-1] = x_k
 us[N_traj-1] = us[N_traj-2] # simply use previous value for display (does not exist)
-
-traj_data = traj_data_true
-t = t_true
 
 measureSolver.print_time(additional_text='Total Solver time')
 measureTotal.print_time(additional_text='Total MPC time')
@@ -540,13 +533,13 @@ if plot_full_model:
         # us_full[i, n_indices] = us[i]
         xs_full[i] = x_i
     
-    subplot_data = calc_7dof_data(us_full, xs_full, t, TCP_frame_id, robot_model_full, pin_data_full, traj_data, freq_per_Ta_step)
+    subplot_data = calc_7dof_data(us_full, xs_full, t, TCP_frame_id, robot_model_full, pin_data_full, traj_data_true, freq_per_Ta_step)
 else:
-    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, freq_per_Ta_step)
+    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
 
 
-folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
 output_file_path = os.path.join(folderpath, outputname)
 
@@ -558,12 +551,10 @@ if plot_sol == True:# and err_state == False:
 # print('Max error:   y_p - y_d_p = {:.2e}'.format(np.max(np.abs(e_p))), 'm/s')
 # print('Max error: y_pp - y_d_pp = {:.2e}'.format(np.max(np.abs(e_pp))), 'm/s^2')
 #print("\nTotal cost:", ddp.cost)
-if err_state == False:
-    print("Minimum Found:", hasConverged)
 
 # visualize=False
 # if visualize==True:
-#     visualize_robot(robot, q, traj_data, Ts, 3, 1)
+#     visualize_robot(robot, q, traj_data_true, Ts, 3, 1)
 
 if use_data_from_simulink:
     shm_data_from_python.close()
@@ -580,4 +571,6 @@ if use_data_from_simulink:
     shm_data_from_simulink_reset.unlink()
     shm_data_from_simulink_stop.close()
     shm_data_from_simulink_stop.unlink()
+    shm_data_from_simulink_traj_switch.close()
+    shm_data_from_simulink_traj_switch.unlink()
     print("Shared Memory freigegeben.")

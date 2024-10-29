@@ -7,7 +7,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define SHM_DATA_SIZE 6
+// compile with mex shm_reader_sfun.c -lrt
+
+#define SHM_DATA_SIZE 7
 #define SHM_DATA_SIZE_BYTES (SHM_DATA_SIZE * sizeof(double))
 
 #define SHM_VALID_FLAG_SIZE 1

@@ -212,6 +212,60 @@ def smooth_signal_savgol(signal, window_length, poly_order):
     
     return final_smoothed_signal
 
+def process_trajectory_data(traj_select, traj_data_all, traj_param_all):
+    # Extract N_traj_true and t
+    N_traj_true = traj_data_all['N'][0, 0][0, 0]
+    t = traj_data_all['t'][0, 0][0, :]
+
+    # Extract trajectory data for the selected trajectory
+    p_d = traj_data_all['p_d'][0, 0][:, :, traj_select]
+    p_d_p = traj_data_all['p_d_p'][0, 0][:, :, traj_select]
+    p_d_pp = traj_data_all['p_d_pp'][0, 0][:, :, traj_select]
+    R_d = traj_data_all['R_d'][0, 0][:, :, :, traj_select]
+    q_d = traj_data_all['q_d'][0, 0][:, :, traj_select]
+    omega_d = traj_data_all['omega_d'][0, 0][:, :, traj_select]
+    omega_d_p = traj_data_all['omega_d_p'][0, 0][:, :, traj_select]
+
+    # Create traj_data dictionary
+    traj_data = {
+        'p_d': p_d,
+        'p_d_p': p_d_p,
+        'p_d_pp': p_d_pp,
+        'R_d': R_d,
+        'q_d': q_d,
+        'omega_d': omega_d,
+        'omega_d_p': omega_d_p,
+        't': t
+    }
+
+    # Create traj_data_true dictionary
+    traj_data_true = {
+        'p_d': p_d[:, 0:N_traj_true],
+        'p_d_p': p_d_p[:, 0:N_traj_true],
+        'p_d_pp': p_d_pp[:, 0:N_traj_true],
+        'R_d': R_d[:, :, 0:N_traj_true],
+        'q_d': q_d[:, 0:N_traj_true],
+        'omega_d': omega_d[:, 0:N_traj_true],
+        'omega_d_p': omega_d_p[:, 0:N_traj_true],
+        't_true': t[0:N_traj_true]
+    }
+
+    # Extract initial configuration data
+    n_indices = slice(None)  # Assuming n_indices is not defined, we use all indices
+    q_0 = traj_param_all['q_0'][0, 0][n_indices, traj_select]
+    q_0_p = traj_param_all['q_0_p'][0, 0][n_indices, traj_select]
+    q_0_pp = traj_param_all['q_0_pp'][0, 0][n_indices, traj_select]
+
+    # Create traj_init_config dictionary
+    traj_init_config = {
+        'q_0': q_0,
+        'q_0_p': q_0_p,
+        'q_0_pp': q_0_pp,
+        'N_traj_true': N_traj_true
+    }
+
+    return traj_data, traj_data_true, traj_init_config
+
 ################################## MODEL TESTS ############################################
 
 
@@ -974,7 +1028,7 @@ def first_init_guess_mpc_v3(tau_init_robot, x_init_robot, N_traj, N_horizon, nx,
 ###################################################################################################################
 
 
-def check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_horizon, N_step, TCP_frame_id, robot_model, traj_data, conv_max_limit=5, plot_sol = False):
+def check_solver_status(warn_cnt, hasConverged, ddp, i, dt, conv_max_limit=5):
     error = 0
     
     if not hasConverged:
@@ -995,11 +1049,6 @@ def check_solver_status(warn_cnt, hasConverged, ddp, us, xs, i, t, dt, N_horizon
         # print("\033[93mWarning: NaN values detected in xs or us arrays at time t = ", f"{i*dt:.3f}", "\033[0m")
         print("\033[91mError: NaN values detected in xs or us arrays at time t =", f"{i*dt:.3f}", "\033[0m")
         error = 1
-    # if error:
-    #     if plot_sol:
-    #         plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, traj_data)
-    #         plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, traj_data)
-    #     exit()
     return warn_cnt, error
 
 #######################################

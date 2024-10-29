@@ -9,22 +9,30 @@
 #include <string.h>
 #include <errno.h>
 
+// compile in matlab with mex shm_writer_sfun.c -lrt
+
 #define SHM_DATA_SIZE 14
 #define SHM_DATA_SIZE_BYTES (SHM_DATA_SIZE * sizeof(double))
 
 #define SHM_VALID_FLAG_SIZE 1
-#define SHM_VALID_FLAG_SIZE_BYTES (SHM_VALID_FLAG_SIZE * sizeof(double))
+#define SHM_VALID_FLAG_SIZE_BYTES (SHM_VALID_FLAG_SIZE * sizeof(char))
 
 #define SHM_START_FLAG_SIZE 1
-#define SHM_START_FLAG_SIZE_BYTES (SHM_START_FLAG_SIZE * sizeof(double))
+#define SHM_START_FLAG_SIZE_BYTES (SHM_START_FLAG_SIZE * sizeof(char))
 
 #define SHM_RESET_FLAG_SIZE 1
-#define SHM_RESET_FLAG_SIZE_BYTES (SHM_RESET_FLAG_SIZE * sizeof(double))
+#define SHM_RESET_FLAG_SIZE_BYTES (SHM_RESET_FLAG_SIZE * sizeof(char))
 
 #define SHM_STOP_FLAG_SIZE 1
-#define SHM_STOP_FLAG_SIZE_BYTES (SHM_STOP_FLAG_SIZE * sizeof(double))
+#define SHM_STOP_FLAG_SIZE_BYTES (SHM_STOP_FLAG_SIZE * sizeof(char))
 
-#define INPUT_NUM 5
+#define SHM_TRAJ_SWITCH_SIZE 1
+#define SHM_TRAJ_SWITCH_SIZE_BYTES (SHM_TRAJ_SWITCH_SIZE * sizeof(char))
+
+#define INPUT_NUM 6
+
+int shm_size[INPUT_NUM] = {SHM_DATA_SIZE, SHM_VALID_FLAG_SIZE, SHM_START_FLAG_SIZE, SHM_RESET_FLAG_SIZE, SHM_STOP_FLAG_SIZE, SHM_TRAJ_SWITCH_SIZE};
+int shm_size_bytes[INPUT_NUM] = {SHM_DATA_SIZE_BYTES, SHM_VALID_FLAG_SIZE_BYTES, SHM_START_FLAG_SIZE_BYTES, SHM_RESET_FLAG_SIZE_BYTES, SHM_STOP_FLAG_SIZE_BYTES, SHM_TRAJ_SWITCH_SIZE_BYTES};
 
 static void mdlInitializeSizes(SimStruct *S)
 {
@@ -33,10 +41,17 @@ static void mdlInitializeSizes(SimStruct *S)
         return;
     }
     if (!ssSetNumInputPorts(S, INPUT_NUM)) return;  // INPUT_NUM inputs: data and valid flag
-    int shm_size[INPUT_NUM] = {SHM_DATA_SIZE, SHM_VALID_FLAG_SIZE, SHM_START_FLAG_SIZE, SHM_RESET_FLAG_SIZE, SHM_STOP_FLAG_SIZE};
+    
     for (int i = 0; i < INPUT_NUM; i++) {
         ssSetInputPortWidth(S, i, shm_size[i]);
-        ssSetInputPortDataType(S, i, SS_DOUBLE);
+        if(i == 0)
+        {
+            ssSetInputPortDataType(S, i, SS_DOUBLE);
+        }
+        else
+        {
+            ssSetInputPortDataType(S, i, SS_INT8);
+        }
         ssSetInputPortDirectFeedThrough(S, i, 1);
         ssSetInputPortRequiredContiguous(S, i, 1);
     }
@@ -62,7 +77,6 @@ static void mdlInitializeSampleTimes(SimStruct *S)
 #define MDL_START
 static void mdlStart(SimStruct *S)
 {
-    int shm_size_bytes[INPUT_NUM] = {SHM_DATA_SIZE_BYTES, SHM_VALID_FLAG_SIZE_BYTES, SHM_START_FLAG_SIZE_BYTES, SHM_RESET_FLAG_SIZE_BYTES, SHM_STOP_FLAG_SIZE_BYTES};
     for (int i = 0; i < INPUT_NUM; i++) {
         char_T shm_name[256];
         mxGetString(ssGetSFcnParam(S, i), shm_name, sizeof(shm_name));
@@ -82,18 +96,36 @@ static void mdlStart(SimStruct *S)
             return;
         }
         
-        double *shared_data = (double*)mmap(0, shm_size_bytes[i], PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-        if (shared_data == MAP_FAILED) {
-            ssPrintf("Failed to map shared memory %d: %s\n", i, strerror(errno));
-            ssSetErrorStatus(S, "Failed to map shared memory");
-            close(fd);
-            return;
+        if(i == 0)
+        {
+            double *shared_data = (double*)mmap(0, shm_size_bytes[i], PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            if (shared_data == MAP_FAILED) {
+                ssPrintf("Failed to map shared memory %d: %s\n", i, strerror(errno));
+                ssSetErrorStatus(S, "Failed to map shared memory");
+                close(fd);
+                return;
+            }
+            
+            memset(shared_data, 0, shm_size_bytes[i]);
+            
+            ssPrintf("Shared memory %d created and mapped successfully\n", i);
+            ssSetPWorkValue(S, i*2, shared_data);
         }
-        
-        memset(shared_data, 0, shm_size_bytes[i]);
-        
-        ssPrintf("Shared memory %d created and mapped successfully\n", i);
-        ssSetPWorkValue(S, i*2, shared_data);
+        else
+        {
+            char *shared_data = (char*)mmap(0, shm_size_bytes[i], PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            if (shared_data == MAP_FAILED) {
+                ssPrintf("Failed to map shared memory %d: %s\n", i, strerror(errno));
+                ssSetErrorStatus(S, "Failed to map shared memory");
+                close(fd);
+                return;
+            }
+            
+            memset(shared_data, 0, shm_size_bytes[i]);
+            
+            ssPrintf("Shared memory %d created and mapped successfully\n", i);
+            ssSetPWorkValue(S, i*2, shared_data);
+        }
         ssSetPWorkValue(S, i*2+1, (void*)(intptr_t)fd);
     }
 }
@@ -110,24 +142,42 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     //ssPrintf("Number of input ports: %d\n", ssGetNumInputPorts(S));
     //ssPrintf("Input port width: %d\n", ssGetInputPortWidth(S, 0));
     
-    int shm_size_bytes[INPUT_NUM] = {SHM_DATA_SIZE_BYTES, SHM_VALID_FLAG_SIZE_BYTES, SHM_START_FLAG_SIZE_BYTES, SHM_RESET_FLAG_SIZE_BYTES, SHM_STOP_FLAG_SIZE_BYTES};
     for (int i = 0; i < INPUT_NUM; i++) {
-        double *u = (double*)ssGetInputPortSignal(S, i);
-        double *shared_data = (double*)ssGetPWorkValue(S, i*2);
-        
-        if (!u) {
-            ssPrintf("Error: Input signal pointer is null for input %d\n", i);
-            return;
-        }
-        
-        if (!shared_data) {
-            ssPrintf("Error: Shared memory pointer is null for input %d\n", i);
-            return;
-        }
+        if( i == 0)
+        {
+            double *u = (double*)ssGetInputPortSignal(S, i);
+            double *shared_data = (double*)ssGetPWorkValue(S, i*2);
+            
+            if (!u) {
+                ssPrintf("Error: Input signal pointer is null for input %d\n", i);
+                return;
+            }
+            
+            if (!shared_data) {
+                ssPrintf("Error: Shared memory pointer is null for input %d\n", i);
+                return;
+            }
     
-    //ssPrintf("Input signal values: %f, %f, %f\n", u[0], u[1], u[2]);
+            memcpy(shared_data, u, shm_size_bytes[i]);
+        }
+        else
+        {
+            char *u = (char*)ssGetInputPortSignal(S, i);
+            char *shared_data = (char*)ssGetPWorkValue(S, i*2);
+            
+            if (!u) {
+                ssPrintf("Error: Input signal pointer is null for input %d\n", i);
+                return;
+            }
+            
+            if (!shared_data) {
+                ssPrintf("Error: Shared memory pointer is null for input %d\n", i);
+                return;
+            }
     
-        memcpy(shared_data, u, shm_size_bytes[i]);
+            memcpy(shared_data, u, shm_size_bytes[i]);
+        }
+
     }
     
     //ssPrintf("Shared memory values: %f, %f, %f\n", shared_data[0], shared_data[1], shared_data[2]);
@@ -136,14 +186,29 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 static void mdlTerminate(SimStruct *S)
 {
     for (int i = 0; i < INPUT_NUM; i++) {
-        double *shared_data = (double*)ssGetPWorkValue(S, i*2);
-        int fd = (int)(intptr_t)ssGetPWorkValue(S, i*2+1);
-        
-        if (shared_data) {
-            munmap(shared_data, SHM_DATA_SIZE_BYTES);
+        if(i == 0)
+        {
+            double *shared_data = (double*)ssGetPWorkValue(S, i*2);
+            int fd = (int)(intptr_t)ssGetPWorkValue(S, i*2+1);
+            
+            if (shared_data) {
+                munmap(shared_data, shm_size_bytes[i]);
+            }
+            if (fd != -1) {
+                close(fd);
+            }
         }
-        if (fd != -1) {
-            close(fd);
+        else
+        {
+            char *shared_data = (char*)ssGetPWorkValue(S, i*2);
+            int fd = (int)(intptr_t)ssGetPWorkValue(S, i*2+1);
+            
+            if (shared_data) {
+                munmap(shared_data, shm_size_bytes[i]);
+            }
+            if (fd != -1) {
+                close(fd);
+            }
         }
     }
 }
