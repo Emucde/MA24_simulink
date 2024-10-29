@@ -45,6 +45,8 @@ try
             end
         end
 
+        T_horizon_max = 1;%1s default
+
         % create param_traj_settings for simulink (online)
         % TODO: ist doch komplizierter als gedacht!!!!
         if(bdIsLoaded(simulink_main_model_name))

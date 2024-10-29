@@ -10,6 +10,8 @@ from scipy.optimize import minimize
 import scipy.io as sio
 from multiprocessing import shared_memory
 
+use_data_from_simulink = True
+
 sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
 from utils_python.utils import *
 
@@ -45,7 +47,6 @@ elif robot_name == 'fr3_6dof_no_hand':
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = True
 if use_data_from_simulink:
     # n_dof = 7 (input data from simulink are 7dof states q, qp)
     def create_shared_memory(name, size):
@@ -304,7 +305,7 @@ if use_data_from_simulink:
                 data_from_simulink_valid[:] = 0
                 data_from_python_valid[:] = 0
                 x_init_robot = data_from_simulink[np.hstack([n_indices, n_indices+7])]
-                run_flag = True
+                run_flag = False
                 break
             # time.sleep(1e-9)
     except KeyboardInterrupt:
@@ -376,9 +377,9 @@ us_init_guess = ddp.us
 if use_data_from_simulink:
     start_solving = False
     data_from_python_valid[:] = 1
-    us_temp = np.zeros(6)
-    us_temp[n_indices] = us[i]
-    data_from_python[:] = us_temp
+    # us_temp = np.zeros(6)
+    # us_temp[n_indices] = us[i]
+    data_from_python[:] = np.zeros(6)
 else:
     start_solving = True
 

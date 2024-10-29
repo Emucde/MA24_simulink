@@ -36,8 +36,8 @@ int MPC9_work(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_
 int MPC9_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_int *sz_w);
 #define MPC9_SZ_ARG 23
 #define MPC9_SZ_RES 18
-#define MPC9_SZ_IW 410
-#define MPC9_SZ_W 4171
+#define MPC9_SZ_IW 1230
+#define MPC9_SZ_W 13102
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

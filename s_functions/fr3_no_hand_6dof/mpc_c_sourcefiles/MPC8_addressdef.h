@@ -4,23 +4,23 @@
 #ifndef MPC8_ADRESSDEF_H
 #define MPC8_ADRESSDEF_H
 
-#define MPC8_IW_LEN 290
+#define MPC8_IW_LEN 870
 #define MPC8_ARG_LEN 23
 #define MPC8_RES_LEN 18
-#define MPC8_W_LEN 3877
-static const uint32_t MPC8_ARG[] = {0,70,162};
-static const uint32_t MPC8_RES[] = {557,559,651,652,653,654,655,656};
-#define MPC8_W_END_ADDRESS 657
+#define MPC8_W_LEN 11114
+static const uint32_t MPC8_ARG[] = {0,126,402};
+static const uint32_t MPC8_RES[] = {797,803,1079,1080,1081,1082,1083,1084};
+#define MPC8_W_END_ADDRESS 1085
 
 // INPUT DIMENSIONS:
-#define MPC8_X_K_LEN 4        /*x_k: [4 1] array values */
+#define MPC8_X_K_LEN 12        /*x_k: [12 1] array values */
 #define MPC8_Y_D_LEN 42        /*y_d: 7x6 matrix values */
-#define MPC8_X_PREV_LEN 24        /*x_prev: 4x6 matrix values */
-#define MPC8_U_LEN 10        /*u: 2x5 matrix values */
-#define MPC8_X_LEN 24        /*x: 4x6 matrix values */
-#define MPC8_LAMBDA_U_LEN 10        /*lambda_u: 2x5 matrix values */
-#define MPC8_LAMBDA_X_LEN 24        /*lambda_x: 4x6 matrix values */
-#define MPC8_G_LEN 24        /*g: 4x6 matrix values */
+#define MPC8_X_PREV_LEN 72        /*x_prev: 12x6 matrix values */
+#define MPC8_U_LEN 30        /*u: 6x5 matrix values */
+#define MPC8_X_LEN 72        /*x: 12x6 matrix values */
+#define MPC8_LAMBDA_U_LEN 30        /*lambda_u: 6x5 matrix values */
+#define MPC8_LAMBDA_X_LEN 72        /*lambda_x: 12x6 matrix values */
+#define MPC8_G_LEN 72        /*g: 12x6 matrix values */
 #define MPC8_Q_Y_LEN 36        /*Q_y: 6x6 matrix values */
 #define MPC8_Q_YKP1_LEN 36        /*Q_ykp1: 6x6 matrix values */
 #define MPC8_Q_YN_LEN 36        /*Q_yN: 6x6 matrix values */
@@ -31,41 +31,41 @@ static const uint32_t MPC8_RES[] = {557,559,651,652,653,654,655,656};
 #define MPC8_U_MIN_LEN 7        /*u_min: [7 1] array values */
 #define MPC8_U_MAX_LEN 7        /*u_max: [7 1] array values */
 
-#define MPC8_REFERENCE_VALUES_LEN 70        /* reference_values = [x_k(4x1), y_d(7x6), x_prev(4x6)] */
-#define MPC8_INIT_GUESS_LEN 92        /* init_guess = [u(2x5), x(4x6), lambda_u(2x5), lambda_x(4x6), g(4x6)] */
+#define MPC8_REFERENCE_VALUES_LEN 126        /* reference_values = [x_k(12x1), y_d(7x6), x_prev(12x6)] */
+#define MPC8_INIT_GUESS_LEN 276        /* init_guess = [u(6x5), x(12x6), lambda_u(6x5), lambda_x(12x6), g(12x6)] */
 #define MPC8_PARAM_WEIGHT_LEN 395        /* param_weight = [Q_y(6x6), Q_ykp1(6x6), Q_yN(6x6), R_q_pp(7x7), R_x(14x14), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
 
 // INPUT ADDRESSES:
-#define MPC8_X_K_ADDR 0        /*x_k: [4 1] array values */
-#define MPC8_Y_D_ADDR 4        /*y_d: 7x6 matrix values */
-#define MPC8_X_PREV_ADDR 46        /*x_prev: 4x6 matrix values */
-#define MPC8_U_ADDR 70        /*u: 2x5 matrix values */
-#define MPC8_X_ADDR 80        /*x: 4x6 matrix values */
-#define MPC8_LAMBDA_U_ADDR 104        /*lambda_u: 2x5 matrix values */
-#define MPC8_LAMBDA_X_ADDR 114        /*lambda_x: 4x6 matrix values */
-#define MPC8_G_ADDR 138        /*g: 4x6 matrix values */
-#define MPC8_Q_Y_ADDR 162        /*Q_y: 6x6 matrix values */
-#define MPC8_Q_YKP1_ADDR 198        /*Q_ykp1: 6x6 matrix values */
-#define MPC8_Q_YN_ADDR 234        /*Q_yN: 6x6 matrix values */
-#define MPC8_R_Q_PP_ADDR 270        /*R_q_pp: 7x7 matrix values */
-#define MPC8_R_X_ADDR 319        /*R_x: 14x14 matrix values */
-#define MPC8_X_MIN_ADDR 515        /*x_min: [14 1] array values */
-#define MPC8_X_MAX_ADDR 529        /*x_max: [14 1] array values */
-#define MPC8_U_MIN_ADDR 543        /*u_min: [7 1] array values */
-#define MPC8_U_MAX_ADDR 550        /*u_max: [7 1] array values */
+#define MPC8_X_K_ADDR 0        /*x_k: [12 1] array values */
+#define MPC8_Y_D_ADDR 12        /*y_d: 7x6 matrix values */
+#define MPC8_X_PREV_ADDR 54        /*x_prev: 12x6 matrix values */
+#define MPC8_U_ADDR 126        /*u: 6x5 matrix values */
+#define MPC8_X_ADDR 156        /*x: 12x6 matrix values */
+#define MPC8_LAMBDA_U_ADDR 228        /*lambda_u: 6x5 matrix values */
+#define MPC8_LAMBDA_X_ADDR 258        /*lambda_x: 12x6 matrix values */
+#define MPC8_G_ADDR 330        /*g: 12x6 matrix values */
+#define MPC8_Q_Y_ADDR 402        /*Q_y: 6x6 matrix values */
+#define MPC8_Q_YKP1_ADDR 438        /*Q_ykp1: 6x6 matrix values */
+#define MPC8_Q_YN_ADDR 474        /*Q_yN: 6x6 matrix values */
+#define MPC8_R_Q_PP_ADDR 510        /*R_q_pp: 7x7 matrix values */
+#define MPC8_R_X_ADDR 559        /*R_x: 14x14 matrix values */
+#define MPC8_X_MIN_ADDR 755        /*x_min: [14 1] array values */
+#define MPC8_X_MAX_ADDR 769        /*x_max: [14 1] array values */
+#define MPC8_U_MIN_ADDR 783        /*u_min: [7 1] array values */
+#define MPC8_U_MAX_ADDR 790        /*u_max: [7 1] array values */
 
 // CASADI FUN INPUT ADRESSES:
-#define MPC8_IN_REFERENCE_VALUES_ADDR 0        /* reference_values = [x_k(4x1), y_d(7x6), x_prev(4x6)] */
-#define MPC8_IN_INIT_GUESS_ADDR 70        /* init_guess = [u(2x5), x(4x6), lambda_u(2x5), lambda_x(4x6), g(4x6)] */
-#define MPC8_IN_PARAM_WEIGHT_ADDR 162        /* param_weight = [Q_y(6x6), Q_ykp1(6x6), Q_yN(6x6), R_q_pp(7x7), R_x(14x14), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
+#define MPC8_IN_REFERENCE_VALUES_ADDR 0        /* reference_values = [x_k(12x1), y_d(7x6), x_prev(12x6)] */
+#define MPC8_IN_INIT_GUESS_ADDR 126        /* init_guess = [u(6x5), x(12x6), lambda_u(6x5), lambda_x(12x6), g(12x6)] */
+#define MPC8_IN_PARAM_WEIGHT_ADDR 402        /* param_weight = [Q_y(6x6), Q_ykp1(6x6), Q_yN(6x6), R_q_pp(7x7), R_x(14x14), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
 
 // OUTPUT DIMENSIONS:
-#define MPC8_U_OPT_LEN 2        /*u_opt: [2 1] array values */
-#define MPC8_U_OUT_LEN 10        /*u_out: 2x5 matrix values */
-#define MPC8_X_OUT_LEN 24        /*x_out: 4x6 matrix values */
-#define MPC8_LAMBDA_U_OUT_LEN 10        /*lambda_u_out: 2x5 matrix values */
-#define MPC8_LAMBDA_X_OUT_LEN 24        /*lambda_x_out: 4x6 matrix values */
-#define MPC8_G_OUT_LEN 24        /*g_out: 4x6 matrix values */
+#define MPC8_U_OPT_LEN 6        /*u_opt: [6 1] array values */
+#define MPC8_U_OUT_LEN 30        /*u_out: 6x5 matrix values */
+#define MPC8_X_OUT_LEN 72        /*x_out: 12x6 matrix values */
+#define MPC8_LAMBDA_U_OUT_LEN 30        /*lambda_u_out: 6x5 matrix values */
+#define MPC8_LAMBDA_X_OUT_LEN 72        /*lambda_x_out: 12x6 matrix values */
+#define MPC8_G_OUT_LEN 72        /*g_out: 12x6 matrix values */
 #define MPC8_J_YT_LEN 1        /*J_yt: [1 1] array values */
 #define MPC8_J_YT_N_LEN 1        /*J_yt_N: [1 1] array values */
 #define MPC8_J_YR_LEN 1        /*J_yr: [1 1] array values */
@@ -74,27 +74,27 @@ static const uint32_t MPC8_RES[] = {557,559,651,652,653,654,655,656};
 #define MPC8_J_X_LEN 1        /*J_x: [1 1] array values */
 
 // OUTPUT ADDRESSES:
-#define MPC8_U_OPT_ADDR 557        /*u_opt: [2 1] array values */
-#define MPC8_U_OUT_ADDR 559        /*u_out: 2x5 matrix values */
-#define MPC8_X_OUT_ADDR 569        /*x_out: 4x6 matrix values */
-#define MPC8_LAMBDA_U_OUT_ADDR 593        /*lambda_u_out: 2x5 matrix values */
-#define MPC8_LAMBDA_X_OUT_ADDR 603        /*lambda_x_out: 4x6 matrix values */
-#define MPC8_G_OUT_ADDR 627        /*g_out: 4x6 matrix values */
-#define MPC8_J_YT_ADDR 651        /*J_yt: [1 1] array values */
-#define MPC8_J_YT_N_ADDR 652        /*J_yt_N: [1 1] array values */
-#define MPC8_J_YR_ADDR 653        /*J_yr: [1 1] array values */
-#define MPC8_J_YR_N_ADDR 654        /*J_yr_N: [1 1] array values */
-#define MPC8_J_Q_PP_ADDR 655        /*J_q_pp: [1 1] array values */
-#define MPC8_J_X_ADDR 656        /*J_x: [1 1] array values */
+#define MPC8_U_OPT_ADDR 797        /*u_opt: [6 1] array values */
+#define MPC8_U_OUT_ADDR 803        /*u_out: 6x5 matrix values */
+#define MPC8_X_OUT_ADDR 833        /*x_out: 12x6 matrix values */
+#define MPC8_LAMBDA_U_OUT_ADDR 905        /*lambda_u_out: 6x5 matrix values */
+#define MPC8_LAMBDA_X_OUT_ADDR 935        /*lambda_x_out: 12x6 matrix values */
+#define MPC8_G_OUT_ADDR 1007        /*g_out: 12x6 matrix values */
+#define MPC8_J_YT_ADDR 1079        /*J_yt: [1 1] array values */
+#define MPC8_J_YT_N_ADDR 1080        /*J_yt_N: [1 1] array values */
+#define MPC8_J_YR_ADDR 1081        /*J_yr: [1 1] array values */
+#define MPC8_J_YR_N_ADDR 1082        /*J_yr_N: [1 1] array values */
+#define MPC8_J_Q_PP_ADDR 1083        /*J_q_pp: [1 1] array values */
+#define MPC8_J_X_ADDR 1084        /*J_x: [1 1] array values */
 
 // CASADI FUN OUTPUT ADRESSES:
-#define MPC8_OUT_U_OPT_ADDR 557        /* u_opt = [u[0:1](2x1)] */
-#define MPC8_OUT_INIT_GUESS_OUT_ADDR 559        /* init_guess_out = [u_out(2x5), x_out(4x6), lambda_u_out(2x5), lambda_x_out(4x6), g_out(4x6)] */
-#define MPC8_OUT_COST_FUN_1_ADDR 651        /* cost_fun_1 = [J_yt(1x1)] */
-#define MPC8_OUT_COST_FUN_2_ADDR 652        /* cost_fun_2 = [J_yt_N(1x1)] */
-#define MPC8_OUT_COST_FUN_3_ADDR 653        /* cost_fun_3 = [J_yr(1x1)] */
-#define MPC8_OUT_COST_FUN_4_ADDR 654        /* cost_fun_4 = [J_yr_N(1x1)] */
-#define MPC8_OUT_COST_FUN_5_ADDR 655        /* cost_fun_5 = [J_q_pp(1x1)] */
-#define MPC8_OUT_COST_FUN_6_ADDR 656        /* cost_fun_6 = [J_x(1x1)] */
+#define MPC8_OUT_U_OPT_ADDR 797        /* u_opt = [u[0:5](6x1)] */
+#define MPC8_OUT_INIT_GUESS_OUT_ADDR 803        /* init_guess_out = [u_out(6x5), x_out(12x6), lambda_u_out(6x5), lambda_x_out(12x6), g_out(12x6)] */
+#define MPC8_OUT_COST_FUN_1_ADDR 1079        /* cost_fun_1 = [J_yt(1x1)] */
+#define MPC8_OUT_COST_FUN_2_ADDR 1080        /* cost_fun_2 = [J_yt_N(1x1)] */
+#define MPC8_OUT_COST_FUN_3_ADDR 1081        /* cost_fun_3 = [J_yr(1x1)] */
+#define MPC8_OUT_COST_FUN_4_ADDR 1082        /* cost_fun_4 = [J_yr_N(1x1)] */
+#define MPC8_OUT_COST_FUN_5_ADDR 1083        /* cost_fun_5 = [J_q_pp(1x1)] */
+#define MPC8_OUT_COST_FUN_6_ADDR 1084        /* cost_fun_6 = [J_x(1x1)] */
 
 #endif /* MPC8_ADRESSDEF_H */

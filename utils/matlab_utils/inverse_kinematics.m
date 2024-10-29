@@ -38,29 +38,31 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
     % - best_f_val: lowest value out of all cost function produced by the
     %               random values q_0_init.
 
-        R_target = quat2rotm_v2(xe0(4:7));
-        xe0 = [xe0(1:3); rotm2eul(R_target, 'XYZ')'];
+        %R_target = quat2rotm_v2(xe0(4:7));
+        %xe0 = [xe0(1:3); rotm2eul(R_target, 'XYZ')'];
         
-        n = param_robot.n_DOF; % Define the number of degrees of freedom.
+        n_indices = param_robot.n_indices;
+        n = param_robot.n_red; % Define the number of degrees of freedom.
 
         % Define the constraints.
         A = []; % Define the matrix for the linear inequality constraints.
         b = []; % Define the vector for the linear inequality constraints.
         Aeq = []; % Define the matrix for the linear equality constraints.
         beq = []; % Define the vector for the linear equality constraints.
-        lb = param_robot.q_limit_lower; % Define the lower bounds for the joint angles.
-        ub = param_robot.q_limit_upper; % Define the upper bounds for the joint angles.
+        lb = param_robot.q_limit_lower(n_indices); % Define the lower bounds for the joint angles.
+        ub = param_robot.q_limit_upper(n_indices); % Define the upper bounds for the joint angles.
         
         % Define the cost function as a combination of position error and manipulability error.
         %if(n > 6)
         %    nl_spring = @(q) nl_spring_force(q, ct_ctrl_param, param_robot);
         %else
             nl_spring = @(q) zeros(n,1);
-        %end
-        
-        x_pos_err = @(q) forward_kinematics(q) - xe0;
+        %endkin_fun_err
+        %x_pos_err = @(q) kin_fun(q) - xe0;
+        x_pos_err = @(q) kin_fun_err_reduced(xe0, q, param_robot);
+        manip_red = @(q) calc_manipulability_reduced(q, param_robot);
         fun = @(q) 1/2*dot(x_pos_err(q), Q1*x_pos_err(q)) ... 
-                 + 1/2*Q2*(calc_manipulability(q))^2 ...
+                 + 1/2*Q2*(manip_red(q))^2 ...
                  + 1/2*dot(q-q_d, Q3*(q-q_d)) ...
                  + 1/2*dot(nl_spring(q), Q4*nl_spring(q));
     
@@ -86,8 +88,10 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
                 best_f_val = f_val; % Update the maximum manipulability value.
                 best_q = q_opt; % Update the joint angles corresponding to the maximum manipulability.
 
-                xe0_act = forward_kinematics(best_q);
-                if(norm(xe0_act - xe0) < tolerance) % Check if the position error between the calculated end-effector position and the desired end-effector position is within a tolerance.
+                xe0_err_act = x_pos_err(best_q);
+                xe0_err_act(4) = 0; % ignore scalar part
+                
+                if(norm(xe0_err_act) < tolerance) % Check if the position error between the calculated end-effector position and the desired end-effector position is within a tolerance.
                     fprintf(">>Solution found!<<\n"); % Print a message indicating that the desired end-effector position is found.
                     break_flag = 1;
                     break; % Exit the loop.
@@ -96,7 +100,7 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
         end
     
         % Print the results.
-        current_err = norm(xe0_act - xe0);
+        current_err = norm(xe0_err_act);
         if(break_flag == 0)
             fprintf(2, "\n! Warning ! Tolerance too small, no solution found!\n\n");
             fprintf(2, 'Pose Error:\n\t(current err) %d > %d (tolerance)\n', current_err, tolerance);
@@ -105,22 +109,29 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
         end
         
     
-        manipulability = calc_manipulability(best_q); % Calculate and print the manipulability for the joint angles corresponding to the maximum manipulability.
+        manipulability = manip_red(best_q); % Calculate and print the manipulability for the joint angles corresponding to the maximum manipulability.
         decimalPlaces = 4;
         fprintf('Manipulability for the optimal joint angles:\n\t%.*g\n', decimalPlaces, manipulability);
     
-        xe0_opt = forward_kinematics(best_q)';
-        decimalPlaces = 3;
-        if(n == 7)
-            fprintf("Joint angles corresponding to the minimum! manipulability:\n\t[%.*f, %.*f, %.*f, %.*f, %.*f, %.*f, %.*f]'\n", decimalPlaces, best_q(1), decimalPlaces, best_q(2), decimalPlaces, best_q(3), decimalPlaces, best_q(4), decimalPlaces, best_q(5), decimalPlaces, best_q(6), decimalPlaces, best_q(7));
+        xe0_opt_act = kin_fun_reduced(best_q, param_robot)';
+        xe0_opt1 = xe0_opt_act;
+        xe0_opt2 = [xe0_opt_act(1:3) -xe0_opt_act(4:7)];
+        
+
+        % zu jeder rotation gibt es zwei quaternionen...
+        if(norm(xe0 - xe0_opt1) < norm(xe0 - xe0_opt2))
+            xe0_opt = xe0_opt1;
         else
-            fprintf("Joint angles corresponding to the minimum! manipulability:\n\t[%.*f, %.*f, %.*f, %.*f, %.*f, %.*f]'\n", decimalPlaces, best_q(1), decimalPlaces, best_q(2), decimalPlaces, best_q(3), decimalPlaces, best_q(4), decimalPlaces, best_q(5), decimalPlaces, best_q(6));
+            xe0_opt = xe0_opt2;
         end
+
+        decimalPlaces = 3;
+        fprintf("Joint angles corresponding to the minimum manipulability:\n\t[%s]'\n", strjoin(arrayfun(@(x) sprintf('%.*f', decimalPlaces, x), best_q, 'UniformOutput', false), ', '));
         
         decimalPlaces = 3;
-        fprintf('Optimal end-effector position:\n\t%.*f, %.*f, %.*f, %.*f, %.*f, %.*f\n', decimalPlaces, xe0_opt(1), decimalPlaces, xe0_opt(2), decimalPlaces, xe0_opt(3), decimalPlaces, xe0_opt(4), decimalPlaces, xe0_opt(5), decimalPlaces, xe0_opt(6));
+        fprintf("Optimal end-effector position:\n\t[%s]'\n", strjoin(arrayfun(@(x) sprintf('%.*f', decimalPlaces, x), xe0_opt, 'UniformOutput', false), ', '));
         decimalPlaces = 3;
-        fprintf('Desired end-effector position:\n\t%.*f, %.*f, %.*f, %.*f, %.*f, %.*f\n', decimalPlaces, xe0(1), decimalPlaces, xe0(2), decimalPlaces, xe0(3), decimalPlaces, xe0(4), decimalPlaces, xe0(5), decimalPlaces, xe0(6));
+        fprintf("Desired end-effector position:\n\t[%s]'\n", strjoin(arrayfun(@(x) sprintf('%.*f', decimalPlaces, x), xe0, 'UniformOutput', false), ', '));
     end
     
     function y_W_E = forward_kinematics(q)

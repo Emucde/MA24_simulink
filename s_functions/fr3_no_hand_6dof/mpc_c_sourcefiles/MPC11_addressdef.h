@@ -4,27 +4,27 @@
 #ifndef MPC8_ADRESSDEF_H
 #define MPC8_ADRESSDEF_H
 
-#define MPC11_IW_LEN 375
+#define MPC11_IW_LEN 955
 #define MPC11_ARG_LEN 23
 #define MPC11_RES_LEN 19
-#define MPC11_W_LEN 4205
-static const uint32_t MPC11_ARG[] = {0,6,126};
-static const uint32_t MPC11_RES[] = {292,294,414,415,416,417,418,419,420};
-#define MPC11_W_END_ADDRESS 421
+#define MPC11_W_LEN 12426
+static const uint32_t MPC11_ARG[] = {0,14,318};
+static const uint32_t MPC11_RES[] = {484,490,794,795,796,797,798,799,800};
+#define MPC11_W_END_ADDRESS 801
 
 // INPUT DIMENSIONS:
-#define MPC11_X_K_LEN 4        /*x_k: [4 1] array values */
+#define MPC11_X_K_LEN 12        /*x_k: [12 1] array values */
 #define MPC11_THETA_LEN 1        /*theta: [1 1] array values */
 #define MPC11_T_LEN 1        /*t: [1 1] array values */
-#define MPC11_U_LEN 10        /*u: 2x5 matrix values */
-#define MPC11_X_LEN 24        /*x: 4x6 matrix values */
+#define MPC11_U_LEN 30        /*u: 6x5 matrix values */
+#define MPC11_X_LEN 72        /*x: 12x6 matrix values */
 #define MPC11_THETA_LEN 6        /*theta: [1 6] array values */
 #define MPC11_V_LEN 5        /*v: [1 5] array values */
-#define MPC11_LAMBDA_U_LEN 10        /*lambda_u: 2x5 matrix values */
-#define MPC11_LAMBDA_X_LEN 24        /*lambda_x: 4x6 matrix values */
+#define MPC11_LAMBDA_U_LEN 30        /*lambda_u: 6x5 matrix values */
+#define MPC11_LAMBDA_X_LEN 72        /*lambda_x: 12x6 matrix values */
 #define MPC11_LAMBDA_THETA_LEN 6        /*lambda_theta: [1 6] array values */
 #define MPC11_LAMBDA_V_LEN 5        /*lambda_v: [1 5] array values */
-#define MPC11_G_LEN 48        /*g: 4x12 matrix values */
+#define MPC11_G_LEN 144        /*g: 12x12 matrix values */
 #define MPC11_Q_Y_LEN 36        /*Q_y: 6x6 matrix values */
 #define MPC11_Q_YN_LEN 36        /*Q_yN: 6x6 matrix values */
 #define MPC11_Q_LEN 1        /*Q: [1 1] array values */
@@ -36,50 +36,50 @@ static const uint32_t MPC11_RES[] = {292,294,414,415,416,417,418,419,420};
 #define MPC11_U_MIN_LEN 7        /*u_min: [7 1] array values */
 #define MPC11_U_MAX_LEN 7        /*u_max: [7 1] array values */
 
-#define MPC11_REFERENCE_VALUES_LEN 6        /* reference_values = [x_k(4x1), theta(1x1), t(1x1)] */
-#define MPC11_INIT_GUESS_LEN 120        /* init_guess = [u(2x5), x(4x6), theta(1x6), v(1x5), lambda_u(2x5), lambda_x(4x6), lambda_theta(1x6), lambda_v(1x5), g(4x12)] */
+#define MPC11_REFERENCE_VALUES_LEN 14        /* reference_values = [x_k(12x1), theta(1x1), t(1x1)] */
+#define MPC11_INIT_GUESS_LEN 304        /* init_guess = [u(6x5), x(12x6), theta(1x6), v(1x5), lambda_u(6x5), lambda_x(12x6), lambda_theta(1x6), lambda_v(1x5), g(12x12)] */
 #define MPC11_PARAM_WEIGHT_LEN 166        /* param_weight = [Q_y(6x6), Q_yN(6x6), Q(1x1), Q(1x1), lambda(1x1), R_q_pp(7x7), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
 
 // INPUT ADDRESSES:
-#define MPC11_X_K_ADDR 0        /*x_k: [4 1] array values */
-#define MPC11_THETA_ADDR 4        /*theta: [1 1] array values */
-#define MPC11_T_ADDR 5        /*t: [1 1] array values */
-#define MPC11_U_ADDR 6        /*u: 2x5 matrix values */
-#define MPC11_X_ADDR 16        /*x: 4x6 matrix values */
-#define MPC11_THETA_ADDR 40        /*theta: [1 6] array values */
-#define MPC11_V_ADDR 46        /*v: [1 5] array values */
-#define MPC11_LAMBDA_U_ADDR 51        /*lambda_u: 2x5 matrix values */
-#define MPC11_LAMBDA_X_ADDR 61        /*lambda_x: 4x6 matrix values */
-#define MPC11_LAMBDA_THETA_ADDR 85        /*lambda_theta: [1 6] array values */
-#define MPC11_LAMBDA_V_ADDR 91        /*lambda_v: [1 5] array values */
-#define MPC11_G_ADDR 96        /*g: 4x12 matrix values */
-#define MPC11_Q_Y_ADDR 144        /*Q_y: 6x6 matrix values */
-#define MPC11_Q_YN_ADDR 180        /*Q_yN: 6x6 matrix values */
-#define MPC11_Q_ADDR 216        /*Q: [1 1] array values */
-#define MPC11_Q_ADDR 217        /*Q: [1 1] array values */
-#define MPC11_LAMBDA_ADDR 218        /*lambda: [1 1] array values */
-#define MPC11_R_Q_PP_ADDR 219        /*R_q_pp: 7x7 matrix values */
-#define MPC11_X_MIN_ADDR 268        /*x_min: [14 1] array values */
-#define MPC11_X_MAX_ADDR 282        /*x_max: [14 1] array values */
-#define MPC11_U_MIN_ADDR 296        /*u_min: [7 1] array values */
-#define MPC11_U_MAX_ADDR 303        /*u_max: [7 1] array values */
+#define MPC11_X_K_ADDR 0        /*x_k: [12 1] array values */
+#define MPC11_THETA_ADDR 12        /*theta: [1 1] array values */
+#define MPC11_T_ADDR 13        /*t: [1 1] array values */
+#define MPC11_U_ADDR 14        /*u: 6x5 matrix values */
+#define MPC11_X_ADDR 44        /*x: 12x6 matrix values */
+#define MPC11_THETA_ADDR 116        /*theta: [1 6] array values */
+#define MPC11_V_ADDR 122        /*v: [1 5] array values */
+#define MPC11_LAMBDA_U_ADDR 127        /*lambda_u: 6x5 matrix values */
+#define MPC11_LAMBDA_X_ADDR 157        /*lambda_x: 12x6 matrix values */
+#define MPC11_LAMBDA_THETA_ADDR 229        /*lambda_theta: [1 6] array values */
+#define MPC11_LAMBDA_V_ADDR 235        /*lambda_v: [1 5] array values */
+#define MPC11_G_ADDR 240        /*g: 12x12 matrix values */
+#define MPC11_Q_Y_ADDR 384        /*Q_y: 6x6 matrix values */
+#define MPC11_Q_YN_ADDR 420        /*Q_yN: 6x6 matrix values */
+#define MPC11_Q_ADDR 456        /*Q: [1 1] array values */
+#define MPC11_Q_ADDR 457        /*Q: [1 1] array values */
+#define MPC11_LAMBDA_ADDR 458        /*lambda: [1 1] array values */
+#define MPC11_R_Q_PP_ADDR 459        /*R_q_pp: 7x7 matrix values */
+#define MPC11_X_MIN_ADDR 508        /*x_min: [14 1] array values */
+#define MPC11_X_MAX_ADDR 522        /*x_max: [14 1] array values */
+#define MPC11_U_MIN_ADDR 536        /*u_min: [7 1] array values */
+#define MPC11_U_MAX_ADDR 543        /*u_max: [7 1] array values */
 
 // CASADI FUN INPUT ADRESSES:
-#define MPC11_IN_REFERENCE_VALUES_ADDR 0        /* reference_values = [x_k(4x1), theta(1x1), t(1x1)] */
-#define MPC11_IN_INIT_GUESS_ADDR 6        /* init_guess = [u(2x5), x(4x6), theta(1x6), v(1x5), lambda_u(2x5), lambda_x(4x6), lambda_theta(1x6), lambda_v(1x5), g(4x12)] */
-#define MPC11_IN_PARAM_WEIGHT_ADDR 126        /* param_weight = [Q_y(6x6), Q_yN(6x6), Q(1x1), Q(1x1), lambda(1x1), R_q_pp(7x7), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
+#define MPC11_IN_REFERENCE_VALUES_ADDR 0        /* reference_values = [x_k(12x1), theta(1x1), t(1x1)] */
+#define MPC11_IN_INIT_GUESS_ADDR 14        /* init_guess = [u(6x5), x(12x6), theta(1x6), v(1x5), lambda_u(6x5), lambda_x(12x6), lambda_theta(1x6), lambda_v(1x5), g(12x12)] */
+#define MPC11_IN_PARAM_WEIGHT_ADDR 318        /* param_weight = [Q_y(6x6), Q_yN(6x6), Q(1x1), Q(1x1), lambda(1x1), R_q_pp(7x7), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
 
 // OUTPUT DIMENSIONS:
-#define MPC11_U_OPT_LEN 2        /*u_opt: [2 1] array values */
-#define MPC11_U_OUT_LEN 10        /*u_out: 2x5 matrix values */
-#define MPC11_X_OUT_LEN 24        /*x_out: 4x6 matrix values */
+#define MPC11_U_OPT_LEN 6        /*u_opt: [6 1] array values */
+#define MPC11_U_OUT_LEN 30        /*u_out: 6x5 matrix values */
+#define MPC11_X_OUT_LEN 72        /*x_out: 12x6 matrix values */
 #define MPC11_THETA_OUT_LEN 6        /*theta_out: [1 6] array values */
 #define MPC11_V_OUT_LEN 5        /*v_out: [1 5] array values */
-#define MPC11_LAMBDA_U_OUT_LEN 10        /*lambda_u_out: 2x5 matrix values */
-#define MPC11_LAMBDA_X_OUT_LEN 24        /*lambda_x_out: 4x6 matrix values */
+#define MPC11_LAMBDA_U_OUT_LEN 30        /*lambda_u_out: 6x5 matrix values */
+#define MPC11_LAMBDA_X_OUT_LEN 72        /*lambda_x_out: 12x6 matrix values */
 #define MPC11_LAMBDA_THETA_OUT_LEN 6        /*lambda_theta_out: [1 6] array values */
 #define MPC11_LAMBDA_V_OUT_LEN 5        /*lambda_v_out: [1 5] array values */
-#define MPC11_G_OUT_LEN 48        /*g_out: 4x12 matrix values */
+#define MPC11_G_OUT_LEN 144        /*g_out: 12x12 matrix values */
 #define MPC11_J_YT_LEN 1        /*J_yt: [1 1] array values */
 #define MPC11_J_YT_N_LEN 1        /*J_yt_N: [1 1] array values */
 #define MPC11_J_YR_LEN 1        /*J_yr: [1 1] array values */
@@ -89,33 +89,33 @@ static const uint32_t MPC11_RES[] = {292,294,414,415,416,417,418,419,420};
 #define MPC11_J_THETAN_LEN 1        /*J_thetaN: [1 1] array values */
 
 // OUTPUT ADDRESSES:
-#define MPC11_U_OPT_ADDR 292        /*u_opt: [2 1] array values */
-#define MPC11_U_OUT_ADDR 294        /*u_out: 2x5 matrix values */
-#define MPC11_X_OUT_ADDR 304        /*x_out: 4x6 matrix values */
-#define MPC11_THETA_OUT_ADDR 328        /*theta_out: [1 6] array values */
-#define MPC11_V_OUT_ADDR 334        /*v_out: [1 5] array values */
-#define MPC11_LAMBDA_U_OUT_ADDR 339        /*lambda_u_out: 2x5 matrix values */
-#define MPC11_LAMBDA_X_OUT_ADDR 349        /*lambda_x_out: 4x6 matrix values */
-#define MPC11_LAMBDA_THETA_OUT_ADDR 373        /*lambda_theta_out: [1 6] array values */
-#define MPC11_LAMBDA_V_OUT_ADDR 379        /*lambda_v_out: [1 5] array values */
-#define MPC11_G_OUT_ADDR 384        /*g_out: 4x12 matrix values */
-#define MPC11_J_YT_ADDR 432        /*J_yt: [1 1] array values */
-#define MPC11_J_YT_N_ADDR 433        /*J_yt_N: [1 1] array values */
-#define MPC11_J_YR_ADDR 434        /*J_yr: [1 1] array values */
-#define MPC11_J_YR_N_ADDR 435        /*J_yr_N: [1 1] array values */
-#define MPC11_J_Q_PP_ADDR 436        /*J_q_pp: [1 1] array values */
-#define MPC11_J_THETA_ADDR 437        /*J_theta: [1 1] array values */
-#define MPC11_J_THETAN_ADDR 438        /*J_thetaN: [1 1] array values */
+#define MPC11_U_OPT_ADDR 484        /*u_opt: [6 1] array values */
+#define MPC11_U_OUT_ADDR 490        /*u_out: 6x5 matrix values */
+#define MPC11_X_OUT_ADDR 520        /*x_out: 12x6 matrix values */
+#define MPC11_THETA_OUT_ADDR 592        /*theta_out: [1 6] array values */
+#define MPC11_V_OUT_ADDR 598        /*v_out: [1 5] array values */
+#define MPC11_LAMBDA_U_OUT_ADDR 603        /*lambda_u_out: 6x5 matrix values */
+#define MPC11_LAMBDA_X_OUT_ADDR 633        /*lambda_x_out: 12x6 matrix values */
+#define MPC11_LAMBDA_THETA_OUT_ADDR 705        /*lambda_theta_out: [1 6] array values */
+#define MPC11_LAMBDA_V_OUT_ADDR 711        /*lambda_v_out: [1 5] array values */
+#define MPC11_G_OUT_ADDR 716        /*g_out: 12x12 matrix values */
+#define MPC11_J_YT_ADDR 860        /*J_yt: [1 1] array values */
+#define MPC11_J_YT_N_ADDR 861        /*J_yt_N: [1 1] array values */
+#define MPC11_J_YR_ADDR 862        /*J_yr: [1 1] array values */
+#define MPC11_J_YR_N_ADDR 863        /*J_yr_N: [1 1] array values */
+#define MPC11_J_Q_PP_ADDR 864        /*J_q_pp: [1 1] array values */
+#define MPC11_J_THETA_ADDR 865        /*J_theta: [1 1] array values */
+#define MPC11_J_THETAN_ADDR 866        /*J_thetaN: [1 1] array values */
 
 // CASADI FUN OUTPUT ADRESSES:
-#define MPC11_OUT_U_OPT_ADDR 292        /* u_opt = [u[0:1](2x1)] */
-#define MPC11_OUT_INIT_GUESS_OUT_ADDR 294        /* init_guess_out = [u_out(2x5), x_out(4x6), theta_out(1x6), v_out(1x5), lambda_u_out(2x5), lambda_x_out(4x6), lambda_theta_out(1x6), lambda_v_out(1x5), g_out(4x12)] */
-#define MPC11_OUT_COST_FUN_1_ADDR 414        /* cost_fun_1 = [J_yt(1x1)] */
-#define MPC11_OUT_COST_FUN_2_ADDR 415        /* cost_fun_2 = [J_yt_N(1x1)] */
-#define MPC11_OUT_COST_FUN_3_ADDR 416        /* cost_fun_3 = [J_yr(1x1)] */
-#define MPC11_OUT_COST_FUN_4_ADDR 417        /* cost_fun_4 = [J_yr_N(1x1)] */
-#define MPC11_OUT_COST_FUN_5_ADDR 418        /* cost_fun_5 = [J_q_pp(1x1)] */
-#define MPC11_OUT_COST_FUN_6_ADDR 419        /* cost_fun_6 = [J_theta(1x1)] */
-#define MPC11_OUT_COST_FUN_7_ADDR 420        /* cost_fun_7 = [J_thetaN(1x1)] */
+#define MPC11_OUT_U_OPT_ADDR 484        /* u_opt = [u[0:5](6x1)] */
+#define MPC11_OUT_INIT_GUESS_OUT_ADDR 490        /* init_guess_out = [u_out(6x5), x_out(12x6), theta_out(1x6), v_out(1x5), lambda_u_out(6x5), lambda_x_out(12x6), lambda_theta_out(1x6), lambda_v_out(1x5), g_out(12x12)] */
+#define MPC11_OUT_COST_FUN_1_ADDR 794        /* cost_fun_1 = [J_yt(1x1)] */
+#define MPC11_OUT_COST_FUN_2_ADDR 795        /* cost_fun_2 = [J_yt_N(1x1)] */
+#define MPC11_OUT_COST_FUN_3_ADDR 796        /* cost_fun_3 = [J_yr(1x1)] */
+#define MPC11_OUT_COST_FUN_4_ADDR 797        /* cost_fun_4 = [J_yr_N(1x1)] */
+#define MPC11_OUT_COST_FUN_5_ADDR 798        /* cost_fun_5 = [J_q_pp(1x1)] */
+#define MPC11_OUT_COST_FUN_6_ADDR 799        /* cost_fun_6 = [J_theta(1x1)] */
+#define MPC11_OUT_COST_FUN_7_ADDR 800        /* cost_fun_7 = [J_thetaN(1x1)] */
 
 #endif /* MPC8_ADRESSDEF_H */

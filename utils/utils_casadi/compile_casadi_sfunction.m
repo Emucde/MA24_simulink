@@ -47,6 +47,10 @@ end
     casadi_fun_c_header_path = [output_dir, '/', casadi_fun_c_header_name];
     casadi_fun_h_header_path = [output_dir, '/', casadi_fun_h_header_name];
 
+    % Save the CasADi function (also in opti case because it is needed for
+    % init guess calculations)
+    casadi_fun.save([output_dir, '/', casadi_fun_name, '.casadi']);
+
     if(mode == 1) % classic nlpsol s_function
         s_fun_file     = [s_fun_path, 's_function_nlpsol.c']; % TODO: create file if not exists!
         s_fun_name_new = ['s_function_nlpsol_', casadi_fun_name];
@@ -54,9 +58,6 @@ end
 
         copyfile(s_fun_file, s_fun_file_new, 'f');
         replace_strings_in_casadi_file(s_fun_file_new, ['nlpsol_', casadi_fun_name]);
-        
-        % Save the CasADi function
-        casadi_fun.save([output_dir, '/', casadi_fun_name, '.casadi']);
         
         % Get paths to CasADi libraries and headers
         lib_path = GlobalOptions.getCasadiPath();

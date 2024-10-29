@@ -8,7 +8,9 @@ slprj
 *.o
 .tmp
 main_simulink/simulink_log/*.txt
+s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/*
 jit*.c
 tmp_casadi_compiler*.o
 tmp_casadi_compiler*.so
 utils_python/__pycache__
+s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/MPC01.c

@@ -75,16 +75,16 @@ const casadi_real MPC7_param_weight[201] = {
     1e-05, 
 
     /* x_min : [14 1] array values */
-    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
+    -2.3093, -1.5133, -2.4937, -2.7478, -2.48, 0.8521, -2.6895, -2, -1, -1.5, -1.25, -3, -1.5, -3, 
 
     /* x_max : [14 1] array values */
-    Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
+    2.3093, 1.5133, 2.4937, -0.4461, 2.48, 4.2094, 2.6895, 2, 1, 1.5, 1.25, 3, 1.5, 3, 
 
     /* u_min : [7 1] array values */
-    -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, -Inf, 
+    -87, -87, -87, -87, -12, -12, -12, 
 
     /* u_max : [7 1] array values */
-    Inf, Inf, Inf, Inf, Inf, Inf, Inf, 
+    87, 87, 87, 87, 12, 12, 12, 
 };
 
 

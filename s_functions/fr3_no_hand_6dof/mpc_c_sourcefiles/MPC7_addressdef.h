@@ -4,29 +4,29 @@
 #ifndef MPC8_ADRESSDEF_H
 #define MPC8_ADRESSDEF_H
 
-#define MPC7_IW_LEN 595
+#define MPC7_IW_LEN 1780
 #define MPC7_ARG_LEN 24
 #define MPC7_RES_LEN 17
-#define MPC7_W_LEN 8902
-static const uint32_t MPC7_ARG[] = {0,116,305};
-static const uint32_t MPC7_RES[] = {506,508,697,698,699,700,701};
-#define MPC7_W_END_ADDRESS 702
+#define MPC7_W_LEN 35915
+static const uint32_t MPC7_ARG[] = {0,132,698};
+static const uint32_t MPC7_RES[] = {899,905,1471,1472,1473,1474,1475};
+#define MPC7_W_END_ADDRESS 1476
 
 // INPUT DIMENSIONS:
-#define MPC7_X_K_LEN 4        /*x_k: [4 1] array values */
-#define MPC7_ZT_0_LEN 4        /*zt_0: [4 1] array values */
+#define MPC7_X_K_LEN 12        /*x_k: [12 1] array values */
+#define MPC7_ZT_0_LEN 12        /*zt_0: [12 1] array values */
 #define MPC7_Y_D_LEN 36        /*y_d: 6x6 matrix values */
 #define MPC7_Y_D_P_LEN 36        /*y_d_p: 6x6 matrix values */
 #define MPC7_Y_D_PP_LEN 36        /*y_d_pp: 6x6 matrix values */
-#define MPC7_U_LEN 10        /*u: 2x5 matrix values */
-#define MPC7_X_LEN 24        /*x: 4x6 matrix values */
-#define MPC7_ZT_LEN 24        /*zt: 4x6 matrix values */
-#define MPC7_ALPHA_T_LEN 12        /*alpha_t: 2x6 matrix values */
-#define MPC7_LAMBDA_U_LEN 10        /*lambda_u: 2x5 matrix values */
-#define MPC7_LAMBDA_X_LEN 24        /*lambda_x: 4x6 matrix values */
-#define MPC7_LAMBDA_ZT_LEN 24        /*lambda_zt: 4x6 matrix values */
-#define MPC7_LAMBDA_ALPHA_T_LEN 12        /*lambda_alpha_t: 2x6 matrix values */
-#define MPC7_G_LEN 52        /*g: 4x13 matrix values */
+#define MPC7_U_LEN 30        /*u: 6x5 matrix values */
+#define MPC7_X_LEN 72        /*x: 12x6 matrix values */
+#define MPC7_ZT_LEN 72        /*zt: 12x6 matrix values */
+#define MPC7_ALPHA_T_LEN 36        /*alpha_t: 6x6 matrix values */
+#define MPC7_LAMBDA_U_LEN 30        /*lambda_u: 6x5 matrix values */
+#define MPC7_LAMBDA_X_LEN 72        /*lambda_x: 12x6 matrix values */
+#define MPC7_LAMBDA_ZT_LEN 72        /*lambda_zt: 12x6 matrix values */
+#define MPC7_LAMBDA_ALPHA_T_LEN 36        /*lambda_alpha_t: 6x6 matrix values */
+#define MPC7_G_LEN 240        /*g: 12x20 matrix values */
 #define MPC7_Q_Y_LEN 36        /*Q_y: 6x6 matrix values */
 #define MPC7_R_Q_PP_LEN 49        /*R_q_pp: 7x7 matrix values */
 #define MPC7_Q_Y_P_REF_LEN 36        /*Q_y_p_ref: 6x6 matrix values */
@@ -38,52 +38,52 @@ static const uint32_t MPC7_RES[] = {506,508,697,698,699,700,701};
 #define MPC7_U_MIN_LEN 7        /*u_min: [7 1] array values */
 #define MPC7_U_MAX_LEN 7        /*u_max: [7 1] array values */
 
-#define MPC7_REFERENCE_VALUES_LEN 116        /* reference_values = [x_k(4x1), zt_0(4x1), y_d(6x6), y_d_p(6x6), y_d_pp(6x6)] */
-#define MPC7_INIT_GUESS_LEN 189        /* init_guess = [u(2x5), x(4x6), zt(4x6), alpha_t(2x6), lambda_u(2x5), lambda_x(4x6), lambda_zt(4x6), lambda_alpha_t(2x6), g(4x13)] */
+#define MPC7_REFERENCE_VALUES_LEN 132        /* reference_values = [x_k(12x1), zt_0(12x1), y_d(6x6), y_d_p(6x6), y_d_pp(6x6)] */
+#define MPC7_INIT_GUESS_LEN 566        /* init_guess = [u(6x5), x(12x6), zt(12x6), alpha_t(6x6), lambda_u(6x5), lambda_x(12x6), lambda_zt(12x6), lambda_alpha_t(6x6), g(12x20)] */
 #define MPC7_PARAM_WEIGHT_LEN 201        /* param_weight = [Q_y(6x6), R_q_pp(7x7), Q_y_p_ref(6x6), Q_y_ref(6x6), epsilon(1x1), epsilon(1x1), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
 
 // INPUT ADDRESSES:
-#define MPC7_X_K_ADDR 0        /*x_k: [4 1] array values */
-#define MPC7_ZT_0_ADDR 4        /*zt_0: [4 1] array values */
-#define MPC7_Y_D_ADDR 8        /*y_d: 6x6 matrix values */
-#define MPC7_Y_D_P_ADDR 44        /*y_d_p: 6x6 matrix values */
-#define MPC7_Y_D_PP_ADDR 80        /*y_d_pp: 6x6 matrix values */
-#define MPC7_U_ADDR 116        /*u: 2x5 matrix values */
-#define MPC7_X_ADDR 126        /*x: 4x6 matrix values */
-#define MPC7_ZT_ADDR 150        /*zt: 4x6 matrix values */
-#define MPC7_ALPHA_T_ADDR 174        /*alpha_t: 2x6 matrix values */
-#define MPC7_LAMBDA_U_ADDR 186        /*lambda_u: 2x5 matrix values */
-#define MPC7_LAMBDA_X_ADDR 196        /*lambda_x: 4x6 matrix values */
-#define MPC7_LAMBDA_ZT_ADDR 220        /*lambda_zt: 4x6 matrix values */
-#define MPC7_LAMBDA_ALPHA_T_ADDR 244        /*lambda_alpha_t: 2x6 matrix values */
-#define MPC7_G_ADDR 256        /*g: 4x13 matrix values */
-#define MPC7_Q_Y_ADDR 308        /*Q_y: 6x6 matrix values */
-#define MPC7_R_Q_PP_ADDR 344        /*R_q_pp: 7x7 matrix values */
-#define MPC7_Q_Y_P_REF_ADDR 393        /*Q_y_p_ref: 6x6 matrix values */
-#define MPC7_Q_Y_REF_ADDR 429        /*Q_y_ref: 6x6 matrix values */
-#define MPC7_EPSILON_ADDR 465        /*epsilon: [1 1] array values */
-#define MPC7_EPSILON_ADDR 466        /*epsilon: [1 1] array values */
-#define MPC7_X_MIN_ADDR 467        /*x_min: [14 1] array values */
-#define MPC7_X_MAX_ADDR 481        /*x_max: [14 1] array values */
-#define MPC7_U_MIN_ADDR 495        /*u_min: [7 1] array values */
-#define MPC7_U_MAX_ADDR 502        /*u_max: [7 1] array values */
+#define MPC7_X_K_ADDR 0        /*x_k: [12 1] array values */
+#define MPC7_ZT_0_ADDR 12        /*zt_0: [12 1] array values */
+#define MPC7_Y_D_ADDR 24        /*y_d: 6x6 matrix values */
+#define MPC7_Y_D_P_ADDR 60        /*y_d_p: 6x6 matrix values */
+#define MPC7_Y_D_PP_ADDR 96        /*y_d_pp: 6x6 matrix values */
+#define MPC7_U_ADDR 132        /*u: 6x5 matrix values */
+#define MPC7_X_ADDR 162        /*x: 12x6 matrix values */
+#define MPC7_ZT_ADDR 234        /*zt: 12x6 matrix values */
+#define MPC7_ALPHA_T_ADDR 306        /*alpha_t: 6x6 matrix values */
+#define MPC7_LAMBDA_U_ADDR 342        /*lambda_u: 6x5 matrix values */
+#define MPC7_LAMBDA_X_ADDR 372        /*lambda_x: 12x6 matrix values */
+#define MPC7_LAMBDA_ZT_ADDR 444        /*lambda_zt: 12x6 matrix values */
+#define MPC7_LAMBDA_ALPHA_T_ADDR 516        /*lambda_alpha_t: 6x6 matrix values */
+#define MPC7_G_ADDR 552        /*g: 12x20 matrix values */
+#define MPC7_Q_Y_ADDR 792        /*Q_y: 6x6 matrix values */
+#define MPC7_R_Q_PP_ADDR 828        /*R_q_pp: 7x7 matrix values */
+#define MPC7_Q_Y_P_REF_ADDR 877        /*Q_y_p_ref: 6x6 matrix values */
+#define MPC7_Q_Y_REF_ADDR 913        /*Q_y_ref: 6x6 matrix values */
+#define MPC7_EPSILON_ADDR 949        /*epsilon: [1 1] array values */
+#define MPC7_EPSILON_ADDR 950        /*epsilon: [1 1] array values */
+#define MPC7_X_MIN_ADDR 951        /*x_min: [14 1] array values */
+#define MPC7_X_MAX_ADDR 965        /*x_max: [14 1] array values */
+#define MPC7_U_MIN_ADDR 979        /*u_min: [7 1] array values */
+#define MPC7_U_MAX_ADDR 986        /*u_max: [7 1] array values */
 
 // CASADI FUN INPUT ADRESSES:
-#define MPC7_IN_REFERENCE_VALUES_ADDR 0        /* reference_values = [x_k(4x1), zt_0(4x1), y_d(6x6), y_d_p(6x6), y_d_pp(6x6)] */
-#define MPC7_IN_INIT_GUESS_ADDR 116        /* init_guess = [u(2x5), x(4x6), zt(4x6), alpha_t(2x6), lambda_u(2x5), lambda_x(4x6), lambda_zt(4x6), lambda_alpha_t(2x6), g(4x13)] */
-#define MPC7_IN_PARAM_WEIGHT_ADDR 305        /* param_weight = [Q_y(6x6), R_q_pp(7x7), Q_y_p_ref(6x6), Q_y_ref(6x6), epsilon(1x1), epsilon(1x1), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
+#define MPC7_IN_REFERENCE_VALUES_ADDR 0        /* reference_values = [x_k(12x1), zt_0(12x1), y_d(6x6), y_d_p(6x6), y_d_pp(6x6)] */
+#define MPC7_IN_INIT_GUESS_ADDR 132        /* init_guess = [u(6x5), x(12x6), zt(12x6), alpha_t(6x6), lambda_u(6x5), lambda_x(12x6), lambda_zt(12x6), lambda_alpha_t(6x6), g(12x20)] */
+#define MPC7_IN_PARAM_WEIGHT_ADDR 698        /* param_weight = [Q_y(6x6), R_q_pp(7x7), Q_y_p_ref(6x6), Q_y_ref(6x6), epsilon(1x1), epsilon(1x1), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
 
 // OUTPUT DIMENSIONS:
-#define MPC7_U_OPT_LEN 2        /*u_opt: [2 1] array values */
-#define MPC7_U_OUT_LEN 10        /*u_out: 2x5 matrix values */
-#define MPC7_X_OUT_LEN 24        /*x_out: 4x6 matrix values */
-#define MPC7_ZT_OUT_LEN 24        /*zt_out: 4x6 matrix values */
-#define MPC7_ALPHA_T_OUT_LEN 12        /*alpha_t_out: 2x6 matrix values */
-#define MPC7_LAMBDA_U_OUT_LEN 10        /*lambda_u_out: 2x5 matrix values */
-#define MPC7_LAMBDA_X_OUT_LEN 24        /*lambda_x_out: 4x6 matrix values */
-#define MPC7_LAMBDA_ZT_OUT_LEN 24        /*lambda_zt_out: 4x6 matrix values */
-#define MPC7_LAMBDA_ALPHA_T_OUT_LEN 12        /*lambda_alpha_t_out: 2x6 matrix values */
-#define MPC7_G_OUT_LEN 52        /*g_out: 4x13 matrix values */
+#define MPC7_U_OPT_LEN 6        /*u_opt: [6 1] array values */
+#define MPC7_U_OUT_LEN 30        /*u_out: 6x5 matrix values */
+#define MPC7_X_OUT_LEN 72        /*x_out: 12x6 matrix values */
+#define MPC7_ZT_OUT_LEN 72        /*zt_out: 12x6 matrix values */
+#define MPC7_ALPHA_T_OUT_LEN 36        /*alpha_t_out: 6x6 matrix values */
+#define MPC7_LAMBDA_U_OUT_LEN 30        /*lambda_u_out: 6x5 matrix values */
+#define MPC7_LAMBDA_X_OUT_LEN 72        /*lambda_x_out: 12x6 matrix values */
+#define MPC7_LAMBDA_ZT_OUT_LEN 72        /*lambda_zt_out: 12x6 matrix values */
+#define MPC7_LAMBDA_ALPHA_T_OUT_LEN 36        /*lambda_alpha_t_out: 6x6 matrix values */
+#define MPC7_G_OUT_LEN 240        /*g_out: 12x20 matrix values */
 #define MPC7_J_YT_LEN 1        /*J_yt: [1 1] array values */
 #define MPC7_JT_YY_REF_LEN 1        /*Jt_yy_ref: [1 1] array values */
 #define MPC7_J_YR_LEN 1        /*J_yr: [1 1] array values */
@@ -91,29 +91,29 @@ static const uint32_t MPC7_RES[] = {506,508,697,698,699,700,701};
 #define MPC7_J_Q_PP_LEN 1        /*J_q_pp: [1 1] array values */
 
 // OUTPUT ADDRESSES:
-#define MPC7_U_OPT_ADDR 506        /*u_opt: [2 1] array values */
-#define MPC7_U_OUT_ADDR 508        /*u_out: 2x5 matrix values */
-#define MPC7_X_OUT_ADDR 518        /*x_out: 4x6 matrix values */
-#define MPC7_ZT_OUT_ADDR 542        /*zt_out: 4x6 matrix values */
-#define MPC7_ALPHA_T_OUT_ADDR 566        /*alpha_t_out: 2x6 matrix values */
-#define MPC7_LAMBDA_U_OUT_ADDR 578        /*lambda_u_out: 2x5 matrix values */
-#define MPC7_LAMBDA_X_OUT_ADDR 588        /*lambda_x_out: 4x6 matrix values */
-#define MPC7_LAMBDA_ZT_OUT_ADDR 612        /*lambda_zt_out: 4x6 matrix values */
-#define MPC7_LAMBDA_ALPHA_T_OUT_ADDR 636        /*lambda_alpha_t_out: 2x6 matrix values */
-#define MPC7_G_OUT_ADDR 648        /*g_out: 4x13 matrix values */
-#define MPC7_J_YT_ADDR 700        /*J_yt: [1 1] array values */
-#define MPC7_JT_YY_REF_ADDR 701        /*Jt_yy_ref: [1 1] array values */
-#define MPC7_J_YR_ADDR 702        /*J_yr: [1 1] array values */
-#define MPC7_JR_YY_REF_ADDR 703        /*Jr_yy_ref: [1 1] array values */
-#define MPC7_J_Q_PP_ADDR 704        /*J_q_pp: [1 1] array values */
+#define MPC7_U_OPT_ADDR 899        /*u_opt: [6 1] array values */
+#define MPC7_U_OUT_ADDR 905        /*u_out: 6x5 matrix values */
+#define MPC7_X_OUT_ADDR 935        /*x_out: 12x6 matrix values */
+#define MPC7_ZT_OUT_ADDR 1007        /*zt_out: 12x6 matrix values */
+#define MPC7_ALPHA_T_OUT_ADDR 1079        /*alpha_t_out: 6x6 matrix values */
+#define MPC7_LAMBDA_U_OUT_ADDR 1115        /*lambda_u_out: 6x5 matrix values */
+#define MPC7_LAMBDA_X_OUT_ADDR 1145        /*lambda_x_out: 12x6 matrix values */
+#define MPC7_LAMBDA_ZT_OUT_ADDR 1217        /*lambda_zt_out: 12x6 matrix values */
+#define MPC7_LAMBDA_ALPHA_T_OUT_ADDR 1289        /*lambda_alpha_t_out: 6x6 matrix values */
+#define MPC7_G_OUT_ADDR 1325        /*g_out: 12x20 matrix values */
+#define MPC7_J_YT_ADDR 1565        /*J_yt: [1 1] array values */
+#define MPC7_JT_YY_REF_ADDR 1566        /*Jt_yy_ref: [1 1] array values */
+#define MPC7_J_YR_ADDR 1567        /*J_yr: [1 1] array values */
+#define MPC7_JR_YY_REF_ADDR 1568        /*Jr_yy_ref: [1 1] array values */
+#define MPC7_J_Q_PP_ADDR 1569        /*J_q_pp: [1 1] array values */
 
 // CASADI FUN OUTPUT ADRESSES:
-#define MPC7_OUT_U_OPT_ADDR 506        /* u_opt = [u[0:1](2x1)] */
-#define MPC7_OUT_INIT_GUESS_OUT_ADDR 508        /* init_guess_out = [u_out(2x5), x_out(4x6), zt_out(4x6), alpha_t_out(2x6), lambda_u_out(2x5), lambda_x_out(4x6), lambda_zt_out(4x6), lambda_alpha_t_out(2x6), g_out(4x13)] */
-#define MPC7_OUT_COST_FUN_1_ADDR 697        /* cost_fun_1 = [J_yt(1x1)] */
-#define MPC7_OUT_COST_FUN_2_ADDR 698        /* cost_fun_2 = [Jt_yy_ref(1x1)] */
-#define MPC7_OUT_COST_FUN_3_ADDR 699        /* cost_fun_3 = [J_yr(1x1)] */
-#define MPC7_OUT_COST_FUN_4_ADDR 700        /* cost_fun_4 = [Jr_yy_ref(1x1)] */
-#define MPC7_OUT_COST_FUN_5_ADDR 701        /* cost_fun_5 = [J_q_pp(1x1)] */
+#define MPC7_OUT_U_OPT_ADDR 899        /* u_opt = [u[0:5](6x1)] */
+#define MPC7_OUT_INIT_GUESS_OUT_ADDR 905        /* init_guess_out = [u_out(6x5), x_out(12x6), zt_out(12x6), alpha_t_out(6x6), lambda_u_out(6x5), lambda_x_out(12x6), lambda_zt_out(12x6), lambda_alpha_t_out(6x6), g_out(12x20)] */
+#define MPC7_OUT_COST_FUN_1_ADDR 1471        /* cost_fun_1 = [J_yt(1x1)] */
+#define MPC7_OUT_COST_FUN_2_ADDR 1472        /* cost_fun_2 = [Jt_yy_ref(1x1)] */
+#define MPC7_OUT_COST_FUN_3_ADDR 1473        /* cost_fun_3 = [J_yr(1x1)] */
+#define MPC7_OUT_COST_FUN_4_ADDR 1474        /* cost_fun_4 = [Jr_yy_ref(1x1)] */
+#define MPC7_OUT_COST_FUN_5_ADDR 1475        /* cost_fun_5 = [J_q_pp(1x1)] */
 
 #endif /* MPC8_ADRESSDEF_H */

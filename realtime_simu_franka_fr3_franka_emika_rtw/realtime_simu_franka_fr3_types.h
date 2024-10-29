@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.398
+ * Model version              : 8.405
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Fri Oct 25 15:00:00 2024
+ * C++ source code generated on : Mon Oct 28 11:24:08 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -29,7 +29,9 @@ struct state_traj_bus
   real_T start;
   real_T reset;
   real_T stop;
-};
+}
+
+;
 
 #endif
 
@@ -79,130 +81,31 @@ struct x_d
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_OnOf2gXFGCeQ1kokKguxcC_
-#define DEFINED_TYPEDEF_FOR_struct_OnOf2gXFGCeQ1kokKguxcC_
+#ifndef DEFINED_TYPEDEF_FOR_struct_bxvYlVJ0lAkCV5jmJsIaMD_
+#define DEFINED_TYPEDEF_FOR_struct_bxvYlVJ0lAkCV5jmJsIaMD_
 
-struct struct_OnOf2gXFGCeQ1kokKguxcC
+struct struct_bxvYlVJ0lAkCV5jmJsIaMD
 {
-  real_T Kd1[36];
-  real_T Kp1[36];
-  real_T q_n[7];
-  real_T K_n[49];
-  real_T D_n[49];
-  real_T k_n_nl[49];
-  real_T nl_spring_threshold[7];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_jfblZltmyovPlsjcFJPP5C_
-#define DEFINED_TYPEDEF_FOR_struct_jfblZltmyovPlsjcFJPP5C_
-
-struct struct_jfblZltmyovPlsjcFJPP5C
-{
-  real_T D_d[36];
-  real_T K_d[36];
-  real_T D_d_jointspace[49];
-  real_T K_d_jointspace[49];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_Fkz9JfHurrLZtu6guaEzCB_
-#define DEFINED_TYPEDEF_FOR_struct_Fkz9JfHurrLZtu6guaEzCB_
-
-struct struct_Fkz9JfHurrLZtu6guaEzCB
-{
-  real_T mode;
-  real_T k;
-  real_T W_bar_N[7];
-  real_T W_E[36];
-  real_T eps;
-  real_T eps_collinear;
-  real_T lambda_min;
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_RCS9FomuFmdbboJvGAYmbB_
-#define DEFINED_TYPEDEF_FOR_struct_RCS9FomuFmdbboJvGAYmbB_
-
-struct struct_RCS9FomuFmdbboJvGAYmbB
-{
-  struct_OnOf2gXFGCeQ1kokKguxcC ct;
-  struct_jfblZltmyovPlsjcFJPP5C pd;
-  struct_Fkz9JfHurrLZtu6guaEzCB regularization;
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_Yw0vgIQ6yZpeProSkAAsrC_
-#define DEFINED_TYPEDEF_FOR_struct_Yw0vgIQ6yZpeProSkAAsrC_
-
-struct struct_Yw0vgIQ6yZpeProSkAAsrC
-{
-  real_T MPC01[359];
-  real_T MPC6[201];
-  real_T MPC7[201];
-  real_T MPC8[395];
-  real_T MPC9[233];
-  real_T MPC10[163];
-  real_T MPC11[166];
-  real_T MPC12[163];
-  real_T MPC13[163];
-  real_T MPC14[199];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_l1Nsuu0XOOc6U6jDqXw0mE_
-#define DEFINED_TYPEDEF_FOR_struct_l1Nsuu0XOOc6U6jDqXw0mE_
-
-struct struct_l1Nsuu0XOOc6U6jDqXw0mE
-{
-  real_T init_guess[460];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_4K1H1LNAOrvSOTHhKEJOg_
-#define DEFINED_TYPEDEF_FOR_struct_4K1H1LNAOrvSOTHhKEJOg_
-
-struct struct_4K1H1LNAOrvSOTHhKEJOg
-{
-  real_T init_guess[170];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_WOC7dUVd8i8zlETJkESm4F_
-#define DEFINED_TYPEDEF_FOR_struct_WOC7dUVd8i8zlETJkESm4F_
-
-struct struct_WOC7dUVd8i8zlETJkESm4F
-{
-  real_T init_guess[600];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_HynqmHhvVrqpd52uaZuCED_
-#define DEFINED_TYPEDEF_FOR_struct_HynqmHhvVrqpd52uaZuCED_
-
-struct struct_HynqmHhvVrqpd52uaZuCED
-{
-  real_T K_D_q[49];
-  real_T K_P_q[49];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_MIVHhJW7aTMZId5MkCQfpG_
-#define DEFINED_TYPEDEF_FOR_struct_MIVHhJW7aTMZId5MkCQfpG_
-
-struct struct_MIVHhJW7aTMZId5MkCQfpG
-{
-  struct_HynqmHhvVrqpd52uaZuCED MPC12;
-  struct_HynqmHhvVrqpd52uaZuCED MPC13;
+  real_T N;
+  real_T t[10051];
+  real_T p_d[180918];
+  real_T p_d_p[180918];
+  real_T p_d_pp[180918];
+  real_T Phi_d[180918];
+  real_T Phi_d_p[180918];
+  real_T Phi_d_pp[180918];
+  real_T R_d[542754];
+  real_T q_d[241224];
+  real_T q_d_p[241224];
+  real_T q_d_pp[241224];
+  real_T omega_d[180918];
+  real_T omega_d_p[180918];
+  real_T alpha_d[60306];
+  real_T alpha_d_p[60306];
+  real_T alpha_d_pp[60306];
+  real_T rot_ax_d[180918];
+  real_T alpha_d_offset[60306];
+  real_T q_d_rel[241224];
 };
 
 #endif
@@ -287,86 +190,27 @@ struct struct_Zz654ZwXwtjsnsQgQLM11G
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_1rg7ji8rN2aACsEM9DgtxD_
-#define DEFINED_TYPEDEF_FOR_struct_1rg7ji8rN2aACsEM9DgtxD_
+#ifndef DEFINED_TYPEDEF_FOR_struct_7GwfAYRjAWGpyfrsv1fnuH_
+#define DEFINED_TYPEDEF_FOR_struct_7GwfAYRjAWGpyfrsv1fnuH_
 
-struct struct_1rg7ji8rN2aACsEM9DgtxD
+struct struct_7GwfAYRjAWGpyfrsv1fnuH
 {
-  real_T start_index[5];
-  real_T stop_index[5];
-  real_T q_0[35];
-  real_T q_0_p[35];
-  real_T q_0_pp[35];
-  real_T joint_points[105];
-  real_T pose[105];
-  real_T rotation[135];
-  real_T rot_ax[45];
-  real_T alpha[15];
-  real_T time[15];
-  real_T traj_type[5];
-  struct_xtY3FIkba7D2gFmP0VadqC diff_filter[5];
-  struct_7a8eCPA4nMdHfiggL8ApbC diff_filter_jointspace[5];
-  struct_Zz654ZwXwtjsnsQgQLM11G sin_poly[5];
+  real_T start_index[6];
+  real_T stop_index[6];
+  real_T q_0[42];
+  real_T q_0_p[42];
+  real_T q_0_pp[42];
+  real_T joint_points[126];
+  real_T pose[126];
+  real_T rotation[162];
+  real_T rot_ax[54];
+  real_T alpha[18];
+  real_T time[18];
+  real_T traj_type[6];
+  struct_xtY3FIkba7D2gFmP0VadqC diff_filter[6];
+  struct_7a8eCPA4nMdHfiggL8ApbC diff_filter_jointspace[6];
+  struct_Zz654ZwXwtjsnsQgQLM11G sin_poly[6];
   real_T N_traj;
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_qIPFwTp4CGXBaltKbUZCzD_
-#define DEFINED_TYPEDEF_FOR_struct_qIPFwTp4CGXBaltKbUZCzD_
-
-struct struct_qIPFwTp4CGXBaltKbUZCzD
-{
-  real_T init_guess[230];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_BA4vVHYs4L8APXB5GH1YyF_
-#define DEFINED_TYPEDEF_FOR_struct_BA4vVHYs4L8APXB5GH1YyF_
-
-struct struct_BA4vVHYs4L8APXB5GH1YyF
-{
-  real_T init_guess[945];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_qBe9UCTbKs0sytBUoosVxE_
-#define DEFINED_TYPEDEF_FOR_struct_qBe9UCTbKs0sytBUoosVxE_
-
-struct struct_qBe9UCTbKs0sytBUoosVxE
-{
-  real_T N;
-  real_T t[15001];
-  real_T p_d[225015];
-  real_T p_d_p[225015];
-  real_T p_d_pp[225015];
-  real_T Phi_d[225015];
-  real_T Phi_d_p[225015];
-  real_T Phi_d_pp[225015];
-  real_T R_d[675045];
-  real_T q_d[300020];
-  real_T q_d_p[300020];
-  real_T q_d_pp[300020];
-  real_T omega_d[225015];
-  real_T omega_d_p[225015];
-  real_T alpha_d[75005];
-  real_T alpha_d_p[75005];
-  real_T alpha_d_pp[75005];
-  real_T rot_ax_d[225015];
-  real_T alpha_d_offset[75005];
-  real_T q_d_rel[300020];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_w9gMcpzWoLTxJuKGyF9MrG_
-#define DEFINED_TYPEDEF_FOR_struct_w9gMcpzWoLTxJuKGyF9MrG_
-
-struct struct_w9gMcpzWoLTxJuKGyF9MrG
-{
-  real_T init_guess[640];
 };
 
 #endif
@@ -384,11 +228,11 @@ struct struct_KEa48IyRUxLtKgH405LUqB
 #endif
 
 #ifndef SS_UINT64
-#define SS_UINT64                      42
+#define SS_UINT64                      29
 #endif
 
 #ifndef SS_INT64
-#define SS_INT64                       43
+#define SS_INT64                       30
 #endif
 
 /* Parameters (default storage) */

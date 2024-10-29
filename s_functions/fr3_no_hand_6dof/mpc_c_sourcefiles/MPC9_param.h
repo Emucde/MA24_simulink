@@ -20,18 +20,18 @@
 
 //MPC_SETTINGS:
 #define MPC9_N 5
-#define MPC9_N_step 1000
-#define MPC9_Ts 1
-#define MPC9_T_horizon 5
+#define MPC9_N_step 5
+#define MPC9_Ts 0.005
+#define MPC9_T_horizon 0.025
 #define MPC9_rk_iter 1
 #define MPC9_variant "nlpsol"
 #define MPC9_solver "qrqp"
-#define MPC9_version "v4_kin_int"
-#define MPC9_name "MPC8"
+#define MPC9_version "v4_kin_int_refsys"
+#define MPC9_name "MPC9"
 #define MPC9_int_method "Euler"
 #define MPC9_fixed_parameter 0
 #define MPC9_traj_data_per_horizon 6
-static const uint32_t MPC9_traj_indices[] = {0,1,1000,2000,3000,4000};
+static const uint32_t MPC9_traj_indices[] = {0,1,5,10,15,20};
 
 //MPC_WEIGHTS:
 const casadi_real MPC9_param_weight[233] = {

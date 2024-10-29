@@ -36,8 +36,8 @@ int MPC6_work(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_
 int MPC6_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_int *sz_w);
 #define MPC6_SZ_ARG 24
 #define MPC6_SZ_RES 17
-#define MPC6_SZ_IW 595
-#define MPC6_SZ_W 8212
+#define MPC6_SZ_IW 1840
+#define MPC6_SZ_W 38635
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
