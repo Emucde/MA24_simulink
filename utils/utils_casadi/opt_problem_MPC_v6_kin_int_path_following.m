@@ -9,6 +9,8 @@ n = param_robot.n_DOF; % Dimension of joint space
 n_red = param_robot.n_red; % Dimension of joint space
 m = param_robot.m; % Dimension of Task Space
 
+n_x_indices = [n_indices n_indices+n];
+
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
@@ -56,7 +58,7 @@ H2_int = integrate_casadi(h, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 H2 = Function('H', {theta, v, lambda_theta}, {H2_int(theta, v)});
 
 %% set up path function (hardcoded here, TODO: make it more general)
-param_traj_pose_idx = param_traj.start_index(2):param_traj.stop_index(2);
+param_traj_pose_idx = param_traj.start_index(traj_select_mpc):param_traj.stop_index(traj_select_mpc);
 pose     = param_traj.pose(yt_indices, param_traj_pose_idx);
 quat     = param_traj.pose(4:7, param_traj_pose_idx);
 rotation = param_traj.rotation(:, :, param_traj_pose_idx);
@@ -125,6 +127,7 @@ end
 T = param_traj_time(end);
 sigma_t_fun = Function('sigma_t_fun', {theta}, {sigma_t});
 sigma_r_fun = Function('sigma_r_fun', {theta}, {sigma_r});
+sigma_r_quat_fun = Function('sigma_r_quat_fun', {theta}, {rotm2quat_v3(sigma_r)});
 
 % Robot System: Initial guess
 q_0_red    = q_0(n_indices);
@@ -146,7 +149,7 @@ theta_init_guess_0 = t_init_guess/T;
 theta_0_0 = theta_init_guess_0(1);
 v_init_guess_0 = zeros(1, N_MPC);
 
-theta_sys = true; % funktioniert zwar, aber macht keinen sinn da theta_k nicht korrekt ist!
+theta_sys = false; % funktioniert zwar, aber macht keinen sinn da theta_k nicht korrekt ist!
 
 if(theta_sys)
     lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(theta_init_guess_0)+numel(v_init_guess_0), 1);
@@ -218,9 +221,11 @@ end
 x_k = SX.sym( 'x_k', 2*n_red, 1 ); % current x state = initial x state
 theta_k = SX.sym( 'theta_k', 1, 1 ); % next theta state
 t_k = SX.sym( 't_k', 1, 1 ); % current time
+x_prev = SX.sym( 'x_prev',  2*n_red, N_MPC+1 );
+theta_prev = SX.sym( 'theta_prev', 1, N_MPC+1 );
 
-mpc_parameter_inputs = {x_k, theta_k, t_k};
-mpc_init_reference_values = [x_0_0(:); theta_0_0; 0];
+mpc_parameter_inputs = {x_k, theta_k, t_k, x_prev, theta_prev};
+mpc_init_reference_values = [x_0_0(:); theta_0_0; 0; x_init_guess_0(:); theta_init_guess_0(:)];
 
 theta_d = (t_k+t_init_guess)/T;
 
@@ -338,7 +343,18 @@ end
 
 J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices));
 
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_theta, J_thetaN}';
+x_err = x-x_prev;
+theta_err = theta-theta_prev;
+
+J_x = 0;
+for i=1:N_MPC
+    % if(i < N_MPC)
+        J_x = J_x + Q_norm_square(x_err(:, 1 + (i)), pp.R_x(n_x_indices, n_x_indices));
+    % end
+end
+J_theta = Q_norm_square(theta_err, pp.R_theta_prev);
+
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_theta, J_thetaN, J_x}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

@@ -20,9 +20,9 @@
 
 //MPC_SETTINGS:
 #define MPC12_N 5
-#define MPC12_N_step 5
-#define MPC12_Ts 0.005
-#define MPC12_T_horizon 0.025
+#define MPC12_N_step 10
+#define MPC12_Ts 0.01
+#define MPC12_T_horizon 0.05
 #define MPC12_rk_iter 1
 #define MPC12_variant "nlpsol"
 #define MPC12_solver "qrqp"
@@ -31,7 +31,7 @@
 #define MPC12_int_method "Euler"
 #define MPC12_fixed_parameter 0
 #define MPC12_traj_data_per_horizon 6
-static const uint32_t MPC12_traj_indices[] = {0,1,2,5,10,15};
+static const uint32_t MPC12_traj_indices[] = {0,1,2,10,20,30};
 
 //MPC_WEIGHTS:
 const casadi_real MPC12_param_weight[163] = {
