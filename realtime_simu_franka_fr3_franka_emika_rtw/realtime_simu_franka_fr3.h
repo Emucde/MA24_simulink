@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.461
+ * Model version              : 8.472
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Tue Oct 29 17:26:41 2024
+ * C++ source code generated on : Wed Oct 30 18:18:09 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -349,7 +349,7 @@ struct DW_realtime_simu_franka_fr3_T {
   } costfunctionscope_PWORK_a;         /* '<S14>/cost function scope' */
 
   struct {
-    void *LoggedData[7];
+    void *LoggedData[8];
   } costfunctionscope_PWORK_g;         /* '<S13>/cost function scope' */
 
   struct {
@@ -389,6 +389,7 @@ struct DW_realtime_simu_franka_fr3_T {
   boolean_T freq_not_empty;            /* '<S57>/MATLAB Function' */
   boolean_T savedTime_not_empty;       /* '<S57>/MATLAB Function' */
   boolean_T icLoad;                    /* '<S19>/init_guess' */
+  boolean_T icLoad_i;                  /* '<S13>/init_guess1' */
   boolean_T Subsystem2_MODE;           /* '<Root>/Subsystem2' */
   boolean_T MPC9offlinecontrollernlpsolve_p;
                /* '<S2>/MPC9 offline controller nlpsolve (qrqp, nlpsol_sfun)' */
@@ -417,7 +418,7 @@ struct P_realtime_simu_franka_fr3_T_ {
   struct_Fk0KA8rNwaPzPDHZYxeGwD param_traj;/* Variable: param_traj
                                             * Referenced by: '<S8>/get q_0_ref'
                                             */
-  struct_Yw0vgIQ6yZpeProSkAAsrC param_weight_init;/* Variable: param_weight_init
+  struct_KqpJoHlQWU4FXqumqJ8INB param_weight_init;/* Variable: param_weight_init
                                                    * Referenced by: '<S19>/Constant18'
                                                    */
   struct_RCS9FomuFmdbboJvGAYmbB ctrl_param;/* Variable: ctrl_param
@@ -506,6 +507,9 @@ struct P_realtime_simu_franka_fr3_T_ {
                                         */
   real_T SFunction3_P2[22];            /* Computed Parameter: SFunction3_P2
                                         * Referenced by: '<S6>/S-Function3'
+                                        */
+  real_T Constant_Value_m;             /* Expression: 1
+                                        * Referenced by: '<S6>/Constant'
                                         */
   real_T SFunction4_P1_Size[2];        /* Computed Parameter: SFunction4_P1_Size
                                         * Referenced by: '<S6>/S-Function4'
@@ -993,10 +997,9 @@ extern "C"
  * '<S58>'  : 'realtime_simu_franka_fr3/Debug Subsystem/Subsystem Reference/manipulability and collinearity 7DOF'
  * '<S59>'  : 'realtime_simu_franka_fr3/Debug Subsystem/tic-toc/MATLAB Function'
  * '<S60>'  : 'realtime_simu_franka_fr3/Subsystem1/Joinspace controller'
- * '<S61>'  : 'realtime_simu_franka_fr3/Subsystem2/MATLAB Function3'
- * '<S62>'  : 'realtime_simu_franka_fr3/Subsystem2/MATLAB Function4'
- * '<S63>'  : 'realtime_simu_franka_fr3/get full tau/get q_0_ref'
- * '<S64>'  : 'realtime_simu_franka_fr3/get full tau/joint space control fixed q3'
- * '<S65>'  : 'realtime_simu_franka_fr3/robot_model_bus_subsys/Robot model bus'
+ * '<S61>'  : 'realtime_simu_franka_fr3/Subsystem2/MATLAB Function4'
+ * '<S62>'  : 'realtime_simu_franka_fr3/get full tau/get q_0_ref'
+ * '<S63>'  : 'realtime_simu_franka_fr3/get full tau/joint space control fixed q3'
+ * '<S64>'  : 'realtime_simu_franka_fr3/robot_model_bus_subsys/Robot model bus'
  */
 #endif                              /* RTW_HEADER_realtime_simu_franka_fr3_h_ */

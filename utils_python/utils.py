@@ -10,6 +10,7 @@ import meshcat.geometry as g
 import meshcat.transformations as tf
 import webbrowser
 import os
+import json
 from meshcat.animation import Animation
 from pinocchio.visualize import MeshcatVisualizer
 import plotly.graph_objects as go
@@ -265,6 +266,28 @@ def process_trajectory_data(traj_select, traj_data_all, traj_param_all):
     }
 
     return traj_data, traj_data_true, traj_init_config
+
+def load_mpc_config(robot_model, file_path='utils_python/mpc_weights_crocoddyl.json'):
+    with open(file_path, 'r') as f:
+        config = json.load(f)
+    
+    mpc_settings = config['mpc_settings']
+    param_mpc_weight = config['param_mpc_weight']
+    
+    # Convert Kd and Kp to numpy arrays
+    param_mpc_weight['Kd'] = np.eye(3) * param_mpc_weight['Kd'][0]
+    param_mpc_weight['Kp'] = np.eye(3) * param_mpc_weight['Kp'][0]
+    
+    # Convert lb_y_ref_N and ub_y_ref_N to numpy arrays
+    param_mpc_weight['lb_y_ref_N'] = np.array(param_mpc_weight['lb_y_ref_N'])
+    param_mpc_weight['ub_y_ref_N'] = np.array(param_mpc_weight['ub_y_ref_N'])
+
+    param_mpc_weight['umin'] = -robot_model.effortLimit#*0.05
+    param_mpc_weight['umax'] = robot_model.effortLimit#*0.05
+    param_mpc_weight['xmin'] = np.hstack([robot_model.lowerPositionLimit, -robot_model.velocityLimit])
+    param_mpc_weight['xmax'] = np.hstack([robot_model.upperPositionLimit, robot_model.velocityLimit])
+    
+    return mpc_settings, param_mpc_weight
 
 ################################## MODEL TESTS ############################################
 

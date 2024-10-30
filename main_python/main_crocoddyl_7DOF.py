@@ -148,35 +148,7 @@ Ts = 1e-3  # Time step of control
 ############################################ MPC Settings ###############################################
 #########################################################################################################
 
-mpc_settings = {
-    'version' : 'MPC_v1_bounds_terminate', # 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref'| 'MPC_v3_bounds_yN_ref' ,
-    'Ts_MPC' : 10e-3, # Interne Abtastzeit der MPC muss vielfaches von Ts sein
-    'N_MPC': 10, # anzahl der Stützstellen innerhalb des Prädiktionshorizont
-    'int_method': 'euler', # 'euler' | 'RK2' | 'RK3' | 'RK4'
-    'solver_steps': 1000
-}
-
-param_mpc_weight = {
-    'q_tracking_cost': 1e2,            # penalizes deviations from the trajectory
-    'q_terminate_tracking_cost': 1e5    ,  # penalizes deviations from the trajectory at the end
-    'q_terminate_tracking_bound_cost': 1e-10,  # penalizes deviations from the bounds of | y_N - y_N_ref | < eps
-    'q_xreg_terminate_cost': 1e-2,  # penalizes deviations from the trajectory at the end
-    'q_ureg_terminate_cost': 1e-2,  # penalizes deviations from the trajectory at the end
-    'q_xreg_cost': 1e-2,              # penalizes changes from the current state
-    'q_ureg_cost': 1e-2,              # penalizes changes from the current input
-    'q_x_bound_cost': 1e-10,              # penalizes ignoring the bounds
-    'q_u_bound_cost': 1e-10,              # penalizes ignoring the bounds
-    'Kd': 100*np.eye(3),
-    'Kp': 100*np.eye(3),
-    'lb_y_ref_N': -1e-6*np.ones(3), # only used if MPC_v3_bounds_yN_ref
-    'ub_y_ref_N': 1e-6*np.ones(3),
-    'umin': [],
-    'umax': [],
-    'xmin': [],
-    'xmax': [],
-    'xref': [],
-    'uref': []
-}
+# see utils_python/mpc_weights_crocoddyl.json
 
 ######################################### Build Robot Model #############################################
 
@@ -222,6 +194,8 @@ pin_data = robot_model.createData()
 #########################################################################################################
 ############################################# INIT MPC ##################################################
 #########################################################################################################
+
+mpc_settings, param_mpc_weight = load_mpc_config(robot_model)
 
 opt_type = mpc_settings['version']
 int_type = mpc_settings['int_method']
@@ -291,7 +265,6 @@ measureSimu = TicToc()
 measureTotal = TicToc()
 measureTotal.tic()
 
-i = 0
 # create first problem:
 y_d_ref = {
     'p_d': p_d[:,    0+MPC_traj_indices],
@@ -300,11 +273,6 @@ y_d_ref = {
 
 param_mpc_weight['xref'] = x_k
 param_mpc_weight['uref'] = us_init_guess[0]
-
-param_mpc_weight['umin'] = -robot_model.effortLimit#*0.05
-param_mpc_weight['umax'] = robot_model.effortLimit#*0.05
-param_mpc_weight['xmin'] = np.hstack([robot_model.lowerPositionLimit, -robot_model.velocityLimit])
-param_mpc_weight['xmax'] = np.hstack([robot_model.upperPositionLimit, robot_model.velocityLimit])
 
 # Create a multibody state from the pinocchio model.
 state = cro.StateMultibody(robot_model)
@@ -316,7 +284,7 @@ problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, para
 # Solve first optimization Problem for warm start
 ddp = solver(problem)
 hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
-warn_cnt = check_solver_status(warn_cnt, hasConverged, ddp, i, Ts, conv_max_limit=5)
+warn_cnt, err_state = check_solver_status(warn_cnt, hasConverged, ddp, 0, Ts, conv_max_limit=5)
 
 xs[0] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
 us[0] = ddp.us[0]
@@ -328,11 +296,12 @@ if use_data_from_simulink:
     start_solving = False
     data_from_python_valid[:] = 1
     us_temp = np.zeros(n_dof)
-    us_temp[n_indices] = us[i]
+    us_temp[n_indices] = us[0]
     data_from_python[:] = us_temp
 else:
     start_solving = True
 
+i = 0
 folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = 'test.html'
 output_file_path = os.path.join(folderpath, outputname)
@@ -342,6 +311,8 @@ try:
     # for i in range(N_traj):
 
         if use_data_from_simulink:
+            if data_from_python_valid[0] == 1:
+                data_from_python_valid[:] = 0
             # Daten von Simulink lesen
             start = data_from_simulink_start[:]
             reset = data_from_simulink_reset[:]
@@ -352,8 +323,7 @@ try:
                 start_solving = False
                 data_from_python[:] = np.zeros(n_dof)
                 if start == 1 and reset == 0 and stop == 0:
-                    if( i == N_traj-1): # autoreset but then no data is printed
-                        i = 0
+                    data_from_python[:] = np.zeros(n_dof)
 
                     if curent_traj_select != new_traj_select:
                         curent_traj_select = new_traj_select
@@ -364,22 +334,60 @@ try:
                         N_traj = traj_init_config['N_traj_true']
                         print(f'New Trajectory selected: {curent_traj_select}')
 
+                        y_d_ref = {
+                            'p_d': p_d[:,    0+MPC_traj_indices],
+                            'R_d': R_d[:, :, 0+MPC_traj_indices]
+                        }
+
+                        q_0 = traj_init_config['q_0'][n_indices]
+                        q_0_p = traj_init_config['q_0_p'][n_indices]
+                        q_0_pp = traj_init_config['q_0_pp'][n_indices]
+
+                        x_init_robot = np.hstack([q_0, q_0_p])
+                        tau_init_robot = pin.rnea(robot_model, robot_data, q_0, q_0_p, q_0_pp)
+
+                    # update mpc settings and problem
+                    mpc_settings, param_mpc_weight = load_mpc_config(robot_model)
+
+                    N_MPC = mpc_settings['N_MPC']
+                    Ts_MPC = mpc_settings['Ts_MPC']
+                    N_step = int(Ts_MPC/Ts)
+                    T_horizon = (N_MPC-1) * Ts_MPC
+                    if N_step <= 2:
+                        MPC_traj_indices = np.arange(0, N_MPC)
+                        MPC_int_time = Ts*np.ones(N_MPC)
+                    else:
+                        MPC_traj_indices = np.hstack([[0, 1], N_step* np.arange(1, (N_MPC-1))])
+                        MPC_int_time = np.hstack([Ts, Ts_MPC-Ts, np.ones(N_MPC-2)*Ts_MPC])
+                    param_traj = {
+                        'traj_indices': MPC_traj_indices,
+                        'int_time': MPC_int_time,
+                    }
+
+                    param_mpc_weight['xref'] = x_k
+                    param_mpc_weight['uref'] = us_init_guess[0]
+                    problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
+                    ddp = solver(problem)
+
+                    if( i == N_traj-1): # autoreset but then no data is printed
+                        i = 0
+
+                    x_k, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_init_robot, N_traj, N_MPC, nx, nu, traj_data)
+
                     run_flag = True
+                    
                     print("MPC started by Simulink")
-                    data_from_simulink_start[:] = 0
-                    data_from_python_valid[:] = 1
                 elif reset == 1 and i == N_traj-1:
                     i = 0
-                    print("MPC reset by Simulink")
+                    
                     subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
                     plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False)
                     data_from_simulink_reset[:] = 0
-                    data_from_python_valid[:] = 0
+                    print("MPC reset by Simulink")
             elif run_flag == True and stop == 1:
                 print("MPC stopped by Simulink")
                 data_from_python[:] = np.zeros(n_dof)
                 data_from_simulink_stop[:] = 0
-                data_from_python_valid[:] = 0
                 run_flag = False
                 start_solving = False
 
@@ -435,24 +443,43 @@ try:
             warn_cnt, err_state = check_solver_status(warn_cnt, hasConverged, ddp, i, Ts, conv_max_limit=5)
 
             if use_data_from_simulink:
-                xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
-                us[i] = ddp.us[0]
+                if not err_state:
+                    xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
+                    us[i] = ddp.us[0]
 
-                xs_init_guess = ddp.xs
-                us_init_guess = ddp.us
-                # Daten von Python an Simulink schreiben
+                    xs_init_guess = ddp.xs
+                    us_init_guess = ddp.us
+                    # Daten von Python an Simulink schreiben
 
-                if(any(abs(us[i])-1 > param_mpc_weight['umax'])):
-                    print("Torque Limit reached!")
+                    if i == 0:
+                        u_i_prev = np.zeros(nq)
+
+                    delta_u = us[i] - u_i_prev
+                    condition1 = np.logical_and(delta_u > 0, delta_u > 5)
+                    condition2 = np.logical_and(delta_u < 0, delta_u < -5)
+
+                    if np.any(np.logical_or(condition1, condition2)): # aber kleiner als -0.8 ist ok
+                        print(us[i])
+                        print("Jump in torque (> 0.9 Nm/ms) detected, output zero torque")
+                        data_from_python[:] = np.zeros(n_dof)
+                        if data_from_python_valid[0] == 1:
+                            data_from_python_valid[:] = 0
+                        run_flag = False
+                    else:
+                        us_temp = np.zeros(n_dof)
+                        us_temp[n_indices] = us[i]
+                        data_from_python[:] = us_temp
+                        if data_from_python_valid[0] == 0:
+                            data_from_python_valid[:] = 1
+                else:
                     data_from_python[:] = np.zeros(n_dof)
                     data_from_python_valid[:] = 0
-                    err_state = True
-                else:
-                    us_temp = np.zeros(n_dof)
-                    us_temp[n_indices] = us[i]
-                    data_from_python[:] = us_temp
-                    data_from_python_valid[:] = 1
+                    run_flag = False
+                    err_state = False # damit python nicht crasht
+
                 start_solving = False
+
+                u_i_prev = us[i]
             else:
                 # x_k_old = x_k
                 x_k, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, Ts, nq, nx, robot_model, robot_data, traj_data)

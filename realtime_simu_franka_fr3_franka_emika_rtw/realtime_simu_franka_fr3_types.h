@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.461
+ * Model version              : 8.472
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Tue Oct 29 17:26:41 2024
+ * C++ source code generated on : Wed Oct 30 18:18:09 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -309,10 +309,10 @@ struct struct_H7i42zUioeRMpvVnQG9wRE
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_Yw0vgIQ6yZpeProSkAAsrC_
-#define DEFINED_TYPEDEF_FOR_struct_Yw0vgIQ6yZpeProSkAAsrC_
+#ifndef DEFINED_TYPEDEF_FOR_struct_KqpJoHlQWU4FXqumqJ8INB_
+#define DEFINED_TYPEDEF_FOR_struct_KqpJoHlQWU4FXqumqJ8INB_
 
-struct struct_Yw0vgIQ6yZpeProSkAAsrC
+struct struct_KqpJoHlQWU4FXqumqJ8INB
 {
   real_T MPC01[359];
   real_T MPC6[201];
@@ -320,7 +320,7 @@ struct struct_Yw0vgIQ6yZpeProSkAAsrC
   real_T MPC8[395];
   real_T MPC9[233];
   real_T MPC10[163];
-  real_T MPC11[166];
+  real_T MPC11[363];
   real_T MPC12[163];
   real_T MPC13[163];
   real_T MPC14[199];
@@ -348,12 +348,12 @@ struct struct_8hCr3cwnSmvhfV9eRQm26B
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_dgqZSLM2ZCHlGRK2LPgKYD_
-#define DEFINED_TYPEDEF_FOR_struct_dgqZSLM2ZCHlGRK2LPgKYD_
+#ifndef DEFINED_TYPEDEF_FOR_struct_sUPBuynHU8As0OtQO333OB_
+#define DEFINED_TYPEDEF_FOR_struct_sUPBuynHU8As0OtQO333OB_
 
-struct struct_dgqZSLM2ZCHlGRK2LPgKYD
+struct struct_sUPBuynHU8As0OtQO333OB
 {
-  real_T init_guess[2128];
+  real_T init_guess[2016];
 };
 
 #endif

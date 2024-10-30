@@ -39,6 +39,14 @@ if( ~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && desktop('
     fprintf(['open simulink model \"' simulink_main_model_name, '\" ...'])
     open_system([simulink_main_model_name '.slx'])
     fprintf([' finished! (Loading time: ' num2str(toc) ' s)\n']);
+    
 end
 
-cd /home/rslstudent/Students/Emanuel/MA24_simulink/
+
+% Reset all inputs so that it must not recompile
+
+state_traj_const_names = {'Start Trajectory', 'Reset Trajectory', 'Stop Trajectory'};
+for i = 1:length(state_traj_const_names)
+    set_param(['realtime_simu_franka_fr3/', state_traj_const_names{i}], 'Value', '0')
+end
+set_param('realtime_simu_franka_fr3/trajectory selector', 'Value', '6')
