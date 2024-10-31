@@ -45,7 +45,7 @@ try
             end
         end
 
-        T_horizon_max = 1;%1s default
+        T_horizon_max = 2;%1s default
 
         % create param_traj_settings for simulink (online)
         % TODO: ist doch komplizierter als gedacht!!!!

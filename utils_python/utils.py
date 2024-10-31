@@ -18,7 +18,7 @@ from plotly.subplots import make_subplots
 import plotly.offline as py
 from typing import overload
 from bs4 import BeautifulSoup
-from multiprocessing import shared_memory
+from multiprocessing import shared_memory, resource_tracker
 
 def trajectory_poly(t, y0, yT, T):
     # The function plans a trajectory from y0 in R3 to yT in R3 and returns the desired position and velocity on this trajectory at time t.
@@ -268,6 +268,16 @@ def process_trajectory_data(traj_select, traj_data_all, traj_param_all):
 
     return traj_data, traj_data_true, traj_init_config
 
+def get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices):
+    p_d = traj_data['p_d']
+    R_d = traj_data['R_d']
+    t = traj_data_true['t_true']
+    q_0 = traj_init_config['q_0'][n_indices]
+    q_0_p = traj_init_config['q_0_p'][n_indices]
+    q_0_pp = traj_init_config['q_0_pp'][n_indices]
+    N_traj = traj_init_config['N_traj_true']
+    return p_d, R_d, t, q_0, q_0_p, q_0_pp, N_traj
+
 def load_mpc_config(robot_model, file_path='utils_python/mpc_weights_crocoddyl.json'):
     with open(file_path, 'r') as f:
         config = json.load(f)
@@ -290,14 +300,35 @@ def load_mpc_config(robot_model, file_path='utils_python/mpc_weights_crocoddyl.j
     
     return mpc_settings, param_mpc_weight
 
+def remove_shm_from_resource_tracker():
+    def fix_register(name, rtype):
+        if rtype == "shared_memory":
+            return
+        return resource_tracker._resource_tracker.register(name, rtype)
+    
+    def fix_unregister(name, rtype):
+        if rtype == "shared_memory":
+            return
+        return resource_tracker._resource_tracker.unregister(name, rtype)
+    
+    resource_tracker.register = fix_register
+    resource_tracker.unregister = fix_unregister
+    
+    if "shared_memory" in resource_tracker._CLEANUP_FUNCS:
+        del resource_tracker._CLEANUP_FUNCS["shared_memory"]
+
+# Call this function before creating shared memory
+remove_shm_from_resource_tracker()
+
 def initialize_shared_memory():
+    remove_shm_from_resource_tracker()
     n_dof = 7  # (input data from simulink are 7dof states q, qp)
 
     def create_shared_memory(name, size):
         try:
-            shm = shared_memory.SharedMemory(name=name, size=size)
-        except FileExistsError:
             shm = shared_memory.SharedMemory(name=name)
+        except FileNotFoundError:
+            shm = shared_memory.SharedMemory(name=name, size=size, create=True)
         return shm
 
     # Shared memory configurations
@@ -327,7 +358,7 @@ def initialize_shared_memory():
         
         shm_data[name] = np.ndarray(shape, dtype=config["dtype"], buffer=shm_objects[name].buf)
 
-    return {"shm_objects": shm_objects, "shm_data": shm_data}
+    return shm_objects, shm_data
 
 ################################## MODEL TESTS ############################################
 
@@ -1114,7 +1145,78 @@ def check_solver_status(warn_cnt, hasConverged, ddp, i, dt, conv_max_limit=5):
         error = 1
     return warn_cnt, error
 
-#######################################
+def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init_config, n_indices, TCP_frame_id):
+    mpc_settings, param_mpc_weight = load_mpc_config(robot_model)
+    p_d, R_d, t, q_0, q_0_p, q_0_pp, N_traj = get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices)
+
+    nq = robot_model.nq
+    nx = 2*nq
+    nu = nq # fully actuated
+
+    opt_type = mpc_settings['version']
+    N_solver_steps = mpc_settings['solver_steps']
+    N_MPC = mpc_settings['N_MPC']
+    Ts_MPC = mpc_settings['Ts_MPC']
+    Ts = mpc_settings['Ts']  # Time step of control
+    N_step = int(Ts_MPC/Ts)
+    T_horizon = (N_MPC-1) * Ts_MPC
+
+    print(f'T_horizon: {T_horizon} s, Ts: {Ts} s, N_MPC: {N_MPC}\n')
+
+    if N_step <= 2:
+        MPC_traj_indices = np.arange(0, N_MPC)
+        MPC_int_time = Ts*np.ones(N_MPC)
+    else:
+        MPC_traj_indices = np.hstack([[0, 1], N_step* np.arange(1, (N_MPC-1))])
+        MPC_int_time = np.hstack([Ts, Ts_MPC-Ts, np.ones(N_MPC-2)*Ts_MPC])
+
+    param_traj = {
+        'traj_indices': MPC_traj_indices,
+        'int_time': MPC_int_time,
+    }
+
+    y_d_ref = {
+        'p_d': p_d[:,    0+MPC_traj_indices],
+        'R_d': R_d[:, :, 0+MPC_traj_indices]
+    }
+
+    solver, init_guess_fun, create_ocp_problem, simulate_model  = get_mpc_funs(opt_type)
+
+    # use start pose at trajectory for first init guess
+    x_init_robot = np.hstack([q_0, q_0_p])
+    tau_init_robot = pinocchio.rnea(robot_model, robot_data, q_0, q_0_p, q_0_pp)
+
+    x_k, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_init_robot, N_traj, N_MPC, nx, nu, traj_data)
+
+    # create first problem:
+
+    param_mpc_weight['xref'] = x_k
+    param_mpc_weight['uref'] = us_init_guess[0]
+
+    # Create a multibody state from the pinocchio model.
+    state = crocoddyl.StateMultibody(robot_model)
+    state.lb = np.hstack([robot_model.lowerPositionLimit, -robot_model.velocityLimit])
+    state.ub = np.hstack([robot_model.upperPositionLimit, robot_model.velocityLimit])
+
+    problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
+
+    # Solve first optimization Problem for warm start
+
+    ddp = solver(problem)
+    hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
+    warn_cnt, err_state = check_solver_status(0, hasConverged, ddp, 0, Ts, conv_max_limit=5)
+
+    xs[0] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
+    us[0] = ddp.us[0]
+
+    xs_init_guess = ddp.xs
+    us_init_guess = ddp.us
+
+    return ddp, x_k, xs, us, xs_init_guess, us_init_guess, p_d, R_d, t, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model
+
+###########################################################################
+################################# PLOTTING ################################
+###########################################################################
 
 def plot_trajectory(traj_data):
     plt.figure(figsize=(10, 6))  # Adjust figure size as needed

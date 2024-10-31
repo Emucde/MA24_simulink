@@ -127,7 +127,7 @@ end
 T = param_traj_time(end);
 sigma_t_fun = Function('sigma_t_fun', {theta}, {sigma_t});
 sigma_r_fun = Function('sigma_r_fun', {theta}, {sigma_r});
-sigma_r_quat_fun = Function('sigma_r_quat_fun', {theta}, {rotm2quat_v3(sigma_r)});
+sigma_r_quat_fun = Function('sigma_r_quat_fun', {theta}, {rotm2quat_v4(sigma_r)});
 
 % Robot System: Initial guess
 q_0_red    = q_0(n_indices);
@@ -317,7 +317,8 @@ else
     J_yr = 0;
     for i=0:N_MPC
         R_y_yr = R_e_arr{1 + (i)} * sigma_r_fun(theta(1 + (i)))';
-        q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
+        % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
+        q_y_yr_err = rotm2quat_v4_casadi(R_y_yr);
     
         if(i < N_MPC)
             J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );

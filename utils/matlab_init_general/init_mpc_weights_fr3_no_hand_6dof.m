@@ -134,7 +134,7 @@ param_weight.(MPC).lambda_theta = 1;
 
 param_weight.(MPC).R_q_pp = 1e-2*diag(ones(n,1));
 param_weight.(MPC).R_x    = 1e-2*diag(ones(2*n,1));
-param_weight.(MPC).R_theta_prev = 1e-2;
+param_weight.(MPC).R_theta_prev = 1e-10;
 
 % param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
 % param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 

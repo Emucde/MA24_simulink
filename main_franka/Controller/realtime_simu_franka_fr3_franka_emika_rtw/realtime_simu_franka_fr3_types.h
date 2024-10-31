@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.473
+ * Model version              : 8.479
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Wed Oct 30 18:49:41 2024
+ * C++ source code generated on : Thu Oct 31 14:38:37 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -515,31 +515,31 @@ struct struct_VgF6GvbsZVA0M47dL3cixG
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_JlJTfmLQbkxalALglSQ4BD_
-#define DEFINED_TYPEDEF_FOR_struct_JlJTfmLQbkxalALglSQ4BD_
+#ifndef DEFINED_TYPEDEF_FOR_struct_fmbWvoEEIstgIkMjr1r2NC_
+#define DEFINED_TYPEDEF_FOR_struct_fmbWvoEEIstgIkMjr1r2NC_
 
-struct struct_JlJTfmLQbkxalALglSQ4BD
+struct struct_fmbWvoEEIstgIkMjr1r2NC
 {
   real_T N;
-  real_T t[11001];
-  real_T p_d[231021];
-  real_T p_d_p[231021];
-  real_T p_d_pp[231021];
-  real_T Phi_d[231021];
-  real_T Phi_d_p[231021];
-  real_T Phi_d_pp[231021];
-  real_T R_d[693063];
-  real_T q_d[308028];
-  real_T q_d_p[308028];
-  real_T q_d_pp[308028];
-  real_T omega_d[231021];
-  real_T omega_d_p[231021];
-  real_T alpha_d[77007];
-  real_T alpha_d_p[77007];
-  real_T alpha_d_pp[77007];
-  real_T rot_ax_d[231021];
-  real_T alpha_d_offset[77007];
-  real_T q_d_rel[308028];
+  real_T t[12001];
+  real_T p_d[252021];
+  real_T p_d_p[252021];
+  real_T p_d_pp[252021];
+  real_T Phi_d[252021];
+  real_T Phi_d_p[252021];
+  real_T Phi_d_pp[252021];
+  real_T R_d[756063];
+  real_T q_d[336028];
+  real_T q_d_p[336028];
+  real_T q_d_pp[336028];
+  real_T omega_d[252021];
+  real_T omega_d_p[252021];
+  real_T alpha_d[84007];
+  real_T alpha_d_p[84007];
+  real_T alpha_d_pp[84007];
+  real_T rot_ax_d[252021];
+  real_T alpha_d_offset[84007];
+  real_T q_d_rel[336028];
 };
 
 #endif

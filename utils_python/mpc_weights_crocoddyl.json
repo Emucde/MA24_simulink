@@ -2,8 +2,8 @@
     "mpc_settings": {
       "version": "MPC_v1_bounds_terminate",
       "Ts": 1e-3,
-      "Ts_MPC": 10e-3,
-      "N_MPC": 10,
+      "Ts_MPC": 5e-3,
+      "N_MPC": 20,
       "int_method": "euler",
       "solver_steps": 1000
     },
@@ -15,7 +15,7 @@
       "q_ureg_terminate_cost": 1e-2,
       "q_xreg_cost": 1e-2,
       "q_ureg_cost": 1e-2,
-      "q_x_bound_cost": 1e-2,
+      "q_x_bound_cost": 1e0,
       "q_u_bound_cost": 1e-10,
       "Kd": [100, 100, 100],
       "Kp": [100, 100, 100],

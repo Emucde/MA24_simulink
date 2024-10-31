@@ -148,7 +148,7 @@ traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 
 traj_struct = struct;
-traj_struct.q_0 = q_0;
+traj_struct.q_0 = q_target;
 traj_struct.q_0_p = zeros(n,1);
 traj_struct.q_0_pp = zeros(n,1);
 traj_struct.joint_points = [-1, -1, -1].*ones(n,1);

@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.473
+ * Model version              : 8.479
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Wed Oct 30 18:49:41 2024
+ * C++ source code generated on : Thu Oct 31 14:38:37 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
