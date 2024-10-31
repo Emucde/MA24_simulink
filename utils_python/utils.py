@@ -18,6 +18,7 @@ from plotly.subplots import make_subplots
 import plotly.offline as py
 from typing import overload
 from bs4 import BeautifulSoup
+from multiprocessing import shared_memory
 
 def trajectory_poly(t, y0, yT, T):
     # The function plans a trajectory from y0 in R3 to yT in R3 and returns the desired position and velocity on this trajectory at time t.
@@ -288,6 +289,45 @@ def load_mpc_config(robot_model, file_path='utils_python/mpc_weights_crocoddyl.j
     param_mpc_weight['xmax'] = np.hstack([robot_model.upperPositionLimit, robot_model.velocityLimit])
     
     return mpc_settings, param_mpc_weight
+
+def initialize_shared_memory():
+    n_dof = 7  # (input data from simulink are 7dof states q, qp)
+
+    def create_shared_memory(name, size):
+        try:
+            shm = shared_memory.SharedMemory(name=name, size=size)
+        except FileExistsError:
+            shm = shared_memory.SharedMemory(name=name)
+        return shm
+
+    # Shared memory configurations
+    shm_configs = {
+        "data_from_python":               {"size": n_dof * 8,     "dtype": np.float64},
+        "data_from_python_valid":         {"size": 8,             "dtype": np.float64},
+        "data_from_simulink":             {"size": 2 * n_dof * 8, "dtype": np.float64},
+        "data_from_simulink_valid":       {"size": 1,             "dtype": np.int8},
+        "data_from_simulink_start":       {"size": 1,             "dtype": np.int8},
+        "data_from_simulink_reset":       {"size": 1,             "dtype": np.int8},
+        "data_from_simulink_stop":        {"size": 1,             "dtype": np.int8},
+        "data_from_simulink_traj_switch": {"size": 1,             "dtype": np.int8}
+    }
+
+    shm_objects = {}
+    shm_data = {}
+
+    for name, config in shm_configs.items():
+        # Create shared memory object
+        shm_objects[name] = create_shared_memory(name, config["size"])
+        
+        # Create numpy array from shared memory buffer
+        if config["dtype"] == np.float64:
+            shape = (config["size"] // 8,)
+        else:
+            shape = (config["size"],)
+        
+        shm_data[name] = np.ndarray(shape, dtype=config["dtype"], buffer=shm_objects[name].buf)
+
+    return {"shm_objects": shm_objects, "shm_data": shm_data}
 
 ################################## MODEL TESTS ############################################
 

@@ -13,44 +13,11 @@ from multiprocessing import shared_memory
 sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
 from utils_python.utils import *
 
-# robot_name = 'ur5e_6dof'
-robot_name = 'fr3_6dof_no_hand'
-
-if robot_name == 'ur5e_6dof':
-    mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_ur5e')
-    urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'ur5e.urdf')
-    urdf_tcp_frame_name = 'ur5e_tcp'
-
-    trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/ur5e_6dof/trajectory_data/param_traj_data.mat')
-    trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/ur5e_6dof/trajectory_data/param_traj.mat')
-    n_indices = np.array([0, 1, 2, 3, 4, 5]) # use all joints
-
-    q_0_ref = np.array([0, 0, 0, 0, 0, 0])
-   
-   # Create a list of joints to lock
-    jointsToLock = []
-elif robot_name == 'fr3_6dof_no_hand':
-    mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_FR3')
-    urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'fr3_no_hand_7dof.urdf')
-    urdf_tcp_frame_name = 'fr3_link8_tcp'
-    trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.mat')
-    trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj.mat')
-
-    use_only_q2q4 = False
-    if use_only_q2q4:
-        n_indices = -1 + np.array([2, 4]) # list of used joints
-    else:
-        n_indices = -1 + np.array([1, 2, 4, 5, 6, 7])
-    q_0_ref = np.array([0, -np.pi/4, 0, -3 * np.pi/4, 0, np.pi/2, np.pi/4])
-
-    # Create a list of joints to lock (starts with joint 1)
-    jointsToLockIndex = np.setdiff1d(np.arange(0,7), n_indices) # at first use 7dof Model (will be later reduced)
-    jointsToLock = jointsToLock = [f"fr3_joint{i+1}" for i in jointsToLockIndex] # list of joints to lock
-
 ################################################ REALTIME ###############################################
 
 use_data_from_simulink = True
 if use_data_from_simulink:
+    # only available for franka research 3 robot
     n_dof = 7 # (input data from simulink are 7dof states q, qp)
     def create_shared_memory(name, size):
         try:
@@ -96,6 +63,89 @@ if use_data_from_simulink:
     data_from_simulink_stop = np.ndarray((simulink_flag_bytes,),  dtype=np.int8, buffer=shm_data_from_simulink_stop.buf)
     data_from_simulink_traj_switch = np.ndarray((simulink_flag_bytes,),  dtype=np.int8, buffer=shm_data_from_simulink_traj_switch.buf)
 
+# robot_name = 'ur5e_6dof'
+robot_name = 'fr3_6dof_no_hand'
+
+if robot_name == 'ur5e_6dof':
+    mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_ur5e')
+    urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'ur5e.urdf')
+    urdf_tcp_frame_name = 'ur5e_tcp'
+
+    trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/ur5e_6dof/trajectory_data/param_traj_data.mat')
+    trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/ur5e_6dof/trajectory_data/param_traj.mat')
+    n_indices = np.array([0, 1, 2, 3, 4, 5]) # use all joints
+
+    q_0_ref = np.array([0, 0, 0, 0, 0, 0])
+   
+   # Create a list of joints to lock
+    jointsToLock = []
+elif robot_name == 'fr3_6dof_no_hand':
+    mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_FR3')
+    urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'fr3_no_hand_7dof.urdf')
+    urdf_tcp_frame_name = 'fr3_link8_tcp'
+    trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.mat')
+    trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj.mat')
+
+    use_only_q2q4 = False
+    if use_only_q2q4:
+        n_indices = -1 + np.array([2, 4]) # list of used joints
+    else:
+        n_indices = -1 + np.array([1, 2, 4, 5, 6, 7])
+    q_0_ref = np.array([0, -np.pi/4, 0, -3 * np.pi/4, 0, np.pi/2, np.pi/4])
+
+    # Create a list of joints to lock (starts with joint 1)
+    jointsToLockIndex = np.setdiff1d(np.arange(0,7), n_indices) # at first use 7dof Model (will be later reduced)
+    jointsToLock = jointsToLock = [f"fr3_joint{i+1}" for i in jointsToLockIndex] # list of joints to lock
+
+#########################################################################################################
+############################################ MPC Settings ###############################################
+#########################################################################################################
+
+# see utils_python/mpc_weights_crocoddyl.json
+
+#########################################################################################################
+######################################### Build Robot Model #############################################
+#########################################################################################################
+
+robot_model_full, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_model_path, mesh_dir)
+
+# https://gepettoweb.laas.fr/doc/stack-of-tasks/pinocchio/master/doxygen-html/md_doc_b_examples_e_reduced_model.html
+# create reduced model:
+ 
+if len(n_indices) != robot_model_full.nq:
+    # Get the ID of all existing joints
+    jointsToLockIDs = []
+    for jn in jointsToLock:
+        if robot_model_full.existJointName(jn):
+            jointsToLockIDs.append(robot_model_full.getJointId(jn))
+        else:
+            print("Warning: joint " + str(jn) + " does not belong to the model!")
+    
+    # Set initial position of both fixed and revoulte joints
+    initialJointConfig = q_0_ref
+    # initialJointConfig[n_indices] = q_0
+
+    robot_model = pin.buildReducedModel(robot_model_full, jointsToLockIDs, initialJointConfig)
+else:
+    robot_model = robot_model_full
+
+nq = robot_model.nq
+nx = 2*nq
+nu = nq # fully actuated
+
+# Gravity should be in -z direction
+# robot_model.gravity.linear[:] = [0, 0, -9.81]
+robot_model.gravity.linear[:] = [0, 0, 0]
+
+robot_data = robot_model.createData()
+
+TCP_frame_id = robot_model.getFrameId(urdf_tcp_frame_name)
+
+# The model loaded from urdf (via pinicchio)
+print(robot_model)
+
+pin_data = robot_model.createData()
+
 #########################################################################################################
 ################################## Get Trajectory from mat file #########################################
 #########################################################################################################
@@ -138,59 +188,6 @@ q_0_pp = traj_init_config['q_0_pp'][n_indices]
 
 N_traj = traj_init_config['N_traj_true']
 
-# SIMULATION SETTINGS
-
-T_start = 0
-T_end = 10
-Ts = 1e-3  # Time step of control
-
-#########################################################################################################
-############################################ MPC Settings ###############################################
-#########################################################################################################
-
-# see utils_python/mpc_weights_crocoddyl.json
-
-######################################### Build Robot Model #############################################
-
-robot_model_full, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_model_path, mesh_dir)
-
-# https://gepettoweb.laas.fr/doc/stack-of-tasks/pinocchio/master/doxygen-html/md_doc_b_examples_e_reduced_model.html
-# create reduced model:
- 
-if len(n_indices) != robot_model_full.nq:
-    # Get the ID of all existing joints
-    jointsToLockIDs = []
-    for jn in jointsToLock:
-        if robot_model_full.existJointName(jn):
-            jointsToLockIDs.append(robot_model_full.getJointId(jn))
-        else:
-            print("Warning: joint " + str(jn) + " does not belong to the model!")
-    
-    # Set initial position of both fixed and revoulte joints
-    initialJointConfig = q_0_ref
-    initialJointConfig[n_indices] = q_0
-
-    robot_model = pin.buildReducedModel(robot_model_full, jointsToLockIDs, initialJointConfig)
-else:
-    robot_model = robot_model_full
-
-nq = robot_model.nq
-nx = 2*nq
-nu = nq # fully actuated
-
-# Gravity should be in -y direction
-# robot_model.gravity.linear[:] = [0, 0, -9.81]
-robot_model.gravity.linear[:] = [0, 0, 0]
-
-robot_data = robot_model.createData()
-
-TCP_frame_id = robot_model.getFrameId(urdf_tcp_frame_name)
-
-# The model loaded from urdf (via pinicchio)
-print(robot_model)
-
-pin_data = robot_model.createData()
-
 #########################################################################################################
 ############################################# INIT MPC ##################################################
 #########################################################################################################
@@ -202,19 +199,7 @@ int_type = mpc_settings['int_method']
 N_solver_steps = mpc_settings['solver_steps']
 N_MPC = mpc_settings['N_MPC']
 Ts_MPC = mpc_settings['Ts_MPC']
-
-solver, init_guess_fun, create_ocp_problem, simulate_model  = get_mpc_funs(opt_type)
-
-# param_casadi_fun_name.(MPC).variant = 'nlpsol';
-# param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-# param_casadi_fun_name.(MPC).version  = 'v6_kin_int_path_following'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v6_kin_int_path_following )
-# param_casadi_fun_name.(MPC).Ts      = 5e-3;
-# param_casadi_fun_name.(MPC).rk_iter = 1;
-# param_casadi_fun_name.(MPC).N_MPC   = 5;
-# param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
-# param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
-# param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
-
+Ts = mpc_settings['Ts']  # Time step of control
 N_step = int(Ts_MPC/Ts)
 T_horizon = (N_MPC-1) * Ts_MPC
 
@@ -227,14 +212,17 @@ else:
     MPC_traj_indices = np.hstack([[0, 1], N_step* np.arange(1, (N_MPC-1))])
     MPC_int_time = np.hstack([Ts, Ts_MPC-Ts, np.ones(N_MPC-2)*Ts_MPC])
 
-# TODO: MPC solvt es nur wenn man equidistante Werte nimmt!!
-# MPC_traj_indices = np.arange(1, (N_MPC) * N_step, N_step)
-# MPC_int_time = np.ones(N_MPC)*Ts_MPC
-
 param_traj = {
     'traj_indices': MPC_traj_indices,
     'int_time': MPC_int_time,
 }
+
+y_d_ref = {
+    'p_d': p_d[:,    0+MPC_traj_indices],
+    'R_d': R_d[:, :, 0+MPC_traj_indices]
+}
+
+solver, init_guess_fun, create_ocp_problem, simulate_model  = get_mpc_funs(opt_type)
 
 # use start pose at trajectory for first init guess
 x_init_robot = np.hstack([q_0, q_0_p])
@@ -266,10 +254,6 @@ measureTotal = TicToc()
 measureTotal.tic()
 
 # create first problem:
-y_d_ref = {
-    'p_d': p_d[:,    0+MPC_traj_indices],
-    'R_d': R_d[:, :, 0+MPC_traj_indices]
-}
 
 param_mpc_weight['xref'] = x_k
 param_mpc_weight['uref'] = us_init_guess[0]

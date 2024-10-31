@@ -1,7 +1,8 @@
 {
     "mpc_settings": {
       "version": "MPC_v1_bounds_terminate",
-      "Ts_MPC": 0.010,
+      "Ts": 1e-3,
+      "Ts_MPC": 10e-3,
       "N_MPC": 10,
       "int_method": "euler",
       "solver_steps": 1000
