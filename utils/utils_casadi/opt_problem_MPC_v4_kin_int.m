@@ -173,6 +173,24 @@ g = g_x;
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
+% e_t_tang = SX(3, N_MPC);
+% e_t_perp = SX(3, N_MPC);
+
+% y_t_err_tang = SX(3, N_MPC);
+% y_t_err_perp = SX(3, N_MPC);
+
+% delta_yd_t = y_d(1:3, 2 : N_MPC+1) - y_d(1:3, 1 : N_MPC);
+% y_t_err = y(1:3, 2 : N_MPC+1) - y_d(1:3, 2 : N_MPC+1);
+
+% for i=1:N_MPC
+%     dy_norm = norm_2(delta_yd_t(:, i));
+%     dyd_norm_inv = if_else(dy_norm < 1e-5, 0, 1/dy_norm);
+%     % e_t_tang(:, i) = delta_yd_t(:, i)/norm_2(delta_yd_t(:, i));
+%     e_t_tang(:, i) = delta_yd_t(:, i) * dyd_norm_inv;
+%     y_t_err_tang(:, i) = dot(y_t_err(:, i), e_t_tang(:, i))*e_t_tang(:, i);
+%     y_t_err_perp(:, i) = y_t_err(:, i) - y_t_err_tang(:, i);
+% end
+
 if isempty(yt_indices)
     J_yt = 0;
     J_yt_N = 0;
@@ -180,6 +198,15 @@ else
     J_yt   =        Q_norm_square( y(yt_indices, 1 + ( 1       ) ) - y_d(yt_indices, 1 + ( 1       )), pp.Q_ykp1(yt_indices,yt_indices) );
     J_yt   = J_yt + Q_norm_square( y(yt_indices, 1 + (2:N_MPC-1) ) - y_d(yt_indices, 1 + (2:N_MPC-1)), pp.Q_y(   yt_indices,yt_indices) );
     J_yt_N =        Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(  yt_indices,yt_indices) );
+
+    % Hier macht gesondertes gewichten in x,y,z keinen Sinn
+    %J_yt_tang = Q_norm_square( y_t_err_tang(yt_indices, 1:N_MPC-1), pp.Q_yt_tang(1:3,1:3) );
+    %J_yt_perp = Q_norm_square( y_t_err_perp(yt_indices, 1:N_MPC-1), pp.Q_yt_perp(1:3,1:3) );
+    %J_yt_N_tang = Q_norm_square( y_t_err_tang(yt_indices, N_MPC), pp.Q_yt_N_tang(1:3,1:3) );
+    %J_yt_N_perp = Q_norm_square( y_t_err_perp(yt_indices, N_MPC), pp.Q_yt_N_perp(1:3,1:3) );
+
+    %J_yt = J_yt_tang + J_yt_perp;
+    %J_yt_N = J_yt_N_tang + J_yt_N_perp;
 end
 
 if isempty(yr_indices)
