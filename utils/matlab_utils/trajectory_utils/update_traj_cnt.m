@@ -14,19 +14,20 @@ function [run_flag, cnt] = update_traj_cnt(state_traj, run_flag, cnt, N)
     % This function updates the run status and count based on the input state
     % trajectory flags (start, reset, stop) and the current run flag status.
     
-    start = state_traj.start;
-    reset = state_traj.reset; % not used
-    stop = state_traj.stop;
+    start_val = state_traj.start;
+    reset_val = state_traj.reset; % not used
+    stop_val = state_traj.stop;
     
     if(run_flag == 0)
-        if(start == 1 && reset == 0 && stop == 0)
+        if(start_val == 1 && reset_val == 0 && stop_val == 0)
             run_flag = 1;
-        elseif(reset == 1 && cnt == N) % sonst springt er
+            cnt = cnt + 1;
+        elseif(reset_val == 1 && cnt == N) % sonst springt er
             cnt = 1;
         end
     elseif(run_flag == 1)
 
-        if(stop == 1)
+        if(stop_val == 1)
             run_flag = 0;
         elseif(cnt < N)
             cnt = cnt+1;

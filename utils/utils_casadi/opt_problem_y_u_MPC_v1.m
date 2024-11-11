@@ -73,15 +73,34 @@ n_x_indices = [n_indices n_indices+n];
 
 % Model equations
 % Forward Dynamics: d/dt x = f(x, u)
+
+no_gravity = false;
 use_aba = true;
 if(use_aba)
-    f = Function.load([input_dir, 'sys_fun_x_aba_py.casadi']); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
+    if(no_gravity)
+        sys_fun_str = 'sys_fun_x_sol_nogravity_py.casadi';
+    else
+        sys_fun_str = 'sys_fun_x_aba_py.casadi';
+    end
 else
-    f = Function.load([input_dir, 'sys_fun_x_sol_py.casadi']); % equivalent as above
+    if(no_gravity)
+        sys_fun_str = 'sys_fun_x_sol_py.casadi';
+    else
+        sys_fun_str = 'sys_fun_x_sol_nogravity_py.casadi';
+    end
 end
 
-compute_tau_fun = Function.load([input_dir, 'compute_tau_py.casadi']); % Inverse Dynamics (ID)
-gravity_fun = Function.load([input_dir, 'gravitational_forces_py.casadi']); % Inverse Dynamics (ID)
+if(no_gravity)
+    tau_fun_str = 'compute_tau_nogravity_py.casadi';
+    gravity_fun = Function('g', {SX.sym( 'q', n, 1 )}, {SX(n, 1)}); % always zero
+else
+    tau_fun_str = 'compute_tau_py.casadi';
+    gravity_fun = Function.load([input_dir, 'gravitational_forces_py.casadi']); % Inverse Dynamics (ID)
+end
+
+f = Function.load([input_dir, sys_fun_str]); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
+compute_tau_fun = Function.load([input_dir, tau_fun_str]); % Inverse Dynamics (ID)
+
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
@@ -263,7 +282,9 @@ for i=0:N_MPC
         q_p(:,  1 + (i)) = dx(      1:  n_red, 1);
         q_pp(:, 1 + (i)) = dx(n_red+1:2*n_red, 1);
 
-        g_vec(:, 1 + (i)) = g_fun_red(q);
+        q_prev = x_prev(1:n_red, 1 + (i));
+        %g_vec(:, 1 + (i)) = g_fun_red(q);
+        g_vec(:, 1 + (i)) = g_fun_red(q_prev);
     end
 end
 
@@ -273,20 +294,11 @@ g = g_x;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Cost Function  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
-if isempty(yt_indices)
-    J_yt = 0;
-    J_yt_N = 0;
-else
-    J_yt = 0;
-    for i=1:N_MPC
-        e_pos_err = y(yt_indices, 1 + (i) ) - y_d(yt_indices, 1 + (i));
-        
-        if(i < N_MPC)
-            J_yt = J_yt + Q_norm_square( e_pos_err, pp.Q_y(yt_indices,yt_indices) );
-        else
-            J_yt_N = Q_norm_square( e_pos_err, pp.Q_y(yt_indices,yt_indices) );
-        end
-    end
+J_yt = 0;
+J_yt_N = 0;
+if ~isempty(yt_indices)
+    J_yt   = J_yt + Q_norm_square( y(yt_indices, 1 + (1:N_MPC-1) ) - y_d(yt_indices, 1 + (1:N_MPC-1)), pp.Q_y(   yt_indices,yt_indices) );
+    J_yt_N =        Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(  yt_indices,yt_indices) );
 end
 
 if isempty(yr_indices)
@@ -295,6 +307,9 @@ if isempty(yr_indices)
 else
     J_yr = 0;
     for i=1:N_MPC
+        % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+        % q_y_yr_err = [1; 1e6*diag(R_y_yr - eye(3))];
+        %q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
         if(i < N_MPC)
@@ -305,32 +320,24 @@ else
     end
 end
 
-% u_err = u-u_prev;
-x_err = x-x_prev;
-
-% u_err = u-u_prev(:, 1);
-% x_err = x-x_k;
-
 u_err = u-g_vec; % es ist stabiler es nicht gegenüber der vorherigen Lösung zu gewichten!
+%u_err = u-u_prev; % es ist stabiler es nicht gegenüber der vorherigen Lösung zu gewichten!
 %u_err = u;
 %u_err = q_pp;
 
-J_u = 0;
-for i=0:N_MPC-1
-    J_u = J_u + Q_norm_square(u_err(:, 1 + (i)), pp.R_u(n_indices, n_indices)); % ist dann eig ziemlich equivalent zu qpp + qp gewichtung (aber am Schnellsten)
-end
+J_u0 = Q_norm_square(u_err(:, 1 + (0)),         pp.R_u0(n_indices, n_indices));
+J_u  = Q_norm_square(u_err(:, 1 + (1:N_MPC-1)), pp.R_u(n_indices, n_indices));
 
-J_x = 0;
-for i=1:N_MPC
-    if(i < N_MPC)
-        J_x = J_x + Q_norm_square(x_err(:, 1 + (i)), pp.R_x(n_x_indices, n_x_indices));
-    end
-end
+q_err = x(1:n_red, :) - x_prev(1:n_red, :);
+q_err_p = x(n_red+1:2*n_red, :);% - x_prev(n_red+1:2*n_red, :);
+x_err = [q_err; q_err_p];
 
+J_x0 = Q_norm_square(x_err(:, 1 + (0)),       pp.R_x0(n_x_indices, n_x_indices));
+J_x  = Q_norm_square(x_err(:, 1 + (1:N_MPC)), pp.R_x(n_x_indices, n_x_indices));
 % J_u = Q_norm_square(q_pp, pp.R_q_pp(n_indices, n_indices)) + Q_norm_square(q_p, pp.R_q_pp(n_indices, n_indices));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Additional Outputs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_u, J_x}';
+cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_u, J_x, J_u0, J_x0}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 

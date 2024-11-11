@@ -63,6 +63,13 @@ else:
 robot = pin.robot_wrapper.RobotWrapper.BuildFromURDF(str(urdf_path), package_dirs=[mesh_dir])
 pin_model = robot.model
 
+nogravity = False
+if nogravity:
+    pin_model.gravity.linear[:] = [0, 0, 0]
+    append_gravity_str = "_nogravity"
+else:
+    append_gravity_str = ""
+
 # Create casadi model and data
 casadi_model = cpin.Model(pin_model)
 cdata = casadi_model.createData()
@@ -158,31 +165,41 @@ robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), 
 # get hom. transformation matrices of all joints
 joint_names = casadi_model.names.tolist() # first joint is 'universal_joint' (ignore it)
 
-for i in range(n):
-    print("Joint: ", joint_names[i+1]) # ignore first joint "universal_joint"
-    joint_id = casadi_model.getFrameId(joint_names[i+1])
-    H_qi_SX = cdata.oMf[joint_id].homogeneous
-    H_qi = cs.Function('H_q'+str(i+1), [q], [H_qi_SX], ['q'], ['H_q'+str(i+1)+'(q)'])
-    H_qi.save(s_functions_path + 'hom_transform_joint_'+str(i+1)+'_py.casadi')
+if not nogravity:
+    for i in range(n):
+        print("Joint: ", joint_names[i+1]) # ignore first joint "universal_joint"
+        joint_id = casadi_model.getFrameId(joint_names[i+1])
+        H_qi_SX = cdata.oMf[joint_id].homogeneous
+        H_qi = cs.Function('H_q'+str(i+1), [q], [H_qi_SX], ['q'], ['H_q'+str(i+1)+'(q)'])
+        H_qi.save(s_functions_path + 'hom_transform_joint_'+str(i+1)+'_py.casadi')
 
-    J_qi_SX = cpin.computeFrameJacobian(casadi_model, cdata, q, joint_id, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
-    J_qi = cs.Function('J_q'+str(i+1), [q], [J_qi_SX], ['q'], ['J_q'+str(i+1)+'(q)'])
+        J_qi_SX = cpin.computeFrameJacobian(casadi_model, cdata, q, joint_id, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+        J_qi = cs.Function('J_q'+str(i+1), [q], [J_qi_SX], ['q'], ['J_q'+str(i+1)+'(q)'])
 
-M.save(s_functions_path + 'inertia_matrix_py.casadi')
-M_inv.save(s_functions_path + 'inverse_inertia_matrix_py.casadi')
-C_rnea.save(s_functions_path + 'n_q_coriols_qp_plus_g_py.casadi')
-g.save(s_functions_path + 'gravitational_forces_py.casadi')
-H.save(s_functions_path + 'hom_transform_endeffector_py.casadi')
-quat.save(s_functions_path + 'quat_endeffector_py.casadi')
-J.save(s_functions_path + 'geo_jacobian_endeffector_py.casadi')
-J_p.save(s_functions_path + 'geo_jacobian_endeffector_p_py.casadi')
+if not nogravity:
+    M.save(s_functions_path + 'inertia_matrix_py.casadi')
+    M_inv.save(s_functions_path + 'inertia_matrix_inv_py.casadi')
+    
+if nogravity:
+    C_rnea.save(s_functions_path + 'n_q_coriols_qp_no_gravity_py.casadi')
+else:
+    C_rnea.save(s_functions_path + 'n_q_coriols_qp_plus_g_py.casadi')
 
-sys_fun_qpp_aba.save(s_functions_path + 'sys_fun_qpp_aba_py.casadi')
-sys_fun_qpp_sol.save(s_functions_path + 'sys_fun_qpp_sol_py.casadi')
-sys_fun_x_aba.save(s_functions_path + 'sys_fun_x_aba_py.casadi')
-sys_fun_x_sol.save(s_functions_path + 'sys_fun_x_sol_py.casadi')
+if not nogravity:
+    g.save(s_functions_path + 'gravitational_forces_py.casadi')
+    H.save(s_functions_path + 'hom_transform_endeffector_py.casadi')
+    quat.save(s_functions_path + 'quat_endeffector_py.casadi')
+    J.save(s_functions_path + 'geo_jacobian_endeffector_py.casadi')
+    J_p.save(s_functions_path + 'geo_jacobian_endeffector_p_py.casadi')
 
-inv_dyn_tau.save(s_functions_path + 'compute_tau_py.casadi')
-robot_model_bus_fun.save(s_functions_path + 'robot_model_bus_fun_py.casadi')
+sys_fun_qpp_aba.save(s_functions_path + 'sys_fun_qpp_aba' + append_gravity_str + '_py.casadi')
+sys_fun_qpp_sol.save(s_functions_path + 'sys_fun_qpp_sol' + append_gravity_str + '_py.casadi')
+sys_fun_x_aba.save(s_functions_path + 'sys_fun_x_aba' + append_gravity_str + '_py.casadi')
+sys_fun_x_sol.save(s_functions_path + 'sys_fun_x_sol' + append_gravity_str + '_py.casadi')
+
+inv_dyn_tau.save(s_functions_path + 'compute_tau' + append_gravity_str + '_py.casadi')
+
+if not nogravity:
+    robot_model_bus_fun.save(s_functions_path + 'robot_model_bus_fun_py.casadi')
 
 print('Done! Run \'compile_py_cfun_to_sfun.m\' to generate S-functions.')

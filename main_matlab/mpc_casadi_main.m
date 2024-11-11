@@ -26,6 +26,11 @@ generate_realtime_udp_c_fun     = true; % create a c function for realtime udp c
 reload_parameters_m             = true; % reload parameters.m at the end (clears all variables!)
 remove_sourcefiles              = false; % remove source files after compilation
 
+% TESTING:
+%compile_sfun = false;
+%create_init_guess_for_all_traj = false;
+%reload_parameters_m = false;
+
 % Compile Mode:
 % compile_mode = 1 | nlpsol-sfun | fast compile time | very accurate,          | sometimes slower exec
 % compile_mode = 2 | opti-sfun   | slow compile time | sometimes less accurate | sometimes faster exec
@@ -40,7 +45,7 @@ param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
-param_casadi_fun_name.(MPC).int_method = 'RK4'; % (RK4 | SSPRK3 | Euler)
+param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
 
 MPC='MPC6';
 param_casadi_fun_name.(MPC).name    = MPC;
@@ -73,8 +78,8 @@ param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v4_kin_int'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
 param_casadi_fun_name.(MPC).Ts      = 10e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 5;
-param_casadi_fun_name.(MPC).compile_mode = 2; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).N_MPC   = 20;
+param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
 

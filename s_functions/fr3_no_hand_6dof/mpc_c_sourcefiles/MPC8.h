@@ -35,9 +35,9 @@ const casadi_int* MPC8_sparsity_out(casadi_int i);
 int MPC8_work(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_int *sz_w);
 int MPC8_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_int *sz_w);
 #define MPC8_SZ_ARG 23
-#define MPC8_SZ_RES 18
-#define MPC8_SZ_IW 870
-#define MPC8_SZ_W 10029
+#define MPC8_SZ_RES 17
+#define MPC8_SZ_IW 3740
+#define MPC8_SZ_W 59828
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
