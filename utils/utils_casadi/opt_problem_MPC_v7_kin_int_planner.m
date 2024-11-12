@@ -9,6 +9,8 @@ n = param_robot.n_DOF; % Dimension of joint space
 n_red = param_robot.n_red; % Dimension of joint space
 m = param_robot.m; % Dimension of Task Space
 
+n_x_indices = [n_indices n_indices+n];
+
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 
@@ -94,8 +96,8 @@ mpc_opt_var_inputs = {u, x};
 %   u1 = q_1_pp = u( n_red+1 : 2*n_red) | q_1 = x(     1+2*n_red :     3*n_red) | q_1_p = x(     1+3*n_red :     4*n_red)
 %   u1 = q_1_pp = xx(n_red+1 : 2*n_red) | q_1 = xx(N_u+1+2*n_red : N_u+3*n_red) | q_1_p = xx(N_u+1+3*n_red : N_u+4*n_red)
 N_u = numel(u);
-q0_pp_idx = [N_u+1         : N_u+  n_red, N_u+1+  n_red:N_u+2*n_red, 1 : n_red]; % [q_0, q_p_0, q_pp_0] % current desired state for CT Control
-q1_pp_idx = [N_u+1+2*n_red : N_u+3*n_red, N_u+1+3*n_red:N_u+4*n_red           ]; % [q_1, q_p_1] % next init state for MPC
+q0_pp_idx = [N_u+1         : N_u+  n_red, N_u+1+  n_red:N_u+2*n_red, 1       :   n_red]; % [q_0, q_p_0, q_pp_0] % current desired state for CT Control
+q1_pp_idx = [N_u+1+2*n_red : N_u+3*n_red, N_u+1+3*n_red:N_u+4*n_red, 1+n_red : 2*n_red]; % [q_1, q_p_1] % next init state for MPC
 u_opt_indices = [q0_pp_idx, q1_pp_idx];
 
 % optimization variables cellarray w
@@ -106,9 +108,10 @@ ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n
 % input parameter
 x_k  = SX.sym( 'x_k',  2*n_red, 1 ); % current x state = initial x state
 y_d  = SX.sym( 'y_d',  m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
+x_prev = SX.sym( 'x_prev',  2*n_red, N_MPC+1 );
 
-mpc_parameter_inputs = {x_k, y_d};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
+mpc_parameter_inputs = {x_k, y_d, x_prev};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:); x_init_guess_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -181,7 +184,11 @@ if isempty(yr_indices)
 else
     J_yr = 0;
     for i=1:N_MPC
-        q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
+        R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+        % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];  % am genauesten
+
+        q_y_yr_err = rotm2quat_v4_casadi(R_y_yr);
+        % q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
         if(i < N_MPC)
             J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
@@ -193,7 +200,14 @@ end
 
 J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp}';
+q_err = x(1:n_red, :) - x_prev(1:n_red, :);
+q_err_p = x(n_red+1:2*n_red, :);% - x_prev(n_red+1:2*n_red, :);
+x_err = [q_err; q_err_p];
+
+J_x0 = Q_norm_square(x_err(:, 1 + (0)),       pp.R_x0(n_x_indices, n_x_indices));
+J_x  = Q_norm_square(x_err(:, 1 + (1:N_MPC)), pp.R_x(n_x_indices, n_x_indices));
+
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_x, J_x0}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

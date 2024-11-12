@@ -10,9 +10,6 @@ n = param_robot.n_DOF; % Dimension of joint space
 n_red = param_robot.n_red; % Dimension of joint space
 m = param_robot.m; % Dimension of Task Space
 
-n_red = n;
-n_indices = 1:n;
-
 n_x_indices = [n_indices n_indices+n];
 
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
@@ -32,11 +29,6 @@ f_red = Function('f_red', {x_red, u_red}, {[x_red(n_red+1:2*n_red); u_red]});
 x = SX.sym( 'x',   2*n, 1 );
 u = SX.sym( 'u',     n, 1 );
 f = Function('f', {x, u}, {[x(n+1:2*n); u]});
-
-% TESTING
-H_red = hom_transform_endeffector_py_fun;
-quat_fun_red = quat_endeffector_py_fun;
-f_red = f;
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
@@ -81,7 +73,7 @@ u_init_guess_0 = ones(n_red, N_MPC).*u_k_0;
 x_init_guess_0 = [x_0_0 ones(2*n_red, N_MPC).*x_0_0];
 
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
-lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+length(n_indices_fixed)*N_MPC, 1);
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
 
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
@@ -136,7 +128,6 @@ end
 
 % constraints conditions cellarray g
 g_x  = cell(1, N_MPC+1); % for F
-g_u = cell(1, N_MPC); % for u_fixed
 
 if(weights_and_limits_as_parameter)
     lbg = SX(numel(lam_g_init_guess_0), 1);
@@ -156,10 +147,6 @@ y       = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
-
-K_d = diag([100 200 1000 200 50 50 10]);
-D_d = sqrt(K_d)*sqrt(2);
-tau_fix_q = SX(length(n_indices_fixed), N_MPC);
 
 for i=0:N_MPC
     q = x(1:n_red, 1 + (i));
@@ -183,16 +170,10 @@ for i=0:N_MPC
             % runs only to T_horizon-Ts_MPC, i. e. tilde x_{N-1} = x(t0+Ts_MPC*(N-1)) and x_N doesn't exist
             % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(N-1))
         end
-        q_0_ref_fix = q_0(n_indices_fixed);
-        q_fix = q(n_indices_fixed);
-        q_p_fix = q_p(n_indices_fixed);
-        tau_fix_q(:, 1 + (i)) = -K_d(n_indices_fixed, n_indices_fixed) * (q_fix - q_0_ref_fix) -D_d(n_indices_fixed, n_indices_fixed)*q_p_fix;
-    
-        g_u(1, 1 + (i)) = {u(n_indices_fixed, 1 + (i)) - tau_fix_q(:, 1 + (i))};
     end
 end
 
-g = [g_x, g_u];
+g = g_x;
 
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
@@ -239,9 +220,9 @@ else
     J_yr = 0;
     for i=1:N_MPC
         %R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
-        % % q_y_y_err = rotation2quaternion_casadi( R_y_yr );
+        % q_y_yr_err = rotm2quat_v4_casadi(R_y_yr);
         %q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
-
+        
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
         if(i==1)
@@ -265,8 +246,7 @@ x_err = [q_err; q_err_p];
 J_x0 = Q_norm_square(x_err(:, 1 + (0)),       pp.R_x0(n_x_indices, n_x_indices));
 J_x  = Q_norm_square(x_err(:, 1 + (1:N_MPC)), pp.R_x(n_x_indices, n_x_indices));
 
-% cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_x, J_x0, J_u_fixed}';
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_x, J_x0}';
 
 
 cost_vars_SX = eval(cost_vars_names);

@@ -36,7 +36,7 @@ end
         S_v = S_v / T_a;
         D = S_v;
     elseif(strcmp(variant, 'savgol'))
-        Nq = 1;
+        Nq = 2;
         d = 2;
         DD = create_savgol_deviation_matrices(T_a, Nq, d, N);
         % idea: S_v is first created for one scalar data and then for a n

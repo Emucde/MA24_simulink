@@ -19,10 +19,10 @@
 #define MPC8_INIT_GUESS_PATH "../s_functions/fr3_no_hand_6dof/initial_guess/param_MPC8_init_guess.bin"
 
 //MPC_SETTINGS:
-#define MPC8_N 20
-#define MPC8_N_step 10
-#define MPC8_Ts 0.01
-#define MPC8_T_horizon 0.2
+#define MPC8_N 5
+#define MPC8_N_step 5
+#define MPC8_Ts 0.005
+#define MPC8_T_horizon 0.025
 #define MPC8_rk_iter 1
 #define MPC8_variant "nlpsol"
 #define MPC8_solver "qrqp"
@@ -30,8 +30,8 @@
 #define MPC8_name "MPC8"
 #define MPC8_int_method "Euler"
 #define MPC8_fixed_parameter 0
-#define MPC8_traj_data_per_horizon 21
-static const uint32_t MPC8_traj_indices[] = {0,1,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190};
+#define MPC8_traj_data_per_horizon 6
+static const uint32_t MPC8_traj_indices[] = {0,1,5,10,15,20};
 
 //MPC_WEIGHTS:
 const casadi_real MPC8_param_weight[591] = {

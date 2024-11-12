@@ -35,9 +35,9 @@ const casadi_int* MPC13_sparsity_out(casadi_int i);
 int MPC13_work(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_int *sz_w);
 int MPC13_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, casadi_int *sz_iw, casadi_int *sz_w);
 #define MPC13_SZ_ARG 23
-#define MPC13_SZ_RES 17
+#define MPC13_SZ_RES 19
 #define MPC13_SZ_IW 420
-#define MPC13_SZ_W 4479
+#define MPC13_SZ_W 5727
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
