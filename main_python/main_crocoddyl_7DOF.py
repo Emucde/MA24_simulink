@@ -240,6 +240,7 @@ output_file_path = os.path.join(folderpath, outputname)
 run_loop = True
 try:
     while run_loop and err_state == False:
+        print('TODO: VORSTEUERUNG FUER FIXED JOINT')
     # for i in range(N_traj):
 
         if use_data_from_simulink:

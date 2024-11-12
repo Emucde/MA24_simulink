@@ -74,7 +74,7 @@ n_x_indices = [n_indices n_indices+n];
 % Model equations
 % Forward Dynamics: d/dt x = f(x, u)
 
-no_gravity = false;
+no_gravity = true;
 use_aba = true;
 if(use_aba)
     if(no_gravity)
@@ -183,14 +183,16 @@ x_DT_ctl_init_0 = F_kp1_sim(x_0_0,           u_init_guess_0(:, 1)    );
 x_DT2_init_0    = F2_sim(   x_DT_ctl_init_0, u_init_guess_0(:, 2)    );
 x_DT_init_0     = F_sim(    x_DT2_init_0,    u_init_guess_0(:, 3:end));
 
+q_pp_init_guess_0 = zeros(n_red, 1); % initial guess for joint acceleration
+
 x_init_guess_0     = [x_0_0 full(x_DT_ctl_init_0) full(x_DT2_init_0) full(x_DT_init_0)];
 % x_init_guess_0     = x_0_0 * ones(1, N_MPC+1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INIT GUESS 1/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
-lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(q_pp_init_guess_0), 1);
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(q_pp_init_guess_0), 1);
 
-init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); q_pp_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 % get weights from "init_MPC_weight.m"
 param_weight_init = param_weight.(casadi_func_name);
@@ -205,16 +207,19 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables 2/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 u   = SX.sym( 'u',    n_red, N_MPC   );
 x   = SX.sym( 'x',  2*n_red, N_MPC+1 );
+q_pp_0 = SX.sym( 'q_pp_0', n_red, 1 );
 
-mpc_opt_var_inputs = {u, x};
+mpc_opt_var_inputs = {u, x, q_pp_0};
 
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')'; % optimization variables cellarray w
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables Limits 3/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min(n_x_indices), size(x, 2), 1)];
-ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max(n_x_indices), size(x, 2), 1)];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min(n_x_indices), size(x, 2), 1); repmat(pp.q_pp_min(n_indices), size(q_pp_0, 2), 1)];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max(n_x_indices), size(x, 2), 1); repmat(pp.q_pp_max(n_indices), size(q_pp_0, 2), 1)];
 
-u_opt_indices = 1:n_red;
+N_u = numel(u);
+N_x = numel(x);
+u_opt_indices = [1:n_red, 1+N_u+N_x: N_u+N_x+n_red]; % tau_0 and q_pp_0
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INPUT Parameter 4/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 x_k    = SX.sym( 'x_k', 2*n_red, 1       ); % current x state
@@ -288,8 +293,10 @@ for i=0:N_MPC
     end
 end
 
+g_qpp_0 = { q_pp_0 - q_pp(:, 1 + (0)) }; % Set the state constraints for q_pp_0 = q_pp(t0) = tilde q_pp_0
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Total number of equation conditions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-g = g_x;
+g = [g_x, g_qpp_0];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Cost Function  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
