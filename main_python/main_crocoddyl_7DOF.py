@@ -98,6 +98,7 @@ if robot_name == 'ur5e_6dof':
     trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/ur5e_6dof/trajectory_data/param_traj_data.mat')
     trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/ur5e_6dof/trajectory_data/param_traj.mat')
     n_indices = np.array([0, 1, 2, 3, 4, 5]) # use all joints
+    n_x_indices = np.hstack([n_indices, n_indices+6])
 
     q_0_ref = np.array([0, 0, 0, 0, 0, 0])
    
@@ -115,11 +116,16 @@ elif robot_name == 'fr3_6dof_no_hand':
         n_indices = -1 + np.array([2, 4]) # list of used joints
     else:
         n_indices = -1 + np.array([1, 2, 4, 5, 6, 7])
+
+    n_x_indices = np.hstack([n_indices, n_indices+7])
+
     q_0_ref = np.array([0, -np.pi/4, 0, -3 * np.pi/4, 0, np.pi/2, np.pi/4])
 
     # Create a list of joints to lock (starts with joint 1)
     jointsToLockIndex = np.setdiff1d(np.arange(0,7), n_indices) # at first use 7dof Model (will be later reduced)
     jointsToLock = jointsToLock = [f"fr3_joint{i+1}" for i in jointsToLockIndex] # list of joints to lock
+else:
+    raise Exception("Unknown robot name '{}'".format(robot_name), "Available robots: 'ur5e_6dof', 'fr3_6dof_no_hand'")
 
 #########################################################################################################
 ############################################ MPC Settings ###############################################
@@ -132,6 +138,8 @@ elif robot_name == 'fr3_6dof_no_hand':
 #########################################################################################################
 
 robot_model_full, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_model_path, mesh_dir)
+
+pin_data_full = robot_model_full.createData()
 
 # https://gepettoweb.laas.fr/doc/stack-of-tasks/pinocchio/master/doxygen-html/md_doc_b_examples_e_reduced_model.html
 # create reduced model:
@@ -240,7 +248,7 @@ output_file_path = os.path.join(folderpath, outputname)
 run_loop = True
 try:
     while run_loop and err_state == False:
-        print('TODO: VORSTEUERUNG FUER FIXED JOINT')
+       #print('TODO: VORSTEUERUNG FUER FIXED JOINT')
     # for i in range(N_traj):
 
         if use_data_from_simulink:
@@ -291,7 +299,8 @@ try:
             if(data_from_simulink_valid[:] == 1 and run_flag == True):
                 data_from_simulink_valid[:] = 0
                 data_from_python_valid[:] = 0
-                x_k = data_from_simulink[np.hstack([n_indices, n_indices+7])]
+                x_k_7dof = data_from_simulink
+                x_k = x_k_7dof[n_x_indices]
                 start_solving = True
         if start_solving:
             measureSimu.tic()
@@ -349,6 +358,38 @@ try:
 
                     xs_init_guess = ddp.xs
                     us_init_guess = ddp.us
+
+                    # 7DOF torque mit Vorsteuerung für die fixierte joints berechnen:
+                    # Bsp: joint 3 ist fixiert. q\in R7, qp\in R7
+                    # 1. Berechnen von qpp = M^-1(q, qp) * (tau|tau3=0 - C(q, qp) - g(q))
+                    # 2. qpp(3) = 0
+                    # 3. Berechnen von tau = M(q, qp) * qpp + C(q, qp) + g(q)
+                    # Anmk. so ist tau[n_indices] == tau_red, eigentlich wird hier nur tau3 so
+                    # berechnet, dass qpp(3) = 0 ist.
+
+                    x_k_tmp = xs[i]
+                    u_k_tmp = us[i]
+
+                    q_red = x_k_tmp[:nq]
+                    q_p_red = x_k_tmp[nq:nx]
+                    tau_red = u_k_tmp
+
+                    q = x_k_7dof[:7] # Messung von simulink
+                    q[n_indices] = q_red
+
+                    q_p = x_k_7dof[7:14]
+                    q_p[n_indices] = q_p_red
+                    
+                    tau = np.zeros(7)
+                    tau[n_indices] = tau_red
+
+                    q_pp_red = pin.aba(robot_model_full, pin_data_full, q, q_p, tau)
+
+                    q_pp = np.zeros(7)
+                    q_pp[n_indices] = q_pp_red[n_indices]
+
+                    tau_full = pin.rnea(robot_model_full, pin_data_full, q, q_p, q_pp)
+
                     # Daten von Python an Simulink schreiben
 
                     if i == 0:
@@ -381,9 +422,7 @@ try:
 
                 u_i_prev = us[i]
             else:
-                # x_k_old = x_k
                 x_k, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, Ts, nq, nx, robot_model, robot_data, traj_data)
-                # x_k = x_k_old
                 
                 # alternative: Use only solver values (perfect tracking)
                 # xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
@@ -465,8 +504,8 @@ else:
     subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
 
 
-folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
 output_file_path = os.path.join(folderpath, outputname)
 
