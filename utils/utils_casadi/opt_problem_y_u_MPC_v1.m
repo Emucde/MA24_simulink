@@ -75,34 +75,9 @@ n_x_indices = [n_indices n_indices+n];
 % Forward Dynamics: d/dt x = f(x, u)
 
 no_gravity = true;
-use_aba = true;
-if(use_aba)
-    if(no_gravity)
-        sys_fun_str = 'sys_fun_x_sol_nogravity_py.casadi';
-    else
-        sys_fun_str = 'sys_fun_x_aba_py.casadi';
-    end
-else
-    if(no_gravity)
-        sys_fun_str = 'sys_fun_x_sol_py.casadi';
-    else
-        sys_fun_str = 'sys_fun_x_sol_nogravity_py.casadi';
-    end
-end
-
-if(no_gravity)
-    tau_fun_str = 'compute_tau_nogravity_py.casadi';
-    gravity_fun = Function('g', {SX.sym( 'q', n, 1 )}, {SX(n, 1)}); % always zero
-else
-    tau_fun_str = 'compute_tau_py.casadi';
-    gravity_fun = Function.load([input_dir, 'gravitational_forces_py.casadi']); % Inverse Dynamics (ID)
-end
-
-f = Function.load([input_dir, sys_fun_str]); % forward dynamics (FD), d/dt x = f(x, u), x = [q; dq]
-compute_tau_fun = Function.load([input_dir, tau_fun_str]); % Inverse Dynamics (ID)
-
-hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
-quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
+use_aba = false;
+[f, compute_tau_fun, gravity_fun, hom_transform_endeffector_py_fun, quat_endeffector_py_fun] = ...
+    load_robot_dynamics(input_dir, n, no_gravity, use_aba);
 
 q_red    = SX.sym( 'q',     n_red, 1 );
 q_red_p  = SX.sym( 'q_p',   n_red, 1 );
@@ -193,6 +168,10 @@ lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(q_p
 lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(q_pp_init_guess_0), 1);
 
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); q_pp_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+
+if(any(isnan(full(init_guess_0))))
+    error('init_guess_0 contains NaN values!');
+end
 
 % get weights from "init_MPC_weight.m"
 param_weight_init = param_weight.(casadi_func_name);
@@ -314,11 +293,25 @@ if isempty(yr_indices)
 else
     J_yr = 0;
     for i=1:N_MPC
+        % Fehlerhaft bei sehr großen fehlern:
         % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
-        % q_y_yr_err = [1; 1e6*diag(R_y_yr - eye(3))];
-        %q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];
+        % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];  % am genauesten
+        
+        % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))' - quat2rotm_v2(y_d(4:7, 1 + (i))) * R_e_arr{1 + (i)}';
+        % q_y_yr_err = [1; R_y_yr(3,2); R_y_yr(1,3); R_y_yr(2,1)];
+        
+        % q_y_yr_err = rotm2quat_v4_casadi(R_y_yr);
+
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
+        % quat_e = y(4:7, 1 + (i));
+        % quat_d = y_d(4:7, 1 + (i));
+
+        % vec_e = quat_e(1)*quat_d(2:4) - quat_d(1)*quat_e(2:4) - cross(quat_d(2:4), quat_e(2:4));
+        % q_y_yr_err = [1; vec_e];
+
+        % q_y_yr_err = 1/2*simplify(quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i)))) - quat_mult(y_d(4:7, 1 + (i)), quat_inv(y(4:7, 1 + (i)))));
+
         if(i < N_MPC)
             J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
         else

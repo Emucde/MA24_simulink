@@ -63,7 +63,7 @@ else:
 robot = pin.robot_wrapper.RobotWrapper.BuildFromURDF(str(urdf_path), package_dirs=[mesh_dir])
 pin_model = robot.model
 
-nogravity = False
+nogravity = True
 if nogravity:
     pin_model.gravity.linear[:] = [0, 0, 0]
     append_gravity_str = "_nogravity"
@@ -152,6 +152,7 @@ J_p = SX00_to_SX0(J_p, q, q_p)
 
 q_pp_aba_SX = cpin.aba(casadi_model, cdata, q, q_p, u)
 q_pp_sol_SX = cs.solve( M(q), u - C_rnea(q, q_p) ) # q_pp_aba leads to error of 1e-13, sol to 0
+# q_pp_sol_SX = M_inv_SX @ (u - C_rnea(q, q_p)) # same as above
 
 sys_fun_qpp_aba = cs.Function('sys_fun_qpp_aba', [q, q_p, u], [q_pp_aba_SX], ['q', 'q_p', 'tau'], ['q_pp'])
 sys_fun_qpp_sol = cs.Function('sys_fun_qpp_sol', [q, q_p, u], [q_pp_sol_SX], ['q', 'q_p', 'tau'], ['q_pp'])
