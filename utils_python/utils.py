@@ -270,13 +270,15 @@ def process_trajectory_data(traj_select, traj_data_all, traj_param_all):
 
 def get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices):
     p_d = traj_data['p_d']
+    p_d_p = traj_data['p_d_p']
+    p_d_pp = traj_data['p_d_pp']
     R_d = traj_data['R_d']
     t = traj_data_true['t_true']
     q_0 = traj_init_config['q_0'][n_indices]
     q_0_p = traj_init_config['q_0_p'][n_indices]
     q_0_pp = traj_init_config['q_0_pp'][n_indices]
     N_traj = traj_init_config['N_traj_true']
-    return p_d, R_d, t, q_0, q_0_p, q_0_pp, N_traj
+    return p_d, p_d_p, p_d_pp, R_d, t, q_0, q_0_p, q_0_pp, N_traj
 
 def load_mpc_config(robot_model, file_path='utils_python/mpc_weights_crocoddyl.json'):
     with open(file_path, 'r') as f:
@@ -359,6 +361,54 @@ def initialize_shared_memory():
         shm_data[name] = np.ndarray(shape, dtype=config["dtype"], buffer=shm_objects[name].buf)
 
     return shm_objects, shm_data
+
+import numpy as np
+import pinocchio as pin
+
+def calculate_ndof_torque_with_feedforward(x, u, x_k_ndof, robot_model_full, pin_data_full, n_red, n, n_indices):
+    """
+    Calculate n-DOF torque with feedforward for fixed joints:
+    Example: For a 7DOF robot with joint 3 fixed, q ∈ Rn, qp ∈ Rn
+    1. Calculate qpp = M^-1(q, qp) * (tau|tau_fixed=0 - C(q, qp) - g(q))
+    2. qpp(fixed_joints) = 0
+    3. Calculate tau = M(q, qp) * qpp + C(q, qp) + g(q)
+    Note: This way, tau[n_indices] == tau_red. Actually, only tau for fixed joints
+    is calculated so that qpp(fixed_joints) = 0.
+
+    Args:
+    x (np.array): Reduced state vector
+    u (np.array): Control input (reduced torque)
+    x_k_ndof (np.array): Full n-DOF state measurement from Simulink
+    robot_model_full (pin.Model): Full robot model
+    pin_data_full (pin.Data): Pinocchio data
+    n_red (int): Number of reduced DOF (non-fixed joints)
+    n (int): Total number of DOF of the full robot
+    n_indices (list): Indices of non-fixed joints
+
+    Returns:
+    np.array: Full n-DOF torque
+    """
+    q_red = x[:n_red]
+    q_p_red = x[n_red:2*n_red]
+    tau_red = u
+
+    q = x_k_ndof[:n]  # Measurement from Simulink
+    q[n_indices] = q_red
+
+    q_p = x_k_ndof[n:2*n]
+    q_p[n_indices] = q_p_red
+    
+    tau = np.zeros(n)  # Fixed joint torque is ignored (therefore 0)
+    tau[n_indices] = tau_red
+
+    q_pp_red = pin.aba(robot_model_full, pin_data_full, q, q_p, tau)
+
+    q_pp = np.zeros(n)
+    q_pp[n_indices] = q_pp_red[n_indices]  # Ignore fixed joint acceleration
+
+    tau_full = pin.rnea(robot_model_full, pin_data_full, q, q_p, q_pp)
+
+    return tau_full
 
 ################################## MODEL TESTS ############################################
 
@@ -589,7 +639,7 @@ class CombinedActionModel(crocoddyl.ActionModelAbstract):
         self.model1 = model1
         self.model2 = model2 # model 2 should be robot model!!
 
-        self.TCP_frame_id = self.model2.state.pinocchio.getFrameId('TCP')
+        self.TCP_frame_id = self.model2.state.pinocchio.getFrameId('fr3_link8_tcp')
         self.q_tracking_cost = self.model2.differential.costs.costs["TCP_pose"].weight
         self.Q_tracking_cost = np.diag([self.q_tracking_cost]*3)
 
@@ -602,6 +652,7 @@ class CombinedActionModel(crocoddyl.ActionModelAbstract):
 
         self.nq_model1 = self.model1.state.nq
         self.nx_model1 = self.model1.state.nx
+        self.nq_model2 = self.model2.state.nq
         self.nx_model2 = self.model2.state.nx
         self.n = self.nx_model1 + self.nx_model2
 
@@ -633,6 +684,8 @@ class CombinedActionModel(crocoddyl.ActionModelAbstract):
         m1 = self.mu_model1
         m = self.m
 
+        nq2 = self.nq_model2
+
         nq1 = self.nq_model1
         n1 = self.nx_model1
         n = self.n
@@ -644,7 +697,7 @@ class CombinedActionModel(crocoddyl.ActionModelAbstract):
         
         robot_data = self.robot_data
         robot_model = self.robot_model
-        pinocchio.forwardKinematics(robot_model, robot_data, x[n1:n1+2])
+        pinocchio.forwardKinematics(robot_model, robot_data, x[n1:n1+nq2])
         pinocchio.updateFramePlacements(robot_model, robot_data)
         y = robot_data.oMf[self.TCP_frame_id].translation.copy()
 
@@ -718,7 +771,6 @@ def get_int_type(int_type):
         raise ValueError("int_type must be 'euler', 'RK2', 'RK3' or 'RK4'")
 
 
-# def ocp_problem_v1(start_index, end_index, N_step, state, x0, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type='euler', use_bounds=False):
 def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=False):
     int_type = mpc_settings['int_method']
     N_MPC = mpc_settings['N_MPC']
@@ -849,20 +901,29 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     problem = crocoddyl.ShootingProblem(x_k, seq, terminalCostModel)
     return problem
 
-def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type='euler', use_bounds=False):
-
+# def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type='euler', use_bounds=False):
+def ocp_problem_v3(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=False):
     ###################
     # Reihenfolge beachten:
     # Zuerst Model1: yref Model (yref = [x1,x2,x3], d/dt yref = [x4,x5,x6]), 
     # dann Model2: Robot model (q = [q1, q2] = [x7, x8], d/dt q = d/dt [q1, q2] = [x9, x10])
+    # Referenzsystem nur für translatorische position verwendet nicht für rotation
+
+    int_type = mpc_settings['int_method']
+    N_MPC = mpc_settings['N_MPC']
+    
+    Ts_MPC = mpc_settings['Ts_MPC']/N_MPC
+
+    int_time = param_traj['int_time']
 
     IntegratedActionModel = get_int_type(int_type)
 
-    y_d_data    = traj_data['p_d'].T
-    y_d_p_data  = traj_data['p_d_p'].T
-    y_d_pp_data = traj_data['p_d_pp'].T
+    p_d_ref = y_d_ref['p_d'].T
+    p_d_p_ref = y_d_ref['p_d_p'].T
+    p_d_pp_ref = y_d_ref['p_d_pp'].T
 
-    N = start_index + (end_index-start_index)*N_step
+    if state.nq >= 6:
+        R_d_ref = y_d_ref['R_d']
 
     # weights
     q_tracking_cost                 = param_mpc_weight['q_tracking_cost']
@@ -883,17 +944,24 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, traj
     xmin = param_mpc_weight['xmin']
     xmax = param_mpc_weight['xmax']
     xref = param_mpc_weight['xref']
+    uref = param_mpc_weight['uref']
 
     running_cost_models = list()
     terminalDifferentialCostModel = crocoddyl.CostModelSum(state) # darf nur eines sein:
     actuationModel = crocoddyl.ActuationModelFull(state)
 
-    for i in range(start_index, N, N_step):
-        y_d    = y_d_data[i]
-        y_d_p  = y_d_p_data[i]
-        y_d_pp = y_d_pp_data[i]
+    for i in range(0, N_MPC):
+        dt = int_time[i]
 
-        yy_DAM = DifferentialActionModelRunningYref(y_d, y_d_p, y_d_pp, Kd, Kp)
+        scale = 1
+
+        p_d = p_d_ref[i]
+        p_d_p = p_d_p_ref[i]
+        p_d_pp = p_d_pp_ref[i]
+        if state.nq >= 6:
+            R_d  = R_d_ref[:,:,i] # rotation matrix!
+
+        yy_DAM = DifferentialActionModelRunningYref(p_d, p_d_p, p_d_pp, Kd, Kp)
         
         # data = yy_DAM.createData()
         # tic()
@@ -914,36 +982,52 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, traj
                     activation=activationModel,
                     residual=crocoddyl.ResidualModelState(state, xref)
                 )
-                runningCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
+                if i < N_MPC-1:
+                    runningCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
+                else:
+                    terminalDifferentialCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
             if np.sum(q_u_bound_cost) not in [0, None]:
                 bounds = crocoddyl.ActivationBounds(umin, umax)
                 activationModel = crocoddyl.ActivationModelQuadraticBarrier(bounds)
                 uRegBoundCost = crocoddyl.CostModelResidual(
                     state,
                     activation=activationModel,
-                    residual=crocoddyl.ResidualModelControl(state)
+                    residual=crocoddyl.ResidualModelControl(state, uref)
                 )
-                runningCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
+                if i < N_MPC-1:
+                    runningCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
+                else:
+                    terminalDifferentialCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
 
         # create classic residual cost models
         xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state, xref))
         uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state))
 
-        if i < N-N_step:
-            yy_NDIAM = IntegratedActionModel(yy_DAM, dt*N_step)
+        goalTrackingCost = crocoddyl.CostModelResidual(
+            state,
+            residual=crocoddyl.ResidualModelFrameTranslation(
+                state, TCP_frame_id, p_d
+            ),
+        )
 
-            goalTrackingCost = crocoddyl.CostModelResidual(
-                    state,
-                    residual=crocoddyl.ResidualModelFrameTranslation(
-                        state, TCP_frame_id, y_d # y_d wird in Klasse CombinedActionModel mit yref überschrieben.
-                    ),
-                )
+        yy_NDIAM = IntegratedActionModel(yy_DAM, dt)
+
+        if state.nq >= 6:
+            goalTrackingCost_r = crocoddyl.CostModelResidual(
+                state,
+                residual=crocoddyl.ResidualModelFrameRotation(
+                    state, TCP_frame_id, R_d
+                ),
+            )
+
+        if i < N_MPC-1:
             runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
-
+            if state.nq >= 6:
+                runningCostModel.addCost("TCP_rot", goalTrackingCost_r, q_tracking_cost)
             if np.sum(q_xreg_cost) not in [0, None]:
-                runningCostModel.addCost("stateReg", xRegCost, q_xreg_cost)
+                runningCostModel.addCost("stateReg", xRegCost, scale * q_xreg_cost)
             if np.sum(q_ureg_cost) not in [0, None]:
-                runningCostModel.addCost("ctrlReg", uRegCost, q_ureg_cost)
+                runningCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_cost)
             # running_cost_models.append(
             #     IntegratedActionModel(
             #         CombinedDifferentialActionModel(
@@ -952,7 +1036,7 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, traj
             #                 state, actuationModel, runningCostModel
             #             )
             #         ),
-            #         dt*N_step
+            #         dt
             #     )
             # )
 
@@ -960,11 +1044,9 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, traj
                 crocoddyl.DifferentialActionModelFreeFwdDynamics(
                     state, actuationModel, runningCostModel
                 ),
-                dt*N_step
+                dt
             )))
         else: # i == N: # Endkostenterm
-            yy_NDIAM = IntegratedActionModel(yy_DAM, dt*N_step)
-            # yy_NDIAM = IntegratedActionModel(yy_DAM, 0) # disable integration by dt=0
             if use_bounds:
                 # cost for bounds of lb_y_ref_N <= || yref_N - y_N || <= lb_y_ref_N
                 bounds = crocoddyl.ActivationBounds(lb_y_ref_N, ub_y_ref_N)
@@ -973,35 +1055,31 @@ def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, traj
                     state,
                     activation=activationModel,
                     residual=crocoddyl.ResidualModelFrameTranslation(
-                        state, TCP_frame_id, y_d # y_d wird in Klasse CombinedActionModel mit yref überschrieben.
+                        state, TCP_frame_id, p_d # p_d wird in Klasse CombinedActionModel mit yref überschrieben.
                     ),
                 )
-                terminalDifferentialCostModel.addCost("TCP_poseBound", terminalTrackingBoundCost, q_terminate_tracking_bound_cost)
+                terminalDifferentialCostModel.addCost("TCP_pose", terminalTrackingBoundCost, q_terminate_tracking_bound_cost)
 
-            # cost for tracking, i. e. || y_N - y_ref_N ||^2
-            terminalTrackingCost = crocoddyl.CostModelResidual(
-                state,
-                residual=crocoddyl.ResidualModelFrameTranslation(
-                    state, TCP_frame_id, y_d # y_d wird in Klasse CombinedActionModel mit yref überschrieben.
-                ),
-            )
-            terminalDifferentialCostModel.addCost("TCP_pose", terminalTrackingCost, q_terminate_tracking_cost)
+            if state.nq >= 6:
+                terminalDifferentialCostModel.addCost("TCP_rot", goalTrackingCost_r, scale * q_terminate_tracking_cost)
             if np.sum(q_xreg_terminate_cost) not in [0, None]:
-                terminalDifferentialCostModel.addCost("stateReg", xRegCost, q_xreg_terminate_cost)
+                terminalDifferentialCostModel.addCost("stateReg", xRegCost, scale * q_xreg_terminate_cost)
             if np.sum(q_ureg_terminate_cost) not in [0, None]:
-                terminalDifferentialCostModel.addCost("ctrlReg", uRegCost, q_ureg_terminate_cost)
+                terminalDifferentialCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_terminate_cost)
+
+    dt = int_time[-1]
 
     # integrate terminal cost model (necessary?)
     terminalCostModel = CombinedActionModelTerminal(yy_NDIAM, IntegratedActionModel(
             crocoddyl.DifferentialActionModelFreeFwdDynamics(
                 state, actuationModel, terminalDifferentialCostModel
             ),
-            dt*N_step # (unsicher obt dt=0 zulaessig: besser in calc ohne u beruecks.)
+            dt # (unsicher obt dt=0 zulaessig: besser in calc ohne u beruecks.)
         ))
 
     # Create the shooting problem
     seq = running_cost_models
-    problem = crocoddyl.ShootingProblem(x0, seq, terminalCostModel)
+    problem = crocoddyl.ShootingProblem(x_k, seq, terminalCostModel)
     return problem
 
 
@@ -1024,17 +1102,17 @@ def get_mpc_funs(problem_name):
     else:
         raise ValueError("problem_name must be 'MPC_v1' | 'MPC_v3_soft_yN_ref' | 'MPC_v3_bounds_yN_ref'")
 
-def create_ocp_problem_v1_soft(start_index, end_index, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = 'euler'):
-    return ocp_problem_v1(start_index, end_index, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type, use_bounds=False)
+def create_ocp_problem_v1_soft(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings):
+    return ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=False)
 
 def create_ocp_problem_v1_bounds(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings):
     return ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=True)
 
-def create_ocp_problem_v3_soft_yN_ref(start_index, end_index, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = 'euler'):
-    return ocp_problem_v3(start_index, end_index, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type, use_bounds=False)
+def create_ocp_problem_v3_soft_yN_ref(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings):
+    return ocp_problem_v3(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=False)
 
-def create_ocp_problem_v3_bounds_yN_ref(start_index, end_index, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type = 'euler'):
-    return ocp_problem_v3(start_index, end_index, N_step, state, xk, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type, use_bounds=True)
+def create_ocp_problem_v3_bounds_yN_ref(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings):
+    return ocp_problem_v3(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=True)
 
 ##############
 
@@ -1081,8 +1159,6 @@ def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data
 
     us_i = uk
     xs_i = xk
-
-    print('xs_i und us_i sind nicht richtig hier! TODO')
 
     # debug for ref trajectory: show only terminal state
     # us_i = ddp.us[-1]
@@ -1147,7 +1223,7 @@ def check_solver_status(warn_cnt, hasConverged, ddp, i, dt, conv_max_limit=5):
 
 def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init_config, n_indices, TCP_frame_id):
     mpc_settings, param_mpc_weight = load_mpc_config(robot_model)
-    p_d, R_d, t, q_0, q_0_p, q_0_pp, N_traj = get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices)
+    p_d, p_d_p, p_d_pp, R_d, t, q_0, q_0_p, q_0_pp, N_traj = get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices)
 
     nq = robot_model.nq
     nx = 2*nq
@@ -1176,8 +1252,17 @@ def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init
     }
 
     y_d_ref = {
-        'p_d': p_d[:,    0+MPC_traj_indices],
-        'R_d': R_d[:, :, 0+MPC_traj_indices]
+        'p_d':    p_d[   :,    0+MPC_traj_indices],
+        'p_d_p':  p_d_p[ :,    0+MPC_traj_indices],
+        'p_d_pp': p_d_pp[:,    0+MPC_traj_indices],
+        'R_d':    R_d[   :, :, 0+MPC_traj_indices]
+    }
+
+    y_d_data = {
+        'p_d':    p_d,
+        'p_d_p':  p_d_p,
+        'p_d_pp': p_d_pp,
+        'R_d':    R_d
     }
 
     solver, init_guess_fun, create_ocp_problem, simulate_model  = get_mpc_funs(opt_type)
@@ -1190,8 +1275,8 @@ def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init
 
     # create first problem:
 
-    param_mpc_weight['xref'] = x_k
-    param_mpc_weight['uref'] = us_init_guess[0]
+    param_mpc_weight['xref'] = x_k[:nx]
+    param_mpc_weight['uref'] = us_init_guess[0][:nq]
 
     # Create a multibody state from the pinocchio model.
     state = crocoddyl.StateMultibody(robot_model)
@@ -1212,7 +1297,7 @@ def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init
     xs_init_guess = ddp.xs
     us_init_guess = ddp.us
 
-    return ddp, x_k, xs, us, xs_init_guess, us_init_guess, p_d, R_d, t, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model
+    return ddp, x_k, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, mpc_settings
 
 ###########################################################################
 ################################# PLOTTING ################################

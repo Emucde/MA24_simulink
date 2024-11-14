@@ -30,51 +30,8 @@ if autostart_fr3:
 
 use_data_from_simulink = False
 if use_data_from_simulink:
-    
     # only available for franka research 3 robot
     n_dof = 7 # (input data from simulink are 7dof states q, qp)
-    # def create_shared_memory(name, size):
-    #     try:
-    #         shm = shared_memory.SharedMemory(name=name, create=True, size=size)
-    #     except FileExistsError:
-    #         shm = shared_memory.SharedMemory(name=name)
-    #     return shm
-
-    # shm_data_from_python_name         = "data_from_python"
-    # shm_data_from_python_valid_name   = "data_from_python_valid"
-
-    # shm_data_from_simulink_name       = "data_from_simulink"
-    # shm_data_from_simulink_valid_name = "data_from_simulink_valid"
-
-    # shm_data_from_simulink_start_name = "data_from_simulink_start"
-    # shm_data_from_simulink_reset_name = "data_from_simulink_reset"
-    # shm_data_from_simulink_stop_name  = "data_from_simulink_stop"
-    # shm_data_from_simulink_traj_switch_name  = "data_from_simulink_traj_switch"
-
-    # python_buffer_bytes = n_dof * 8 # 1x7 torque inputs, 8 bytes per double
-    # python_flag_bytes = 1 * 8 # 8 byte
-    # simulink_buffer_bytes = 2 * n_dof * 8 # 2x7 states q, qp, 8 bytes per double
-    # simulink_flag_bytes = 1# 1 byte
-
-    # shm_data_from_python = create_shared_memory(shm_data_from_python_name, python_buffer_bytes)  # 8 bytes pro double
-    # shm_data_from_python_valid = create_shared_memory(shm_data_from_python_valid_name, python_flag_bytes)  # 1 bytes (bit possible?)
-    # shm_data_from_simulink = create_shared_memory(shm_data_from_simulink_name, simulink_buffer_bytes)  # 8 bytes pro double
-    # shm_data_from_simulink_valid = create_shared_memory(shm_data_from_simulink_valid_name, simulink_flag_bytes)  # 1 bytes pro double
-    
-    # shm_data_from_simulink_start = create_shared_memory(shm_data_from_simulink_start_name, simulink_flag_bytes)  # 1 bytes pro double
-    # shm_data_from_simulink_reset = create_shared_memory(shm_data_from_simulink_reset_name, simulink_flag_bytes)  # 1 bytes pro double
-    # shm_data_from_simulink_stop = create_shared_memory(shm_data_from_simulink_stop_name, simulink_flag_bytes)  # 1 bytes pro double
-    # shm_data_from_simulink_traj_switch = create_shared_memory(shm_data_from_simulink_traj_switch_name, simulink_flag_bytes)  # 1 bytes pro double
-
-    # data_from_python = np.ndarray((python_buffer_bytes//8,), dtype=np.float64, buffer=shm_data_from_python.buf)
-    # data_from_python_valid = np.ndarray((python_flag_bytes//8,), dtype=np.float64, buffer=shm_data_from_python_valid.buf)
-    # data_from_simulink = np.ndarray((simulink_buffer_bytes//8,), dtype=np.float64, buffer=shm_data_from_simulink.buf)
-    # data_from_simulink_valid = np.ndarray((simulink_flag_bytes,), dtype=np.int8, buffer=shm_data_from_simulink_valid.buf)
-
-    # data_from_simulink_start = np.ndarray((simulink_flag_bytes,), dtype=np.int8, buffer=shm_data_from_simulink_start.buf)
-    # data_from_simulink_reset = np.ndarray((simulink_flag_bytes,), dtype=np.int8, buffer=shm_data_from_simulink_reset.buf)
-    # data_from_simulink_stop = np.ndarray((simulink_flag_bytes,),  dtype=np.int8, buffer=shm_data_from_simulink_stop.buf)
-    # data_from_simulink_traj_switch = np.ndarray((simulink_flag_bytes,),  dtype=np.int8, buffer=shm_data_from_simulink_traj_switch.buf)
 
     shm_objects, shm_data = initialize_shared_memory()
     data_from_python = shm_data['data_from_python']
@@ -214,17 +171,26 @@ traj_data, traj_data_true, traj_init_config = process_trajectory_data(curent_tra
 ############################################# INIT MPC ##################################################
 #########################################################################################################
 
-ddp, x_k, xs, us, xs_init_guess, us_init_guess, p_d, R_d, t, TCP_frame_id, \
-N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model =   \
+ddp, x_k, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, \
+N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
+simulate_model, mpc_settings =   \
     init_crocoddyl( robot_model, robot_data, traj_data, traj_data_true,     \
                     traj_init_config, n_indices, TCP_frame_id)
+
+p_d = y_d_data['p_d']
+p_d_p = y_d_data['p_d_p']
+p_d_pp = y_d_data['p_d_pp']
+R_d = y_d_data['R_d']
 
 if use_data_from_simulink:
     run_flag = False
     start_solving = False
-    us_temp = np.zeros(n_dof)
-    us_temp[n_indices] = us[0]
-    data_from_python[:] = us_temp
+
+    x_k_ndof = np.zeros(2*n_dof)
+    x_k_ndof[n_indices] = q_0_ref
+    tau_full = calculate_ndof_torque_with_feedforward(xs[0], us[0], x_k_ndof, robot_model_full, pin_data_full, nq, n_dof, n_indices)
+
+    data_from_python[:] = tau_full
     data_from_python_valid[:] = 1
 else:
     start_solving = True
@@ -248,9 +214,6 @@ output_file_path = os.path.join(folderpath, outputname)
 run_loop = True
 try:
     while run_loop and err_state == False:
-       #print('TODO: VORSTEUERUNG FUER FIXED JOINT')
-    # for i in range(N_traj):
-
         if use_data_from_simulink:
             if data_from_python_valid[0] == 1:
                 data_from_python_valid[:] = 0
@@ -275,10 +238,16 @@ try:
                         print(f'New Trajectory selected: {curent_traj_select}')
 
                     # update mpc settings and problem
-                    ddp, x_k, xs, us, xs_init_guess, us_init_guess, p_d, R_d, t, TCP_frame_id, \
-                    N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model =   \
+                    ddp, x_k, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, \
+                    N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
+                    simulate_model, mpc_settings =   \
                         init_crocoddyl( robot_model, robot_data, traj_data, traj_data_true,     \
                                         traj_init_config, n_indices, TCP_frame_id)
+                    
+                    p_d = y_d_data['p_d']
+                    p_d_p = y_d_data['p_d_p']
+                    p_d_pp = y_d_data['p_d_pp']
+                    R_d = y_d_data['R_d']
 
                     run_flag = True
                     print("MPC started by Simulink")
@@ -299,46 +268,66 @@ try:
             if(data_from_simulink_valid[:] == 1 and run_flag == True):
                 data_from_simulink_valid[:] = 0
                 data_from_python_valid[:] = 0
-                x_k_7dof = data_from_simulink
-                x_k = x_k_7dof[n_x_indices]
+                x_k_ndof = data_from_simulink
+                x_k = x_k_ndof[n_x_indices]
                 start_solving = True
         if start_solving:
             measureSimu.tic()
             
             g_k = pin.computeGeneralizedGravity(robot_model, pin_data, x_k[:nq])
 
-            xs_init_guess_prev = np.array(xs_init_guess)
-            xs_init_guess_prev[:,nq:nx] = 0
-            
-            # v2: update reference values
-            for j, runningModel in enumerate(ddp.problem.runningModels):
-                ddp.problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
+            if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
+                xs_init_guess_prev = np.array(xs_init_guess)
+                xs_init_guess_model2 = xs_init_guess_prev[:, 6::]
+                xs_init_guess_model2[:,nq:nx] = 0
+
+                # v2: update reference values
+                for j, runningModel in enumerate(ddp.problem.runningModels):
+                    ddp.problem.runningModels[j].model1.differential.y_d = p_d[:, i+MPC_traj_indices[j]]
+                    ddp.problem.runningModels[j].model1.differential.y_d_p = p_d_p[:, i+MPC_traj_indices[j]]
+                    ddp.problem.runningModels[j].model1.differential.y_d_pp = p_d_pp[:, i+MPC_traj_indices[j]]
+
+                    ddp.problem.runningModels[j].model2.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
+                    if(nq >= 6):
+                        ddp.problem.runningModels[j].model2.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
+                    ddp.problem.runningModels[j].model2.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_model2[j]
+                    ddp.problem.runningModels[j].model2.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_model2[j]
+                    ddp.problem.runningModels[j].model2.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                    ddp.problem.runningModels[j].model2.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+
+                ddp.problem.terminalModel.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
                 if(nq >= 6):
-                    ddp.problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
-                # ddp.problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(n_dof)])
-                # ddp.problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = x_k
-                # ddp.problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
-                ddp.problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_prev[j]
-                ddp.problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_prev[j]
-                # ddp.problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
-                # ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
-                ddp.problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-                ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                    ddp.problem.terminalModel.model2.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
+                ddp.problem.terminalModel.model2.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_model2[j+1]
+                ddp.problem.terminalModel.model2.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_model2[j+1]
+                ddp.problem.terminalModel.model2.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                ddp.problem.terminalModel.model2.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                
+                x0_new = x_k
+                x0_new[:6] = xs_init_guess_prev[1, :6]
+                ddp.problem.x0 = x0_new
+            else:
+                xs_init_guess_prev = np.array(xs_init_guess)
+                xs_init_guess_prev[:,nq:nx] = 0
+                # v2: update reference values
+                for j, runningModel in enumerate(ddp.problem.runningModels):
+                    ddp.problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
+                    if(nq >= 6):
+                        ddp.problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
+                    ddp.problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_prev[j]
+                    # ddp.problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_prev[j]
+                    ddp.problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                    # ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
 
-            ddp.problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
-            if(nq >= 6):
-                ddp.problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
-            # ddp.problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = np.hstack([x_k[:nq], np.zeros(n_dof)])
-            # ddp.problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = x_k
-            # ddp.problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = x_k
-            ddp.problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_prev[j+1]
-            ddp.problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_prev[j+1]
-            # ddp.problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
-            # ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = us[i] #first us[0] is torque for gravity compensation
-            ddp.problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-            ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                ddp.problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
+                if(nq >= 6):
+                    ddp.problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
+                ddp.problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_prev[j+1]
+                # ddp.problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_prev[j+1]
+                ddp.problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                # ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
 
-            ddp.problem.x0 = x_k
+                ddp.problem.x0 = x_k
             # v2 end
 
             # ddp = solver(problem)
@@ -359,57 +348,26 @@ try:
                     xs_init_guess = ddp.xs
                     us_init_guess = ddp.us
 
-                    # 7DOF torque mit Vorsteuerung für die fixierte joints berechnen:
-                    # Bsp: joint 3 ist fixiert. q\in R7, qp\in R7
-                    # 1. Berechnen von qpp = M^-1(q, qp) * (tau|tau3=0 - C(q, qp) - g(q))
-                    # 2. qpp(3) = 0
-                    # 3. Berechnen von tau = M(q, qp) * qpp + C(q, qp) + g(q)
-                    # Anmk. so ist tau[n_indices] == tau_red, eigentlich wird hier nur tau3 so
-                    # berechnet, dass qpp(3) = 0 ist.
-
-                    x_k_tmp = xs[i]
-                    u_k_tmp = us[i]
-
-                    q_red = x_k_tmp[:nq]
-                    q_p_red = x_k_tmp[nq:nx]
-                    tau_red = u_k_tmp
-
-                    q = x_k_7dof[:7] # Messung von simulink
-                    q[n_indices] = q_red
-
-                    q_p = x_k_7dof[7:14]
-                    q_p[n_indices] = q_p_red
-                    
-                    tau = np.zeros(7)
-                    tau[n_indices] = tau_red
-
-                    q_pp_red = pin.aba(robot_model_full, pin_data_full, q, q_p, tau)
-
-                    q_pp = np.zeros(7)
-                    q_pp[n_indices] = q_pp_red[n_indices]
-
-                    tau_full = pin.rnea(robot_model_full, pin_data_full, q, q_p, q_pp)
+                    tau_full = calculate_ndof_torque_with_feedforward(xs[i], us[i], x_k_ndof, robot_model_full, pin_data_full, nq, n_dof, n_indices)
 
                     # Daten von Python an Simulink schreiben
 
                     if i == 0:
-                        u_i_prev = np.zeros(nq)
+                        tau_i_prev = np.zeros(7)
 
-                    delta_u = us[i] - u_i_prev
+                    delta_u = tau_full - tau_i_prev
                     condition1 = np.logical_and(delta_u > 0, delta_u > 5)
                     condition2 = np.logical_and(delta_u < 0, delta_u < -5)
 
                     if np.any(np.logical_or(condition1, condition2)): # aber kleiner als -0.8 ist ok
-                        print(us[i])
-                        print("Jump in torque (> 0.9 Nm/ms) detected, output zero torque")
+                        print(tau_full)
+                        print("Jump in torque (> 5 Nm/ms) detected, output zero torque")
                         data_from_python[:] = np.zeros(n_dof)
                         if data_from_python_valid[0] == 1:
                             data_from_python_valid[:] = 0
                         run_flag = False
                     else:
-                        us_temp = np.zeros(n_dof)
-                        us_temp[n_indices] = us[i]
-                        data_from_python[:] = us_temp
+                        data_from_python[:] = tau_full
                         if data_from_python_valid[0] == 0:
                             data_from_python_valid[:] = 1
                 else:
@@ -420,7 +378,7 @@ try:
 
                 start_solving = False
 
-                u_i_prev = us[i]
+                tau_i_prev = tau_full
             else:
                 x_k, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, Ts, nq, nx, robot_model, robot_data, traj_data)
                 
@@ -470,6 +428,10 @@ measureTotal.print_time(additional_text='Total MPC time')
 ############################################# Plot Results ##############################################
 #########################################################################################################
 
+if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
+    us = us[:, 3::]
+    xs = xs[:, 6::]
+
 plot_full_model = False
 
 if plot_full_model:
@@ -504,8 +466,8 @@ else:
     subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
 
 
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
 output_file_path = os.path.join(folderpath, outputname)
 
