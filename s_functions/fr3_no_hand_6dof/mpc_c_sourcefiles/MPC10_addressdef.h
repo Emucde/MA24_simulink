@@ -7,7 +7,7 @@
 #define MPC10_IW_LEN 300
 #define MPC10_ARG_LEN 23
 #define MPC10_RES_LEN 19
-#define MPC10_W_LEN 6195
+#define MPC10_W_LEN 5443
 static const uint32_t MPC10_ARG[] = {0,90,192};
 static const uint32_t MPC10_RES[] = {747,753,855,856,857,858,859,860,861};
 #define MPC10_W_END_ADDRESS 862

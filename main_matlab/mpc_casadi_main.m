@@ -112,7 +112,7 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'v6_kin_int_path_following'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v6_kin_int_path_following )
-param_casadi_fun_name.(MPC).Ts      = 10e-3;
+param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
@@ -156,7 +156,7 @@ param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true:
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC7;
+param_casadi_fun_struct = param_casadi_fun_name.MPC12;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if(compile_all_mpc_sfunctions)
@@ -375,7 +375,8 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     'int_method',            int_method, ...
     'fixed_parameter',       fixed_parameter, ...
     'traj_data_per_horizon', N_MPC+1, ...
-    'traj_indices',          MPC_traj_indices ...
+    'traj_indices',          MPC_traj_indices, ...
+    'int_times',             (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*param_global.Ta ...
     );
 
     param_MPC_settings = param_MPC;

@@ -1087,17 +1087,17 @@ def ocp_problem_v3(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
 
 def get_mpc_funs(problem_name):
     if problem_name == 'MPC_v1_soft_terminate':
-        return crocoddyl.SolverDDP, first_init_guess_mpc_v1, create_ocp_problem_v1_soft, simulate_model_mpc_v1
+        return crocoddyl.SolverDDP, first_init_guess_mpc_v1, create_ocp_problem_v1_soft, simulate_model_mpc_v1, next_init_guess_mpc_v1
         # return crocoddyl.SolverBoxFDDP, first_init_guess_mpc_v1, create_ocp_problem_v1, simulate_model_mpc_v1
         # return crocoddyl.SolverFDDP, first_init_guess_mpc_v1, create_ocp_problem_v1, simulate_model_mpc_v1
     if problem_name == 'MPC_v1_bounds_terminate':
-        return crocoddyl.SolverBoxDDP, first_init_guess_mpc_v1, create_ocp_problem_v1_bounds, simulate_model_mpc_v1
+        return crocoddyl.SolverBoxDDP, first_init_guess_mpc_v1, create_ocp_problem_v1_bounds, simulate_model_mpc_v1, next_init_guess_mpc_v1
         # return crocoddyl.SolverBoxFDDP, first_init_guess_mpc_v1, create_ocp_problem_v1, simulate_model_mpc_v1
         # return crocoddyl.SolverFDDP, first_init_guess_mpc_v1, create_ocp_problem_v1, simulate_model_mpc_v1
     elif problem_name == 'MPC_v3_soft_yN_ref':
-        return  crocoddyl.SolverDDP, first_init_guess_mpc_v3, create_ocp_problem_v3_soft_yN_ref, simulate_model_mpc_v3
+        return  crocoddyl.SolverDDP, first_init_guess_mpc_v3, create_ocp_problem_v3_soft_yN_ref, simulate_model_mpc_v3, next_init_guess_mpc_v1
     elif problem_name == 'MPC_v3_bounds_yN_ref':
-        return crocoddyl.SolverBoxDDP, first_init_guess_mpc_v3, create_ocp_problem_v3_bounds_yN_ref, simulate_model_mpc_v3
+        return crocoddyl.SolverBoxDDP, first_init_guess_mpc_v3, create_ocp_problem_v3_bounds_yN_ref, simulate_model_mpc_v3, next_init_guess_mpc_v1
         # return crocoddyl.SolverFDDP, first_init_guess_mpc_v3, create_ocp_problem_v3_bounds_yN_ref, simulate_model_mpc_v3
     else:
         raise ValueError("problem_name must be 'MPC_v1' | 'MPC_v3_soft_yN_ref' | 'MPC_v3_bounds_yN_ref'")
@@ -1116,8 +1116,51 @@ def create_ocp_problem_v3_bounds_yN_ref(x_k, y_d_ref, state, TCP_frame_id, param
 
 ##############
 
-def simulate_model_mpc_v1(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data):
+def next_init_guess_mpc_v1(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj):
+    N_MPC = mpc_settings['N_MPC']
+    int_time = param_traj['int_time']
+    dt = mpc_settings['Ts']
 
+    xx_next = np.zeros((N_MPC-1, nx))
+    uu_next = np.zeros((N_MPC-2, nq))
+
+    for j in range(0, N_MPC-1):
+        xk = ddp.xs[j]
+        uk = ddp.us[j]
+
+        # Modell Simulation
+        tau_k = uk
+        q = xk[:nq]
+        q_p = xk[nq:nx]
+
+        q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
+        xx_next[j] = np.hstack([q_next, q_p_next])
+
+        if(j < N_MPC-2):
+            dtau = (ddp.us[j+1] - ddp.us[j])/int_time[j]
+            uu_next[j] = ddp.us[j] + dt * dtau # letztes dtau ist falsch
+
+    # d_xx_next = np.diff(ddp.xs, axis=0) / int_time[:N_MPC-1, np.newaxis]
+    # xx_next = ddp.xs[:-1] + dt * d_xx_next
+
+    # # Vectorized calculation for uu_next
+    # dtau = np.diff(ddp.us, axis=0) / int_time[:N_MPC-2, np.newaxis]
+    # uu_next = ddp.us[:-1] + dt * dtau
+
+    # besser init guess als nominelle ideale lösung (= perfekte prädiktion):
+    # wobei der letzte unbekannte wert einfach gleich gelassen wird.
+
+    # ddp.xs[0:-1] = ddp.xs[1::] # Problem: geht nur wenn alle werte in Ta abstand (TsMPC ist aber > Ta)
+    # ddp.us[0:-1] = ddp.us[1::] # fehler da TsMPC > Ta ist.
+    ddp.xs[0:-1] = xx_next # genauere Lösung
+    ddp.us[0:-1] = uu_next # approximativ bestimmt
+   
+    xs_init_guess = ddp.xs
+    us_init_guess = ddp.us
+
+    return xs_init_guess, us_init_guess
+
+def simulate_model_mpc_v1(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data, mpc_settings, param_traj):
     xk = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
     uk = ddp.us[0]
 
@@ -1127,18 +1170,14 @@ def simulate_model_mpc_v1(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data
     q_p   = xk[nq:nx]
 
     q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
-
     xkp1 = np.hstack([q_next, q_p_next])
-
-    xs_init_guess = ddp.xs
-    us_init_guess = ddp.us
 
     us_i = uk
     xs_i = xk
 
-    return xkp1, xs_i, us_i, xs_init_guess, us_init_guess
+    return xkp1, xs_i, us_i
 
-def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data):
+def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data, mpc_settings):
 
     xk = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
     uk = ddp.us[0]
@@ -1265,7 +1304,7 @@ def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init
         'R_d':    R_d
     }
 
-    solver, init_guess_fun, create_ocp_problem, simulate_model  = get_mpc_funs(opt_type)
+    solver, init_guess_fun, create_ocp_problem, simulate_model, next_init_guess_fun  = get_mpc_funs(opt_type)
 
     # use start pose at trajectory for first init guess
     x_init_robot = np.hstack([q_0, q_0_p])
@@ -1294,10 +1333,12 @@ def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init
     xs[0] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
     us[0] = ddp.us[0]
 
+    xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
+
     xs_init_guess = ddp.xs
     us_init_guess = ddp.us
 
-    return ddp, x_k, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, mpc_settings
+    return ddp, x_k, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, next_init_guess_fun, mpc_settings, param_traj
 
 ###########################################################################
 ################################# PLOTTING ################################

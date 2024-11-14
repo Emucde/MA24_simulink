@@ -32,6 +32,7 @@
 #define MPC12_fixed_parameter 0
 #define MPC12_traj_data_per_horizon 6
 static const uint32_t MPC12_traj_indices[] = {0,1,2,5,10,15};
+static const uint32_t MPC12_int_times[] = {1.000000e-03,1.000000e-03,3.000000e-03,5.000000e-03,5.000000e-03};
 
 //MPC_WEIGHTS:
 const casadi_real MPC12_param_weight[555] = {

@@ -32,6 +32,7 @@
 #define MPC8_fixed_parameter 0
 #define MPC8_traj_data_per_horizon 6
 static const uint32_t MPC8_traj_indices[] = {0,1,5,10,15,20};
+static const uint32_t MPC8_int_times[] = {1.000000e-03,4.000000e-03,5.000000e-03,5.000000e-03,5.000000e-03};
 
 //MPC_WEIGHTS:
 const casadi_real MPC8_param_weight[591] = {

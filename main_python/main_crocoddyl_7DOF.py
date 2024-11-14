@@ -173,7 +173,7 @@ traj_data, traj_data_true, traj_init_config = process_trajectory_data(curent_tra
 
 ddp, x_k, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, \
 N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
-simulate_model, mpc_settings =   \
+simulate_model, next_init_guess_fun, mpc_settings, param_traj =   \
     init_crocoddyl( robot_model, robot_data, traj_data, traj_data_true,     \
                     traj_init_config, n_indices, TCP_frame_id)
 
@@ -240,7 +240,7 @@ try:
                     # update mpc settings and problem
                     ddp, x_k, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, \
                     N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
-                    simulate_model, mpc_settings =   \
+                    simulate_model, next_init_guess_fun, mpc_settings, param_traj =   \
                         init_crocoddyl( robot_model, robot_data, traj_data, traj_data_true,     \
                                         traj_init_config, n_indices, TCP_frame_id)
                     
@@ -380,11 +380,14 @@ try:
 
                 tau_i_prev = tau_full
             else:
-                x_k, xs[i], us[i], xs_init_guess, us_init_guess = simulate_model(ddp, i, Ts, nq, nx, robot_model, robot_data, traj_data)
-                
+                x_k, xs[i], us[i] = simulate_model(ddp, i, Ts, nq, nx, robot_model, robot_data, traj_data, mpc_settings, param_traj)
+                xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
                 # alternative: Use only solver values (perfect tracking)
                 # xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
                 # us[i] = ddp.us[0]
+
+                # ddp.xs[0:-1] = ddp.xs[1::] # Problem: geht nur wenn alle werte in Ta abstand (TsMPC ist aber > Ta)
+                # ddp.us[0:-1] = ddp.us[1::] # fehler da TsMPC > Ta ist.
 
                 # xs_init_guess = ddp.xs
                 # us_init_guess = ddp.us
@@ -411,8 +414,9 @@ except KeyboardInterrupt:
 
 if err_state:
     print("Error Occured, output zero torque:", hasConverged)
-    data_from_python[:] = np.zeros(n_dof)
-    data_from_python_valid[:] = 0
+    if use_data_from_simulink:
+        data_from_python[:] = np.zeros(n_dof)
+        data_from_python_valid[:] = 0
 else:
     print("Minimum Found:", hasConverged)
 
@@ -466,8 +470,8 @@ else:
     subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
 
 
-folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
 output_file_path = os.path.join(folderpath, outputname)
 

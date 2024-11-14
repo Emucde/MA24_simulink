@@ -7,7 +7,7 @@ diff_variant_mode.numdiff = 1; % default forward, central, backward deviation
 diff_variant_mode.savgol = 2; % savgol filtering and deviation
 diff_variant_mode.savgol_v2 = 3; % savgol filtering without additional equations and deviation
 
-diff_variant = diff_variant_mode.savgol;
+diff_variant = diff_variant_mode.numdiff;
 
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;
