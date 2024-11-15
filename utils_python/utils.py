@@ -362,10 +362,7 @@ def initialize_shared_memory():
 
     return shm_objects, shm_data
 
-import numpy as np
-import pinocchio as pin
-
-def calculate_ndof_torque_with_feedforward(x, u, x_k_ndof, robot_model_full, pin_data_full, n_red, n, n_indices):
+def calculate_ndof_torque_with_feedforward(x, u, x_k_ndof, q_0_ref, robot_model_full, pin_data_full, n_red, n, n_indices):
     """
     Calculate n-DOF torque with feedforward for fixed joints:
     Example: For a 7DOF robot with joint 3 fixed, q ∈ Rn, qp ∈ Rn
@@ -379,8 +376,8 @@ def calculate_ndof_torque_with_feedforward(x, u, x_k_ndof, robot_model_full, pin
     x (np.array): Reduced state vector
     u (np.array): Control input (reduced torque)
     x_k_ndof (np.array): Full n-DOF state measurement from Simulink
-    robot_model_full (pin.Model): Full robot model
-    pin_data_full (pin.Data): Pinocchio data
+    robot_model_full (pinocchio.Model): Full robot model
+    pin_data_full (pinocchio.Data): Pinocchio data
     n_red (int): Number of reduced DOF (non-fixed joints)
     n (int): Total number of DOF of the full robot
     n_indices (list): Indices of non-fixed joints
@@ -392,21 +389,27 @@ def calculate_ndof_torque_with_feedforward(x, u, x_k_ndof, robot_model_full, pin
     q_p_red = x[n_red:2*n_red]
     tau_red = u
 
-    q = x_k_ndof[:n]  # Measurement from Simulink
+    q = q_0_ref  # Measurement from Simulink
     q[n_indices] = q_red
 
-    q_p = x_k_ndof[n:2*n]
+    q_p = np.zeros(n)
     q_p[n_indices] = q_p_red
     
     tau = np.zeros(n)  # Fixed joint torque is ignored (therefore 0)
     tau[n_indices] = tau_red
 
-    q_pp_red = pin.aba(robot_model_full, pin_data_full, q, q_p, tau)
+    q_pp_red = pinocchio.aba(robot_model_full, pin_data_full, q, q_p, tau)
 
     q_pp = np.zeros(n)
     q_pp[n_indices] = q_pp_red[n_indices]  # Ignore fixed joint acceleration
 
-    tau_full = pin.rnea(robot_model_full, pin_data_full, q, q_p, q_pp)
+    q_meas = x_k_ndof[:n]
+    q_meas[n_indices] = q_red
+    q_p_meas = x_k_ndof[n:2*n]
+    # q_p_meas[n_indices] = q_p_red
+
+    tau_full = pinocchio.rnea(robot_model_full, pin_data_full, q_meas, q_p, q_pp)
+    # tau_full[n_indices] = tau_red
 
     return tau_full
 

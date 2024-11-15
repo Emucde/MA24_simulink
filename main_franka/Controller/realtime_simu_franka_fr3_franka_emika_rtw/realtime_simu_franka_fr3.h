@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.479
+ * Model version              : 8.532
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Thu Oct 31 14:38:37 2024
+ * C++ source code generated on : Fri Nov 15 19:10:54 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -147,30 +147,32 @@ extern "C"
 
 /* Block signals for system '<S12>/CT Regler' */
 struct B_CTRegler_realtime_simu_fran_T {
-  real_T tau[6];                       /* '<S12>/CT Regler' */
+  real_T tau[7];                       /* '<S12>/CT Regler' */
 };
 
-/* Block signals for system '<S14>/CT Regler' */
-struct B_CTRegler_realtime_simu_fr_p_T {
-  real_T tau[6];                       /* '<S14>/CT Regler' */
+/* Block signals for system '<S17>/fixed joint feedforward' */
+struct B_fixedjointfeedforward_realt_T {
+  real_T tau[7];                       /* '<S17>/fixed joint feedforward' */
 };
 
 /* Block signals (default storage) */
 struct B_realtime_simu_franka_fr3_T {
+  robot_model robot_model_o;           /* '<S8>/Robot model bus' */
   real_T GetRobotState2_o1[7];         /* '<S4>/Get Robot State2' */
   real_T GetRobotState2_o2[7];         /* '<S4>/Get Robot State2' */
   real_T GetRobotState2_o3[6];         /* '<S4>/Get Robot State2' */
   real_T Switch[7];                    /* '<S4>/Switch' */
-  real_T robotmodelsfunction2_o1[16];  /* '<S9>/robot model s-function2' */
-  real_T robotmodelsfunction2_o2[42];  /* '<S9>/robot model s-function2' */
-  real_T robotmodelsfunction2_o3[42];  /* '<S9>/robot model s-function2' */
-  real_T robotmodelsfunction2_o4[49];  /* '<S9>/robot model s-function2' */
-  real_T robotmodelsfunction2_o5[7];   /* '<S9>/robot model s-function2' */
-  real_T robotmodelsfunction2_o6[49];  /* '<S9>/robot model s-function2' */
-  real_T robotmodelsfunction2_o7[7];   /* '<S9>/robot model s-function2' */
+  real_T robotmodelsfunction2_o1[16];  /* '<S8>/robot model s-function2' */
+  real_T robotmodelsfunction2_o2[42];  /* '<S8>/robot model s-function2' */
+  real_T robotmodelsfunction2_o3[42];  /* '<S8>/robot model s-function2' */
+  real_T robotmodelsfunction2_o4[49];  /* '<S8>/robot model s-function2' */
+  real_T robotmodelsfunction2_o5[7];   /* '<S8>/robot model s-function2' */
+  real_T robotmodelsfunction2_o6[49];  /* '<S8>/robot model s-function2' */
+  real_T robotmodelsfunction2_o7[7];   /* '<S8>/robot model s-function2' */
   real_T Derivative[7];                /* '<Root>/Derivative' */
   real_T Selector8;                    /* '<S2>/Selector8' */
-  real_T Merge1[6];                    /* '<S2>/Merge1' */
+  real_T Merge1[7];                    /* '<S2>/Merge1' */
+  real_T Gain[7];                      /* '<S6>/Gain' */
   real_T Add[7];                       /* '<S3>/Add' */
   real_T q_pp[7];
                /* '<S3>/SigConversion_InsertedFor_Bus Selector1_at_outport_2' */
@@ -193,28 +195,30 @@ struct B_realtime_simu_franka_fr3_T {
   /* '<S3>/TmpSignal ConversionAtTAQSigLogging_InsertedFor_From50_at_outport_0Inport1' */
   real_T RateLimiter[7];               /* '<S4>/Rate Limiter' */
   real_T JJ_Y12_B13_R14[3];
-               /* '<S55>/SigConversion_InsertedFor_Bus Selector_at_outport_0' */
+               /* '<S65>/SigConversion_InsertedFor_Bus Selector_at_outport_0' */
   real_T JJ_Y15_B16_R17[3];
-               /* '<S55>/SigConversion_InsertedFor_Bus Selector_at_outport_1' */
+               /* '<S65>/SigConversion_InsertedFor_Bus Selector_at_outport_1' */
   real_T JJ_Y23_B24_R25[3];
-               /* '<S55>/SigConversion_InsertedFor_Bus Selector_at_outport_2' */
+               /* '<S65>/SigConversion_InsertedFor_Bus Selector_at_outport_2' */
   real_T JJ_Y26_B27_R34[3];
-               /* '<S55>/SigConversion_InsertedFor_Bus Selector_at_outport_3' */
+               /* '<S65>/SigConversion_InsertedFor_Bus Selector_at_outport_3' */
   real_T JJ_Y35_B36_R37[3];
-               /* '<S55>/SigConversion_InsertedFor_Bus Selector_at_outport_4' */
+               /* '<S65>/SigConversion_InsertedFor_Bus Selector_at_outport_4' */
   real_T JJ_Y45_B46_R47[3];
-               /* '<S55>/SigConversion_InsertedFor_Bus Selector_at_outport_5' */
+               /* '<S65>/SigConversion_InsertedFor_Bus Selector_at_outport_5' */
   real_T JJ_Y56_B57_R67[3];
-               /* '<S55>/SigConversion_InsertedFor_Bus Selector_at_outport_6' */
-  real_T tau[7];                       /* '<S8>/joint space control fixed q3' */
+               /* '<S65>/SigConversion_InsertedFor_Bus Selector_at_outport_6' */
   real_T TmpSignalConversionAtSFunction4[14];
-  real_T SFunction3_o1[7];             /* '<S6>/S-Function3' */
-  real_T SFunction3_o2;                /* '<S6>/S-Function3' */
-  real_T tau_croc_red[6];              /* '<S6>/MATLAB Function4' */
-  real_T tau_c[7];                     /* '<S5>/Joinspace controller' */
-  real_T freq_per_step;                /* '<S57>/MATLAB Function' */
-  real_T freq_per_step_mean;           /* '<S57>/MATLAB Function' */
-  real_T f_data_o[301];                /* '<S57>/MATLAB Function' */
+  real_T SFunction3_o1[7];             /* '<S9>/S-Function3' */
+  real_T SFunction3_o2;                /* '<S9>/S-Function3' */
+  real_T K_d[7];                       /* '<S7>/home robot logic' */
+  real_T D_d[7];                       /* '<S7>/home robot logic' */
+  real_T home_running;                 /* '<S7>/home robot logic' */
+  real_T tau[7];                       /* '<S7>/Joinspace controller' */
+  real_T q_0_ref_fixed[7];             /* '<S6>/get q_0_ref' */
+  real_T freq_per_step;                /* '<S67>/MATLAB Function' */
+  real_T freq_per_step_mean;           /* '<S67>/MATLAB Function' */
+  real_T f_data_o[301];                /* '<S67>/MATLAB Function' */
   real_T e_x;                          /* '<S3>/calc_errors' */
   real_T e_y;                          /* '<S3>/calc_errors' */
   real_T e_z;                          /* '<S3>/calc_errors' */
@@ -239,9 +243,8 @@ struct B_realtime_simu_franka_fr3_T {
   real_T omega_d[3];                   /* '<S3>/calc_errors' */
   real_T omega_e_p[3];                 /* '<S3>/calc_errors' */
   real_T omega_d_p[3];                 /* '<S3>/calc_errors' */
-  real_T w;                   /* '<S55>/manipulability and collinearity 7DOF' */
-  real_T ManualSwitch[395];            /* '<S19>/Manual Switch' */
-  real_T init_guess[276];              /* '<S19>/init_guess' */
+  real_T w;                   /* '<S65>/manipulability and collinearity 7DOF' */
+  real_T ManualSwitch[591];            /* '<S19>/Manual Switch' */
   real_T SFunction_o1[6];              /* '<S19>/S-Function' */
   real_T SFunction_o2[276];            /* '<S19>/S-Function' */
   real_T J_yt;                         /* '<S19>/S-Function' */
@@ -250,45 +253,46 @@ struct B_realtime_simu_franka_fr3_T {
   real_T SFunction_o6;                 /* '<S19>/S-Function' */
   real_T SFunction_o7;                 /* '<S19>/S-Function' */
   real_T SFunction_o8;                 /* '<S19>/S-Function' */
-  real_T mpc_refs[126];                /* '<S47>/get data' */
-  int8_T CastToSingle4;                /* '<S6>/Cast To Single4' */
-  int8_T CastToSingle3;                /* '<S6>/Cast To Single3' */
-  int8_T CastToSingle2;                /* '<S6>/Cast To Single2' */
-  int8_T CastToSingle1;                /* '<S6>/Cast To Single1' */
-  int8_T CastToSingle;                 /* '<S6>/Cast To Single' */
+  real_T SFunction_o9;                 /* '<S19>/S-Function' */
+  real_T init_next[276];               /* '<S19>/next init guess' */
+  real_T mpc_refs[126];                /* '<S56>/get data' */
+  int8_T CastToSingle4;                /* '<S9>/Cast To Single4' */
+  int8_T CastToSingle3;                /* '<S9>/Cast To Single3' */
+  int8_T CastToSingle2;                /* '<S9>/Cast To Single2' */
+  int8_T CastToSingle1;                /* '<S9>/Cast To Single1' */
+  int8_T CastToSingle;                 /* '<S9>/Cast To Single' */
   B_CTRegler_realtime_simu_fran_T sf_CTRegler_o;/* '<S20>/CT Regler' */
-  B_CTRegler_realtime_simu_fr_p_T sf_CTRegler_k;/* '<S15>/CT Regler' */
-  B_CTRegler_realtime_simu_fr_p_T sf_CTRegler_m;/* '<S14>/CT Regler' */
+  B_fixedjointfeedforward_realt_T sf_fixedjointfeedforward_k;/* '<S18>/fixed joint feedforward' */
+  B_fixedjointfeedforward_realt_T sf_fixedjointfeedforward_d;/* '<S17>/fixed joint feedforward' */
   B_CTRegler_realtime_simu_fran_T sf_CTRegler_i;/* '<S13>/CT Regler' */
   B_CTRegler_realtime_simu_fran_T sf_CTRegler;/* '<S12>/CT Regler' */
 };
 
 /* Block states (default storage) for system '<Root>' */
 struct DW_realtime_simu_franka_fr3_T {
-  sdAmwXbnJnEmimT0NaJRtAD_realt_T savedTime;/* '<S57>/MATLAB Function' */
+  sdAmwXbnJnEmimT0NaJRtAD_realt_T savedTime;/* '<S67>/MATLAB Function' */
   real_T init_guess_DSTATE[276];       /* '<S19>/init_guess' */
-  real_T filterwindow_PreviousInput[301];/* '<S57>/filter window' */
+  real_T filterwindow_PreviousInput[301];/* '<S67>/filter window' */
   real_T GetRobotState2_DWORK1;        /* '<S4>/Get Robot State2' */
   real_T TimeStampA;                   /* '<Root>/Derivative' */
   real_T LastUAtTimeA[7];              /* '<Root>/Derivative' */
   real_T TimeStampB;                   /* '<Root>/Derivative' */
   real_T LastUAtTimeB[7];              /* '<Root>/Derivative' */
   real_T PrevY[7];                     /* '<S4>/Rate Limiter' */
+  real_T LastMajorTime;                /* '<S4>/Rate Limiter' */
   real_T ApplyControl_DWORK1;          /* '<S4>/Apply Control' */
   real_T ApplyControl_DWORK2;          /* '<S4>/Apply Control' */
+  real_T enabled;                      /* '<S7>/home robot logic' */
+  real_T t_start;                      /* '<S7>/home robot logic' */
   real_T cnt;                          /* '<Root>/get data' */
   real_T run_flag;                     /* '<Root>/get data' */
-  real_T cnt_j;                        /* '<S57>/MATLAB Function' */
-  real_T time_start;                   /* '<S57>/MATLAB Function' */
-  real_T freq;                         /* '<S57>/MATLAB Function' */
-  real_T cnt_f;                        /* '<S47>/get data' */
-  real_T run_flag_m;                   /* '<S47>/get data' */
-  real_T SFunction_RWORK[10029];       /* '<S19>/S-Function' */
-  void *robotmodelsfunction2_PWORK[9]; /* '<S9>/robot model s-function2' */
-  struct {
-    void *LoggedData[4];
-  } Scope5_PWORK;                      /* '<Root>/Scope5' */
-
+  real_T cnt_j;                        /* '<S67>/MATLAB Function' */
+  real_T time_start;                   /* '<S67>/MATLAB Function' */
+  real_T freq;                         /* '<S67>/MATLAB Function' */
+  real_T cnt_b;                        /* '<S56>/get data' */
+  real_T run_flag_a;                   /* '<S56>/get data' */
+  real_T SFunction_RWORK[10272];       /* '<S19>/S-Function' */
+  void *robotmodelsfunction2_PWORK[9]; /* '<S8>/robot model s-function2' */
   struct {
     void *LoggedData;
   } Scope1_PWORK;                      /* '<S3>/Scope1' */
@@ -302,24 +306,28 @@ struct DW_realtime_simu_franka_fr3_T {
   } Scope_PWORK;                       /* '<Root>/Scope' */
 
   struct {
-    void *LoggedData;
+    void *LoggedData[8];
+  } Cosinushnlichkeiten7DOF_PWORK;     /* '<S65>/Cosinus Ähnlichkeiten 7DOF' */
+
+  struct {
+    void *LoggedData[2];
   } Scope1_PWORK_b;                    /* '<Root>/Scope1' */
 
   struct {
-    void *LoggedData[8];
-  } Cosinushnlichkeiten7DOF_PWORK;     /* '<S55>/Cosinus Ähnlichkeiten 7DOF' */
+    void *LoggedData[3];
+  } Scope5_PWORK;                      /* '<Root>/Scope5' */
 
-  void *SFunction3_PWORK[4];           /* '<S6>/S-Function3' */
-  void *SFunction4_PWORK[12];          /* '<S6>/S-Function4' */
+  void *SFunction3_PWORK[4];           /* '<S9>/S-Function3' */
+  void *SFunction4_PWORK[12];          /* '<S9>/S-Function4' */
   struct {
     void *LoggedData[2];
-  } Scope6_PWORK;                      /* '<S6>/Scope6' */
+  } Scope6_PWORK;                      /* '<S9>/Scope6' */
 
   struct {
     void *LoggedData[7];
   } costfunctionscope_PWORK;           /* '<S20>/cost function scope' */
 
-  void *SFunction_PWORK[41];           /* '<S19>/S-Function' */
+  void *SFunction_PWORK[42];           /* '<S19>/S-Function' */
   struct {
     void *LoggedData;
   } Scope_PWORK_a;                     /* '<S19>/Scope' */
@@ -341,11 +349,11 @@ struct DW_realtime_simu_franka_fr3_T {
   } costfunctionscope_PWORK_h;         /* '<S16>/cost function scope' */
 
   struct {
-    void *LoggedData[5];
-  } costfunctionscope_PWORK_n;         /* '<S15>/cost function scope' */
+    void *LoggedData[7];
+  } costfunctionscope_PWORK_f;         /* '<S15>/cost function scope' */
 
   struct {
-    void *LoggedData[5];
+    void *LoggedData[7];
   } costfunctionscope_PWORK_a;         /* '<S14>/cost function scope' */
 
   struct {
@@ -357,12 +365,12 @@ struct DW_realtime_simu_franka_fr3_T {
   } costfunctionscope_PWORK_oc;        /* '<S12>/cost function scope' */
 
   struct {
-    void *LoggedData[5];
+    void *LoggedData[8];
   } costfunctionscope_PWORK_mr;        /* '<S11>/cost function scope' */
 
   int_T SFunction_IWORK[870];          /* '<S19>/S-Function' */
-  int8_T Subsystem2_SubsysRanBC;       /* '<Root>/Subsystem2' */
-  int8_T Subsystem1_SubsysRanBC;       /* '<Root>/Subsystem1' */
+  int8_T tau_subsystem_SubsysRanBC;    /* '<Root>/tau_subsystem' */
+  int8_T jointspacectlsubsys_SubsysRanBC;/* '<Root>/jointspace ctl subsys' */
   int8_T PDControllerSubsystem_SubsysRan;/* '<S2>/PD+ Controller Subsystem' */
   int8_T MPC9offlinecontrollernlpsolveqr;
                /* '<S2>/MPC9 offline controller nlpsolve (qrqp, nlpsol_sfun)' */
@@ -385,12 +393,20 @@ struct DW_realtime_simu_franka_fr3_T {
   int8_T MPC01offlinecontrollernlpsolveq;
               /* '<S2>/MPC01 offline controller nlpsolve (qrqp, nlpsol_sfun)' */
   int8_T CTControllerSubsystem_SubsysRan;/* '<S2>/CT Controller Subsystem' */
-  boolean_T time_start_not_empty;      /* '<S57>/MATLAB Function' */
-  boolean_T freq_not_empty;            /* '<S57>/MATLAB Function' */
-  boolean_T savedTime_not_empty;       /* '<S57>/MATLAB Function' */
+  boolean_T enabled_not_empty;         /* '<S7>/home robot logic' */
+  boolean_T time_start_not_empty;      /* '<S67>/MATLAB Function' */
+  boolean_T freq_not_empty;            /* '<S67>/MATLAB Function' */
+  boolean_T savedTime_not_empty;       /* '<S67>/MATLAB Function' */
   boolean_T icLoad;                    /* '<S19>/init_guess' */
-  boolean_T icLoad_i;                  /* '<S13>/init_guess1' */
-  boolean_T Subsystem2_MODE;           /* '<Root>/Subsystem2' */
+  boolean_T icLoad_m;                  /* '<S18>/init_guess1' */
+  boolean_T icLoad_c;                  /* '<S17>/init_guess' */
+  boolean_T icLoad_f;                  /* '<S15>/init_guess1' */
+  boolean_T icLoad_i;                  /* '<S14>/init_guess1' */
+  boolean_T icLoad_iz;                 /* '<S13>/init_guess1' */
+  boolean_T icLoad_cg;                 /* '<S12>/init_guess1' */
+  boolean_T icLoad_h;                  /* '<S11>/init_guess' */
+  boolean_T tau_subsystem_MODE;        /* '<Root>/tau_subsystem' */
+  boolean_T jointspacectlsubsys_MODE;  /* '<Root>/jointspace ctl subsys' */
   boolean_T MPC9offlinecontrollernlpsolve_p;
                /* '<S2>/MPC9 offline controller nlpsolve (qrqp, nlpsol_sfun)' */
   boolean_T MPC8offlinecontrollernlpsolve_i;
@@ -416,9 +432,9 @@ struct DW_realtime_simu_franka_fr3_T {
 /* Parameters (default storage) */
 struct P_realtime_simu_franka_fr3_T_ {
   struct_Fk0KA8rNwaPzPDHZYxeGwD param_traj;/* Variable: param_traj
-                                            * Referenced by: '<S8>/get q_0_ref'
+                                            * Referenced by: '<S6>/get q_0_ref'
                                             */
-  struct_KqpJoHlQWU4FXqumqJ8INB param_weight_init;/* Variable: param_weight_init
+  struct_w8ygcEBhBAoDKqazOeSyPB param_weight_init;/* Variable: param_weight_init
                                                    * Referenced by: '<S19>/Constant18'
                                                    */
   struct_RCS9FomuFmdbboJvGAYmbB ctrl_param;/* Variable: ctrl_param
@@ -427,23 +443,33 @@ struct P_realtime_simu_franka_fr3_T_ {
                                             *   '<S21>/Reduced Cartesian PD+ Controller'
                                             */
   struct_BAQoxvk5NEutQSlALFTg0D param_savgol;/* Variable: param_savgol
-                                              * Referenced by: '<S57>/MATLAB Function'
+                                              * Referenced by: '<S67>/MATLAB Function'
                                               */
-  struct_MIVHhJW7aTMZId5MkCQfpG param_jointspace_ct;/* Variable: param_jointspace_ct
-                                                     * Referenced by:
-                                                     *   '<S14>/CT Regler'
-                                                     *   '<S15>/CT Regler'
-                                                     */
+  struct_gknxtQA1ISFUDnwOAkWFw param_jointspace_ct;/* Variable: param_jointspace_ct
+                                                    * Referenced by:
+                                                    *   '<S14>/CT Regler'
+                                                    *   '<S15>/CT Regler'
+                                                    */
+  struct_KEa48IyRUxLtKgH405LUqB param_global;/* Variable: param_global
+                                              * Referenced by:
+                                              *   '<S11>/next init guess'
+                                              *   '<S12>/next init guess'
+                                              *   '<S14>/next init guess'
+                                              *   '<S15>/next init guess'
+                                              *   '<S17>/next init guess'
+                                              *   '<S18>/next init guess'
+                                              *   '<S19>/next init guess'
+                                              */
   real_T q_init[7];                    /* Variable: q_init
                                         * Referenced by: '<S4>/Constant'
                                         */
   x_d Merge_InitialOutput;            /* Computed Parameter: Merge_InitialOutput
                                        * Referenced by: '<S2>/Merge'
                                        */
-  real_T K_d_Value[6];       /* Expression: [24     24     24     8     8     8]
-                              * Referenced by: '<S10>/K_d'
-                              */
-  real_T K_p_Value[6];      /* Expression: [225    225    225    25    25    25]
+  real_T K_d_Value[6];    /* Expression: [48     48     48     16     16     16]
+                           * Referenced by: '<S10>/K_d'
+                           */
+  real_T K_p_Value[6];      /* Expression: [400    400    400    50    50    50]
                              * Referenced by: '<S10>/K_p'
                              */
   real_T Q_y_Value[36];      /* Expression: 1e2*diag([1*ones(3,1); 1*ones(3,1)])
@@ -457,6 +483,9 @@ struct P_realtime_simu_franka_fr3_T_ {
                               */
   real_T R_q_pp_Value[49];             /* Expression: 1e-2*diag(ones(n,1))
                                         * Referenced by: '<S19>/R_q_pp'
+                                        */
+  real_T R_x1_Value[196];              /* Expression: 1e-2*diag(ones(2*n,1))
+                                        * Referenced by: '<S19>/R_x1'
                                         */
   real_T R_x_Value[196];               /* Expression: 1e-2*diag(ones(2*n,1))
                                         * Referenced by: '<S19>/R_x'
@@ -478,80 +507,84 @@ struct P_realtime_simu_franka_fr3_T_ {
   real_T Constant_Value[6];            /* Expression: param_MPC8.traj_indices
                                         * Referenced by: '<S19>/Constant'
                                         */
-  real_T D_d_Value[6];       /* Expression: [24     24     24     3     3     3]
-                              * Referenced by: '<S21>/D_d'
-                              */
-  real_T K_d_Value_c[6];    /* Expression: [225    225    225    25    25    25]
-                             * Referenced by: '<S21>/K_d'
-                             */
+  real_T D_d_Value[6];                 /* Expression: [20 20 20 20 20 20]
+                                        * Referenced by: '<S21>/D_d'
+                                        */
+  real_T K_d_Value_c[6];
+                       /* Expression: [1600    1600    1600    400    400   400]
+                        * Referenced by: '<S21>/K_d'
+                        */
   real_T tau_Y0;                       /* Computed Parameter: tau_Y0
-                                        * Referenced by: '<S5>/tau'
+                                        * Referenced by: '<S7>/tau'
                                         */
-  real_T D_d_jointspace2_Value[7];     /* Expression: [0 0 0 0 0 0 0]
-                                        * Referenced by: '<S5>/D_d_jointspace2'
+  real_T homerunflag_Y0;               /* Computed Parameter: homerunflag_Y0
+                                        * Referenced by: '<S7>/home run flag'
                                         */
-  real_T K_d_jointspace2_Value[7];     /* Expression: [100 200 500 200 50 50 10]
-                                        * Referenced by: '<S5>/K_d_jointspace2'
+  real_T t0_Value;                     /* Expression: 3
+                                        * Referenced by: '<S7>/t0'
+                                        */
+  real_T t1_Value;                     /* Expression: 5
+                                        * Referenced by: '<S7>/t1'
+                                        */
+  real_T tend_Value;                   /* Expression: 6
+                                        * Referenced by: '<S7>/tend'
                                         */
   real_T tau_Y0_d;                     /* Computed Parameter: tau_Y0_d
-                                        * Referenced by: '<S6>/tau'
+                                        * Referenced by: '<S9>/tau'
                                         */
   real_T SFunction3_P1_Size[2];        /* Computed Parameter: SFunction3_P1_Size
-                                        * Referenced by: '<S6>/S-Function3'
+                                        * Referenced by: '<S9>/S-Function3'
                                         */
   real_T SFunction3_P1[16];            /* Computed Parameter: SFunction3_P1
-                                        * Referenced by: '<S6>/S-Function3'
+                                        * Referenced by: '<S9>/S-Function3'
                                         */
   real_T SFunction3_P2_Size[2];        /* Computed Parameter: SFunction3_P2_Size
-                                        * Referenced by: '<S6>/S-Function3'
+                                        * Referenced by: '<S9>/S-Function3'
                                         */
   real_T SFunction3_P2[22];            /* Computed Parameter: SFunction3_P2
-                                        * Referenced by: '<S6>/S-Function3'
+                                        * Referenced by: '<S9>/S-Function3'
                                         */
   real_T Constant_Value_m;             /* Expression: 1
-                                        * Referenced by: '<S6>/Constant'
+                                        * Referenced by: '<S9>/Constant'
                                         */
   real_T SFunction4_P1_Size[2];        /* Computed Parameter: SFunction4_P1_Size
-                                        * Referenced by: '<S6>/S-Function4'
+                                        * Referenced by: '<S9>/S-Function4'
                                         */
   real_T SFunction4_P1[18];            /* Computed Parameter: SFunction4_P1
-                                        * Referenced by: '<S6>/S-Function4'
+                                        * Referenced by: '<S9>/S-Function4'
                                         */
   real_T SFunction4_P2_Size[2];        /* Computed Parameter: SFunction4_P2_Size
-                                        * Referenced by: '<S6>/S-Function4'
+                                        * Referenced by: '<S9>/S-Function4'
                                         */
   real_T SFunction4_P2[24];            /* Computed Parameter: SFunction4_P2
-                                        * Referenced by: '<S6>/S-Function4'
+                                        * Referenced by: '<S9>/S-Function4'
                                         */
   real_T SFunction4_P3_Size[2];        /* Computed Parameter: SFunction4_P3_Size
-                                        * Referenced by: '<S6>/S-Function4'
+                                        * Referenced by: '<S9>/S-Function4'
                                         */
   real_T SFunction4_P3[24];            /* Computed Parameter: SFunction4_P3
-                                        * Referenced by: '<S6>/S-Function4'
+                                        * Referenced by: '<S9>/S-Function4'
                                         */
   real_T SFunction4_P4_Size[2];        /* Computed Parameter: SFunction4_P4_Size
-                                        * Referenced by: '<S6>/S-Function4'
+                                        * Referenced by: '<S9>/S-Function4'
                                         */
   real_T SFunction4_P4[24];            /* Computed Parameter: SFunction4_P4
-                                        * Referenced by: '<S6>/S-Function4'
+                                        * Referenced by: '<S9>/S-Function4'
                                         */
   real_T SFunction4_P5_Size[2];        /* Computed Parameter: SFunction4_P5_Size
-                                        * Referenced by: '<S6>/S-Function4'
+                                        * Referenced by: '<S9>/S-Function4'
                                         */
   real_T SFunction4_P5[23];            /* Computed Parameter: SFunction4_P5
-                                        * Referenced by: '<S6>/S-Function4'
+                                        * Referenced by: '<S9>/S-Function4'
                                         */
   real_T SFunction4_P6_Size[2];        /* Computed Parameter: SFunction4_P6_Size
-                                        * Referenced by: '<S6>/S-Function4'
+                                        * Referenced by: '<S9>/S-Function4'
                                         */
   real_T SFunction4_P6[30];            /* Computed Parameter: SFunction4_P6
-                                        * Referenced by: '<S6>/S-Function4'
-                                        */
-  real_T Constant_Value_l[7];          /* Expression: zeros(7,1)
-                                        * Referenced by: '<Root>/Constant'
+                                        * Referenced by: '<S9>/S-Function4'
                                         */
   real_T filterwindow_InitialCondition[301];/* Expression: zeros(param_savgol.N, 1)
-                                             * Referenced by: '<S57>/filter window'
+                                             * Referenced by: '<S67>/filter window'
                                              */
   real_T Switch_Threshold;             /* Expression: 0.001
                                         * Referenced by: '<S4>/Switch'
@@ -562,16 +595,25 @@ struct P_realtime_simu_franka_fr3_T_ {
   real_T StartTrajectory_Value;        /* Expression: 0
                                         * Referenced by: '<Root>/Start Trajectory'
                                         */
+  real_T home_Value;                   /* Expression: 0
+                                        * Referenced by: '<Root>/home'
+                                        */
   real_T ResetTrajectory_Value;        /* Expression: 0
                                         * Referenced by: '<Root>/Reset Trajectory'
                                         */
   real_T StopTrajectory_Value;         /* Expression: 0
                                         * Referenced by: '<Root>/Stop Trajectory'
                                         */
-  real_T use_casadi_flag_Value;        /* Expression: 0
+  real_T use_casadi_flag_Value;        /* Expression: 1
                                         * Referenced by: '<Root>/use_casadi_flag'
                                         */
+  real_T q_ref_Value[7];  /* Expression: [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]
+                           * Referenced by: '<Root>/q_ref'
+                           */
   real_T Constant1_Value;              /* Expression: 1
+                                        * Referenced by: '<Root>/Constant1'
+                                        */
+  real_T Constant1_Value_n;            /* Expression: 1
                                         * Referenced by: '<S2>/Constant1'
                                         */
   real_T Constant2_Value;              /* Expression: 2
@@ -613,25 +655,19 @@ struct P_realtime_simu_franka_fr3_T_ {
   real_T use_crocoddyl_flag_Value;     /* Expression: 1
                                         * Referenced by: '<Root>/use_crocoddyl_flag'
                                         */
-  real_T K_d_jointspace1_Value[7];    /* Expression: [100 200 1000 200 50 50 10]
-                                       * Referenced by: '<S8>/K_d_jointspace1'
-                                       */
-  real_T Gain_Gain;                    /* Expression: sqrt(2)
-                                        * Referenced by: '<S8>/Gain'
+  real_T K_d_jointspace1_Value[7];     /* Expression: [100 200 500 200 50 50 10]
+                                        * Referenced by: '<S6>/K_d_jointspace1'
                                         */
-  real_T Constant1_Value_f;            /* Expression: 1
-                                        * Referenced by: '<Root>/Constant1'
+  real_T Gain_Gain;                    /* Expression: 2
+                                        * Referenced by: '<S6>/Gain'
                                         */
-  real_T q_ref_Value[7];  /* Expression: [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]
-                           * Referenced by: '<Root>/q_ref'
-                           */
+  real_T Switch_Threshold_c;           /* Expression: 0
+                                        * Referenced by: '<Root>/Switch'
+                                        */
   real_T RateLimiter_RisingLim;        /* Expression: 1000
                                         * Referenced by: '<S4>/Rate Limiter'
                                         */
   real_T RateLimiter_FallingLim;       /* Expression: -1000
-                                        * Referenced by: '<S4>/Rate Limiter'
-                                        */
-  real_T RateLimiter_IC;               /* Expression: 0
                                         * Referenced by: '<S4>/Rate Limiter'
                                         */
   real_T ApplyControl_P1[52];          /* Expression: collision_thresholds
@@ -664,18 +700,10 @@ struct P_realtime_simu_franka_fr3_T_ {
                               /* Computed Parameter: ManualSwitch_CurrentSetting
                                * Referenced by: '<S19>/Manual Switch'
                                */
-  uint8_T ManualSwitch2_CurrentSetting;
-                             /* Computed Parameter: ManualSwitch2_CurrentSetting
-                              * Referenced by: '<Root>/Manual Switch2'
-                              */
   uint8_T ManualSwitch_CurrentSetting_n;
                             /* Computed Parameter: ManualSwitch_CurrentSetting_n
                              * Referenced by: '<Root>/Manual Switch'
                              */
-  uint8_T ManualSwitch1_CurrentSetting;
-                             /* Computed Parameter: ManualSwitch1_CurrentSetting
-                              * Referenced by: '<Root>/Manual Switch1'
-                              */
 };
 
 /* Real-time Model Data Structure */
@@ -716,9 +744,9 @@ struct tag_RTM_realtime_simu_franka_fr3_T {
       int_T iDims0[2];
       int_T iDims1[2];
       int_T iDims2[2];
-      struct _ssPortOutputs outputPortInfo[8];
-      struct _ssOutPortUnit outputPortUnits[8];
-      struct _ssOutPortCoSimAttribute outputPortCoSimAttribute[8];
+      struct _ssPortOutputs outputPortInfo[9];
+      struct _ssOutPortUnit outputPortUnits[9];
+      struct _ssOutPortCoSimAttribute outputPortCoSimAttribute[9];
       int_T oDims0[2];
       int_T oDims1[2];
       int_T oDims2[2];
@@ -727,6 +755,7 @@ struct tag_RTM_realtime_simu_franka_fr3_T {
       int_T oDims5[2];
       int_T oDims6[2];
       int_T oDims7[2];
+      int_T oDims8[2];
       struct _ssDWorkRecord dWork[3];
       struct _ssDWorkAuxRecord dWorkAux[3];
     } Sfcn0;
@@ -941,11 +970,11 @@ extern "C"
  * '<S2>'   : 'realtime_simu_franka_fr3/Controller Subsystem'
  * '<S3>'   : 'realtime_simu_franka_fr3/Debug Subsystem'
  * '<S4>'   : 'realtime_simu_franka_fr3/Subsystem'
- * '<S5>'   : 'realtime_simu_franka_fr3/Subsystem1'
- * '<S6>'   : 'realtime_simu_franka_fr3/Subsystem2'
- * '<S7>'   : 'realtime_simu_franka_fr3/get data'
- * '<S8>'   : 'realtime_simu_franka_fr3/get full tau'
- * '<S9>'   : 'realtime_simu_franka_fr3/robot_model_bus_subsys'
+ * '<S5>'   : 'realtime_simu_franka_fr3/get data'
+ * '<S6>'   : 'realtime_simu_franka_fr3/get full tau'
+ * '<S7>'   : 'realtime_simu_franka_fr3/jointspace ctl subsys'
+ * '<S8>'   : 'realtime_simu_franka_fr3/robot_model_bus_subsys'
+ * '<S9>'   : 'realtime_simu_franka_fr3/tau_subsystem'
  * '<S10>'  : 'realtime_simu_franka_fr3/Controller Subsystem/CT Controller Subsystem'
  * '<S11>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC01 offline controller nlpsolve (qrqp, nlpsol_sfun)'
  * '<S12>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC10 offline controller nlpsolve (qrqp, nlpsol_sfun)'
@@ -959,47 +988,57 @@ extern "C"
  * '<S20>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC9 offline controller nlpsolve (qrqp, nlpsol_sfun)'
  * '<S21>'  : 'realtime_simu_franka_fr3/Controller Subsystem/PD+ Controller Subsystem'
  * '<S22>'  : 'realtime_simu_franka_fr3/Controller Subsystem/CT Controller Subsystem/Reduced Cartesian CT Controller'
- * '<S23>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC01 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
- * '<S24>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC01 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
- * '<S25>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC10 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
- * '<S26>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC10 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
- * '<S27>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC10 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
- * '<S28>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC11 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
- * '<S29>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC11 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
- * '<S30>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC11 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
- * '<S31>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC11 offline controller nlpsolve (qrqp, nlpsol_sfun)/get theta_kp1'
- * '<S32>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC12 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
- * '<S33>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC12 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
- * '<S34>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC12 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
- * '<S35>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC13 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
- * '<S36>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC13 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
- * '<S37>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC13 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
- * '<S38>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC14 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
- * '<S39>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC14 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
- * '<S40>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC14 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
- * '<S41>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC6 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
- * '<S42>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC6 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
- * '<S43>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC7 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
- * '<S44>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC7 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
- * '<S45>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC8 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
- * '<S46>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC8 offline controller nlpsolve (qrqp, nlpsol_sfun)/MATLAB Function'
- * '<S47>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC8 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
- * '<S48>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC8 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
- * '<S49>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC8 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys/get data'
- * '<S50>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC9 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
- * '<S51>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC9 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
- * '<S52>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC9 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
- * '<S53>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC9 offline controller nlpsolve (qrqp, nlpsol_sfun)/get ukp1'
- * '<S54>'  : 'realtime_simu_franka_fr3/Controller Subsystem/PD+ Controller Subsystem/Reduced Cartesian PD+ Controller'
- * '<S55>'  : 'realtime_simu_franka_fr3/Debug Subsystem/Subsystem Reference'
- * '<S56>'  : 'realtime_simu_franka_fr3/Debug Subsystem/calc_errors'
- * '<S57>'  : 'realtime_simu_franka_fr3/Debug Subsystem/tic-toc'
- * '<S58>'  : 'realtime_simu_franka_fr3/Debug Subsystem/Subsystem Reference/manipulability and collinearity 7DOF'
- * '<S59>'  : 'realtime_simu_franka_fr3/Debug Subsystem/tic-toc/MATLAB Function'
- * '<S60>'  : 'realtime_simu_franka_fr3/Subsystem1/Joinspace controller'
- * '<S61>'  : 'realtime_simu_franka_fr3/Subsystem2/MATLAB Function4'
- * '<S62>'  : 'realtime_simu_franka_fr3/get full tau/get q_0_ref'
- * '<S63>'  : 'realtime_simu_franka_fr3/get full tau/joint space control fixed q3'
- * '<S64>'  : 'realtime_simu_franka_fr3/robot_model_bus_subsys/Robot model bus'
+ * '<S23>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC01 offline controller nlpsolve (qrqp, nlpsol_sfun)/fixed joint feedforward'
+ * '<S24>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC01 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
+ * '<S25>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC01 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
+ * '<S26>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC01 offline controller nlpsolve (qrqp, nlpsol_sfun)/next init guess'
+ * '<S27>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC10 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
+ * '<S28>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC10 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
+ * '<S29>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC10 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
+ * '<S30>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC10 offline controller nlpsolve (qrqp, nlpsol_sfun)/next init guess'
+ * '<S31>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC11 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
+ * '<S32>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC11 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
+ * '<S33>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC11 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
+ * '<S34>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC11 offline controller nlpsolve (qrqp, nlpsol_sfun)/get theta_kp1'
+ * '<S35>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC12 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
+ * '<S36>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC12 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
+ * '<S37>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC12 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
+ * '<S38>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC12 offline controller nlpsolve (qrqp, nlpsol_sfun)/next init guess'
+ * '<S39>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC13 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
+ * '<S40>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC13 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
+ * '<S41>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC13 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
+ * '<S42>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC13 offline controller nlpsolve (qrqp, nlpsol_sfun)/next init guess'
+ * '<S43>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC14 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
+ * '<S44>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC14 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
+ * '<S45>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC14 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
+ * '<S46>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC6 offline controller nlpsolve (qrqp, nlpsol_sfun)/fixed joint feedforward'
+ * '<S47>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC6 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
+ * '<S48>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC6 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
+ * '<S49>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC6 offline controller nlpsolve (qrqp, nlpsol_sfun)/next init guess'
+ * '<S50>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC7 offline controller nlpsolve (qrqp, nlpsol_sfun)/fixed joint feedforward'
+ * '<S51>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC7 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
+ * '<S52>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC7 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
+ * '<S53>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC7 offline controller nlpsolve (qrqp, nlpsol_sfun)/next init guess'
+ * '<S54>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC8 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
+ * '<S55>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC8 offline controller nlpsolve (qrqp, nlpsol_sfun)/MATLAB Function'
+ * '<S56>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC8 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
+ * '<S57>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC8 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
+ * '<S58>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC8 offline controller nlpsolve (qrqp, nlpsol_sfun)/next init guess'
+ * '<S59>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC8 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys/get data'
+ * '<S60>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC9 offline controller nlpsolve (qrqp, nlpsol_sfun)/CT Regler'
+ * '<S61>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC9 offline controller nlpsolve (qrqp, nlpsol_sfun)/get data subsys'
+ * '<S62>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC9 offline controller nlpsolve (qrqp, nlpsol_sfun)/get init guess data'
+ * '<S63>'  : 'realtime_simu_franka_fr3/Controller Subsystem/MPC9 offline controller nlpsolve (qrqp, nlpsol_sfun)/get ukp1'
+ * '<S64>'  : 'realtime_simu_franka_fr3/Controller Subsystem/PD+ Controller Subsystem/Reduced Cartesian PD+ Controller'
+ * '<S65>'  : 'realtime_simu_franka_fr3/Debug Subsystem/Subsystem Reference'
+ * '<S66>'  : 'realtime_simu_franka_fr3/Debug Subsystem/calc_errors'
+ * '<S67>'  : 'realtime_simu_franka_fr3/Debug Subsystem/tic-toc'
+ * '<S68>'  : 'realtime_simu_franka_fr3/Debug Subsystem/Subsystem Reference/manipulability and collinearity 7DOF'
+ * '<S69>'  : 'realtime_simu_franka_fr3/Debug Subsystem/tic-toc/MATLAB Function'
+ * '<S70>'  : 'realtime_simu_franka_fr3/get full tau/get q_0_ref'
+ * '<S71>'  : 'realtime_simu_franka_fr3/get full tau/joint space control fixed q3'
+ * '<S72>'  : 'realtime_simu_franka_fr3/jointspace ctl subsys/Joinspace controller'
+ * '<S73>'  : 'realtime_simu_franka_fr3/jointspace ctl subsys/home robot logic'
+ * '<S74>'  : 'realtime_simu_franka_fr3/robot_model_bus_subsys/Robot model bus'
  */
 #endif                              /* RTW_HEADER_realtime_simu_franka_fr3_h_ */

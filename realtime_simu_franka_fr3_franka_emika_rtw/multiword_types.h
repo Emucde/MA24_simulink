@@ -1,23 +1,3 @@
-/*
- * multiword_types.h
- *
- * Academic License - for use in teaching, academic research, and meeting
- * course requirements at degree granting institutions only.  Not for
- * government, commercial, or other organizational use.
- *
- * Code generation for model "realtime_simu_franka_fr3".
- *
- * Model version              : 8.472
- * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Wed Oct 30 18:18:09 2024
- *
- * Target selection: franka_emika_panda.tlc
- * Note: GRT includes extra infrastructure and instrumentation for prototyping
- * Embedded hardware selection: Intel->x86-64 (Linux 64)
- * Code generation objective: Execution efficiency
- * Validation result: Not run
- */
-
 #ifndef MULTIWORD_TYPES_H
 #define MULTIWORD_TYPES_H
 #include "rtwtypes.h"

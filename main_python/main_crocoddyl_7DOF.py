@@ -28,7 +28,7 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = False
+use_data_from_simulink = True
 if use_data_from_simulink:
     # only available for franka research 3 robot
     n_dof = 7 # (input data from simulink are 7dof states q, qp)
@@ -187,8 +187,8 @@ if use_data_from_simulink:
     start_solving = False
 
     x_k_ndof = np.zeros(2*n_dof)
-    x_k_ndof[n_indices] = q_0_ref
-    tau_full = calculate_ndof_torque_with_feedforward(xs[0], us[0], x_k_ndof, robot_model_full, pin_data_full, nq, n_dof, n_indices)
+    x_k_ndof[:n_dof] = q_0_ref
+    tau_full = calculate_ndof_torque_with_feedforward(xs[0], us[0], x_k_ndof, q_0_ref, robot_model_full, pin_data_full, nq, n_dof, n_indices)
 
     data_from_python[:] = tau_full
     data_from_python_valid[:] = 1
@@ -251,7 +251,7 @@ try:
 
                     run_flag = True
                     print("MPC started by Simulink")
-                elif reset == 1 and i == N_traj-1:
+                elif reset == 1:# and i == N_traj-1:
                     i = 0
                     
                     subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
@@ -264,6 +264,13 @@ try:
                 data_from_simulink_stop[:] = 0
                 run_flag = False
                 start_solving = False
+            elif run_flag == True and reset == 1:
+                print("MPC reset by Simulink")
+                data_from_python[:] = np.zeros(n_dof)
+                data_from_simulink_reset[:] = 0
+                run_flag = False
+                start_solving = False
+                i = 0
 
             if(data_from_simulink_valid[:] == 1 and run_flag == True):
                 data_from_simulink_valid[:] = 0
@@ -348,16 +355,19 @@ try:
                     xs_init_guess = ddp.xs
                     us_init_guess = ddp.us
 
-                    tau_full = calculate_ndof_torque_with_feedforward(xs[i], us[i], x_k_ndof, robot_model_full, pin_data_full, nq, n_dof, n_indices)
+                    # tau_full = calculate_ndof_torque_with_feedforward(xs[i], us[i], x_k_ndof, q_0_ref, robot_model_full, pin_data_full, nq, n_dof, n_indices)
+                    tau_full = np.zeros(n_dof)
+                    tau_full[n_indices] = us[i]
 
                     # Daten von Python an Simulink schreiben
 
                     if i == 0:
-                        tau_i_prev = np.zeros(7)
+                        # tau_i_prev = np.zeros(7)
+                        tau_i_prev = tau_full
 
                     delta_u = tau_full - tau_i_prev
-                    condition1 = np.logical_and(delta_u > 0, delta_u > 5)
-                    condition2 = np.logical_and(delta_u < 0, delta_u < -5)
+                    condition1 = np.logical_and(delta_u > 0, delta_u > 2)
+                    condition2 = np.logical_and(delta_u < 0, delta_u < -2)
 
                     if np.any(np.logical_or(condition1, condition2)): # aber kleiner als -0.8 ist ok
                         print(tau_full)
