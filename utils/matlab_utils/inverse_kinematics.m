@@ -1,4 +1,4 @@
-function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2, Q3, Q4, tolerance, random_q0_count, ct_ctrl_param)
+function [best_q, best_f_val] = inverse_kinematics(param_robot, param_inv_kin, ct_ctrl_param)
     % This function solves the inverse kinematics for a 9DOF system with the
     % goal of placing the joint angles q0(1:2) of the linear axes as close to
     % the center of the workspace as possible (also depending on q_d).
@@ -10,24 +10,26 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
     % - param_robot: a struct containing the robot parameters - xe0: a
     %                6x1 vector representing the desired end-effector position
     %                and orientation
-    % - q_d: a 7x1 vector representing the desired q position, if not necessary
-    %        set it to (lb+ub)/2 = q_n. By using that parameter it is possible
-    %        to get more useful solutions.
-    % - Q1: a 6x6 matrix representing a weighting factor for the end-effector
-    %       position error
-    % - Q2: a scalar representing a weighting factor for
-    %       the manipulability measure
-    % - Q3: a 7x7 matrix representing a
-    %       weighting factor for the joint angles
-    % - Q4: a 7x7 matrix
-    %       representing a weighting factor for the nonlinear spring occured by
-    %       each joint angle (increase this weight to avoid starting in limits,
-    %       which lead to instabilites due to the huge nonlinear spring
-    %       forces.)
-    % - tolerance: a scalar representing the tolerance for the position error
-    %              between the calculated end-effector position and the desired
-    %              end-effector position
-    % - random_q0_count: amount of random q0 startvalues of fmincon
+    %  - param_inv_kin: a struct containing the inverse kin parameters:
+    %     - q_d: a 7x1 vector representing the desired q position, if not necessary
+    %            set it to (lb+ub)/2 = q_n. By using that parameter it is possible
+    %            to get more useful solutions.
+    %     - Q_pos: a 6x6 matrix representing a weighting factor for the end-effector
+    %              position error
+    %     - Q_m: a scalar representing a weighting factor for
+    %            the manipulability measure
+    %     - Q_q: a 7x7 matrix representing a
+    %            weighting factor for the joint angles
+    %     - Q_nl: a 7x7 matrix
+    %             representing a weighting factor for the nonlinear spring occured by
+    %             each joint angle (increase this weight to avoid starting in limits,
+    %             which lead to instabilites due to the huge nonlinear spring
+    %             forces, not used for non redundant robots)
+    %     - Q_collin: collinearity weightin matrix of J'J/(|Jj||Ji|)
+    %     - tolerance: a scalar representing the tolerance for the position error
+    %           between the calculated end-effector position and the desired
+    %           end-effector position
+    %      - random_q0_count: amount of random q0 startvalues of fmincon
     % - ct_ctrl_param: struct defined by ct controller in parameters.m
     %
     % Outputs:
@@ -37,6 +39,18 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
     %           values q_0_init is returned.
     % - best_f_val: lowest value out of all cost function produced by the
     %               random values q_0_init.
+
+        xe0 = param_inv_kin.xe0;
+        q_d = param_inv_kin.q_d;
+        Q1 = param_inv_kin.Q_pos;
+        Q2 = param_inv_kin.Q_m;
+        Q3 = param_inv_kin.Q_q;
+        Q4 = param_inv_kin.Q_nl;
+        K_J_struct = param_inv_kin.K_J;
+        R_J_d_struct = param_inv_kin.R_J_d;
+        [R_J_d, K_J] = set_collin_matrices(R_J_d_struct, K_J_struct, param_robot);
+        tolerance = param_inv_kin.tolerance;
+        random_q0_count = param_inv_kin.random_q0_count;
 
         %R_target = quat2rotm_v2(xe0(4:7));
         %xe0 = [xe0(1:3); rotm2eul(R_target, 'XYZ')'];
@@ -61,10 +75,12 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, xe0, q_d, Q1, Q2
         %x_pos_err = @(q) kin_fun(q) - xe0;
         x_pos_err = @(q) kin_fun_err_reduced(xe0, q, param_robot);
         manip_red = @(q) calc_manipulability_reduced(q, param_robot);
+        R_J = @(q) calc_collinearity_reduced(q, param_robot);
         fun = @(q) 1/2*dot(x_pos_err(q), Q1*x_pos_err(q)) ... 
                  + 1/2*Q2*(manip_red(q))^2 ...
                  + 1/2*dot(q-q_d, Q3*(q-q_d)) ...
-                 + 1/2*dot(nl_spring(q), Q4*nl_spring(q));
+                 + 1/2*dot(nl_spring(q), Q4*nl_spring(q)) ...
+                 + 1/2*sum( 1/2 * K_J .* (abs(R_J(q)) - R_J_d).^2, 'all');
     
         % Define the optimization options.
         options = optimoptions('fmincon','Display','off','Algorithm','interior-point'); % Define the options for the optimization algorithm.

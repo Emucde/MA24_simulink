@@ -6,6 +6,7 @@ slprj
 *.autosave
 *.casadi
 *.o
+*.mexa64
 .tmp
 main_simulink/simulink_log/*.txt
 s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/*
