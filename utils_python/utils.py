@@ -1215,7 +1215,9 @@ def sim_model(robot_model, robot_data, q, q_p, tau, dt):
 
 ###############
 
-def first_init_guess_mpc_v1(tau_init_robot, x_init_robot, N_traj, N_horizon, nx, nu, traj_data):
+def first_init_guess_mpc_v1(tau_init_robot, x_init_robot, N_traj, N_horizon, param_robot, traj_data):
+    nu = param_robot['n_dof']
+    nx = 2*nu
     xk = x_init_robot
 
     xs_init_guess = [x_init_robot]  * (N_horizon)
@@ -1225,7 +1227,10 @@ def first_init_guess_mpc_v1(tau_init_robot, x_init_robot, N_traj, N_horizon, nx,
     us = np.zeros((N_traj, nu))
     return xk, xs, us, xs_init_guess, us_init_guess
 
-def first_init_guess_mpc_v3(tau_init_robot, x_init_robot, N_traj, N_horizon, nx, nu, traj_data):
+def first_init_guess_mpc_v3(tau_init_robot, x_init_robot, N_traj, N_horizon, param_robot, traj_data):
+    nu = param_robot['n_dof']
+    nx = 2*nu
+
     x0_init = np.hstack([traj_data['p_d'][:, 0], traj_data['p_d_p'][:, 0], x_init_robot])
     xk = x0_init
 
@@ -1262,7 +1267,8 @@ def check_solver_status(warn_cnt, hasConverged, ddp, i, dt, conv_max_limit=5):
         error = 1
     return warn_cnt, error
 
-def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init_config, n_indices, TCP_frame_id):
+def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init_config, param_robot, TCP_frame_id):
+    n_indices = param_robot['n_indices']
     mpc_settings, param_mpc_weight = load_mpc_config(robot_model)
     p_d, p_d_p, p_d_pp, R_d, t, q_0, q_0_p, q_0_pp, N_traj = get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices)
 
@@ -1312,7 +1318,7 @@ def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init
     x_init_robot = np.hstack([q_0, q_0_p])
     tau_init_robot = pinocchio.rnea(robot_model, robot_data, q_0, q_0_p, q_0_pp)
 
-    x_k, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_init_robot, N_traj, N_MPC, nx, nu, traj_data)
+    x_k, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_init_robot, N_traj, N_MPC, param_robot, traj_data)
 
     # create first problem:
 
@@ -1331,9 +1337,6 @@ def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init
     ddp = solver(problem)
     hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
     warn_cnt, err_state = check_solver_status(0, hasConverged, ddp, 0, Ts, conv_max_limit=5)
-
-    xs[0] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
-    us[0] = ddp.us[0]
 
     xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
 

@@ -88,6 +88,15 @@ else:
 n_indices_all = np.arange(0, n_dof)
 n_indices_fixed = n_indices_all[~np.isin(n_indices_all, n_indices)]
 
+param_robot = {
+    'n_dof': n_dof,
+    'n_red': len(n_indices),
+    'n_indices': n_indices,
+    'n_indices_fixed': n_indices_fixed,
+    'n_x_indices': n_x_indices,
+    'q_0_ref': q_0_ref
+}
+
 #########################################################################################################
 ############################################ MPC Settings ###############################################
 #########################################################################################################
@@ -183,7 +192,7 @@ ddp, x_k, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, \
 N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
 simulate_model, next_init_guess_fun, mpc_settings, param_traj =   \
     init_crocoddyl( robot_model, robot_data, traj_data, traj_data_true,     \
-                    traj_init_config, n_indices, TCP_frame_id)
+                    traj_init_config, param_robot, TCP_frame_id)
 
 p_d = y_d_data['p_d']
 p_d_p = y_d_data['p_d_p']
@@ -193,10 +202,7 @@ R_d = y_d_data['R_d']
 x_k_ndof = np.zeros(2*n_dof)
 x_k_ndof[:n_dof] = q_0_ref
 
-tau_full = calculate_ndof_torque_with_feedforward(us[0], x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, n_indices_fixed)
-
-xs = np.zeros((N_traj, 2*n_dof))
-us = np.zeros((N_traj, n_dof))
+tau_full = calculate_ndof_torque_with_feedforward(us_init_guess[0], x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, n_indices_fixed)
 
 if use_data_from_simulink:
     run_flag = False
@@ -254,7 +260,7 @@ try:
                     N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
                     simulate_model, next_init_guess_fun, mpc_settings, param_traj =   \
                         init_crocoddyl( robot_model, robot_data, traj_data, traj_data_true,     \
-                                        traj_init_config, n_indices, TCP_frame_id)
+                                        traj_init_config, param_robot, TCP_frame_id)
                     
                     p_d = y_d_data['p_d']
                     p_d_p = y_d_data['p_d_p']
