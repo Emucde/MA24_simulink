@@ -362,7 +362,7 @@ def initialize_shared_memory():
 
     return shm_objects, shm_data
 
-def calculate_ndof_torque_with_feedforward(x, u, x_k_ndof, q_0_ref, robot_model_full, pin_data_full, n_red, n, n_indices):
+def calculate_ndof_torque_with_feedforward(u, x_k_ndof, robot_model_full, robot_data_full, n, n_indices, n_indices_fixed):
     """
     Calculate n-DOF torque with feedforward for fixed joints:
     Example: For a 7DOF robot with joint 3 fixed, q ∈ Rn, qp ∈ Rn
@@ -371,13 +371,13 @@ def calculate_ndof_torque_with_feedforward(x, u, x_k_ndof, q_0_ref, robot_model_
     3. Calculate tau = M(q, qp) * qpp + C(q, qp) + g(q)
     Note: This way, tau[n_indices] == tau_red. Actually, only tau for fixed joints
     is calculated so that qpp(fixed_joints) = 0.
-
+g
     Args:
     x (np.array): Reduced state vector
     u (np.array): Control input (reduced torque)
     x_k_ndof (np.array): Full n-DOF state measurement from Simulink
     robot_model_full (pinocchio.Model): Full robot model
-    pin_data_full (pinocchio.Data): Pinocchio data
+    robot_data_full (pinocchio.Data): Pinocchio data
     n_red (int): Number of reduced DOF (non-fixed joints)
     n (int): Total number of DOF of the full robot
     n_indices (list): Indices of non-fixed joints
@@ -385,31 +385,32 @@ def calculate_ndof_torque_with_feedforward(x, u, x_k_ndof, q_0_ref, robot_model_
     Returns:
     np.array: Full n-DOF torque
     """
-    q_red = x[:n_red]
-    q_p_red = x[n_red:2*n_red]
+
+    # for n_x_indices it have to be the same as x[0] as in the measurement
+    # only for fixed values the measurement is used.
+    q = x_k_ndof[:n]
+    q_p = x_k_ndof[n:2*n]
+
     tau_red = u
 
-    q = q_0_ref  # Measurement from Simulink
-    q[n_indices] = q_red
+    M = pinocchio.crba(robot_model_full, robot_data_full, q)
+    C_rnea = pinocchio.rnea(robot_model_full, robot_data_full, q, q_p, np.zeros(n)) # = Cq_p + g
+    # C = pinocchio.computeCoriolisMatrix(robot_model_full, robot_data_full, q, q_p)
+    M_red = M[n_indices][:, n_indices]
+    C_rnea_tilde = C_rnea[n_indices]
 
-    q_p = np.zeros(n)
-    q_p[n_indices] = q_p_red
-    
-    tau = np.zeros(n)  # Fixed joint torque is ignored (therefore 0)
-    tau[n_indices] = tau_red
-
-    q_pp_red = pinocchio.aba(robot_model_full, pin_data_full, q, q_p, tau)
+    q_pp_red = np.linalg.solve(M_red, tau_red - C_rnea_tilde)
 
     q_pp = np.zeros(n)
-    q_pp[n_indices] = q_pp_red[n_indices]  # Ignore fixed joint acceleration
+    q_pp[n_indices] = q_pp_red
 
-    q_meas = x_k_ndof[:n]
-    q_meas[n_indices] = q_red
-    q_p_meas = x_k_ndof[n:2*n]
-    # q_p_meas[n_indices] = q_p_red
-
-    tau_full = pinocchio.rnea(robot_model_full, pin_data_full, q_meas, q_p, q_pp)
+    # v1: 2x faster than v2
+    tau_full = pinocchio.rnea(robot_model_full, robot_data_full, q, q_p, q_pp)
+    
+    # v2: 2x slower than v1 due to tau_full[n_indices] = tau_red
+    # tau_full = np.zeros(n)
     # tau_full[n_indices] = tau_red
+    # tau_full[n_indices_fixed] = M[n_indices_fixed] @ q_pp + C_rnea[n_indices_fixed]
 
     return tau_full
 
@@ -1163,9 +1164,7 @@ def next_init_guess_mpc_v1(ddp, nq, nx, robot_model, robot_data, mpc_settings, p
 
     return xs_init_guess, us_init_guess
 
-def simulate_model_mpc_v1(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data, mpc_settings, param_traj):
-    xk = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
-    uk = ddp.us[0]
+def simulate_model_mpc_v1(xk, uk, dt, nq, nx, robot_model, robot_data, traj_data):
 
     # Modell Simulation
     tau_k = uk
@@ -1180,7 +1179,7 @@ def simulate_model_mpc_v1(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data
 
     return xkp1, xs_i, us_i
 
-def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data, mpc_settings):
+def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data):
 
     xk = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
     uk = ddp.us[0]
@@ -1574,13 +1573,14 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, 
                 'sig_linestyles': ['-'],
                 'sig_colors': ['rgb(255,255,17)']}
     
+    sig_linestyles_7dof_arr = ['-', '-', '-', '-', '-', '-', '-']
     color_7dof_rgb_arr = ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(100,212,19)', 'rgb(183,70,255)', 'rgb(15,255,255)', 'rgb(255,19,166)']
     
     subplot8 = {'title': 'q (rad)',
                 'sig_labels': [f"q{i+1}" for i in range(n)],
                 'sig_xdata': t,
                 'sig_ydata': [q[:, i] for i in range(n)],
-                'sig_linestyles': ['-', '-', '-', '-', '-', '-'],
+                'sig_linestyles': sig_linestyles_7dof_arr[:n],
                 'sig_colors': color_7dof_rgb_arr[:n]}
 
     subplot9 = {'title': 'e_y (m)',
@@ -1608,7 +1608,7 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, 
                 'sig_labels': [f"q̇_{i+1}" for i in range(n)],
                 'sig_xdata': t,
                 'sig_ydata': [q_p[:, i] for i in range(n)],
-                'sig_linestyles': ['-', '-', '-', '-', '-', '-'],
+                'sig_linestyles': sig_linestyles_7dof_arr[:n],
                 'sig_colors': color_7dof_rgb_arr[:n]}
                  
     subplot13 = {'title': 'e_z (m)',
@@ -1636,7 +1636,7 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, 
                 'sig_labels': [f"q̈_{i+1}" for i in range(n)],
                 'sig_xdata': t,
                 'sig_ydata': [q_pp[:, i] for i in range(n)],
-                'sig_linestyles': ['-', '-', '-', '-', '-', '-'],
+                'sig_linestyles': sig_linestyles_7dof_arr[:n],
                 'sig_colors': color_7dof_rgb_arr[:n]}
     
     subplot17 = {'title': 'quat_e(2:4)',
@@ -1692,7 +1692,7 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, 
                 'sig_labels': [f"tau_{i+1}" for i in range(n)],
                 'sig_xdata': t,
                 'sig_ydata': [tau[:, i] for i in range(n)],
-                'sig_linestyles': ['-', '-', '-', '-', '-', '-'],
+                'sig_linestyles': sig_linestyles_7dof_arr[:n],
                 'sig_colors': color_7dof_rgb_arr[:n]}
 
     subplot_data = [subplot1, subplot2, subplot3, subplot4, subplot5, subplot6, subplot7, subplot8, subplot9, subplot10, subplot11, subplot12, subplot13, subplot14, subplot15, subplot16, subplot17, subplot18, subplot19, subplot20, subplot21, subplot22, subplot23, subplot24]

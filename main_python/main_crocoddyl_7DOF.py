@@ -28,10 +28,9 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = True
+use_data_from_simulink = False
 if use_data_from_simulink:
-    # only available for franka research 3 robot
-    n_dof = 7 # (input data from simulink are 7dof states q, qp)
+    # only available for franka research 3 robot (n_dof = 7)
 
     shm_objects, shm_data = initialize_shared_memory()
     data_from_python = shm_data['data_from_python']
@@ -48,6 +47,7 @@ if use_data_from_simulink:
 robot_name = 'fr3_6dof_no_hand'
 
 if robot_name == 'ur5e_6dof':
+    n_dof = 6 # (input data from simulink are 7dof states q, qp)
     mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_ur5e')
     urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'ur5e.urdf')
     urdf_tcp_frame_name = 'ur5e_tcp'
@@ -62,6 +62,7 @@ if robot_name == 'ur5e_6dof':
    # Create a list of joints to lock
     jointsToLock = []
 elif robot_name == 'fr3_6dof_no_hand':
+    n_dof = 7 # (input data from simulink are 7dof states q, qp)
     mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_FR3')
     urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'fr3_no_hand_7dof.urdf')
     urdf_tcp_frame_name = 'fr3_link8_tcp'
@@ -84,6 +85,9 @@ elif robot_name == 'fr3_6dof_no_hand':
 else:
     raise Exception("Unknown robot name '{}'".format(robot_name), "Available robots: 'ur5e_6dof', 'fr3_6dof_no_hand'")
 
+n_indices_all = np.arange(0, n_dof)
+n_indices_fixed = n_indices_all[~np.isin(n_indices_all, n_indices)]
+
 #########################################################################################################
 ############################################ MPC Settings ###############################################
 #########################################################################################################
@@ -96,7 +100,7 @@ else:
 
 robot_model_full, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_model_path, mesh_dir)
 
-pin_data_full = robot_model_full.createData()
+robot_data_full = robot_model_full.createData()
 
 # https://gepettoweb.laas.fr/doc/stack-of-tasks/pinocchio/master/doxygen-html/md_doc_b_examples_e_reduced_model.html
 # create reduced model:
@@ -123,8 +127,14 @@ nx = 2*nq
 nu = nq # fully actuated
 
 # Gravity should be in -z direction
-# robot_model.gravity.linear[:] = [0, 0, -9.81]
-robot_model.gravity.linear[:] = [0, 0, 0]
+use_gravity = False
+if use_gravity:
+    gravity = [0, 0, -9.81]
+else:
+    gravity = [0, 0, 0]
+
+robot_model.gravity.linear[:] = gravity
+robot_model_full.gravity.linear[:] = gravity
 
 robot_data = robot_model.createData()
 
@@ -132,8 +142,6 @@ TCP_frame_id = robot_model.getFrameId(urdf_tcp_frame_name)
 
 # The model loaded from urdf (via pinicchio)
 print(robot_model)
-
-pin_data = robot_model.createData()
 
 #########################################################################################################
 ################################## Get Trajectory from mat file #########################################
@@ -182,13 +190,17 @@ p_d_p = y_d_data['p_d_p']
 p_d_pp = y_d_data['p_d_pp']
 R_d = y_d_data['R_d']
 
+x_k_ndof = np.zeros(2*n_dof)
+x_k_ndof[:n_dof] = q_0_ref
+
+tau_full = calculate_ndof_torque_with_feedforward(us[0], x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, n_indices_fixed)
+
+xs = np.zeros((N_traj, 2*n_dof))
+us = np.zeros((N_traj, n_dof))
+
 if use_data_from_simulink:
     run_flag = False
     start_solving = False
-
-    x_k_ndof = np.zeros(2*n_dof)
-    x_k_ndof[:n_dof] = q_0_ref
-    tau_full = calculate_ndof_torque_with_feedforward(xs[0], us[0], x_k_ndof, q_0_ref, robot_model_full, pin_data_full, nq, n_dof, n_indices)
 
     data_from_python[:] = tau_full
     data_from_python_valid[:] = 1
@@ -275,13 +287,13 @@ try:
             if(data_from_simulink_valid[:] == 1 and run_flag == True):
                 data_from_simulink_valid[:] = 0
                 data_from_python_valid[:] = 0
-                x_k_ndof = data_from_simulink
+                x_k_ndof = data_from_simulink.copy()
                 x_k = x_k_ndof[n_x_indices]
                 start_solving = True
         if start_solving:
             measureSimu.tic()
             
-            g_k = pin.computeGeneralizedGravity(robot_model, pin_data, x_k[:nq])
+            g_k = pin.computeGeneralizedGravity(robot_model, robot_data, x_k[:nq])
 
             # if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
             #     xs_init_guess_prev = np.array(xs_init_guess)
@@ -355,14 +367,13 @@ try:
                     xs_init_guess = ddp.xs
                     us_init_guess = ddp.us
 
-                    # tau_full = calculate_ndof_torque_with_feedforward(xs[i], us[i], x_k_ndof, q_0_ref, robot_model_full, pin_data_full, nq, n_dof, n_indices)
-                    tau_full = np.zeros(n_dof)
-                    tau_full[n_indices] = us[i]
+                    tau_full = calculate_ndof_torque_with_feedforward(u_k, x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, n_indices_fixed)
+                    # tau_full = np.zeros(n_dof)
+                    # tau_full[n_indices] = us[i]
 
                     # Daten von Python an Simulink schreiben
 
                     if i == 0:
-                        # tau_i_prev = np.zeros(7)
                         tau_i_prev = tau_full
 
                     delta_u = tau_full - tau_i_prev
@@ -390,7 +401,35 @@ try:
 
                 tau_i_prev = tau_full
             else:
-                x_k, xs[i], us[i] = simulate_model(ddp, i, Ts, nq, nx, robot_model, robot_data, traj_data, mpc_settings, param_traj)
+                u_k = ddp.us[0]
+                x_k_ndof = np.zeros(2*n_dof)
+                x_k_ndof[n_x_indices] = ddp.xs[0]
+                tau_full = calculate_ndof_torque_with_feedforward(u_k, x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, n_indices_fixed)
+                
+                K_d = np.diag([100, 200, 500, 200, 50, 50, 10])
+                D_d = np.sqrt(2*K_d)
+                
+                K_d_fixed = K_d[n_indices_fixed][:, n_indices_fixed]
+                D_d_fixed = D_d[n_indices_fixed][:, n_indices_fixed]
+                
+                q_ndof = x_k_ndof[:n_dof]
+                q_p_ndof = x_k_ndof[n_dof::]
+
+                q_fixed = q_ndof[n_indices_fixed]
+                q_p_fixed = q_p_ndof[n_indices_fixed]
+
+                tau_fixed = -K_d_fixed @ (q_fixed - q_0_ref[n_indices_fixed]) - D_d_fixed @ q_p_fixed
+
+                tau_full[n_indices_fixed] = tau_full[n_indices_fixed] + tau_fixed
+                
+                x_kp1_ndof, x_k_i_ndof, u_k_i_ndof = simulate_model(x_k_ndof, tau_full, Ts, n_dof, 2*n_dof, robot_model_full, robot_data_full, traj_data)
+
+                xs[i] = x_k_i_ndof
+                us[i] = u_k_i_ndof
+
+                x_k_ndof = x_kp1_ndof
+                x_k = x_k_ndof[n_x_indices]
+
                 xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
                 # alternative: Use only solver values (perfect tracking)
                 # xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
@@ -431,7 +470,7 @@ else:
     print("Minimum Found:", hasConverged)
 
 
-xs[N_traj-1] = x_k
+xs[N_traj-1] = x_k_ndof
 us[N_traj-1] = us[N_traj-2] # simply use previous value for display (does not exist)
 
 measureSolver.print_time(additional_text='Total Solver time')
@@ -446,42 +485,43 @@ if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
     us = us[:, 3::]
     xs = xs[:, 6::]
 
-plot_full_model = False
+plot_full_model = True
 
 if plot_full_model:
-    pin_data_full = robot_model_full.createData()
+    # robot_data_full = robot_model_full.createData()
 
-    n_full = len(q_0_ref)
-    x_indiced = np.hstack([n_indices, n_indices+n_full])
-    us_full = np.zeros((N_traj,   n_full))
-    xs_full = np.zeros((N_traj, 2*n_full))
-    x_i = np.hstack([q_0_ref, np.zeros(n_full)])
-    for i in range(N_traj):
-        q = x_i[:n_full]
-        q_p = x_i[n_full::]
+    # n_full = len(q_0_ref)
+    # x_indiced = np.hstack([n_indices, n_indices+n_full])
+    # us_full = np.zeros((N_traj,   n_full))
+    # xs_full = np.zeros((N_traj, 2*n_full))
+    # x_i = np.hstack([q_0_ref, np.zeros(n_full)])
+    # for i in range(N_traj):
+    #     q = x_i[:n_full]
+    #     q_p = x_i[n_full::]
 
-        x_i[x_indiced] = xs[i]
+    #     x_i[x_indiced] = xs[i]
 
-        q_red = xs[i][:nq]
-        q_p_red = xs[i][nq::]
-        u_red = us[i]
+    #     q_red = xs[i][:nq]
+    #     q_p_red = xs[i][nq::]
+    #     u_red = us[i]
 
-        q_pp_red = pin.aba(robot_model, pin_data, q_red, q_p_red, u_red)
-        q_pp = np.zeros(n_full)
-        q_pp[n_indices] = q_pp_red
+    #     q_pp_red = pin.aba(robot_model, robot_data, q_red, q_p_red, u_red)
+    #     q_pp = np.zeros(n_full)
+    #     q_pp[n_indices] = q_pp_red
 
-        us_full[i] = pin.rnea(robot_model_full, pin_data_full, q, q_p, q_pp)
+    #     us_full[i] = pin.rnea(robot_model_full, robot_data_full, q, q_p, q_pp)
 
-        # us_full[i, n_indices] = us[i]
-        xs_full[i] = x_i
+    #     # us_full[i, n_indices] = us[i]
+    #     xs_full[i] = x_i
     
-    subplot_data = calc_7dof_data(us_full, xs_full, t, TCP_frame_id, robot_model_full, pin_data_full, traj_data_true, freq_per_Ta_step)
+    # subplot_data = calc_7dof_data(us_full, xs_full, t, TCP_frame_id, robot_model_full, robot_data_full, traj_data_true, freq_per_Ta_step)
+    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model_full, robot_data_full, traj_data_true, freq_per_Ta_step)
 else:
     subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
 
 
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
 output_file_path = os.path.join(folderpath, outputname)
 
