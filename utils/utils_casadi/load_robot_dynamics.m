@@ -1,4 +1,4 @@
-function [f, compute_tau_fun, gravity_fun, hom_transform_endeffector_py_fun, quat_endeffector_py_fun] = load_robot_dynamics(input_dir, n, no_gravity, use_aba)
+function [f, compute_tau_fun, gravity_fun, hom_transform_endeffector_py_fun, quat_endeffector_py_fun] = load_robot_dynamics(input_dir, n, gravity, use_aba)
     % LOAD_ROBOT_DYNAMICS Loads and prepares robot dynamics functions
     %
     % This function loads various dynamics-related functions for a robot model,
@@ -17,32 +17,33 @@ function [f, compute_tau_fun, gravity_fun, hom_transform_endeffector_py_fun, qua
     %   gravity_fun - CasADi Function, gravitational forces function
     %   hom_transform_endeffector_py_fun - CasADi Function, homogeneous transform of end-effector
     %   quat_endeffector_py_fun - CasADi Function, quaternion of end-effector
+    %   all sizes are calculated by rnea
     %
     % Note: This function assumes that the necessary .casadi files are present in the input_dir.
     import casadi.*;
 
         % Determine which system function to load based on gravity and ABA settings
         if use_aba
-            if no_gravity
-                sys_fun_str = 'sys_fun_x_sol_nogravity_py.casadi';
-            else
+            if gravity
                 sys_fun_str = 'sys_fun_x_aba_py.casadi';
+            else
+                sys_fun_str = 'sys_fun_x_sol_nogravity_py.casadi';
             end
         else
-            if no_gravity
-                sys_fun_str = 'sys_fun_x_sol_nogravity_py.casadi';
-            else
+            if gravity
                 sys_fun_str = 'sys_fun_x_sol_py.casadi';
+            else
+                sys_fun_str = 'sys_fun_x_sol_nogravity_py.casadi';
             end
         end
     
         % Determine which tau computation function to load and set up gravity function
-        if no_gravity
-            tau_fun_str = 'compute_tau_nogravity_py.casadi';
-            gravity_fun = Function('g', {SX.sym('q', n, 1)}, {SX(n, 1)}); % always zero
-        else
+        if gravity
             tau_fun_str = 'compute_tau_py.casadi';
             gravity_fun = Function.load([input_dir, 'gravitational_forces_py.casadi']); % Inverse Dynamics (ID)
+        else
+            tau_fun_str = 'compute_tau_nogravity_py.casadi';
+            gravity_fun = Function('g', {SX.sym('q', n, 1)}, {SX(n, 1)}); % always zero
         end
     
         % Load the dynamics functions

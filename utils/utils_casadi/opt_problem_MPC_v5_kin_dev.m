@@ -150,6 +150,7 @@ else
 end
 %      x = [q(t0),   q(t1), ...  q(tN),  dq(t0),  dq(t1), ...  dq(tN)] = [qq;   qq_p ]
 % d/dt x = [dq(t0), dq(t1), ... dq(tN), ddq(t0), ddq(t1), ... ddq(tN)] = [qq_p; qq_pp]
+
 qq = reshape(q, n_red*(N_MPC+1), 1);
 qq_p  = S_v * qq;
 qq_pp = S_a * qq;
@@ -208,6 +209,12 @@ else
         end
     end
 end
+
+qq_prev = reshape(q_prev, n_red*(N_MPC+1), 1);
+qq_prev_p  = S_v * qq;
+qq_prev_pp = S_a * qq;
+q_prev_p = reshape(qq_prev_p, n_red, N_MPC+1);
+q_prev_pp = reshape(qq_prev_pp, n_red, N_MPC+1);
 
 J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 

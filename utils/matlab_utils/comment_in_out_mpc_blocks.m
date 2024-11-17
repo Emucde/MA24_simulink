@@ -21,7 +21,17 @@ if(bdIsLoaded(simulink_main_model_name))
 
         comment_state = get_param(mpc_sfun_string, 'Commented');
 
-        if(contains(mpc_subsys_list{i}, selected_mpc_name))
+
+        mpc_number_str_cell = strsplit(sfun_mpc_modules, 'MPC');
+        mpc_number = str2double(mpc_number_str_cell{end}(1:end-1));
+
+        if(mpc_number > 7 && mpc_number ~= 14)
+            force_uncommenting = true;
+        else
+            force_uncommenting = false;
+        end
+
+        if(contains(mpc_subsys_list{i}, selected_mpc_name)  || force_uncommenting)
             if(strcmp(comment_state, 'on'))
                 for j=1:5
                     try

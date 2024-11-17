@@ -74,10 +74,10 @@ n_x_indices = [n_indices n_indices+n];
 % Model equations
 % Forward Dynamics: d/dt x = f(x, u)
 
-no_gravity = true;
+gravity = false;
 use_aba = false;
 [f, compute_tau_fun, gravity_fun, hom_transform_endeffector_py_fun, quat_endeffector_py_fun] = ...
-    load_robot_dynamics(input_dir, n, no_gravity, use_aba);
+    load_robot_dynamics(input_dir, n, gravity, use_aba);
 
 q_red    = SX.sym( 'q',     n_red, 1 );
 q_red_p  = SX.sym( 'q_p',   n_red, 1 );

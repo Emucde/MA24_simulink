@@ -51,10 +51,10 @@ n_y_indices = [yt_indices 3+yr_indices];
 n_z_indices = [yt_indices 3+yt_indices 6+yr_indices 9+yr_indices]; % weil nur der quaternionenfehler mit yr_indices gewichtet wird, aber quaternionen immer 4 dim sind.
 
 % Robot model Forward Dynamics: d/dt x = f(x, u)
-no_gravity = true;
-use_aba = false; % aba ist langsamer! (357s vs 335s)
+gravity = false;
+use_aba = false;
 [f, compute_tau_fun, gravity_fun, hom_transform_endeffector_py_fun, quat_endeffector_py_fun] = ...
-    load_robot_dynamics(input_dir, n, no_gravity, use_aba);
+    load_robot_dynamics(input_dir, n, gravity, use_aba);
 
 [~, ~, Q] = quat_deriv(ones(4,1), ones(3,1), ones(3,1)); % get function handle
 
