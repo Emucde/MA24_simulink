@@ -40,13 +40,13 @@ ctrl_param.pd.K_d_jointspace = ctrl_param.pd.D_d_jointspace^2/4; % (NOT USED)
 % 3: set sing values sigma_i < eps to sign(sigma_i)/q_i_max
 % 4: collinearity approach 1: only works if joint is exact replaceable (linear dependent) by one other joint (but not by multiple joints!!)
 % 5: collinearity approach after steinböck: works for all joints
-ctrl_param.regularization.mode = 1;
+ctrl_param.regularization.mode = 3;
 
 % 1:
 ctrl_param.regularization.k = 1e-3;
 
 % 2:
-ctrl_param.regularization.W_bar_N = 1e-4*param_robot.sugihara_limb_vector;
+ctrl_param.regularization.W_bar_N = 1e-3*param_robot.sugihara_limb_vector;
 % ctrl_param.regularization.W_bar_N = 1e-1*ones(n,1);
 ctrl_param.regularization.W_E = 1 * eye(6); %ctrl_param.regularization.w_bar_N;
 

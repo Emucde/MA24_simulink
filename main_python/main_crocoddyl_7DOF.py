@@ -181,7 +181,7 @@ traj_select 6: Sing test stretch arm out, Polynomial, joint space
 traj_select 7: Sing test stretch arm in, Polynomial, joint space
 '''
 
-curent_traj_select = 11
+curent_traj_select = 3
 traj_data, traj_data_true, traj_init_config = process_trajectory_data(curent_traj_select-1, traj_data_all, traj_param_all)
 
 #########################################################################################################
@@ -199,6 +199,8 @@ p_d_p = y_d_data['p_d_p']
 p_d_pp = y_d_data['p_d_pp']
 R_d = y_d_data['R_d']
 
+
+q_0_ref = traj_init_config['q_0']
 x_k_ndof = np.zeros(2*n_dof)
 x_k_ndof[:n_dof] = q_0_ref
 
@@ -333,6 +335,7 @@ try:
             #     ddp.problem.x0 = x0_new
             # else:
             xs_init_guess_prev = np.array(xs_init_guess)
+            us_init_guess_prev = np.array(us_init_guess)
             xs_init_guess_prev[:,nq:nx] = 0
             # v2: update reference values
             for j, runningModel in enumerate(ddp.problem.runningModels):
@@ -342,6 +345,7 @@ try:
                 ddp.problem.runningModels[j].differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_prev[j]
                 ddp.problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_prev[j]
                 ddp.problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                ddp.problem.runningModels[j].differential.costs.costs["ctrlPrev"].cost.residual.reference = us_init_guess_prev[j] #first us[0] is torque for gravity compensation
                 ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
 
             ddp.problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
@@ -350,6 +354,7 @@ try:
             ddp.problem.terminalModel.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_prev[j+1]
             ddp.problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_prev[j+1]
             ddp.problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+            ddp.problem.terminalModel.differential.costs.costs["ctrlPrev"].cost.residual.reference = us_init_guess_prev[j] #first us[0] is torque for gravity compensation
             ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
 
             ddp.problem.x0 = x_k
@@ -367,15 +372,17 @@ try:
 
             if use_data_from_simulink:
                 if not err_state:
-                    xs[i] = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
-                    us[i] = ddp.us[0]
-
                     xs_init_guess = ddp.xs
                     us_init_guess = ddp.us
 
+                    u_k = ddp.us[0]
+
                     tau_full = calculate_ndof_torque_with_feedforward(u_k, x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, n_indices_fixed)
+                    
+                    xs[i] = x_k_ndof
+                    us[i] = tau_full
                     # tau_full = np.zeros(n_dof)
-                    # tau_full[n_indices] = us[i]
+                    # tau_full[n_indices] = u_k
 
                     # Daten von Python an Simulink schreiben
 
@@ -408,8 +415,6 @@ try:
                 tau_i_prev = tau_full
             else:
                 u_k = ddp.us[0]
-                x_k_ndof = np.zeros(2*n_dof)
-                x_k_ndof[n_x_indices] = ddp.xs[0]
                 tau_full = calculate_ndof_torque_with_feedforward(u_k, x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, n_indices_fixed)
                 
                 K_d = np.diag([100, 200, 500, 200, 50, 50, 10])
@@ -427,6 +432,9 @@ try:
                 tau_fixed = -K_d_fixed @ (q_fixed - q_0_ref[n_indices_fixed]) - D_d_fixed @ q_p_fixed
 
                 tau_full[n_indices_fixed] = tau_full[n_indices_fixed] + tau_fixed
+
+                # tau_full = np.zeros(n_dof)
+                # tau_full[n_indices] = u_k
                 
                 x_kp1_ndof, x_k_i_ndof, u_k_i_ndof = simulate_model(x_k_ndof, tau_full, Ts, n_dof, 2*n_dof, robot_model_full, robot_data_full, traj_data)
 
@@ -526,8 +534,8 @@ else:
     subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step, param_robot)
 
 
-folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
 output_file_path = os.path.join(folderpath, outputname)
 

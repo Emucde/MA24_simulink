@@ -5,7 +5,7 @@ overwrite_offline_traj_forced_extern = true;
 dont_clear = true;
 
 
-for i = 1175:100000
+for i = 419:100000
     % Erstellen Sie eindeutige Namen für die Textdatei und das Video
     current_time = datetime('now', 'Format', 'yyyyMMdd_HHmmss_SSS');
     textFileName = sprintf('videos/max2_simulation_%05d_%s.txt', i, char(current_time));

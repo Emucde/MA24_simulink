@@ -17,11 +17,11 @@ plot_init_guess                 = false; % plot init guess
 plot_null_simu                  = false; % plot system simulation for x0 = 0, u0 = ID(x0)
 convert_maple_to_casadi         = false; % convert maple functions into casadi functions
 fullsimu                        = false; % make full mpc simulation and plot results
-traj_select_mpc                 = 6; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
+traj_select_mpc                 = 3; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
 create_init_guess_for_all_traj  = true; % create init guess for all trajectories
 compile_sfun                    = ~false; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
-compile_all_mpc_sfunctions      = false;
+compile_all_mpc_sfunctions      = ~false;
 generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
 reload_parameters_m             = true; % reload parameters.m at the end (clears all variables!)
 remove_sourcefiles              = false; % remove source files after compilation

@@ -795,8 +795,10 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     q_terminate_tracking_cost = param_mpc_weight['q_terminate_tracking_cost']
     q_xreg_terminate_cost = param_mpc_weight['q_xreg_terminate_cost']
     q_ureg_terminate_cost = param_mpc_weight['q_ureg_terminate_cost']
+    q_uprev_terminate_cost = param_mpc_weight['q_uprev_terminate_cost']
     q_xreg_cost = param_mpc_weight['q_xreg_cost']
     q_ureg_cost = param_mpc_weight['q_ureg_cost']
+    q_uprev_cost = param_mpc_weight['q_uprev_cost']
     q_x_bound_cost = param_mpc_weight['q_x_bound_cost']
     q_u_bound_cost = param_mpc_weight['q_u_bound_cost']
     umin = param_mpc_weight['umin']
@@ -851,6 +853,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
         # create classic residual cost models
         xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state, xref))
         uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state, uref))
+        uprevCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state, uref))
 
         goalTrackingCost = crocoddyl.CostModelResidual(
             state,
@@ -875,6 +878,8 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                 runningCostModel.addCost("stateReg", xRegCost, scale * q_xreg_cost)
             if np.sum(q_ureg_cost) not in [0, None]:
                 runningCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_cost)
+            if np.sum(q_uprev_terminate_cost) not in [0, None]:
+                runningCostModel.addCost("ctrlPrev", uprevCost, scale * q_uprev_cost)
 
             running_cost_models.append(IntegratedActionModel(
                 crocoddyl.DifferentialActionModelFreeFwdDynamics(
@@ -890,6 +895,8 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                 terminalDifferentialCostModel.addCost("stateReg", xRegCost, scale * q_xreg_terminate_cost)
             if np.sum(q_ureg_terminate_cost) not in [0, None]:
                 terminalDifferentialCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_terminate_cost)
+            if np.sum(q_uprev_terminate_cost) not in [0, None]:
+                terminalDifferentialCostModel.addCost("ctrlPrev", uprevCost, scale * q_uprev_terminate_cost)
 
     dt = int_time[-1]
     # integrate terminal cost model (necessary?)
