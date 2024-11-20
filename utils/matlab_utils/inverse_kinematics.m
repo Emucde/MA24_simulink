@@ -52,6 +52,22 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, param_inv_kin, c
         tolerance = param_inv_kin.tolerance;
         random_q0_count = param_inv_kin.random_q0_count;
 
+        xpos_joint1 = param_inv_kin.xpos_joint1;
+        xpos_joint2 = param_inv_kin.xpos_joint2;
+        xpos_joint3 = param_inv_kin.xpos_joint3;
+        xpos_joint4 = param_inv_kin.xpos_joint4;
+        xpos_joint5 = param_inv_kin.xpos_joint5;
+        xpos_joint6 = param_inv_kin.xpos_joint6;
+        xpos_joint7 = param_inv_kin.xpos_joint7;
+
+        Q_joint1 = param_inv_kin.Q_joint1;
+        Q_joint2 = param_inv_kin.Q_joint2;
+        Q_joint3 = param_inv_kin.Q_joint3;
+        Q_joint4 = param_inv_kin.Q_joint4;
+        Q_joint5 = param_inv_kin.Q_joint5;
+        Q_joint6 = param_inv_kin.Q_joint6;
+        Q_joint7 = param_inv_kin.Q_joint7;
+
         %R_target = quat2rotm_v2(xe0(4:7));
         %xe0 = [xe0(1:3); rotm2eul(R_target, 'XYZ')'];
         
@@ -72,11 +88,31 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, param_inv_kin, c
         %else
             nl_spring = @(q) zeros(n,1);
         %endkin_fun_err
-        %x_pos_err = @(q) kin_fun(q) - xe0;
-        x_pos_err = @(q) kin_fun_err_reduced(xe0, q, param_robot);
+        %x_tcp_err = @(q) kin_fun(q) - xe0;
+
+        x_joint1_err = @(q) kin_fun_err_reduced(xpos_joint1, q, @(q) hom_transform_joint_1_py(q), param_robot);
+        x_joint2_err = @(q) kin_fun_err_reduced(xpos_joint2, q, @(q) hom_transform_joint_2_py(q), param_robot);
+        x_joint3_err = @(q) kin_fun_err_reduced(xpos_joint3, q, @(q) hom_transform_joint_3_py(q), param_robot);
+        x_joint4_err = @(q) kin_fun_err_reduced(xpos_joint4, q, @(q) hom_transform_joint_4_py(q), param_robot);
+        x_joint5_err = @(q) kin_fun_err_reduced(xpos_joint5, q, @(q) hom_transform_joint_5_py(q), param_robot);
+        x_joint6_err = @(q) kin_fun_err_reduced(xpos_joint6, q, @(q) hom_transform_joint_6_py(q), param_robot);
+        x_joint7_err = @(q) kin_fun_err_reduced(xpos_joint7, q, @(q) hom_transform_joint_7_py(q), param_robot);
+
+        f_joint1 = @(q) 1/2*dot(x_joint1_err(q), Q_joint1*x_joint1_err(q));
+        f_joint2 = @(q) 1/2*dot(x_joint2_err(q), Q_joint2*x_joint2_err(q));
+        f_joint3 = @(q) 1/2*dot(x_joint3_err(q), Q_joint3*x_joint3_err(q));
+        f_joint4 = @(q) 1/2*dot(x_joint4_err(q), Q_joint4*x_joint4_err(q));
+        f_joint5 = @(q) 1/2*dot(x_joint5_err(q), Q_joint5*x_joint5_err(q));
+        f_joint6 = @(q) 1/2*dot(x_joint6_err(q), Q_joint6*x_joint6_err(q));
+        f_joint7 = @(q) 1/2*dot(x_joint7_err(q), Q_joint7*x_joint7_err(q));
+
+        f_all_joint = @(q) f_joint1(q) + f_joint2(q) + f_joint3(q) + f_joint4(q) + f_joint5(q) + f_joint6(q) + f_joint7(q); 
+
+        x_tcp_err = @(q) kin_fun_err_reduced(xe0, q, @(q) hom_transform_endeffector_py(q), param_robot);
         manip_red = @(q) calc_manipulability_reduced(q, param_robot);
         R_J = @(q) calc_collinearity_reduced(q, param_robot);
-        fun = @(q) 1/2*dot(x_pos_err(q), Q1*x_pos_err(q)) ... 
+        fun = @(q) 1/2*dot(x_tcp_err(q), Q1*x_tcp_err(q)) ... 
+                 + f_all_joint(q) ...
                  + 1/2*Q2*(manip_red(q))^2 ...
                  + 1/2*dot(q-q_d, Q3*(q-q_d)) ...
                  + 1/2*dot(nl_spring(q), Q4*nl_spring(q)) ...
@@ -104,7 +140,7 @@ function [best_q, best_f_val] = inverse_kinematics(param_robot, param_inv_kin, c
                 best_f_val = f_val; % Update the maximum manipulability value.
                 best_q = q_opt; % Update the joint angles corresponding to the maximum manipulability.
 
-                xe0_err_act = x_pos_err(best_q);
+                xe0_err_act = x_tcp_err(best_q);
                 xe0_err_act(4) = 0; % ignore scalar part
                 
                 if(norm(xe0_err_act) < tolerance) % Check if the position error between the calculated end-effector position and the desired end-effector position is within a tolerance.

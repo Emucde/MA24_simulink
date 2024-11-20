@@ -181,7 +181,7 @@ traj_select 6: Sing test stretch arm out, Polynomial, joint space
 traj_select 7: Sing test stretch arm in, Polynomial, joint space
 '''
 
-curent_traj_select = 6
+curent_traj_select = 11
 traj_data, traj_data_true, traj_init_config = process_trajectory_data(curent_traj_select-1, traj_data_all, traj_param_all)
 
 #########################################################################################################
@@ -521,9 +521,9 @@ if plot_full_model:
     #     xs_full[i] = x_i
     
     # subplot_data = calc_7dof_data(us_full, xs_full, t, TCP_frame_id, robot_model_full, robot_data_full, traj_data_true, freq_per_Ta_step)
-    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model_full, robot_data_full, traj_data_true, freq_per_Ta_step)
+    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model_full, robot_data_full, traj_data_true, freq_per_Ta_step, param_robot)
 else:
-    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
+    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step, param_robot)
 
 
 folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"

@@ -16,6 +16,10 @@ if(~exist('dont_clear', 'var'))
     clear;
 end
 
+if(  ~exist('overwrite_offline_traj_forced_extern', 'var') )
+    overwrite_offline_traj_forced_extern = false;
+end
+
 fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 
 %start_in_singularity = false;
@@ -23,7 +27,9 @@ fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 %x_traj_out_of_workspace_value = 0.1;
 
 plot_trajectory               = ~true;
-overwrite_offline_traj_forced = false;
+overwrite_offline_traj_forced = false; % if true then init guess is also created
+warm_start = false;
+overwrite_init_guess = false;
 
 % set_param(gcs,'Profile','off'); % turn off profiler when not needed anymore
 
@@ -75,13 +81,15 @@ param_robot_init;
 % it has to be ensured that sim_discrete_7dof is open!
 comment_in_out_mpc_blocks;
 
-activate_simulink_logs;
+% activate_simulink_logs;
 
 bus_definitions;
 
 init_MPC_weights; %% set MPC weights
 
 create_trajectories;
+overwrite_init_guess = false;%%%%%%%%%% ACHTUNG !!%%%%%%%%%%%%%
+create_mpc_init_guess;
 
 change_simulink_traj_combo_box; % saves system!
 

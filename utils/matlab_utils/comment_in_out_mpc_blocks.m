@@ -1,4 +1,6 @@
 % comments all unused mpcs out and only used mpc block in.
+special_comment_mode = false;
+
 if(bdIsLoaded(simulink_main_model_name))
     % get selected mpc version
     mpc_list = get_param('sim_discrete_7dof/controller combo box', 'States');
@@ -25,8 +27,12 @@ if(bdIsLoaded(simulink_main_model_name))
         mpc_number_str_cell = strsplit(sfun_mpc_modules, 'MPC');
         mpc_number = str2double(mpc_number_str_cell{end}(1:end-1));
 
-        if(mpc_number > 7 && mpc_number ~= 14)
-            force_uncommenting = true;
+        if(special_comment_mode)
+            if(mpc_number > 7 && mpc_number ~= 14)
+                force_uncommenting = true;
+            else
+                force_uncommenting = false;
+            end
         else
             force_uncommenting = false;
         end

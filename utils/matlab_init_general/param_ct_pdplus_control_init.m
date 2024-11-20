@@ -43,10 +43,10 @@ ctrl_param.pd.K_d_jointspace = ctrl_param.pd.D_d_jointspace^2/4; % (NOT USED)
 ctrl_param.regularization.mode = 1;
 
 % 1:
-ctrl_param.regularization.k = 1e-2;
+ctrl_param.regularization.k = 1e-3;
 
 % 2:
-ctrl_param.regularization.W_bar_N = 1e-3*param_robot.sugihara_limb_vector;
+ctrl_param.regularization.W_bar_N = 1e-4*param_robot.sugihara_limb_vector;
 % ctrl_param.regularization.W_bar_N = 1e-1*ones(n,1);
 ctrl_param.regularization.W_E = 1 * eye(6); %ctrl_param.regularization.w_bar_N;
 
@@ -57,7 +57,7 @@ ctrl_param.regularization.eps  = 1e-1;
 ctrl_param.regularization.eps_collinear = 0.95;
 
 % 5:
-ctrl_param.regularization.lambda_min = 1e-3;
+ctrl_param.regularization.lambda_min = 1e-1;
 
 %% nullspace for CT controller
 ctrl_param.ct.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;

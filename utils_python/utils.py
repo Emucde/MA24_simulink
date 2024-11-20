@@ -1172,12 +1172,16 @@ def simulate_model_mpc_v1(xk, uk, dt, nq, nx, robot_model, robot_data, traj_data
     q_p   = xk[nq:nx]
 
     q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
+    lb = np.hstack([robot_model.lowerPositionLimit, -robot_model.velocityLimit])
+    ub = np.hstack([robot_model.upperPositionLimit, robot_model.velocityLimit])
+    
     xkp1 = np.hstack([q_next, q_p_next])
+    xkp1_lim = np.clip(xkp1, lb, ub)
 
     us_i = uk
     xs_i = xk
 
-    return xkp1, xs_i, us_i
+    return xkp1_lim, xs_i, us_i
 
 def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data):
 
@@ -1369,9 +1373,10 @@ def plot_trajectory(traj_data):
     plt.tight_layout()
     plt.show()
 
-def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, frep_per_Ta_step):
+def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, frep_per_Ta_step, param_robot):
     N = len(xs)
     n = robot_model.nq
+    n_indices = param_robot['n_indices']
 
     p_e = np.zeros((N, 3))
     p_e_p = np.zeros((N, 3))
@@ -1449,7 +1454,8 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, 
         omega_e[i] = pinocchio.getFrameVelocity(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
         omega_e_p[i] = pinocchio.getFrameClassicalAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
 
-        w[i] = np.sqrt(np.abs(sp.linalg.det(J @ J.T)))
+        J_red = J[:, n_indices]
+        w[i] = np.sqrt(np.abs(sp.linalg.det(J_red @ J_red.T)))
 
         p_err[i] = p_e[i] - p_d[:, i]
         p_err_p[i] = p_e_p[i] - p_d_p[:, i]

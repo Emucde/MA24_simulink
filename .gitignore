@@ -8,6 +8,7 @@ slprj
 *.o
 *.mexa64
 .tmp
+videos
 main_simulink/simulink_log/*.txt
 s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/*
 jit*.c

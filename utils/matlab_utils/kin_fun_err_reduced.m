@@ -1,4 +1,4 @@
-function y_W_E_err = kin_fun_err_reduced(xe, q_reduced, param_robot)
+function y_W_E_err = kin_fun_err_reduced(xe, q_reduced, hom_fun, param_robot)
 % CALCULATE_ERROR Computes the position and orientation error between the end-effector and desired pose
 %
 % Inputs:
@@ -19,7 +19,7 @@ function y_W_E_err = kin_fun_err_reduced(xe, q_reduced, param_robot)
     q(param_robot.n_indices) = q_reduced;
     
     % Calculate forward kinematics
-    H = hom_transform_endeffector_py(q);
+    H = hom_fun(q);
     
     % Calculate rotation error
     %RR = H(1:3,1:3)*quat2rotm_v2(xe(4:7))';

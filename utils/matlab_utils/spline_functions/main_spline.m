@@ -53,6 +53,9 @@ if(~any(isnan(PP)))
         dCz = @(uu) arrayfun(@(u) dC_tj_fun(u, 3, bspline), uu);
     end
 
+    sigma_fun = @(theta) [Cx(theta); Cy(theta); Cz(theta)];
+    dsigma_fun = @(theta) [dCx(theta); dCy(theta); dCz(theta)];
+
     tt = 0:1e-3:1;
     subplot(3,2,[1 3]);
 

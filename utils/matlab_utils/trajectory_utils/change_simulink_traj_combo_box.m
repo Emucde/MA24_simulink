@@ -31,7 +31,8 @@ if(bdIsLoaded(simulink_main_model_name))
 
     current_traj_value = str2double(get_param(traj_blk_name, 'Value'));
     if(current_traj_value > N_traj)
-        set_param(traj_blk_name, 'Value', 1);
+        set_param([simulink_main_model_name, '/trajectory selector'], 'Value', '1'); % dann updated sich combo box von selbst
+        current_traj_value = 1;
     end
 
     if(strcmp(robot_name, 'fr3_7dof'))
@@ -57,7 +58,9 @@ if(bdIsLoaded(simulink_main_model_name))
 
     save_pending_state = get_param(simulink_main_model_name, 'Dirty');
     if(strcmp(save_pending_state, 'on'))
-        save_system(simulink_main_model_name, 'SaveDirtyReferencedModels','on');
+        try
+            save_system(simulink_main_model_name, 'SaveDirtyReferencedModels','on');
+        end
     end
 
     q_init = param_traj.q_0(:, current_traj_value); % testing for simscape

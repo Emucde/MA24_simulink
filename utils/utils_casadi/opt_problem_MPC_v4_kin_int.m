@@ -115,10 +115,11 @@ ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max(n_x_indices),
 % input parameter
 x_k    = SX.sym( 'x_k',     2*n_red, 1 ); % current x state = initial x state
 y_d    = SX.sym( 'y_d',     m+1, N_MPC+1 );
+u_prev = SX.sym( 'u_prev',  n_red, N_MPC );
 x_prev = SX.sym( 'x_prev',  2*n_red, N_MPC+1 );
 
-mpc_parameter_inputs = {x_k, y_d, x_prev};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:); x_init_guess_0(:)];
+mpc_parameter_inputs = {x_k, y_d, u_prev, x_prev};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:); u_init_guess_0(:); x_init_guess_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -235,18 +236,22 @@ else
     end
 end
 
+q        = x(   1:n_red, :);
+q_prev = x_prev(1:n_red, :);
+q_p      = x(     n_red+1:2*n_red, :);
+q_prev_p = x_prev(n_red+1:2*n_red, :);
+
+x_err = [q - q_prev; q_p - q_prev_p];
+
+
+J_q_p = Q_norm_square(u, pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
-% J_q_pp = N_MPC*Q_norm_square(u - q_d_pp, pp.R_y_pp)+Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
-% J_q_pp = Q_norm_square(y_pp - y_d_pp, pp.R_y_pp);
 
-q_err = x(1:n_red, :) - x_prev(1:n_red, :);
-q_err_p = x(n_red+1:2*n_red, :);% - x_prev(n_red+1:2*n_red, :);
-x_err = [q_err; q_err_p];
+J_delta_x0 = Q_norm_square(x_err(:, 1 + (0)),       pp.R_delta_x0(n_x_indices, n_x_indices));
+J_delta_x  = Q_norm_square(x_err(:, 1 + (1:N_MPC)), pp.R_delta_x(n_x_indices, n_x_indices));
+J_delta_u = Q_norm_square(u - u_prev, pp.R_delta_u(n_indices, n_indices));
 
-J_x0 = Q_norm_square(x_err(:, 1 + (0)),       pp.R_x0(n_x_indices, n_x_indices));
-J_x  = Q_norm_square(x_err(:, 1 + (1:N_MPC)), pp.R_x(n_x_indices, n_x_indices));
-
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_x, J_x0}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_p, J_q_pp, J_delta_x0, J_delta_x, J_delta_u}';
 
 
 cost_vars_SX = eval(cost_vars_names);
