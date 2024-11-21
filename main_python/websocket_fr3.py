@@ -23,7 +23,9 @@ async def broadcast(message):
         )
 
 async def websocket_server():
-    server = await websockets.serve(handler, "localhost", 8765)
+    port = 8765
+    server = await websockets.serve(handler, "localhost", port)
+    await broadcast('reload')
     await server.wait_closed()
 
 asyncio.run(websocket_server())

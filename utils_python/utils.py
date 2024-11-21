@@ -19,6 +19,10 @@ import plotly.offline as py
 from typing import overload
 from bs4 import BeautifulSoup
 from multiprocessing import shared_memory, resource_tracker
+import asyncio
+import websockets
+import subprocess
+import fcntl
 
 def trajectory_poly(t, y0, yT, T):
     # The function plans a trajectory from y0 in R3 to yT in R3 and returns the desired position and velocity on this trajectory at time t.
@@ -793,10 +797,10 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     # weights
     q_tracking_cost = param_mpc_weight['q_tracking_cost']
     q_terminate_tracking_cost = param_mpc_weight['q_terminate_tracking_cost']
-    q_xreg_terminate_cost = param_mpc_weight['q_xreg_terminate_cost']
+    R_xreg_terminate_weight = np.array(param_mpc_weight['R_xreg_terminate_cost'])
     q_ureg_terminate_cost = param_mpc_weight['q_ureg_terminate_cost']
     q_uprev_terminate_cost = param_mpc_weight['q_uprev_terminate_cost']
-    q_xreg_cost = param_mpc_weight['q_xreg_cost']
+    R_xreg_weight = np.array(param_mpc_weight['R_xreg_cost'])
     q_ureg_cost = param_mpc_weight['q_ureg_cost']
     q_uprev_cost = param_mpc_weight['q_uprev_cost']
     q_x_bound_cost = param_mpc_weight['q_x_bound_cost']
@@ -851,7 +855,9 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                     terminalDifferentialCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
 
         # create classic residual cost models
-        xRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelState(state, xref))
+        xRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_xreg_weight), crocoddyl.ResidualModelState(state, xref))
+        xRegTerminateCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_xreg_terminate_weight), crocoddyl.ResidualModelState(state, xref))
+
         uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state, uref))
         uprevCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state, uref))
 
@@ -874,8 +880,8 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
             runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
             if state.nq >= 6:
                 runningCostModel.addCost("TCP_rot", goalTrackingCost_r, q_tracking_cost)
-            if np.sum(q_xreg_cost) not in [0, None]:
-                runningCostModel.addCost("stateReg", xRegCost, scale * q_xreg_cost)
+            if np.sum(R_xreg_weight) not in [0, None]:
+                runningCostModel.addCost("stateReg", xRegCost, weight=1.0)
             if np.sum(q_ureg_cost) not in [0, None]:
                 runningCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_cost)
             if np.sum(q_uprev_terminate_cost) not in [0, None]:
@@ -891,8 +897,8 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
             terminalDifferentialCostModel.addCost("TCP_pose", goalTrackingCost, scale * q_terminate_tracking_cost)
             if state.nq >= 6:
                 terminalDifferentialCostModel.addCost("TCP_rot", goalTrackingCost_r, scale * q_terminate_tracking_cost)
-            if np.sum(q_xreg_terminate_cost) not in [0, None]:
-                terminalDifferentialCostModel.addCost("stateReg", xRegCost, scale * q_xreg_terminate_cost)
+            if np.sum(R_xreg_terminate_weight) not in [0, None]:
+                terminalDifferentialCostModel.addCost("stateReg", xRegTerminateCost, weight=1.0)
             if np.sum(q_ureg_terminate_cost) not in [0, None]:
                 terminalDifferentialCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_terminate_cost)
             if np.sum(q_uprev_terminate_cost) not in [0, None]:
@@ -1111,7 +1117,7 @@ def get_mpc_funs(problem_name):
         return crocoddyl.SolverBoxDDP, first_init_guess_mpc_v3, create_ocp_problem_v3_bounds_yN_ref, simulate_model_mpc_v3, next_init_guess_mpc_v1
         # return crocoddyl.SolverFDDP, first_init_guess_mpc_v3, create_ocp_problem_v3_bounds_yN_ref, simulate_model_mpc_v3
     else:
-        raise ValueError("problem_name must be 'MPC_v1' | 'MPC_v3_soft_yN_ref' | 'MPC_v3_bounds_yN_ref'")
+        raise ValueError("problem_name must be 'MPC_v1_soft_terminate' | 'MPC_v1_bounds_terminate' | 'MPC_v3_soft_yN_ref' | 'MPC_v3_bounds_yN_ref'")
 
 def create_ocp_problem_v1_soft(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings):
     return ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=False)
@@ -1715,7 +1721,45 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, 
 
     return subplot_data
 
-def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', plot_fig=True, matlab_import=True):
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+
+def start_server():
+    lock_file_path = '/tmp/my_server.lock'
+    script_path = 'main_python/websocket_fr3.py'
+
+    def is_server_running():
+        if os.path.exists(lock_file_path):
+            return True
+
+    if is_server_running():
+        print("Server is already running.")
+        asyncio.run(send_message('reload'))
+        return False
+
+    # Create lock file
+    with open(lock_file_path, 'w') as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        
+        # Start the server script in the background
+        subprocess.Popen(['python', script_path], 
+                         start_new_session=True, 
+                         stdout=subprocess.DEVNULL, 
+                         stderr=subprocess.DEVNULL)
+
+    print("Server started successfully.")
+    return True
+
+async def send_message(message, port=8765):
+    async with websockets.connect(f"ws://localhost:{port}") as websocket:
+        await websocket.send(message)
+        print(f"Nachricht gesendet: {message}")
+
+def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', plot_fig=True, matlab_import=True, reload_page=False):
     subplot_number = len(subplot_data)
     sig_labels = np.empty(24, dtype=object)
 
@@ -1891,6 +1935,17 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
         setTimeout(autoscale_function, rec_time);
         '''
 
+        reload_tab_code = '''
+            const ws = new WebSocket('ws://localhost:8765');
+
+            ws.onmessage = function(event) {
+                console.log(event.data);
+                if (event.data === 'reload') {
+                    location.reload();
+                }
+            };
+        '''
+
         # py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False, include_plotlyjs='cdn') # online use
         py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False) # offline use
         with open(file_name, 'r', encoding='utf-8') as file:
@@ -1899,11 +1954,17 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
             first_script_tag = soup.find('script')
             if first_script_tag:
                 new_script = soup.new_tag('script')
-                new_script.string = "document.body.style.background='#1e1e1e';"+autoscale_code
+                new_script.string = "document.body.style.background='#1e1e1e';"+autoscale_code+reload_tab_code
                 first_script_tag.insert_after(new_script)
                 with open(file_name, 'w', encoding='utf-8') as file:
                     file.write(str(soup))
-        webbrowser.open('file://' + file_name)
+        if(reload_page):
+            started = start_server()
+            if started:
+                time.sleep(1)
+                webbrowser.open('file://' + file_name)
+        else: # otherwise open in browser
+            webbrowser.open('file://' + file_name)
 
 def plot_solution(us, xs, t, TCP_frame_id, robot_model, traj_data, save_plot=False, file_name='plot_saved', plot_fig=True):
     robot_data = robot_model.createData()

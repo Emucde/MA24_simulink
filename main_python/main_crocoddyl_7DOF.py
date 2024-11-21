@@ -9,16 +9,8 @@ from scipy.spatial.transform import Rotation
 from scipy.optimize import minimize
 import scipy.io as sio
 from multiprocessing import shared_memory
-import asyncio
-import websockets
-
 sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
 from utils_python.utils import *
-
-async def send_message(message):
-    async with websockets.connect("ws://localhost:8765") as websocket:
-        await websocket.send(message)
-        print(f"Nachricht gesendet: {message}")
 
 autostart_fr3 = False
 
@@ -87,15 +79,6 @@ else:
 
 n_indices_all = np.arange(0, n_dof)
 n_indices_fixed = n_indices_all[~np.isin(n_indices_all, n_indices)]
-
-param_robot = {
-    'n_dof': n_dof,
-    'n_red': len(n_indices),
-    'n_indices': n_indices,
-    'n_indices_fixed': n_indices_fixed,
-    'n_x_indices': n_x_indices,
-    'q_0_ref': q_0_ref
-}
 
 #########################################################################################################
 ############################################ MPC Settings ###############################################
@@ -184,6 +167,15 @@ traj_select 7: Sing test stretch arm in, Polynomial, joint space
 curent_traj_select = 3
 traj_data, traj_data_true, traj_init_config = process_trajectory_data(curent_traj_select-1, traj_data_all, traj_param_all)
 
+q_0_ref = traj_init_config['q_0']
+param_robot = {
+    'n_dof': n_dof,
+    'n_red': len(n_indices),
+    'n_indices': n_indices,
+    'n_indices_fixed': n_indices_fixed,
+    'n_x_indices': n_x_indices,
+    'q_0_ref': q_0_ref
+}
 #########################################################################################################
 ############################################# INIT MPC ##################################################
 #########################################################################################################
@@ -200,7 +192,6 @@ p_d_pp = y_d_data['p_d_pp']
 R_d = y_d_data['R_d']
 
 
-q_0_ref = traj_init_config['q_0']
 x_k_ndof = np.zeros(2*n_dof)
 x_k_ndof[:n_dof] = q_0_ref
 
@@ -222,6 +213,8 @@ conv_max_limit = 10
 update_interval = N_traj//100
 
 freq_per_Ta_step = np.zeros(N_traj)
+
+reload_page=True
 
 measureSolver = TicToc()
 measureSimu = TicToc()
@@ -275,7 +268,7 @@ try:
                     i = 0
                     
                     subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
-                    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False)
+                    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page)
                     data_from_simulink_reset[:] = 0
                     print("MPC reset by Simulink")
             elif run_flag == True and stop == 1:
@@ -480,8 +473,6 @@ if err_state:
     if use_data_from_simulink:
         data_from_python[:] = np.zeros(n_dof)
         data_from_python_valid[:] = 0
-else:
-    print("Minimum Found:", hasConverged)
 
 
 xs[N_traj-1] = x_k_ndof
@@ -534,14 +525,14 @@ else:
     subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step, param_robot)
 
 
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
 output_file_path = os.path.join(folderpath, outputname)
 
 plot_sol=False
 if plot_sol == True or use_data_from_simulink == False:# and err_state == False:
-    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False)
+    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page)
 
 # print('Max error:       y - y_d = {:.2e}'.format(np.max(np.abs(e))), 'm')
 # print('Max error:   y_p - y_d_p = {:.2e}'.format(np.max(np.abs(e_p))), 'm/s')
