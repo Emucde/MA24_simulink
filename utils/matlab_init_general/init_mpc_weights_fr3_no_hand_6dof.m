@@ -232,6 +232,7 @@ param_weight.(MPC).u_max    = param_robot.q_pp_limit_upper;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 10) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % kinematic deviation planner mpc v8
+
 MPC='MPC13';
 
 param_weight.(MPC).Q_y    = diag([1e2*ones(3,1); 1e2*ones(3,1)]);  % d_kpn
@@ -242,9 +243,9 @@ param_weight.(MPC).Q_yN   = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % D_N
 % param_weight.(MPC).R_delta_x0  = 0*diag([1*ones(n,1); 0*ones(n,1)]);
 % param_weight.(MPC).R_delta_x   = param_weight.(MPC).R_delta_x0;
 % param_weight.(MPC).R_delta_u = 0*diag(ones(n,1));
-param_weight.(MPC).R_q_p  = 1e-10*diag(ones(n,1));  % d_kpn
-param_weight.(MPC).R_q_pp = 1e-10*diag(ones(n,1));  % d_kpn
-param_weight.(MPC).R_delta_x0  = 1e-10*diag([1*ones(n,1); 0*ones(n,1)]);
+param_weight.(MPC).R_q_p  = 1e-4*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).R_q_pp = 0*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).R_delta_x0  = 1e-4*diag([1*ones(n,1); 1*ones(n,1)]);
 param_weight.(MPC).R_delta_x   = param_weight.(MPC).R_delta_x0;
 param_weight.(MPC).R_delta_u = 0*diag(ones(n,1));
 

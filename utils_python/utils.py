@@ -10,6 +10,7 @@ import meshcat.geometry as g
 import meshcat.transformations as tf
 import webbrowser
 import os
+import sys
 import json
 from meshcat.animation import Animation
 from pinocchio.visualize import MeshcatVisualizer
@@ -795,12 +796,21 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
         R_d_ref = y_d_ref['R_d']
 
     # weights
-    q_tracking_cost = param_mpc_weight['q_tracking_cost']
-    q_terminate_tracking_cost = param_mpc_weight['q_terminate_tracking_cost']
-    R_xreg_terminate_weight = np.array(param_mpc_weight['R_xreg_terminate_cost'])
-    q_ureg_terminate_cost = param_mpc_weight['q_ureg_terminate_cost']
-    q_uprev_terminate_cost = param_mpc_weight['q_uprev_terminate_cost']
-    R_xreg_weight = np.array(param_mpc_weight['R_xreg_cost'])
+    q_yt_common_weight = param_mpc_weight['q_yt_common_weight']
+    q_yr_common_weight = param_mpc_weight['q_yr_common_weight']
+    Q_yt = np.array(param_mpc_weight['Q_yt'])
+    Q_yr = np.array(param_mpc_weight['Q_yr'])
+    q_yt_terminal_common_weight = param_mpc_weight['q_yt_terminal_common_weight']
+    q_yr_terminal_common_weight = param_mpc_weight['q_yr_terminal_common_weight']
+    Q_yt_terminal = np.array(param_mpc_weight['Q_yt_terminal'])
+    Q_yr_terminal = np.array(param_mpc_weight['Q_yr_terminal'])
+
+    q_p_common_weight = param_mpc_weight['q_p_common_weight']
+    R_q_p = np.array(param_mpc_weight['R_q_p'])
+    q_pp_common_weight = param_mpc_weight['q_pp_common_weight']
+    R_q_pp = np.array(param_mpc_weight['R_q_pp'])
+    q_xprev_common_weight = param_mpc_weight['q_xprev_common_weight']
+    R_xprev = np.array(param_mpc_weight['R_xprev'])
     q_ureg_cost = param_mpc_weight['q_ureg_cost']
     q_uprev_cost = param_mpc_weight['q_uprev_cost']
     q_x_bound_cost = param_mpc_weight['q_x_bound_cost']
@@ -810,6 +820,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     xmin = param_mpc_weight['xmin']
     xmax = param_mpc_weight['xmax']
     xref = param_mpc_weight['xref']
+    xprev_ref = param_mpc_weight['xprev_ref']
     uref = param_mpc_weight['uref']
 
     running_cost_models = list()
@@ -855,36 +866,33 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                     terminalDifferentialCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
 
         # create classic residual cost models
-        xRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_xreg_weight), crocoddyl.ResidualModelState(state, xref))
-        xRegTerminateCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_xreg_terminate_weight), crocoddyl.ResidualModelState(state, xref))
-
+        R_q_p_weight_vec = np.hstack([np.zeros(state.nq), R_q_p])
+        R_q_pp_weight_vec = np.hstack([np.zeros(state.nq), R_q_pp])
+        q_pCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_q_p_weight_vec), crocoddyl.ResidualModelState(state, np.zeros(state.nx)))
+        q_ppCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_q_pp_weight_vec), crocoddyl.ResidualModelState(state, xref))
+        xprevRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_xprev), crocoddyl.ResidualModelState(state, xref))
         uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state, uref))
         uprevCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state, uref))
 
-        goalTrackingCost = crocoddyl.CostModelResidual(
-            state,
-            residual=crocoddyl.ResidualModelFrameTranslation(
-                state, TCP_frame_id, p_d
-            ),
-        )
-
+        q_ytCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(Q_yt), crocoddyl.ResidualModelFrameTranslation(state, TCP_frame_id, p_d))
+        q_yt_terminateCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(Q_yt_terminal), crocoddyl.ResidualModelFrameTranslation(state, TCP_frame_id, p_d))
         if state.nq >= 6:
-            goalTrackingCost_r = crocoddyl.CostModelResidual(
-                state,
-                residual=crocoddyl.ResidualModelFrameRotation(
-                    state, TCP_frame_id, R_d
-                ),
-            )
+            q_yrCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(Q_yr), crocoddyl.ResidualModelFrameRotation(state, TCP_frame_id, R_d))
+            q_yr_terminateCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(Q_yr_terminal), crocoddyl.ResidualModelFrameRotation(state, TCP_frame_id, R_d))
 
         if i < N_MPC-1:
-            runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
+            runningCostModel.addCost("TCP_pose", q_ytCost, q_yt_common_weight)
             if state.nq >= 6:
-                runningCostModel.addCost("TCP_rot", goalTrackingCost_r, q_tracking_cost)
-            if np.sum(R_xreg_weight) not in [0, None]:
-                runningCostModel.addCost("stateReg", xRegCost, weight=1.0)
-            if np.sum(q_ureg_cost) not in [0, None]:
+                runningCostModel.addCost("TCP_rot", q_yrCost, q_yr_common_weight)
+            if q_p_common_weight not in [0, None]:
+                runningCostModel.addCost("q_pReg", q_pCost, weight=q_p_common_weight)
+            if q_pp_common_weight not in [0, None]:
+                runningCostModel.addCost("q_ppReg", q_ppCost, weight=q_pp_common_weight*dt) # approx qpp = (q_p - q_p_prev)/dt
+            if q_xprev_common_weight not in [0, None]:
+                runningCostModel.addCost("xprevReg", xprevRegCost, weight=q_xprev_common_weight)
+            if q_ureg_cost not in [0, None]:
                 runningCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_cost)
-            if np.sum(q_uprev_terminate_cost) not in [0, None]:
+            if q_uprev_cost not in [0, None]:
                 runningCostModel.addCost("ctrlPrev", uprevCost, scale * q_uprev_cost)
 
             running_cost_models.append(IntegratedActionModel(
@@ -894,15 +902,19 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                 dt
             ))
         else: # i == N: # Endkostenterm
-            terminalDifferentialCostModel.addCost("TCP_pose", goalTrackingCost, scale * q_terminate_tracking_cost)
+            terminalDifferentialCostModel.addCost("TCP_pose", q_yt_terminateCost, scale * q_yt_terminal_common_weight)
             if state.nq >= 6:
-                terminalDifferentialCostModel.addCost("TCP_rot", goalTrackingCost_r, scale * q_terminate_tracking_cost)
-            if np.sum(R_xreg_terminate_weight) not in [0, None]:
-                terminalDifferentialCostModel.addCost("stateReg", xRegTerminateCost, weight=1.0)
-            if np.sum(q_ureg_terminate_cost) not in [0, None]:
-                terminalDifferentialCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_terminate_cost)
-            if np.sum(q_uprev_terminate_cost) not in [0, None]:
-                terminalDifferentialCostModel.addCost("ctrlPrev", uprevCost, scale * q_uprev_terminate_cost)
+                terminalDifferentialCostModel.addCost("TCP_rot", q_yr_terminateCost, scale * q_yr_terminal_common_weight)
+            if q_p_common_weight not in [0, None]:
+                terminalDifferentialCostModel.addCost("q_pReg", q_pCost, weight=q_p_common_weight)
+            if q_pp_common_weight not in [0, None]:
+                terminalDifferentialCostModel.addCost("q_ppReg", q_ppCost, weight=q_pp_common_weight*dt)
+            if q_xprev_common_weight not in [0, None]:
+                terminalDifferentialCostModel.addCost("xprevReg", xprevRegCost, weight=q_xprev_common_weight)
+            if q_ureg_cost not in [0, None]:
+                terminalDifferentialCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_cost)
+            if q_uprev_cost not in [0, None]:
+                terminalDifferentialCostModel.addCost("ctrlPrev", uprevCost, scale * q_uprev_cost)
 
     dt = int_time[-1]
     # integrate terminal cost model (necessary?)
@@ -1340,6 +1352,7 @@ def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init
     # create first problem:
 
     param_mpc_weight['xref'] = x_k[:nx]
+    param_mpc_weight['xprev_ref'] = x_k[:nx]
     param_mpc_weight['uref'] = us_init_guess[0][:nq]
 
     # Create a multibody state from the pinocchio model.
@@ -1360,7 +1373,7 @@ def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init
     xs_init_guess = ddp.xs
     us_init_guess = ddp.us
 
-    return ddp, x_k, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, next_init_guess_fun, mpc_settings, param_traj
+    return ddp, x_k, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, param_traj
 
 ###########################################################################
 ################################# PLOTTING ################################
@@ -1729,11 +1742,12 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, 
 ###########################################################################
 
 def start_server():
-    lock_file_path = '/tmp/my_server.lock'
-    script_path = 'main_python/websocket_fr3.py'
+    LOCK_FILE = '/tmp/my_server.lock'
+    SCRIPT_PATH = 'main_python/websocket_fr3.py'
+    PID_FILE = '/tmp/my_server.pid'
 
     def is_server_running():
-        if os.path.exists(lock_file_path):
+        if os.path.exists(LOCK_FILE):
             return True
 
     if is_server_running():
@@ -1741,18 +1755,23 @@ def start_server():
         asyncio.run(send_message('reload'))
         return False
 
-    # Create lock file
-    with open(lock_file_path, 'w') as lock_file:
-        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        
-        # Start the server script in the background
-        subprocess.Popen(['python', script_path], 
-                         start_new_session=True, 
-                         stdout=subprocess.DEVNULL, 
-                         stderr=subprocess.DEVNULL)
+    # Erstelle Lock-Datei
+    with open(LOCK_FILE, 'w') as lock_file:
+        try:
+            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            
+            # Starte das Server-Skript im Hintergrund
+            pid = os.spawnl(os.P_NOWAIT, sys.executable, sys.executable, SCRIPT_PATH)
+            
+            # Schreibe die PID in die Datei
+            with open(PID_FILE, 'w') as pid_file:
+                pid_file.write(str(pid))
 
-    print("Server started successfully.")
-    return True
+            print("Server started successfully.")
+            return True
+        except IOError:
+            print("Could not acquire lock. Server may be running.")
+            return False
 
 async def send_message(message, port=8765):
     async with websockets.connect(f"ws://localhost:{port}") as websocket:
@@ -1961,7 +1980,6 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
         if(reload_page):
             started = start_server()
             if started:
-                time.sleep(1)
                 webbrowser.open('file://' + file_name)
         else: # otherwise open in browser
             webbrowser.open('file://' + file_name)

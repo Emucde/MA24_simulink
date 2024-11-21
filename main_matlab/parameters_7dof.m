@@ -28,15 +28,10 @@ fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 
 plot_trajectory               = ~true;
 overwrite_offline_traj_forced = false; % if true then init guess is also created
-warm_start = false;
+warm_start = true;
 overwrite_init_guess = false;
 
 % set_param(gcs,'Profile','off'); % turn off profiler when not needed anymore
-
-% measure compile time: 
-% disp('Compile Time:')
-% tic;set_param('sim_discrete_planar', 'SimulationCommand', 'update');
-% toc
 
 %% Global Parameters
 T_sim = 10; % = param_vis.T (see init_visual.m)
@@ -79,6 +74,7 @@ param_robot_init;
 
 % combo boxes are trajectory dependent changed for each robot!
 % it has to be ensured that sim_discrete_7dof is open!
+special_comment_mode = true; % all opti mpc are commented in
 comment_in_out_mpc_blocks;
 
 % activate_simulink_logs;
@@ -88,12 +84,13 @@ bus_definitions;
 init_MPC_weights; %% set MPC weights
 
 create_trajectories;
-overwrite_init_guess = false;%%%%%%%%%% ACHTUNG !!%%%%%%%%%%%%%
+% overwrite_init_guess = false;%%%%%%%%%% ACHTUNG !!%%%%%%%%%%%%%
 create_mpc_init_guess;
 
 change_simulink_traj_combo_box; % saves system!
 
 create_trajectory_frame_data;
+create_traj_data_bus;
 
 param_ct_pdplus_control_init;
 

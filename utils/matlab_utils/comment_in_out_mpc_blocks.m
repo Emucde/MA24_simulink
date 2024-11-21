@@ -1,5 +1,4 @@
 % comments all unused mpcs out and only used mpc block in.
-special_comment_mode = false;
 
 if(bdIsLoaded(simulink_main_model_name))
     % get selected mpc version
