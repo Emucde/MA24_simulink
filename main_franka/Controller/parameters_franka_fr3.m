@@ -45,8 +45,8 @@ end
 
 % Reset all inputs so that it must not recompile
 
-state_traj_const_names = {'Start Trajectory', 'Reset Trajectory', 'Stop Trajectory', 'home'};
+state_traj_const_names = {'Start Trajectory', 'Reset Trajectory', 'Stop Trajectory', 'home', 'home mode'};
 for i = 1:length(state_traj_const_names)
     set_param(['realtime_simu_franka_fr3/', state_traj_const_names{i}], 'Value', '0')
 end
-set_param('realtime_simu_franka_fr3/trajectory selector', 'Value', '6')
+set_param('realtime_simu_franka_fr3/trajectory selector', 'Value', '1')

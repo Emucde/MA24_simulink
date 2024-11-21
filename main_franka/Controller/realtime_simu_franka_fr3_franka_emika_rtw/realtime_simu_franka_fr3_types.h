@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.532
+ * Model version              : 8.555
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Fri Nov 15 19:10:54 2024
+ * C++ source code generated on : Thu Nov 21 19:18:29 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -29,7 +29,9 @@ struct state_traj_bus
   real_T start;
   real_T reset;
   real_T stop;
-};
+}
+
+;
 
 #endif
 
@@ -48,6 +50,35 @@ struct robot_model
   real_T C_rnea[7];
   real_T C[49];
   real_T g[7];
+};
+
+#endif
+
+#ifndef DEFINED_TYPEDEF_FOR_traj_data_bus_
+#define DEFINED_TYPEDEF_FOR_traj_data_bus_
+
+struct traj_data_bus
+{
+  real_T N;
+  real_T t[12001];
+  real_T p_d[108009];
+  real_T p_d_p[108009];
+  real_T p_d_pp[108009];
+  real_T Phi_d[108009];
+  real_T Phi_d_p[108009];
+  real_T Phi_d_pp[108009];
+  real_T R_d[324027];
+  real_T q_d[144012];
+  real_T q_d_p[144012];
+  real_T q_d_pp[144012];
+  real_T omega_d[108009];
+  real_T omega_d_p[108009];
+  real_T alpha_d[36003];
+  real_T alpha_d_p[36003];
+  real_T alpha_d_pp[36003];
+  real_T rot_ax_d[108009];
+  real_T alpha_d_offset[36003];
+  real_T q_d_rel[144012];
 };
 
 #endif
@@ -91,63 +122,6 @@ struct collinearity_bus
   real_T JJ_Y35_B36_R37[3];
   real_T JJ_Y45_B46_R47[3];
   real_T JJ_Y56_B57_R67[3];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_OnOf2gXFGCeQ1kokKguxcC_
-#define DEFINED_TYPEDEF_FOR_struct_OnOf2gXFGCeQ1kokKguxcC_
-
-struct struct_OnOf2gXFGCeQ1kokKguxcC
-{
-  real_T Kd1[36];
-  real_T Kp1[36];
-  real_T q_n[7];
-  real_T K_n[49];
-  real_T D_n[49];
-  real_T k_n_nl[49];
-  real_T nl_spring_threshold[7];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_jfblZltmyovPlsjcFJPP5C_
-#define DEFINED_TYPEDEF_FOR_struct_jfblZltmyovPlsjcFJPP5C_
-
-struct struct_jfblZltmyovPlsjcFJPP5C
-{
-  real_T D_d[36];
-  real_T K_d[36];
-  real_T D_d_jointspace[49];
-  real_T K_d_jointspace[49];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_Fkz9JfHurrLZtu6guaEzCB_
-#define DEFINED_TYPEDEF_FOR_struct_Fkz9JfHurrLZtu6guaEzCB_
-
-struct struct_Fkz9JfHurrLZtu6guaEzCB
-{
-  real_T mode;
-  real_T k;
-  real_T W_bar_N[7];
-  real_T W_E[36];
-  real_T eps;
-  real_T eps_collinear;
-  real_T lambda_min;
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_RCS9FomuFmdbboJvGAYmbB_
-#define DEFINED_TYPEDEF_FOR_struct_RCS9FomuFmdbboJvGAYmbB_
-
-struct struct_RCS9FomuFmdbboJvGAYmbB
-{
-  struct_OnOf2gXFGCeQ1kokKguxcC ct;
-  struct_jfblZltmyovPlsjcFJPP5C pd;
-  struct_Fkz9JfHurrLZtu6guaEzCB regularization;
 };
 
 #endif
@@ -309,85 +283,13 @@ struct struct_H7i42zUioeRMpvVnQG9wRE
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_w8ygcEBhBAoDKqazOeSyPB_
-#define DEFINED_TYPEDEF_FOR_struct_w8ygcEBhBAoDKqazOeSyPB_
+#ifndef DEFINED_TYPEDEF_FOR_struct_BAQoxvk5NEutQSlALFTg0D_
+#define DEFINED_TYPEDEF_FOR_struct_BAQoxvk5NEutQSlALFTg0D_
 
-struct struct_w8ygcEBhBAoDKqazOeSyPB
+struct struct_BAQoxvk5NEutQSlALFTg0D
 {
-  real_T MPC01[618];
-  real_T MPC6[861];
-  real_T MPC7[861];
-  real_T MPC8[591];
-  real_T MPC9[233];
-  real_T MPC10[555];
-  real_T MPC11[363];
-  real_T MPC12[555];
-  real_T MPC13[555];
-  real_T MPC14[199];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_WgCxEYIBGJkBqv7Z2Uv6qB_
-#define DEFINED_TYPEDEF_FOR_struct_WgCxEYIBGJkBqv7Z2Uv6qB_
-
-struct struct_WgCxEYIBGJkBqv7Z2Uv6qB
-{
-  real_T init_guess[2058];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_KEa48IyRUxLtKgH405LUqB_
-#define DEFINED_TYPEDEF_FOR_struct_KEa48IyRUxLtKgH405LUqB_
-
-struct struct_KEa48IyRUxLtKgH405LUqB
-{
-  real_T T_sim;
-  real_T Ta;
-  real_T traj_buffer_size;
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_8hCr3cwnSmvhfV9eRQm26B_
-#define DEFINED_TYPEDEF_FOR_struct_8hCr3cwnSmvhfV9eRQm26B_
-
-struct struct_8hCr3cwnSmvhfV9eRQm26B
-{
-  real_T init_guess[714];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_sUPBuynHU8As0OtQO333OB_
-#define DEFINED_TYPEDEF_FOR_struct_sUPBuynHU8As0OtQO333OB_
-
-struct struct_sUPBuynHU8As0OtQO333OB
-{
-  real_T init_guess[2016];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_BuHuXu0RvUmrI3aDcWV4B_
-#define DEFINED_TYPEDEF_FOR_struct_BuHuXu0RvUmrI3aDcWV4B_
-
-struct struct_BuHuXu0RvUmrI3aDcWV4B
-{
-  real_T K_P_q[49];
-  real_T K_D_q[49];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_gknxtQA1ISFUDnwOAkWFw_
-#define DEFINED_TYPEDEF_FOR_struct_gknxtQA1ISFUDnwOAkWFw_
-
-struct struct_gknxtQA1ISFUDnwOAkWFw
-{
-  struct_BuHuXu0RvUmrI3aDcWV4B MPC12;
-  struct_BuHuXu0RvUmrI3aDcWV4B MPC13;
+  real_T bT[301];
+  real_T N;
 };
 
 #endif
@@ -472,122 +374,44 @@ struct struct_Zz654ZwXwtjsnsQgQLM11G
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_Fk0KA8rNwaPzPDHZYxeGwD_
-#define DEFINED_TYPEDEF_FOR_struct_Fk0KA8rNwaPzPDHZYxeGwD_
+#ifndef DEFINED_TYPEDEF_FOR_struct_XqwzzZafeCsSqaSmJYqOHC_
+#define DEFINED_TYPEDEF_FOR_struct_XqwzzZafeCsSqaSmJYqOHC_
 
-struct struct_Fk0KA8rNwaPzPDHZYxeGwD
+struct struct_XqwzzZafeCsSqaSmJYqOHC
 {
-  real_T start_index[7];
-  real_T stop_index[7];
-  real_T q_0[49];
-  real_T q_0_p[49];
-  real_T q_0_pp[49];
-  real_T joint_points[147];
-  real_T pose[147];
-  real_T rotation[189];
-  real_T rot_ax[63];
-  real_T alpha[21];
-  real_T time[21];
-  real_T traj_type[7];
-  struct_xtY3FIkba7D2gFmP0VadqC diff_filter[7];
-  struct_7a8eCPA4nMdHfiggL8ApbC diff_filter_jointspace[7];
-  struct_Zz654ZwXwtjsnsQgQLM11G sin_poly[7];
+  real_T start_index[3];
+  real_T stop_index[3];
+  real_T q_0[21];
+  real_T q_0_p[21];
+  real_T q_0_pp[21];
+  real_T joint_points[77];
+  real_T pose[77];
+  real_T rotation[99];
+  real_T rot_ax[33];
+  real_T alpha[11];
+  real_T time[11];
+  real_T traj_type[3];
+  struct_xtY3FIkba7D2gFmP0VadqC diff_filter[3];
+  struct_7a8eCPA4nMdHfiggL8ApbC diff_filter_jointspace[3];
+  struct_Zz654ZwXwtjsnsQgQLM11G sin_poly[3];
   real_T N_traj;
 };
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_jb0urZltPNjGYvlXV2e7ME_
-#define DEFINED_TYPEDEF_FOR_struct_jb0urZltPNjGYvlXV2e7ME_
+#ifndef DEFINED_TYPEDEF_FOR_struct_KEa48IyRUxLtKgH405LUqB_
+#define DEFINED_TYPEDEF_FOR_struct_KEa48IyRUxLtKgH405LUqB_
 
-struct struct_jb0urZltPNjGYvlXV2e7ME
+struct struct_KEa48IyRUxLtKgH405LUqB
 {
-  real_T init_guess[1932];
+  real_T T_sim;
+  real_T Ta;
+  real_T traj_buffer_size;
 };
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_WiWYF6jeTBvPvMrLRwoKXG_
-#define DEFINED_TYPEDEF_FOR_struct_WiWYF6jeTBvPvMrLRwoKXG_
-
-struct struct_WiWYF6jeTBvPvMrLRwoKXG
-{
-  real_T init_guess[966];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_QzZMwj0u8mt77tBOtVuqxB_
-#define DEFINED_TYPEDEF_FOR_struct_QzZMwj0u8mt77tBOtVuqxB_
-
-struct struct_QzZMwj0u8mt77tBOtVuqxB
-{
-  real_T init_guess[4214];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_afBmYlbT2aN38lopLHTAPG_
-#define DEFINED_TYPEDEF_FOR_struct_afBmYlbT2aN38lopLHTAPG_
-
-struct struct_afBmYlbT2aN38lopLHTAPG
-{
-  real_T init_guess[4088];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_fmbWvoEEIstgIkMjr1r2NC_
-#define DEFINED_TYPEDEF_FOR_struct_fmbWvoEEIstgIkMjr1r2NC_
-
-struct struct_fmbWvoEEIstgIkMjr1r2NC
-{
-  real_T N;
-  real_T t[12001];
-  real_T p_d[252021];
-  real_T p_d_p[252021];
-  real_T p_d_pp[252021];
-  real_T Phi_d[252021];
-  real_T Phi_d_p[252021];
-  real_T Phi_d_pp[252021];
-  real_T R_d[756063];
-  real_T q_d[336028];
-  real_T q_d_p[336028];
-  real_T q_d_pp[336028];
-  real_T omega_d[252021];
-  real_T omega_d_p[252021];
-  real_T alpha_d[84007];
-  real_T alpha_d_p[84007];
-  real_T alpha_d_pp[84007];
-  real_T rot_ax_d[252021];
-  real_T alpha_d_offset[84007];
-  real_T q_d_rel[336028];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_gVq23GowDVNcGsGiNsOYj_
-#define DEFINED_TYPEDEF_FOR_struct_gVq23GowDVNcGsGiNsOYj_
-
-struct struct_gVq23GowDVNcGsGiNsOYj
-{
-  real_T init_guess[2688];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_BAQoxvk5NEutQSlALFTg0D_
-#define DEFINED_TYPEDEF_FOR_struct_BAQoxvk5NEutQSlALFTg0D_
-
-struct struct_BAQoxvk5NEutQSlALFTg0D
-{
-  real_T bT[301];
-  real_T N;
-};
-
-#endif
-
-/* Custom Type definition for MATLAB Function: '<S67>/MATLAB Function' */
+/* Custom Type definition for MATLAB Function: '<S12>/MATLAB Function' */
 #include "coder_posix_time.h"
 #ifndef struct_sdAmwXbnJnEmimT0NaJRtAD_realt_T
 #define struct_sdAmwXbnJnEmimT0NaJRtAD_realt_T
@@ -601,11 +425,11 @@ struct sdAmwXbnJnEmimT0NaJRtAD_realt_T
 #endif                              /* struct_sdAmwXbnJnEmimT0NaJRtAD_realt_T */
 
 #ifndef SS_UINT64
-#define SS_UINT64                      48
+#define SS_UINT64                      34
 #endif
 
 #ifndef SS_INT64
-#define SS_INT64                       49
+#define SS_INT64                       35
 #endif
 
 /* Parameters (default storage) */

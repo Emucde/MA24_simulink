@@ -364,6 +364,7 @@ def initialize_shared_memory():
             shape = (config["size"],)
         
         shm_data[name] = np.ndarray(shape, dtype=config["dtype"], buffer=shm_objects[name].buf)
+        shm_data[name][:] = 0
 
     return shm_objects, shm_data
 

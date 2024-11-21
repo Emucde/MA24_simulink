@@ -20,7 +20,9 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = False
+use_data_from_simulink = True
+manual_traj_select = 1
+
 if use_data_from_simulink:
     # only available for franka research 3 robot (n_dof = 7)
 
@@ -164,7 +166,13 @@ traj_select 6: Sing test stretch arm out, Polynomial, joint space
 traj_select 7: Sing test stretch arm in, Polynomial, joint space
 '''
 
-curent_traj_select = 3
+if use_data_from_simulink:
+    if data_from_simulink_traj_switch[0] == 0:
+        curent_traj_select = 1
+    else:
+        curent_traj_select = data_from_simulink_traj_switch[0]
+else:
+    curent_traj_select = manual_traj_select
 traj_data, traj_data_true, traj_init_config = process_trajectory_data(curent_traj_select-1, traj_data_all, traj_param_all)
 
 q_0_ref = traj_init_config['q_0']
@@ -194,6 +202,10 @@ R_d = y_d_data['R_d']
 
 x_k_ndof = np.zeros(2*n_dof)
 x_k_ndof[:n_dof] = q_0_ref
+# x_k_ndof[n_x_indices] = np.array([-4.71541765e-05, -7.70960138e-01, -2.35629353e+00, 8.63920206e-05, \
+#                                 1.57111388e+00, 7.85625356e-01, 1.18528803e-04, 1.41223310e-03, \
+#                                 4.93944513e-04, -9.78304970e-04, -2.07886725e-04, -3.13358760e-03])
+x_k = x_k_ndof[n_x_indices]
 
 tau_full = calculate_ndof_torque_with_feedforward(us_init_guess[0], x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, n_indices_fixed)
 
@@ -216,14 +228,19 @@ freq_per_Ta_step = np.zeros(N_traj)
 
 reload_page=True
 
+
+
 measureSolver = TicToc()
 measureSimu = TicToc()
 measureTotal = TicToc()
 measureTotal.tic()
 i = 0
+init_cnt = 0
+init_cnt_max = 100
 folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = 'test.html'
 output_file_path = os.path.join(folderpath, outputname)
+mpc_state = 'init'
 run_loop = True
 try:
     while run_loop and err_state == False:
@@ -240,6 +257,10 @@ try:
                 start_solving = False
                 data_from_python[:] = np.zeros(n_dof)
                 if start == 1 and reset == 0 and stop == 0:
+                    data_from_simulink_start[:] = 0
+                    mpc_state = 'init'
+                    init_cnt = 0
+
                     data_from_python[:] = np.zeros(n_dof)
 
                     if i == N_traj-1:
@@ -257,6 +278,9 @@ try:
                         init_crocoddyl( robot_model, robot_data, traj_data, traj_data_true,     \
                                         traj_init_config, param_robot, TCP_frame_id)
                     
+                    MPC_traj_indices_init = MPC_traj_indices
+                    MPC_traj_indices = MPC_traj_indices*0
+                    
                     p_d = y_d_data['p_d']
                     p_d_p = y_d_data['p_d_p']
                     p_d_pp = y_d_data['p_d_pp']
@@ -267,7 +291,7 @@ try:
                 elif reset == 1:# and i == N_traj-1:
                     i = 0
                     
-                    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step)
+                    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model_full, robot_data_full, traj_data_true, freq_per_Ta_step, param_robot)
                     plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page)
                     data_from_simulink_reset[:] = 0
                     print("MPC reset by Simulink")
@@ -327,6 +351,24 @@ try:
             #     x0_new[:6] = xs_init_guess_prev[1, :6]
             #     ddp.problem.x0 = x0_new
             # else:
+
+            if mpc_state == 'init':
+                # because it is not guaranteed that the robot starts at the initial position lower weights are used
+                # wich are incremented in the first few steps
+                if(init_cnt == 0):
+                    MPC_traj_indices_init = MPC_traj_indices
+                    MPC_traj_indices = MPC_traj_indices*0
+                if(init_cnt < init_cnt_max):
+                    # x_k[:nq] = q_0_ref[n_indices] + init_cnt/init_cnt_max * x_k[:nq]
+                    # x_k[nq::] = init_cnt/init_cnt_max * x_k[nq::]
+                    init_cnt += 1
+                else:
+                    MPC_traj_indices = MPC_traj_indices_init
+                    mpc_state = 'run'
+                for j, runningModel in enumerate(ddp.problem.runningModels):
+                    ddp.problem.runningModels[j].differential.costs.costs["q_pReg"].weight = param_mpc_weight['q_p_common_weight'] + 1e1* (1 - init_cnt/init_cnt_max)
+                ddp.problem.terminalModel.differential.costs.costs["q_pReg"].weight = param_mpc_weight['q_p_common_weight'] + 1e1* (1 - init_cnt/init_cnt_max)
+
             xs_init_guess_prev = np.array(xs_init_guess)
             us_init_guess_prev = np.array(us_init_guess)
             # v2: update reference values
@@ -381,8 +423,8 @@ try:
                     
                     xs[i] = x_k_ndof
                     us[i] = tau_full
-                    # tau_full = np.zeros(n_dof)
-                    # tau_full[n_indices] = u_k
+                    tau_full = np.zeros(n_dof)
+                    tau_full[n_indices] = u_k
 
                     # Daten von Python an Simulink schreiben
 
@@ -472,7 +514,7 @@ try:
             if (i+1) % update_interval == 0:
                 print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()}    ", end='\r')
 
-            if i < N_traj-1 and run_flag == True:
+            if i < N_traj-1 and run_flag == True and mpc_state == 'run':
                 i += 1 # last value of i is N_traj-1
                 # in case of use_data_from_simulink == True, the last trajectory value
                 # is used for all further calculations (stay on the last position)

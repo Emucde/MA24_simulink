@@ -74,7 +74,7 @@ param_robot_init;
 
 % combo boxes are trajectory dependent changed for each robot!
 % it has to be ensured that sim_discrete_7dof is open!
-special_comment_mode = true; % all opti mpc are commented in
+special_comment_mode = false; % all opti mpc are commented in
 comment_in_out_mpc_blocks;
 
 % activate_simulink_logs;
