@@ -47,17 +47,18 @@ def trajectory_poly(t, y0, yT, T):
 
     return y_d, dy_d, ddy_d
 
-def create_poly_traj(x_target, x0_target, T_start, t, R_init, rot_ax, rot_alpha_scale, param_traj_poly):
-    T = param_traj_poly['T']
+def create_poly_traj(yT, y0, t, R_init, rot_ax, rot_alpha_scale, param_traj_poly):
+    T_start = param_traj_poly['T_start']
+    T_1 = param_traj_poly['T_1']
     
-    if t - T_start > T:
-        p_d = np.concatenate((x_target[:3], [1]))
+    if t - T_start > T_1:
+        p_d = np.concatenate((yT[:3], [1]))
         p_d_p = np.concatenate((np.zeros(3), [1]))
         p_d_pp = np.concatenate((np.zeros(3), [1]))
     else:
-        yT = np.concatenate((x_target[:3], [1]))  # poly contains [x, y, z, alpha]
-        y0 = np.concatenate((x0_target[:3], [0]))
-        p_d, p_d_p, p_d_pp = trajectory_poly(t - T_start, y0, yT, T)
+        yT = np.concatenate((yT[:3], [1]))  # poly contains [x, y, z, alpha]
+        y0 = np.concatenate((y0[:3], [0]))
+        p_d, p_d_p, p_d_pp = trajectory_poly(t - T_start, y0, yT, T_1)
     
     alpha = p_d[3]
     alpha_p = p_d_p[3]
@@ -73,46 +74,120 @@ def create_poly_traj(x_target, x0_target, T_start, t, R_init, rot_ax, rot_alpha_
     x_d['p_d'] = p_d[:3]
     x_d['p_d_p'] = p_d_p[:3]
     x_d['p_d_pp'] = p_d_pp[:3]
+    x_d['R_d'] = R_act
     x_d['q_d'] = Rotation.from_matrix(R_act).as_quat()
     x_d['omega_d'] = alpha_p * rot_ax
     x_d['omega_d_p'] = alpha_pp * rot_ax
     
     return x_d
 
-def generate_trajectory(t, xe0, xeT, R_init, rot_ax, rot_alpha_scale, T_start, T_end, param_traj_poly, plot_traj=False):
+def generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_traj=False):
+    T_start = param_traj_poly['T_start']
+    T_1 = param_traj_poly['T_1']
+    T_end = param_traj_poly['T_end']
+
+    t_true = np.arange(T_start, T_end, dt)
+
+    # normalize time
+    param_traj_poly['T_start'] = 0
+    param_traj_poly['T_1'] = T_1 - T_start
+    param_traj_poly['T_end'] = T_end - T_start
+
+    t = t_true - T_start
+
     N = len(t)
     p_d = np.zeros((3, N))
     p_d_p = np.zeros((3, N))
     p_d_pp = np.zeros((3, N))
+    R_d = np.zeros((3, 3, N))
     q_d = np.zeros((4, N))
     omega_d = np.zeros((3, N))
     omega_d_p = np.zeros((3, N))
 
-    T_start_end = T_end/2
-    T_start = 0
-    flag = 0
+    # RR = np.dot(R_init.T, R_target)
+    RR = R_target @ R_init.T
+    rot_quat = np.roll(Rotation.from_matrix(RR).as_quat(), 1) # as_quat has xyzw format: after roll: wxyz
+    rot_rho = rot_quat[0]
+    rot_alpha_scale = 2 * np.arccos(rot_rho)
+    if rot_alpha_scale == 0:
+        rot_ax = np.array([0,0,1]) # random axis because rotation angle is 0
+    else:
+        rot_ax = rot_quat[1:4] / np.sin(rot_alpha_scale / 2)
 
     for i in range(N):
-        x_d = create_poly_traj(xeT, xe0, T_start, t[i], R_init, rot_ax, rot_alpha_scale, param_traj_poly)
+        x_d = create_poly_traj(xeT, xe0, t[i], R_init, rot_ax, rot_alpha_scale, param_traj_poly)
         p_d[:, i]       = x_d['p_d']
         p_d_p[:, i]     = x_d['p_d_p']
         p_d_pp[:, i]    = x_d['p_d_pp']
+        R_d[:, :, i]    = x_d['R_d']
         q_d[:, i]       = x_d['q_d']
         omega_d[:, i]   = x_d['omega_d']
         omega_d_p[:, i] = x_d['omega_d_p']
-        if t[i] >= T_start_end and flag == 0:
-            temp = xe0
-            xe0  = xeT
-            xeT  = temp
-            T_start = T_start_end
-            flag = 1
 
-    traj_data = {'p_d': p_d, 'p_d_p': p_d_p, 'p_d_pp': p_d_pp, 'q_d': q_d, 'omega_d': omega_d, 'omega_d_p': omega_d_p}
+    traj_data = {'t': t_true, 'N_traj': N, 'p_d': p_d, 'p_d_p': p_d_p, 'p_d_pp': p_d_pp, 'R_d': R_d, 'q_d': q_d, 'omega_d': omega_d, 'omega_d_p': omega_d_p}
 
     if plot_traj:
         plot_trajectory(traj_data)
 
     return traj_data
+
+
+def create_transient_trajectory(q_k, TCP_frame_id, robot_model, robot_data, y_d_data, mpc_settings):
+
+    # Extract data from y_d_data
+    p_d = y_d_data['p_d']
+    p_d_p = y_d_data['p_d_p']
+    p_d_pp = y_d_data['p_d_pp']
+    R_d = y_d_data['R_d']
+
+    # generate init trajectory
+    pinocchio.forwardKinematics(robot_model, robot_data, q_k)
+    pinocchio.updateFramePlacements(robot_model, robot_data)
+
+    R_target = R_d[:, :, 0]
+    xeT = p_d[:, 0]
+    
+    xe0 = robot_data.oMf[TCP_frame_id].translation
+    R_init = robot_data.oMf[TCP_frame_id].rotation
+
+    param_traj_poly = {}
+    param_traj_poly['T_start'] = 0
+    param_traj_poly['T_1'] = 1
+    param_traj_poly['T_end'] = 2
+
+    dt = mpc_settings['Ts']
+    init_traj_data = generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_traj=True)
+    
+    N_init = init_traj_data['N_traj']
+    # Extract data from init_traj_data
+    p_d_init = init_traj_data['p_d']
+    p_d_p_init = init_traj_data['p_d_p']
+    p_d_pp_init = init_traj_data['p_d_pp']
+    R_d_init = init_traj_data['R_d']
+
+    # Merge trajectories using numpy.hstack
+    merged_p_d = np.hstack((p_d_init, p_d))
+    merged_p_d_p = np.hstack((p_d_p_init, p_d_p))
+    merged_p_d_pp = np.hstack((p_d_pp_init, p_d_pp))
+    
+    # For R_d, we need to handle the 3D array differently
+    N_init = R_d_init.shape[2]
+    N_traj = R_d.shape[2]
+    merged_R_d = np.zeros((3, 3, N_init+N_traj))
+    merged_R_d[:, :, :N_init] = R_d_init
+    merged_R_d[:, :, N_init:] = R_d
+
+    # Create merged trajectory dictionary
+    merged_trajectory = {
+        'p_d': merged_p_d,
+        'p_d_p': merged_p_d_p,
+        'p_d_pp': merged_p_d_pp,
+        'R_d': merged_R_d,
+        'N_traj': N_traj,
+        'N_init': N_init
+    }
+
+    return merged_trajectory
 
 def tic():
     global start_time
@@ -871,7 +946,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
         R_q_pp_weight_vec = np.hstack([np.zeros(state.nq), R_q_pp])
         q_pCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_q_p_weight_vec), crocoddyl.ResidualModelState(state, np.zeros(state.nx)))
         q_ppCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_q_pp_weight_vec), crocoddyl.ResidualModelState(state, xref))
-        xprevRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_xprev), crocoddyl.ResidualModelState(state, xref))
+        xprevRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_xprev), crocoddyl.ResidualModelState(state, xprev_ref))
         uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state, uref))
         uprevCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state, uref))
 
@@ -1381,22 +1456,27 @@ def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init
 ###########################################################################
 
 def plot_trajectory(traj_data):
-    plt.figure(figsize=(10, 6))  # Adjust figure size as needed
-
-    plt.plot(traj_data['p_d'].T, label='y_d')
-    plt.plot(traj_data['p_d_p'].T, label='y_d_p')
-    plt.plot(traj_data['p_d_pp'].T, label='y_d_pp')
-
-    # Add labels and title
-    plt.xlabel('Time Step (Assuming data represents time series)')
-    plt.ylabel('Data Value')
-    plt.title('Plot of y_d, y_d_p, and y_d_pp Data')
-
-    # Add legend
-    plt.legend()
-
-    # Show the plot
-    plt.grid(True)
+    """
+    Plots the x, y, z components of p_d, p_d_p, and p_d_pp in 9 subplots.
+    Args:
+    traj_data: A dictionary with keys 'p_d', 'p_d_p', 'p_d_pp', 
+               each containing arrays with x, y, z components over time.
+    """
+    fig, axes = plt.subplots(3, 3, figsize=(15, 10))  # Create a 3x3 grid of subplots
+    components = ['x', 'y', 'z']
+    datasets = ['p_d', 'p_d_p', 'p_d_pp']
+    
+    for row, dataset in enumerate(datasets):
+        for col, component in enumerate(components):
+            ax = axes[row, col]
+            ax.plot(traj_data[dataset][row, :], label=f"{dataset}_{component}")
+            ax.set_title(f"{dataset} {component}")
+            ax.set_xlabel("Time Step")
+            ax.set_ylabel("Value")
+            ax.legend()
+            ax.grid(True)
+    
+    # Adjust layout for better spacing
     plt.tight_layout()
     plt.show()
 

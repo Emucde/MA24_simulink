@@ -20,7 +20,7 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = True
+use_data_from_simulink = not True
 manual_traj_select = 1
 
 if use_data_from_simulink:
@@ -202,9 +202,9 @@ R_d = y_d_data['R_d']
 
 x_k_ndof = np.zeros(2*n_dof)
 x_k_ndof[:n_dof] = q_0_ref
-# x_k_ndof[n_x_indices] = np.array([-4.71541765e-05, -7.70960138e-01, -2.35629353e+00, 8.63920206e-05, \
-#                                 1.57111388e+00, 7.85625356e-01, 1.18528803e-04, 1.41223310e-03, \
-#                                 4.93944513e-04, -9.78304970e-04, -2.07886725e-04, -3.13358760e-03])
+x_k_ndof[n_x_indices] = np.array([-4.71541765e-05, -7.70960138e-01, -2.35629353e+00, 8.63920206e-05, \
+                                1.57111388e+00, 7.85625356e-01, 1.18528803e-04, 1.41223310e-03, \
+                                4.93944513e-04, -9.78304970e-04, -2.07886725e-04, -3.13358760e-03])
 x_k = x_k_ndof[n_x_indices]
 
 tau_full = calculate_ndof_torque_with_feedforward(us_init_guess[0], x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, n_indices_fixed)
@@ -245,8 +245,17 @@ run_loop = True
 try:
     while run_loop and err_state == False:
         if use_data_from_simulink:
+            # Read data
+            if(data_from_simulink_valid[:] == 1):
+                data_from_simulink_valid[:] = 0
+                data_from_python_valid[:] = 0
+                x_k_ndof = data_from_simulink.copy()
+                x_k = x_k_ndof[n_x_indices]
+                start_solving = True
+
             if data_from_python_valid[0] == 1:
                 data_from_python_valid[:] = 0
+
             # Daten von Simulink lesen
             start = data_from_simulink_start[:]
             reset = data_from_simulink_reset[:]
@@ -254,10 +263,10 @@ try:
             new_traj_select = data_from_simulink_traj_switch[0]
             
             if run_flag == False:
-                start_solving = False
                 data_from_python[:] = np.zeros(n_dof)
                 if start == 1 and reset == 0 and stop == 0:
                     data_from_simulink_start[:] = 0
+
                     mpc_state = 'init'
                     init_cnt = 0
 
@@ -279,12 +288,6 @@ try:
                                         traj_init_config, param_robot, TCP_frame_id)
                     
                     MPC_traj_indices_init = MPC_traj_indices
-                    MPC_traj_indices = MPC_traj_indices*0
-                    
-                    p_d = y_d_data['p_d']
-                    p_d_p = y_d_data['p_d_p']
-                    p_d_pp = y_d_data['p_d_pp']
-                    R_d = y_d_data['R_d']
 
                     run_flag = True
                     print("MPC started by Simulink")
@@ -295,26 +298,21 @@ try:
                     plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page)
                     data_from_simulink_reset[:] = 0
                     print("MPC reset by Simulink")
-            elif run_flag == True and stop == 1:
-                print("MPC stopped by Simulink")
-                data_from_python[:] = np.zeros(n_dof)
-                data_from_simulink_stop[:] = 0
-                run_flag = False
-                start_solving = False
-            elif run_flag == True and reset == 1:
-                print("MPC reset by Simulink")
-                data_from_python[:] = np.zeros(n_dof)
-                data_from_simulink_reset[:] = 0
-                run_flag = False
-                start_solving = False
-                i = 0
-
-            if(data_from_simulink_valid[:] == 1 and run_flag == True):
-                data_from_simulink_valid[:] = 0
-                data_from_python_valid[:] = 0
-                x_k_ndof = data_from_simulink.copy()
-                x_k = x_k_ndof[n_x_indices]
-                start_solving = True
+                    start_solving = False
+            elif run_flag == True:
+                if stop == 1:
+                    print("MPC stopped by Simulink")
+                    data_from_python[:] = np.zeros(n_dof)
+                    data_from_simulink_stop[:] = 0
+                    run_flag = False
+                    start_solving = False
+                elif reset == 1:
+                    print("MPC reset by Simulink")
+                    data_from_python[:] = np.zeros(n_dof)
+                    data_from_simulink_reset[:] = 0
+                    run_flag = False
+                    start_solving = False
+                    i = 0
         if start_solving:
             measureSimu.tic()
             
@@ -356,8 +354,15 @@ try:
                 # because it is not guaranteed that the robot starts at the initial position lower weights are used
                 # wich are incremented in the first few steps
                 if(init_cnt == 0):
-                    MPC_traj_indices_init = MPC_traj_indices
-                    MPC_traj_indices = MPC_traj_indices*0
+                    # MPC_traj_indices_init = MPC_traj_indices
+                    # MPC_traj_indices = MPC_traj_indices*0+1
+                    transient_traj = create_transient_trajectory(x_k_ndof[:n_dof], TCP_frame_id, robot_model_full, robot_data_full, y_d_data, mpc_settings)
+
+                    p_d = transient_traj['p_d']
+                    p_d_p = transient_traj['p_d_p']
+                    p_d_pp = transient_traj['p_d_pp']
+                    R_d = transient_traj['R_d']
+                    
                 if(init_cnt < init_cnt_max):
                     # x_k[:nq] = q_0_ref[n_indices] + init_cnt/init_cnt_max * x_k[:nq]
                     # x_k[nq::] = init_cnt/init_cnt_max * x_k[nq::]
@@ -365,9 +370,15 @@ try:
                 else:
                     MPC_traj_indices = MPC_traj_indices_init
                     mpc_state = 'run'
-                for j, runningModel in enumerate(ddp.problem.runningModels):
-                    ddp.problem.runningModels[j].differential.costs.costs["q_pReg"].weight = param_mpc_weight['q_p_common_weight'] + 1e1* (1 - init_cnt/init_cnt_max)
-                ddp.problem.terminalModel.differential.costs.costs["q_pReg"].weight = param_mpc_weight['q_p_common_weight'] + 1e1* (1 - init_cnt/init_cnt_max)
+
+
+                # for j, runningModel in enumerate(ddp.problem.runningModels):
+                #     ddp.problem.runningModels[j].differential.costs.costs["q_pReg"].weight = param_mpc_weight['q_p_common_weight'] + 1e1* (1 - init_cnt/init_cnt_max)
+                # ddp.problem.terminalModel.differential.costs.costs["q_pReg"].weight = param_mpc_weight['q_p_common_weight'] + 1e1* (1 - init_cnt/init_cnt_max)
+
+            # MPC_traj_indices = MPC_traj_indices*0+1
+            # MPC_traj_indices -= 1
+            mpc_state = 'run'
 
             xs_init_guess_prev = np.array(xs_init_guess)
             us_init_guess_prev = np.array(us_init_guess)
@@ -453,7 +464,6 @@ try:
                     err_state = False # damit python nicht crasht
 
                 start_solving = False
-
                 tau_i_prev = tau_full
             else:
                 u_k = ddp.us[0]
@@ -521,7 +531,7 @@ try:
             # else:
             #     run_flag = False
             
-            if i == N_traj-1 and use_data_from_simulink == False:
+            if i == N_traj-1 and not use_data_from_simulink:
                 run_loop = False
         
             elapsed_time = measureSimu.toc()
@@ -586,8 +596,8 @@ else:
     subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step, param_robot)
 
 
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+# folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
 output_file_path = os.path.join(folderpath, outputname)
 
