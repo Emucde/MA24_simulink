@@ -25,6 +25,20 @@ import websockets
 import subprocess
 import fcntl
 
+class DebouncedButton:
+    def __init__(self, delay):
+        self.delay = delay
+        self.last_press_time = 0
+
+    def debounce(self, value):
+        current_time = time.time()
+
+        if value == 1 and (current_time - self.last_press_time > self.delay):
+            self.last_press_time = current_time
+            return 1
+        else:
+            return 0
+
 def trajectory_poly(t, y0, yT, T):
     # The function plans a trajectory from y0 in R3 to yT in R3 and returns the desired position and velocity on this trajectory at time t.
     # The trajectory starts at t=0 with y_d(0) = y0 and dy_d(0) = 0 and reaches y_d(T)=yT and dy_d(T) = 0 at t=T.
@@ -52,12 +66,12 @@ def create_poly_traj(yT, y0, t, R_init, rot_ax, rot_alpha_scale, param_traj_poly
     T_1 = param_traj_poly['T_1']
     
     if t - T_start > T_1:
-        p_d = np.concatenate((yT[:3], [1]))
-        p_d_p = np.concatenate((np.zeros(3), [1]))
-        p_d_pp = np.concatenate((np.zeros(3), [1]))
+        p_d = np.concatenate((yT[:3], [rot_alpha_scale]))
+        p_d_p = np.concatenate((np.zeros(3), [0]))
+        p_d_pp = np.concatenate((np.zeros(3), [0]))
     else:
-        yT = np.concatenate((yT[:3], [1]))  # poly contains [x, y, z, alpha]
         y0 = np.concatenate((y0[:3], [0]))
+        yT = np.concatenate((yT[:3], [rot_alpha_scale]))  # poly contains [x, y, z, alpha]
         p_d, p_d_p, p_d_pp = trajectory_poly(t - T_start, y0, yT, T_1)
     
     alpha = p_d[3]
@@ -68,14 +82,14 @@ def create_poly_traj(yT, y0, t, R_init, rot_ax, rot_alpha_scale, param_traj_poly
                         [rot_ax[2], 0, -rot_ax[0]],
                         [-rot_ax[1], rot_ax[0], 0]])
     
-    R_act = R_init @ (np.eye(3) + np.sin(rot_alpha_scale * alpha) * skew_ew + (1 - np.cos(rot_alpha_scale * alpha)) * skew_ew @ skew_ew)
+    R_act = (np.eye(3) + np.sin(alpha) * skew_ew + (1 - np.cos(alpha)) * skew_ew @ skew_ew) @ R_init
     
     x_d = {}
     x_d['p_d'] = p_d[:3]
     x_d['p_d_p'] = p_d_p[:3]
     x_d['p_d_pp'] = p_d_pp[:3]
     x_d['R_d'] = R_act
-    x_d['q_d'] = Rotation.from_matrix(R_act).as_quat()
+    x_d['q_d'] = np.roll(Rotation.from_matrix(R_act).as_quat(), 1) # as_quat has xyzw format: after roll: wxyz
     x_d['omega_d'] = alpha_p * rot_ax
     x_d['omega_d_p'] = alpha_pp * rot_ax
     
@@ -110,9 +124,13 @@ def generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_tr
     rot_rho = rot_quat[0]
     rot_alpha_scale = 2 * np.arccos(rot_rho)
     if rot_alpha_scale == 0:
-        rot_ax = np.array([0,0,1]) # random axis because rotation angle is 0
+        rot_ax = np.array([0,0,0]) # random axis because rotation angle is 0
     else:
         rot_ax = rot_quat[1:4] / np.sin(rot_alpha_scale / 2)
+
+    if(rot_alpha_scale > np.pi):
+        rot_alpha_scale = 2*np.pi - rot_alpha_scale
+        rot_ax = -rot_ax
 
     for i in range(N):
         x_d = create_poly_traj(xeT, xe0, t[i], R_init, rot_ax, rot_alpha_scale, param_traj_poly)
@@ -132,13 +150,16 @@ def generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_tr
     return traj_data
 
 
-def create_transient_trajectory(q_k, TCP_frame_id, robot_model, robot_data, y_d_data, mpc_settings):
+def create_transient_trajectory(q_k, TCP_frame_id, robot_model, robot_data, traj_data, mpc_settings, param_traj_poly, plot_traj=False):
 
     # Extract data from y_d_data
-    p_d = y_d_data['p_d']
-    p_d_p = y_d_data['p_d_p']
-    p_d_pp = y_d_data['p_d_pp']
-    R_d = y_d_data['R_d']
+    p_d = traj_data['p_d']
+    p_d_p = traj_data['p_d_p']
+    p_d_pp = traj_data['p_d_pp']
+    R_d = traj_data['R_d']
+    q_d = traj_data['q_d']
+    omega_d = traj_data['omega_d']
+    omega_d_p = traj_data['omega_d_p']
 
     # generate init trajectory
     pinocchio.forwardKinematics(robot_model, robot_data, q_k)
@@ -150,13 +171,8 @@ def create_transient_trajectory(q_k, TCP_frame_id, robot_model, robot_data, y_d_
     xe0 = robot_data.oMf[TCP_frame_id].translation
     R_init = robot_data.oMf[TCP_frame_id].rotation
 
-    param_traj_poly = {}
-    param_traj_poly['T_start'] = 0
-    param_traj_poly['T_1'] = 1
-    param_traj_poly['T_end'] = 2
-
     dt = mpc_settings['Ts']
-    init_traj_data = generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_traj=True)
+    init_traj_data = generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_traj=plot_traj)
     
     N_init = init_traj_data['N_traj']
     # Extract data from init_traj_data
@@ -164,6 +180,9 @@ def create_transient_trajectory(q_k, TCP_frame_id, robot_model, robot_data, y_d_
     p_d_p_init = init_traj_data['p_d_p']
     p_d_pp_init = init_traj_data['p_d_pp']
     R_d_init = init_traj_data['R_d']
+    q_d_init = init_traj_data['q_d']
+    omega_d_init = init_traj_data['omega_d']
+    omega_d_p_init = init_traj_data['omega_d_p']
 
     # Merge trajectories using numpy.hstack
     merged_p_d = np.hstack((p_d_init, p_d))
@@ -177,14 +196,22 @@ def create_transient_trajectory(q_k, TCP_frame_id, robot_model, robot_data, y_d_
     merged_R_d[:, :, :N_init] = R_d_init
     merged_R_d[:, :, N_init:] = R_d
 
+    merged_q_d = np.hstack((q_d_init, q_d))
+    merged_omega_d = np.hstack((omega_d_init, omega_d))
+    merged_omega_d_p = np.hstack((omega_d_p_init, omega_d_p))
+
     # Create merged trajectory dictionary
     merged_trajectory = {
         'p_d': merged_p_d,
         'p_d_p': merged_p_d_p,
         'p_d_pp': merged_p_d_pp,
         'R_d': merged_R_d,
+        'q_d': merged_q_d,
+        'omega_d': merged_omega_d,
+        'omega_d_p': merged_omega_d_p,
         'N_traj': N_traj,
-        'N_init': N_init
+        'N_init': N_init,
+        'N_total': N_init + N_traj
     }
 
     return merged_trajectory
@@ -354,11 +381,11 @@ def get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices):
     p_d_pp = traj_data['p_d_pp']
     R_d = traj_data['R_d']
     t = traj_data_true['t_true']
-    q_0 = traj_init_config['q_0'][n_indices]
-    q_0_p = traj_init_config['q_0_p'][n_indices]
+    # q_0 = traj_init_config['q_0'][n_indices]
+    # q_0_p = traj_init_config['q_0_p'][n_indices]
     q_0_pp = traj_init_config['q_0_pp'][n_indices]
     N_traj = traj_init_config['N_traj_true']
-    return p_d, p_d_p, p_d_pp, R_d, t, q_0, q_0_p, q_0_pp, N_traj
+    return p_d, p_d_p, p_d_pp, R_d, t, q_0_pp, N_traj
 
 def load_mpc_config(robot_model, file_path='utils_python/mpc_weights_crocoddyl.json'):
     with open(file_path, 'r') as f:
@@ -1279,10 +1306,7 @@ def simulate_model_mpc_v1(xk, uk, dt, nq, nx, robot_model, robot_data, traj_data
     xkp1 = np.hstack([q_next, q_p_next])
     xkp1_lim = np.clip(xkp1, lb, ub)
 
-    us_i = uk
-    xs_i = xk
-
-    return xkp1_lim, xs_i, us_i
+    return xkp1_lim
 
 def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data):
 
@@ -1372,10 +1396,18 @@ def check_solver_status(warn_cnt, hasConverged, ddp, i, dt, conv_max_limit=5):
         error = 1
     return warn_cnt, error
 
-def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init_config, param_robot, TCP_frame_id):
+def init_crocoddyl(x_k, robot_model, robot_data, traj_data, traj_data_true, traj_init_config, param_robot, param_traj_poly, TCP_frame_id):
+    # because later I add the initial trajectory to the true trajectory
+    N_init_traj = int(param_traj_poly['T_end'] / 1e-3) + 1
+    traj_init_config['N_traj_true'] += N_init_traj
+
     n_indices = param_robot['n_indices']
+    n_dof = param_robot['n_dof']
     mpc_settings, param_mpc_weight = load_mpc_config(robot_model)
-    p_d, p_d_p, p_d_pp, R_d, t, q_0, q_0_p, q_0_pp, N_traj = get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices)
+    p_d, p_d_p, p_d_pp, R_d, t, q_0_pp, N_traj = get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices)
+
+    q_0 = x_k[:n_dof]
+    q_0_p = x_k[n_dof:2*n_dof]
 
     nq = robot_model.nq
     nx = 2*nq
@@ -1420,7 +1452,7 @@ def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init
     solver, init_guess_fun, create_ocp_problem, simulate_model, next_init_guess_fun  = get_mpc_funs(opt_type)
 
     # use start pose at trajectory for first init guess
-    x_init_robot = np.hstack([q_0, q_0_p])
+    x_init_robot = x_k
     tau_init_robot = pinocchio.rnea(robot_model, robot_data, q_0, q_0_p, q_0_pp)
 
     x_k, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_init_robot, N_traj, N_MPC, param_robot, traj_data)
@@ -1449,7 +1481,7 @@ def init_crocoddyl(robot_model, robot_data, traj_data, traj_data_true, traj_init
     xs_init_guess = ddp.xs
     us_init_guess = ddp.us
 
-    return ddp, x_k, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, param_traj
+    return ddp, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, param_traj
 
 ###########################################################################
 ################################# PLOTTING ################################

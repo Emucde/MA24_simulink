@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.555
+ * Model version              : 8.564
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Thu Nov 21 19:18:29 2024
+ * C++ source code generated on : Fri Nov 22 16:33:00 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -625,26 +625,42 @@ void realtime_simu_franka_fr3_step(void)
 
     /* End of Outputs for SubSystem: '<Root>/jointspace ctl subsys' */
 
-    /* Switch: '<Root>/Switch' incorporates:
-     *  MATLAB Function: '<S5>/joint space control fixed q3'
-     */
-    isodd = (realtime_simu_franka_fr3_B.home_running >
-             realtime_simu_franka_fr3_P.Switch_Threshold_c);
-    for (i = 0; i < 7; i++) {
-      absxk = rtb_ManualSwitch[i];
-      if (isodd) {
-        absxk = realtime_simu_franka_fr3_B.tau[i];
+    /* Switch: '<Root>/Switch' */
+    if (realtime_simu_franka_fr3_B.home_running >
+        realtime_simu_franka_fr3_P.Switch_Threshold_c) {
+      /* Switch: '<Root>/Switch' */
+      for (i = 0; i < 7; i++) {
+        realtime_simu_franka_fr3_B.Switch_n[i] =
+          realtime_simu_franka_fr3_B.tau[i];
       }
+    } else {
+      /* ManualSwitch: '<Root>/Manual Switch1' */
+      isodd = (realtime_simu_franka_fr3_P.ManualSwitch1_CurrentSetting == 1);
 
-      /* Sum: '<S3>/Add' incorporates:
-       *  MATLAB Function: '<S5>/joint space control fixed q3'
-       */
-      realtime_simu_franka_fr3_B.Add[i] = absxk -
-        realtime_simu_franka_fr3_B.robot_model_o.g[i];
-      rtb_ManualSwitch[i] = absxk;
+      /* Switch: '<Root>/Switch' */
+      for (k = 0; k < 7; k++) {
+        /* ManualSwitch: '<Root>/Manual Switch1' incorporates:
+         *  Constant: '<Root>/Constant'
+         *  MATLAB Function: '<S5>/joint space control fixed q3'
+         */
+        if (isodd) {
+          realtime_simu_franka_fr3_B.Switch_n[k] = rtb_ManualSwitch[k];
+        } else {
+          realtime_simu_franka_fr3_B.Switch_n[k] =
+            realtime_simu_franka_fr3_P.Constant_Value_b[k];
+        }
+      }
     }
 
     /* End of Switch: '<Root>/Switch' */
+    for (i = 0; i < 7; i++) {
+      /* Sum: '<S3>/Add' incorporates:
+       *  Switch: '<Root>/Switch'
+       */
+      realtime_simu_franka_fr3_B.Add[i] = realtime_simu_franka_fr3_B.Switch_n[i]
+        - realtime_simu_franka_fr3_B.robot_model_o.g[i];
+    }
+
     /* MATLAB Function: '<S2>/MATLAB Function' incorporates:
      *  BusCreator generated from: '<S2>/MATLAB Function'
      *  Constant: '<Root>/Start Trajectory'
@@ -975,11 +991,11 @@ void realtime_simu_franka_fr3_step(void)
         }
       }
 
-      rtb_q_ref[jj] = s * sqrt(time_end);
+      rtb_ManualSwitch[jj] = s * sqrt(time_end);
       for (k = 0; k < 6; k++) {
         c = 6 * jj + k;
         J_tilde[c] = realtime_simu_franka_fr3_B.robot_model_o.J[c] /
-          rtb_q_ref[jj];
+          rtb_ManualSwitch[jj];
       }
     }
 
@@ -1094,25 +1110,27 @@ void realtime_simu_franka_fr3_step(void)
        *  Switch: '<Root>/Switch'
        */
       for (i = 0; i < 7; i++) {
-        realtime_simu_franka_fr3_B.RateLimiter[i] = rtb_ManualSwitch[i];
+        realtime_simu_franka_fr3_B.RateLimiter[i] =
+          realtime_simu_franka_fr3_B.Switch_n[i];
       }
     } else {
       time_end = realtime_simu_franka_fr3_M->Timing.t[0] -
         realtime_simu_franka_fr3_DW.LastMajorTime;
       for (i = 0; i < 7; i++) {
-        absxk = rtb_ManualSwitch[i];
-        t = absxk - realtime_simu_franka_fr3_DW.PrevY[i];
+        absxk = realtime_simu_franka_fr3_B.Switch_n[i] -
+          realtime_simu_franka_fr3_DW.PrevY[i];
         s = time_end * realtime_simu_franka_fr3_P.RateLimiter_RisingLim;
-        if (t > s) {
+        if (absxk > s) {
           realtime_simu_franka_fr3_B.RateLimiter[i] = s +
             realtime_simu_franka_fr3_DW.PrevY[i];
         } else {
           s = time_end * realtime_simu_franka_fr3_P.RateLimiter_FallingLim;
-          if (t < s) {
+          if (absxk < s) {
             realtime_simu_franka_fr3_B.RateLimiter[i] =
               realtime_simu_franka_fr3_DW.PrevY[i] + s;
           } else {
-            realtime_simu_franka_fr3_B.RateLimiter[i] = absxk;
+            realtime_simu_franka_fr3_B.RateLimiter[i] =
+              realtime_simu_franka_fr3_B.Switch_n[i];
           }
         }
       }
@@ -1403,15 +1421,15 @@ void realtime_simu_franka_fr3_initialize(void)
   }
 
   /* External mode info */
-  realtime_simu_franka_fr3_M->Sizes.checksums[0] = (4046486997U);
-  realtime_simu_franka_fr3_M->Sizes.checksums[1] = (2566383573U);
-  realtime_simu_franka_fr3_M->Sizes.checksums[2] = (3237123533U);
-  realtime_simu_franka_fr3_M->Sizes.checksums[3] = (701200181U);
+  realtime_simu_franka_fr3_M->Sizes.checksums[0] = (2631055712U);
+  realtime_simu_franka_fr3_M->Sizes.checksums[1] = (4007677605U);
+  realtime_simu_franka_fr3_M->Sizes.checksums[2] = (1764305089U);
+  realtime_simu_franka_fr3_M->Sizes.checksums[3] = (3359067011U);
 
   {
     static const sysRanDType rtAlwaysEnabled = SUBSYS_RAN_BC_ENABLE;
     static RTWExtModeInfo rt_ExtModeInfo;
-    static const sysRanDType *systemRan[14];
+    static const sysRanDType *systemRan[15];
     realtime_simu_franka_fr3_M->extModeInfo = (&rt_ExtModeInfo);
     rteiSetSubSystemActiveVectorAddresses(&rt_ExtModeInfo, systemRan);
     systemRan[0] = &rtAlwaysEnabled;
@@ -1422,16 +1440,17 @@ void realtime_simu_franka_fr3_initialize(void)
     systemRan[5] = &rtAlwaysEnabled;
     systemRan[6] = &rtAlwaysEnabled;
     systemRan[7] = &rtAlwaysEnabled;
-    systemRan[8] = (sysRanDType *)
-      &realtime_simu_franka_fr3_DW.jointspacectlsubsys_SubsysRanBC;
+    systemRan[8] = &rtAlwaysEnabled;
     systemRan[9] = (sysRanDType *)
       &realtime_simu_franka_fr3_DW.jointspacectlsubsys_SubsysRanBC;
     systemRan[10] = (sysRanDType *)
       &realtime_simu_franka_fr3_DW.jointspacectlsubsys_SubsysRanBC;
     systemRan[11] = (sysRanDType *)
       &realtime_simu_franka_fr3_DW.jointspacectlsubsys_SubsysRanBC;
-    systemRan[12] = &rtAlwaysEnabled;
-    systemRan[13] = (sysRanDType *)
+    systemRan[12] = (sysRanDType *)
+      &realtime_simu_franka_fr3_DW.jointspacectlsubsys_SubsysRanBC;
+    systemRan[13] = &rtAlwaysEnabled;
+    systemRan[14] = (sysRanDType *)
       &realtime_simu_franka_fr3_DW.tau_subsystem_SubsysRanBC;
     rteiSetModelMappingInfoPtr(realtime_simu_franka_fr3_M->extModeInfo,
       &realtime_simu_franka_fr3_M->SpecialInfo.mappingInfo);

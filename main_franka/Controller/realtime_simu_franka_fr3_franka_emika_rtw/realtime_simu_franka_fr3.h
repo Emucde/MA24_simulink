@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.555
+ * Model version              : 8.564
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Thu Nov 21 19:18:29 2024
+ * C++ source code generated on : Fri Nov 22 16:33:00 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -154,6 +154,7 @@ struct B_realtime_simu_franka_fr3_T {
   real_T robotmodelsfunction2_o7[7];   /* '<S7>/robot model s-function2' */
   real_T Derivative[7];                /* '<Root>/Derivative' */
   real_T Gain[7];                      /* '<S5>/Gain' */
+  real_T Switch_n[7];                  /* '<Root>/Switch' */
   real_T Add[7];                       /* '<S3>/Add' */
   real_T q_pp[7];
                /* '<S3>/SigConversion_InsertedFor_Bus Selector1_at_outport_2' */
@@ -258,6 +259,10 @@ struct DW_realtime_simu_franka_fr3_T {
   } Scope_PWORK;                       /* '<Root>/Scope' */
 
   struct {
+    void *LoggedData[4];
+  } Scope5_PWORK;                      /* '<Root>/Scope5' */
+
+  struct {
     void *LoggedData;
   } Scope1_PWORK;                      /* '<S3>/Scope1' */
 
@@ -268,14 +273,6 @@ struct DW_realtime_simu_franka_fr3_T {
   struct {
     void *LoggedData[8];
   } Cosinushnlichkeiten7DOF_PWORK;     /* '<S10>/Cosinus Ähnlichkeiten 7DOF' */
-
-  struct {
-    void *LoggedData[3];
-  } Scope5_PWORK;                      /* '<Root>/Scope5' */
-
-  struct {
-    void *LoggedData[2];
-  } Scope1_PWORK_b;                    /* '<Root>/Scope1' */
 
   void *SFunction3_PWORK[4];           /* '<S8>/S-Function3' */
   void *SFunction4_PWORK[12];          /* '<S8>/S-Function4' */
@@ -409,6 +406,9 @@ struct P_realtime_simu_franka_fr3_T_ {
   real_T Gain_Gain;                    /* Expression: 2
                                         * Referenced by: '<S5>/Gain'
                                         */
+  real_T Constant_Value_b[7];          /* Expression: zeros(7,1)
+                                        * Referenced by: '<Root>/Constant'
+                                        */
   real_T homemode_Value;               /* Expression: 0
                                         * Referenced by: '<Root>/home mode'
                                         */
@@ -453,6 +453,10 @@ struct P_realtime_simu_franka_fr3_T_ {
                                  /* Computed Parameter: controllerselector_Value
                                   * Referenced by: '<Root>/controller selector'
                                   */
+  uint8_T ManualSwitch1_CurrentSetting;
+                             /* Computed Parameter: ManualSwitch1_CurrentSetting
+                              * Referenced by: '<Root>/Manual Switch1'
+                              */
   uint8_T ManualSwitch_CurrentSetting;
                               /* Computed Parameter: ManualSwitch_CurrentSetting
                                * Referenced by: '<Root>/Manual Switch'
