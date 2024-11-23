@@ -14,6 +14,8 @@
 % import casadi.*;
 % output_dir = './s_functions/s_functions_7dof/';
 
+compile_matlab_sfun = false;
+
 import casadi.*;
 clc;
 
@@ -65,7 +67,8 @@ fun_arr_matlab = { ...
 fun_arr_sfun = { ...
     'sys_fun_qpp_aba_py', ...
     'sys_fun_qpp_sol_py', ...
-    'robot_model_bus_fun_py' ...
+    'robot_model_bus_fun_py', ...
+    'ekf_fun_py' ...
 };
 
 fun_arr_sfun_realtime = { ...
@@ -89,20 +92,23 @@ catch ME
 end
 
 %% 2. Compile casadi functions to matlab functions (mex files)
-output_dir = ['./s_functions/', robot_name, '/matlab_functions/'];
-try
-    for i = 1:length(fun_arr_matlab)
-        fun_name = fun_arr_matlab{i};
-        
-        casadi_fun = Function.load([input_dir, fun_name '.casadi']);
 
-        casadi_fun_to_mex(casadi_fun, output_dir, fun_name, '-O2');
-        disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
+if compile_matlab_sfun
+    output_dir = ['./s_functions/', robot_name, '/matlab_functions/'];
+    try
+        for i = 1:length(fun_arr_matlab)
+            fun_name = fun_arr_matlab{i};
+            
+            casadi_fun = Function.load([input_dir, fun_name '.casadi']);
+
+            casadi_fun_to_mex(casadi_fun, output_dir, fun_name, '-O2');
+            disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
+        end
+        fprintf('\n--------------------------------------------------------------------\n\n');
+    catch ME
+        disp('Error in casadi_fun_to_mex.m')
+        fprintf(2, 'Error: %s\n', getReport(ME));
     end
-    fprintf('\n--------------------------------------------------------------------\n\n');
-catch ME
-    disp('Error in casadi_fun_to_mex.m')
-    fprintf(2, 'Error: %s\n', getReport(ME));
 end
 
 %% 3. Compile casadi functions to s-functions for simulink (with sources)
