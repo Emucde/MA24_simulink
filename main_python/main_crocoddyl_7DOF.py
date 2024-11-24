@@ -20,7 +20,7 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = True
+use_data_from_simulink = False
 manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
@@ -202,9 +202,9 @@ param_traj_poly['T_end'] = 2
 
 x_k_ndof = np.zeros(2*n_dof)
 x_k_ndof[:n_dof] = q_0_ref
-# x_k_ndof[n_x_indices] = np.array([-4.71541765e-05, -7.70960138e-01, -2.35629353e+00, 8.63920206e-05, \
-#                                 1.57111388e+00, 7.85625356e-01, 1.18528803e-04, 1.41223310e-03, \
-#                                 4.93944513e-04, -9.78304970e-04, -2.07886725e-04, -3.13358760e-03])
+x_k_ndof[n_x_indices] = np.array([-4.71541765e-05, -7.70960138e-01, -2.35629353e+00, 8.63920206e-05, \
+                                1.57111388e+00, 7.85625356e-01, 1.18528803e-04, 1.41223310e-03, \
+                                4.93944513e-04, -9.78304970e-04, -2.07886725e-04, -3.13358760e-03])
 x_k = x_k_ndof[n_x_indices]
 
 ddp, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, \
@@ -386,7 +386,11 @@ try:
             mpc_state = 'run'
 
             xs_init_guess_prev = np.array(xs_init_guess)
-            us_init_guess_prev = np.array(us_init_guess)
+            if i==0:
+                mul=0
+            else:
+                mul=1
+            us_init_guess_prev = np.array(us_init_guess)*mul
             # v2: update reference values
             for j, runningModel in enumerate(ddp.problem.runningModels):
                 ddp.problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
@@ -401,6 +405,8 @@ try:
                 if(param_mpc_weight['q_uprev_cost'] > 0):
                     ddp.problem.runningModels[j].differential.costs.costs["ctrlPrev"].cost.residual.reference = us_init_guess_prev[j] #first us[0] is torque for gravity compensation
                 ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                # ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.activation.bounds.lb = us_init_guess_prev[j] - 0.1
+                # ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.activation.bounds.ub = us_init_guess_prev[j] + 0.1
 
             ddp.problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
             if(nq >= 6):
@@ -414,6 +420,8 @@ try:
             if(param_mpc_weight['q_uprev_cost'] > 0):
                 ddp.problem.terminalModel.differential.costs.costs["ctrlPrev"].cost.residual.reference = us_init_guess_prev[j] #first us[0] is torque for gravity compensation
             ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+            # ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.activation.bounds.lb = us_init_guess_prev[j] - 0.1
+            # ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.activation.bounds.ub = us_init_guess_prev[j] + 0.1
 
             ddp.problem.x0 = x_k
             # v2 end
@@ -596,10 +604,14 @@ else:
     subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step, param_robot)
 
 
-# folderpath = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+folderpath1 = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+folderpath2 = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+paths = [folderpath1, folderpath2]
+folderpath = next((path for path in paths if os.path.exists(path)), None)
+
 outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
 output_file_path = os.path.join(folderpath, outputname)
+
 
 plot_sol=False
 if plot_sol == True or use_data_from_simulink == False:# and err_state == False:

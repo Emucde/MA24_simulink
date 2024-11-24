@@ -361,9 +361,9 @@ def process_trajectory_data(traj_select, traj_data_all, traj_param_all):
 
     # Extract initial configuration data
     n_indices = slice(None)  # Assuming n_indices is not defined, we use all indices
-    q_0 = traj_param_all['q_0'][0, 0][n_indices, traj_select]
-    q_0_p = traj_param_all['q_0_p'][0, 0][n_indices, traj_select]
-    q_0_pp = traj_param_all['q_0_pp'][0, 0][n_indices, traj_select]
+    q_0 = traj_param_all['q_0'][0, 0][:, traj_select]
+    q_0_p = traj_param_all['q_0_p'][0, 0][:, traj_select]
+    q_0_pp = traj_param_all['q_0_pp'][0, 0][:, traj_select]
 
     # Create traj_init_config dictionary
     traj_init_config = {
@@ -383,7 +383,7 @@ def get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices):
     t = traj_data_true['t_true']
     # q_0 = traj_init_config['q_0'][n_indices]
     # q_0_p = traj_init_config['q_0_p'][n_indices]
-    q_0_pp = traj_init_config['q_0_pp'][n_indices]
+    q_0_pp = traj_init_config['q_0_pp'][:]
     N_traj = traj_init_config['N_traj_true']
     return p_d, p_d_p, p_d_pp, R_d, t, q_0_pp, N_traj
 
@@ -1344,19 +1344,19 @@ def sim_model(robot_model, robot_data, q, q_p, tau, dt):
 
 ###############
 
-def first_init_guess_mpc_v1(tau_init_robot, x_init_robot, N_traj, N_horizon, param_robot, traj_data):
+def first_init_guess_mpc_v1(tau_init_robot, x_0_red, N_traj, N_horizon, param_robot, traj_data):
     nu = param_robot['n_dof']
     nx = 2*nu
-    xk = x_init_robot
+    xk = x_0_red
 
-    xs_init_guess = [x_init_robot]  * (N_horizon)
+    xs_init_guess = [x_0_red]  * (N_horizon)
     us_init_guess = [tau_init_robot] * (N_horizon-1)
 
     xs = np.zeros((N_traj, nx))
     us = np.zeros((N_traj, nu))
     return xk, xs, us, xs_init_guess, us_init_guess
 
-def first_init_guess_mpc_v3(tau_init_robot, x_init_robot, N_traj, N_horizon, param_robot, traj_data):
+def first_init_guess_mpc_v3(tau_init_robot, x_0_red, N_traj, N_horizon, param_robot, traj_data):
     nu = param_robot['n_dof']
     nx = 2*nu
 
@@ -1402,6 +1402,7 @@ def init_crocoddyl(x_k, robot_model, robot_data, traj_data, traj_data_true, traj
     traj_init_config['N_traj_true'] += N_init_traj
 
     n_indices = param_robot['n_indices']
+    n_x_indices = param_robot['n_x_indices']
     n_dof = param_robot['n_dof']
     mpc_settings, param_mpc_weight = load_mpc_config(robot_model)
     p_d, p_d_p, p_d_pp, R_d, t, q_0_pp, N_traj = get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices)
@@ -1453,14 +1454,14 @@ def init_crocoddyl(x_k, robot_model, robot_data, traj_data, traj_data_true, traj
 
     # use start pose at trajectory for first init guess
     x_init_robot = x_k
-    tau_init_robot = pinocchio.rnea(robot_model, robot_data, q_0, q_0_p, q_0_pp)
+    tau_init_robot = pinocchio.rnea(robot_model, robot_data, q_0[n_indices], q_0_p[n_indices], q_0_pp[n_indices])
 
-    x_k, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_init_robot, N_traj, N_MPC, param_robot, traj_data)
+    x_k_red, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_k[n_x_indices], N_traj, N_MPC, param_robot, traj_data)
 
     # create first problem:
 
-    param_mpc_weight['xref'] = x_k[:nx]
-    param_mpc_weight['xprev_ref'] = x_k[:nx]
+    param_mpc_weight['xref'] = x_k_red[:nx]
+    param_mpc_weight['xprev_ref'] = x_k_red[:nx]
     param_mpc_weight['uref'] = us_init_guess[0][:nq]
 
     # Create a multibody state from the pinocchio model.
@@ -1468,7 +1469,7 @@ def init_crocoddyl(x_k, robot_model, robot_data, traj_data, traj_data_true, traj
     state.lb = np.hstack([robot_model.lowerPositionLimit, -robot_model.velocityLimit])
     state.ub = np.hstack([robot_model.upperPositionLimit, robot_model.velocityLimit])
 
-    problem = create_ocp_problem(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
+    problem = create_ocp_problem(x_k_red, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings)
 
     # Solve first optimization Problem for warm start
 
