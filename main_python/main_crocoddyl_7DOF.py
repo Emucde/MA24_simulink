@@ -196,8 +196,8 @@ param_robot = {
 #########################################################################################################
 
 param_traj_poly = {}
-param_traj_poly['T_start'] = 0
-param_traj_poly['T_1'] = 1
+param_traj_poly['T_start'] = 0.5
+param_traj_poly['T_poly'] = 1
 param_traj_poly['T_end'] = 2
 
 x_k_ndof = np.zeros(2*n_dof)
@@ -205,7 +205,10 @@ x_k_ndof[:n_dof] = q_0_ref
 x_k_ndof[n_x_indices] = np.array([-4.71541765e-05, -7.70960138e-01, -2.35629353e+00, 8.63920206e-05, \
                                 1.57111388e+00, 7.85625356e-01, 1.18528803e-04, 1.41223310e-03, \
                                 4.93944513e-04, -9.78304970e-04, -2.07886725e-04, -3.13358760e-03])
+x_k_ndof[n_dof::] = 0 # weil er stillsteht, jegliche Geschwindigkeitsmessung ist noise!
 x_k = x_k_ndof[n_x_indices]
+
+# TODO: in init_crocoddyl die initiale trajektorie erstellen!
 
 ddp, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, \
 N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
@@ -275,6 +278,10 @@ try:
                 if start == 1 and reset == 0 and stop == 0:
                     new_traj_select = data_from_simulink_traj_switch[0]
                     data_from_simulink_start[:] = 0
+
+                    # Selbst wenn die Messung zu beginn eine Jointgeschwindigkeit ausgibt, wird diese auf 0 gesetzt
+                    # weil der Roboter zu beginn stillsteht und es damit nur noise ist
+                    x_k_ndof[n_dof::] = 0
 
                     mpc_state = 'init'
                     init_cnt = 0
@@ -355,13 +362,13 @@ try:
             #     ddp.problem.x0 = x0_new
             # else:
 
-            if mpc_state == 'init':
+            if mpc_state == 'init': # TODO: in init_crocoddyl() die initiale trajektorie erstellen!
                 # because it is not guaranteed that the robot starts at the initial position lower weights are used
                 # wich are incremented in the first few steps
                 if(init_cnt == 0):
                     # MPC_traj_indices_init = MPC_traj_indices
                     # MPC_traj_indices = MPC_traj_indices*0+1
-                    transient_traj = create_transient_trajectory(x_k_ndof[:n_dof], TCP_frame_id, robot_model_full, robot_data_full, traj_data, mpc_settings, param_traj_poly)
+                    transient_traj = create_transient_trajectory(x_k_ndof[:n_dof], TCP_frame_id, robot_model_full, robot_data_full, traj_data, mpc_settings, param_traj_poly, plot_traj=False)
                     traj_data_true = transient_traj
                     p_d = transient_traj['p_d']
                     p_d_p = transient_traj['p_d_p']

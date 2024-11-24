@@ -63,16 +63,20 @@ def trajectory_poly(t, y0, yT, T):
 
 def create_poly_traj(yT, y0, t, R_init, rot_ax, rot_alpha_scale, param_traj_poly):
     T_start = param_traj_poly['T_start']
-    T_1 = param_traj_poly['T_1']
+    T_poly = param_traj_poly['T_poly']
     
-    if t - T_start > T_1:
+    if t - T_start < 0:
+        p_d = np.concatenate((y0[:3], [0]))
+        p_d_p = np.concatenate((np.zeros(3), [0]))
+        p_d_pp = np.concatenate((np.zeros(3), [0]))
+    elif t - T_start > T_poly:
         p_d = np.concatenate((yT[:3], [rot_alpha_scale]))
         p_d_p = np.concatenate((np.zeros(3), [0]))
         p_d_pp = np.concatenate((np.zeros(3), [0]))
     else:
         y0 = np.concatenate((y0[:3], [0]))
         yT = np.concatenate((yT[:3], [rot_alpha_scale]))  # poly contains [x, y, z, alpha]
-        p_d, p_d_p, p_d_pp = trajectory_poly(t - T_start, y0, yT, T_1)
+        p_d, p_d_p, p_d_pp = trajectory_poly(t - T_start, y0, yT, T_poly)
     
     alpha = p_d[3]
     alpha_p = p_d_p[3]
@@ -97,17 +101,17 @@ def create_poly_traj(yT, y0, t, R_init, rot_ax, rot_alpha_scale, param_traj_poly
 
 def generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_traj=False):
     T_start = param_traj_poly['T_start']
-    T_1 = param_traj_poly['T_1']
+    T_poly = param_traj_poly['T_poly']
     T_end = param_traj_poly['T_end']
 
-    t_true = np.arange(T_start, T_end, dt)
+    t = np.arange(0, T_end, dt)
 
     # normalize time
-    param_traj_poly['T_start'] = 0
-    param_traj_poly['T_1'] = T_1 - T_start
-    param_traj_poly['T_end'] = T_end - T_start
+    # param_traj_poly['T_start'] = 0
+    # param_traj_poly['T_poly'] = T_poly - T_start
+    # param_traj_poly['T_end'] = T_end - T_start
 
-    t = t_true - T_start
+    # t = t_true - T_start
 
     N = len(t)
     p_d = np.zeros((3, N))
@@ -142,7 +146,7 @@ def generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_tr
         omega_d[:, i]   = x_d['omega_d']
         omega_d_p[:, i] = x_d['omega_d_p']
 
-    traj_data = {'t': t_true, 'N_traj': N, 'p_d': p_d, 'p_d_p': p_d_p, 'p_d_pp': p_d_pp, 'R_d': R_d, 'q_d': q_d, 'omega_d': omega_d, 'omega_d_p': omega_d_p}
+    traj_data = {'t': t, 'N_traj': N, 'p_d': p_d, 'p_d_p': p_d_p, 'p_d_pp': p_d_pp, 'R_d': R_d, 'q_d': q_d, 'omega_d': omega_d, 'omega_d_p': omega_d_p}
 
     if plot_traj:
         plot_trajectory(traj_data)
