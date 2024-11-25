@@ -6,8 +6,9 @@ diff_variant_mode = struct;
 diff_variant_mode.numdiff = 1; % default forward, central, backward deviation
 diff_variant_mode.savgol = 2; % savgol filtering and deviation
 diff_variant_mode.savgol_v2 = 3; % savgol filtering without additional equations and deviation
+diff_variant_mode.savgol_not_equidist = 4; % savgol filtering without additional equations and deviation
 
-diff_variant = diff_variant_mode.numdiff;
+diff_variant = diff_variant_mode.savgol_not_equidist;
 
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;
@@ -135,7 +136,8 @@ if(diff_variant == diff_variant_mode.numdiff)
     S_v = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'fwdbwdcentraltwotimes', DT);
     S_a = S_v^2;
 elseif(diff_variant == diff_variant_mode.savgol)
-    DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
+    % DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
+    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol', DT, MPC_traj_indices);
 
     S_v = DD_DT{2};
     S_a = DD_DT{3};
@@ -143,6 +145,11 @@ elseif(diff_variant == diff_variant_mode.savgol_v2)
     DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
 
     S_q = DD_DT{1};
+    S_v = DD_DT{2};
+    S_a = DD_DT{3};
+elseif(diff_variant == diff_variant_mode.savgol_not_equidist)
+    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices);
+
     S_v = DD_DT{2};
     S_a = DD_DT{3};
 else

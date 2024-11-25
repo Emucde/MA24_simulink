@@ -1,10 +1,11 @@
-function D = create_numdiff_matrix(T_a, n, N, variant, T_a_MPC)
+function D = create_numdiff_matrix(T_a, n, N, variant, T_a_MPC, MPC_traj_indices)
 arguments
     T_a (1,1) double
     n (1,1) double
     N (1,1) double
-    variant char {mustBeMember(variant, {'fwdbwdcentral', 'bwd', 'savgol', 'fwdbwdcentraltwotimes', 'fwdbwdcentralthreetimes'})} = 'fwdbwdcentral'
-    T_a_MPC (1,1) double = 0.01
+    variant char {mustBeMember(variant, {'fwdbwdcentral', 'bwd', 'savgol', 'savgol_notequidist', 'fwdbwdcentraltwotimes', 'fwdbwdcentralthreetimes'})} = 'fwdbwdcentral'
+    T_a_MPC (1,1) double = T_a
+    MPC_traj_indices = 1:N
 end
     if(T_a == T_a_MPC && (strcmp(variant, 'fwdbwdcentraltwotimes') || strcmp(variant, 'fwdbwdcentralthreetimes')))
         variant = 'fwdbwdcentral';
@@ -39,7 +40,25 @@ end
         Nq = 2;
         d = 2;
         DD = create_savgol_deviation_matrices(T_a, Nq, d, N);
-        % idea: S_v is first created for one scalar data and then for a n
+        % idea: S_v is first created for one scalar state and then for a n
+        % dimensional data it is necessary to use this data multiple time
+        DD_vec = cell(1, d);
+        for l=1:1:d+1
+            S0_v = DD{l};
+            S_v = zeros(n*N, n*N);
+            for i=1:1:N
+                for j=1:1:N
+                    S_v((i-1)*n + [1:n], (j-1)*n + [1:n]) = eye(n) * S0_v(i, j);
+                end
+            end
+            DD_vec{l} = S_v;
+        end
+        D = DD_vec;
+    elseif(strcmp(variant, 'savgol_notequidist'))
+        Nq = 2;
+        d = 2;
+        DD = create_savgol_deviation_matrices_not_equidist(T_a, Nq, d, N, MPC_traj_indices);
+        % idea: S_v is first created for one scalar state and then for a n
         % dimensional data it is necessary to use this data multiple time
         DD_vec = cell(1, d);
         for l=1:1:d+1
