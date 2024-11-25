@@ -24,7 +24,13 @@ use_data_from_simulink = False
 manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
+use_gravity = False
 debounce_delay = 0.1
+
+param_traj_poly = {}
+param_traj_poly['T_start'] = 0.5
+param_traj_poly['T_poly'] = 1
+param_traj_poly['T_end'] = 2
 
 if use_data_from_simulink:
     # only available for franka research 3 robot (n_dof = 7)
@@ -128,7 +134,6 @@ nx = 2*nq
 nu = nq # fully actuated
 
 # Gravity should be in -z direction
-use_gravity = False
 if use_gravity:
     gravity = [0, 0, -9.81]
 else:
@@ -176,29 +181,31 @@ traj_select 7: Sing test stretch arm in, Polynomial, joint space
 if use_data_from_simulink:
     if data_from_simulink_traj_switch[0] == 0:
         curent_traj_select = 1
+        data_from_simulink_traj_switch[0] = 1
     else:
         curent_traj_select = data_from_simulink_traj_switch[0]
 else:
     curent_traj_select = manual_traj_select
-traj_data, traj_data_true, traj_init_config = process_trajectory_data(curent_traj_select-1, traj_data_all, traj_param_all)
+traj_data, traj_init_config = process_trajectory_data(curent_traj_select-1, traj_data_all, traj_param_all)
 
 q_0_ref = traj_init_config['q_0']
+
+x_min = np.hstack([robot_model_full.lowerPositionLimit, -robot_model_full.velocityLimit])
+x_max = np.hstack([robot_model_full.upperPositionLimit, robot_model_full.velocityLimit])
 param_robot = {
     'n_dof': n_dof,
     'n_red': len(n_indices),
     'n_indices': n_indices,
     'n_indices_fixed': n_indices_fixed,
     'n_x_indices': n_x_indices,
-    'q_0_ref': q_0_ref
+    'q_0_ref': q_0_ref,
+    'x_min': x_min,
+    'x_max': x_max,
+    'x_mean': (x_max + x_min)/2
 }
 #########################################################################################################
 ############################################# INIT MPC ##################################################
 #########################################################################################################
-
-param_traj_poly = {}
-param_traj_poly['T_start'] = 0.5
-param_traj_poly['T_poly'] = 1
-param_traj_poly['T_end'] = 2
 
 x_k_ndof = np.zeros(2*n_dof)
 x_k_ndof[:n_dof] = q_0_ref
@@ -210,10 +217,11 @@ x_k = x_k_ndof[n_x_indices]
 
 # TODO: in init_crocoddyl die initiale trajektorie erstellen!
 
-ddp, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, \
+ddp, xs, us, xs_init_guess, us_init_guess, y_d_data, TCP_frame_id, \
 N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
-simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, param_traj =   \
-    init_crocoddyl( x_k_ndof, robot_model, robot_data, traj_data, traj_data_true,     \
+simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, \
+transient_traj, param_traj =   \
+    init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data,     \
                     traj_init_config, param_robot, param_traj_poly, TCP_frame_id)
 
 p_d = y_d_data['p_d']
@@ -221,7 +229,21 @@ p_d_p = y_d_data['p_d_p']
 p_d_pp = y_d_data['p_d_pp']
 R_d = y_d_data['R_d']
 
+p_d = transient_traj['p_d']
+p_d_p = transient_traj['p_d_p']
+p_d_pp = transient_traj['p_d_pp']
+R_d = transient_traj['R_d']
+
 tau_full = calculate_ndof_torque_with_feedforward(us_init_guess[0], x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, n_indices_fixed)
+
+# jointspace controller settings for fixed joints
+K_d = np.diag([100, 200, 500, 200, 50, 50, 10])
+D_d = np.sqrt(2*K_d)
+
+K_d_fixed = K_d[n_indices_fixed][:, n_indices_fixed]
+D_d_fixed = D_d[n_indices_fixed][:, n_indices_fixed]
+
+q_0_ref_fixed = q_0_ref[n_indices_fixed]
 
 if use_data_from_simulink:
     run_flag = False
@@ -242,7 +264,7 @@ freq_per_Ta_step = np.zeros(N_traj)
 reload_page=True
 
 u_prev = 0
-        
+
 measureSolver = TicToc()
 measureSimu = TicToc()
 measureTotal = TicToc()
@@ -253,7 +275,7 @@ init_cnt_max = 100
 folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = 'test.html'
 output_file_path = os.path.join(folderpath, outputname)
-mpc_state = 'init'
+
 run_loop = True
 try:
     while run_loop and err_state == False:
@@ -282,8 +304,6 @@ try:
                     # Selbst wenn die Messung zu beginn eine Jointgeschwindigkeit ausgibt, wird diese auf 0 gesetzt
                     # weil der Roboter zu beginn stillsteht und es damit nur noise ist
                     x_k_ndof[n_dof::] = 0
-
-                    mpc_state = 'init'
                     init_cnt = 0
 
                     data_from_python[:] = np.zeros(n_dof)
@@ -293,17 +313,17 @@ try:
 
                     if curent_traj_select != new_traj_select:
                         curent_traj_select = new_traj_select
-                        traj_data, traj_data_true, traj_init_config = process_trajectory_data(curent_traj_select-1, traj_data_all, traj_param_all)
+                        traj_data, traj_init_config = process_trajectory_data(curent_traj_select-1, traj_data_all, traj_param_all)
                         print(f'New Trajectory selected: {curent_traj_select}')
 
-                    # update mpc settings and problem
-                    ddp, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, \
-                    N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
-                    simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, param_traj =   \
-                        init_crocoddyl( robot_model, robot_data, traj_data, traj_data_true,     \
-                                        traj_init_config, param_robot, param_traj_poly, TCP_frame_id)
-                    
-                    MPC_traj_indices_init = MPC_traj_indices
+                    if i == 0:
+                        # update mpc settings and problem
+                        ddp, xs, us, xs_init_guess, us_init_guess, y_d_data, TCP_frame_id, \
+                        N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
+                        simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, \
+                        transient_traj, param_traj =   \
+                            init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data,     \
+                                            traj_init_config, param_robot, param_traj_poly, TCP_frame_id)
 
                     run_flag = True
                     print("MPC started by Simulink")
@@ -320,7 +340,7 @@ try:
                     data_from_simulink_reset[:] = 0
                     run_flag = False
                     start_solving = False
-                    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model_full, robot_data_full, traj_data_true, freq_per_Ta_step, param_robot)
+                    subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
                     plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page)
                     i = 0
                 else:
@@ -328,7 +348,10 @@ try:
         if start_solving:
             measureSimu.tic()
             
-            g_k = pin.computeGeneralizedGravity(robot_model, robot_data, x_k[:nq])
+            if use_gravity:
+                g_k = pin.computeGeneralizedGravity(robot_model, robot_data, x_k[:nq])
+            else:
+                g_k = np.zeros(nq)
 
             # if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
             #     xs_init_guess_prev = np.array(xs_init_guess)
@@ -361,43 +384,13 @@ try:
             #     x0_new[:6] = xs_init_guess_prev[1, :6]
             #     ddp.problem.x0 = x0_new
             # else:
-
-            if mpc_state == 'init': # TODO: in init_crocoddyl() die initiale trajektorie erstellen!
-                # because it is not guaranteed that the robot starts at the initial position lower weights are used
-                # wich are incremented in the first few steps
-                if(init_cnt == 0):
-                    # MPC_traj_indices_init = MPC_traj_indices
-                    # MPC_traj_indices = MPC_traj_indices*0+1
-                    transient_traj = create_transient_trajectory(x_k_ndof[:n_dof], TCP_frame_id, robot_model_full, robot_data_full, traj_data, mpc_settings, param_traj_poly, plot_traj=False)
-                    traj_data_true = transient_traj
-                    p_d = transient_traj['p_d']
-                    p_d_p = transient_traj['p_d_p']
-                    p_d_pp = transient_traj['p_d_pp']
-                    R_d = transient_traj['R_d']
-                    
-                if(init_cnt < init_cnt_max):
-                    # x_k[:nq] = q_0_ref[n_indices] + init_cnt/init_cnt_max * x_k[:nq]
-                    # x_k[nq::] = init_cnt/init_cnt_max * x_k[nq::]
-                    init_cnt += 1
-                else:
-                    MPC_traj_indices = MPC_traj_indices_init
-                    mpc_state = 'run'
-
-
-                # for j, runningModel in enumerate(ddp.problem.runningModels):
-                #     ddp.problem.runningModels[j].differential.costs.costs["q_pReg"].weight = param_mpc_weight['q_p_common_weight'] + 1e1* (1 - init_cnt/init_cnt_max)
-                # ddp.problem.terminalModel.differential.costs.costs["q_pReg"].weight = param_mpc_weight['q_p_common_weight'] + 1e1* (1 - init_cnt/init_cnt_max)
-
-            # MPC_traj_indices = MPC_traj_indices*0+1
-            # MPC_traj_indices -= 1
-            mpc_state = 'run'
-
+            
             xs_init_guess_prev = np.array(xs_init_guess)
             if i==0:
-                mul=0
+                us_init_guess_prev = g_k * np.ones((mpc_settings['N_MPC']-1, nu))
             else:
-                mul=1
-            us_init_guess_prev = np.array(us_init_guess)*mul
+                us_init_guess_prev = np.array(us_init_guess)
+
             # v2: update reference values
             for j, runningModel in enumerate(ddp.problem.runningModels):
                 ddp.problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
@@ -407,11 +400,9 @@ try:
                     ddp.problem.runningModels[j].differential.costs.costs["q_ppReg"].cost.residual.reference = xs_init_guess_prev[j] # because qpp is calculated approximated
                 if(param_mpc_weight['q_xprev_common_weight'] > 0):
                     ddp.problem.runningModels[j].differential.costs.costs["xprevReg"].cost.residual.reference = xs_init_guess_prev[j]
-                ddp.problem.runningModels[j].differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_prev[j]
-                ddp.problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                # ddp.problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
                 if(param_mpc_weight['q_uprev_cost'] > 0):
                     ddp.problem.runningModels[j].differential.costs.costs["ctrlPrev"].cost.residual.reference = us_init_guess_prev[j] #first us[0] is torque for gravity compensation
-                ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
                 # ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.activation.bounds.lb = us_init_guess_prev[j] - 0.1
                 # ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.activation.bounds.ub = us_init_guess_prev[j] + 0.1
 
@@ -419,18 +410,18 @@ try:
             if(nq >= 6):
                 ddp.problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
             if(param_mpc_weight['q_pp_common_weight'] > 0):
-                ddp.problem.terminalModel.differential.costs.costs["q_ppReg"].cost.residual.reference = xs_init_guess_prev[j] # because qpp is calculated approximated
+                ddp.problem.terminalModel.differential.costs.costs["q_ppReg"].cost.residual.reference = xs_init_guess_prev[j+1] # because qpp is calculated approximated
             if(param_mpc_weight['q_xprev_common_weight'] > 0):
                 ddp.problem.terminalModel.differential.costs.costs["xprevReg"].cost.residual.reference = xs_init_guess_prev[j+1]
-            ddp.problem.terminalModel.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_prev[j+1]
-            ddp.problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+            # ddp.problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
             if(param_mpc_weight['q_uprev_cost'] > 0):
                 ddp.problem.terminalModel.differential.costs.costs["ctrlPrev"].cost.residual.reference = us_init_guess_prev[j] #first us[0] is torque for gravity compensation
-            ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
             # ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.activation.bounds.lb = us_init_guess_prev[j] - 0.1
             # ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.activation.bounds.ub = us_init_guess_prev[j] + 0.1
 
             ddp.problem.x0 = x_k
+
+            
             # v2 end
 
             # ddp = solver(problem)
@@ -441,9 +432,10 @@ try:
             measureSolver.toc()
 
             warn_cnt, err_state = check_solver_status(warn_cnt, hasConverged, ddp, i, Ts, conv_max_limit=5)
-
+            
             xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
-
+            # ddp.xs[0:-1] = ddp.xs[1::] # Problem: geht nur wenn alle werte in Ta abstand (TsMPC ist aber > Ta)
+            # ddp.us[0:-1] = ddp.us[1::] # fehler da TsMPC > Ta ist.
             u_k = ddp.us[0]
 
             if use_clipping:
@@ -470,8 +462,6 @@ try:
 
             if use_data_from_simulink:
                 if not err_state:
-
-
                     # Daten von Python an Simulink schreiben
 
                     if i == 0:
@@ -502,30 +492,24 @@ try:
                 start_solving = False
                 tau_i_prev = tau_full
             else:
-                K_d = np.diag([100, 200, 500, 200, 50, 50, 10])
-                D_d = np.sqrt(2*K_d)
-                
-                K_d_fixed = K_d[n_indices_fixed][:, n_indices_fixed]
-                D_d_fixed = D_d[n_indices_fixed][:, n_indices_fixed]
-                
                 q_ndof = x_k_ndof[:n_dof]
                 q_p_ndof = x_k_ndof[n_dof::]
 
                 q_fixed = q_ndof[n_indices_fixed]
                 q_p_fixed = q_p_ndof[n_indices_fixed]
 
-                tau_fixed = -K_d_fixed @ (q_fixed - q_0_ref[n_indices_fixed]) - D_d_fixed @ q_p_fixed
+                tau_fixed = -K_d_fixed @ (q_fixed - q_0_ref_fixed) - D_d_fixed @ q_p_fixed
 
                 tau_full[n_indices_fixed] = tau_full[n_indices_fixed] + tau_fixed
                 
-                x_kp1_ndof = simulate_model(x_k_ndof, tau_full, Ts, n_dof, 2*n_dof, robot_model_full, robot_data_full, traj_data)
+                x_kp1_ndof = simulate_model(x_k_ndof, tau_full, Ts, n_dof, 2*n_dof, robot_model_full, robot_data_full, param_robot, transient_traj)
                 
                 #### testing reduced model
                 # q_red = q_ndof[n_indices]
                 # q_p_red = q_p_ndof[n_indices]
                 # x_k = np.hstack([q_red, q_p_red])
                 
-                # x_kp1_red, x_k_i_red, u_k_i_red = simulate_model(x_k, u_k, Ts, 6, 2*6, robot_model, robot_data, traj_data)
+                # x_kp1_red, x_k_i_red, u_k_i_red = simulate_model(x_k, u_k, Ts, 6, 2*6, robot_model, robot_data, transient_traj)
                 # x_k_i_ndof = np.zeros(2*n_dof)
                 # x_k_i_ndof[n_x_indices] = x_k_i_red
                 
@@ -543,12 +527,12 @@ try:
             if (i+1) % update_interval == 0:
                 print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()}    ", end='\r')
 
-            if i < N_traj-1 and run_flag == True and mpc_state == 'run':
+            if i < N_traj-1 and run_flag == True:
                 i += 1 # last value of i is N_traj-1
             
             if i == N_traj-1 and not use_data_from_simulink:
                 run_loop = False
-
+            
             elapsed_time = measureSimu.toc()
             freq_per_Ta_step[i] = 1/elapsed_time
 except KeyboardInterrupt:
@@ -605,10 +589,10 @@ if plot_full_model:
     #     # us_full[i, n_indices] = us[i]
     #     xs_full[i] = x_i
     
-    # subplot_data = calc_7dof_data(us_full, xs_full, t, TCP_frame_id, robot_model_full, robot_data_full, traj_data_true, freq_per_Ta_step)
-    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model_full, robot_data_full, traj_data_true, freq_per_Ta_step, param_robot)
+    # subplot_data = calc_7dof_data(us_full, xs_full, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step)
+    subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
 else:
-    subplot_data = calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data_true, freq_per_Ta_step, param_robot)
+    subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, transient_traj, freq_per_Ta_step, param_robot)
 
 
 folderpath1 = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
@@ -620,7 +604,7 @@ outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
 output_file_path = os.path.join(folderpath, outputname)
 
 
-plot_sol=False
+plot_sol=True
 if plot_sol == True or use_data_from_simulink == False:# and err_state == False:
     plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page)
 
@@ -631,7 +615,7 @@ if plot_sol == True or use_data_from_simulink == False:# and err_state == False:
 
 # visualize=False
 # if visualize==True:
-#     visualize_robot(robot, q, traj_data_true, Ts, 3, 1)
+#     visualize_robot(robot, q, transient_traj, Ts, 3, 1)
 
 if use_data_from_simulink:
     user_input = input("Do you want to clear the shared memory? (y/n): ").lower()

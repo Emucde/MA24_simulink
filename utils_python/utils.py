@@ -164,6 +164,7 @@ def create_transient_trajectory(q_k, TCP_frame_id, robot_model, robot_data, traj
     q_d = traj_data['q_d']
     omega_d = traj_data['omega_d']
     omega_d_p = traj_data['omega_d_p']
+    N_traj_true = traj_data['N_traj_true'] # without the data at the end needed for mpc
 
     # generate init trajectory
     pinocchio.forwardKinematics(robot_model, robot_data, q_k)
@@ -213,9 +214,10 @@ def create_transient_trajectory(q_k, TCP_frame_id, robot_model, robot_data, traj
         'q_d': merged_q_d,
         'omega_d': merged_omega_d,
         'omega_d_p': merged_omega_d_p,
-        'N_traj': N_traj,
+        'N_traj': N_traj_true,
         'N_init': N_init,
-        'N_total': N_init + N_traj
+        'N_total': N_init + N_traj_true,
+        't': np.arange(1,N_init + N_traj_true + 1)*dt
     }
 
     return merged_trajectory
@@ -348,19 +350,8 @@ def process_trajectory_data(traj_select, traj_data_all, traj_param_all):
         'q_d': q_d,
         'omega_d': omega_d,
         'omega_d_p': omega_d_p,
-        't': t
-    }
-
-    # Create traj_data_true dictionary
-    traj_data_true = {
-        'p_d': p_d[:, 0:N_traj_true],
-        'p_d_p': p_d_p[:, 0:N_traj_true],
-        'p_d_pp': p_d_pp[:, 0:N_traj_true],
-        'R_d': R_d[:, :, 0:N_traj_true],
-        'q_d': q_d[:, 0:N_traj_true],
-        'omega_d': omega_d[:, 0:N_traj_true],
-        'omega_d_p': omega_d_p[:, 0:N_traj_true],
-        't_true': t[0:N_traj_true]
+        't': t,
+        'N_traj_true': N_traj_true
     }
 
     # Extract initial configuration data
@@ -377,19 +368,17 @@ def process_trajectory_data(traj_select, traj_data_all, traj_param_all):
         'N_traj_true': N_traj_true
     }
 
-    return traj_data, traj_data_true, traj_init_config
+    return traj_data, traj_init_config
 
-def get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices):
+def get_trajectory_data(traj_data, traj_init_config, n_indices):
     p_d = traj_data['p_d']
     p_d_p = traj_data['p_d_p']
     p_d_pp = traj_data['p_d_pp']
     R_d = traj_data['R_d']
-    t = traj_data_true['t_true']
     # q_0 = traj_init_config['q_0'][n_indices]
     # q_0_p = traj_init_config['q_0_p'][n_indices]
     q_0_pp = traj_init_config['q_0_pp'][:]
-    N_traj = traj_init_config['N_traj_true']
-    return p_d, p_d_p, p_d_pp, R_d, t, q_0_pp, N_traj
+    return p_d, p_d_p, p_d_pp, R_d, q_0_pp
 
 def load_mpc_config(robot_model, file_path='utils_python/mpc_weights_crocoddyl.json'):
     with open(file_path, 'r') as f:
@@ -1257,46 +1246,48 @@ def next_init_guess_mpc_v1(ddp, nq, nx, robot_model, robot_data, mpc_settings, p
     int_time = param_traj['int_time']
     dt = mpc_settings['Ts']
 
-    xx_next = np.zeros((N_MPC-1, nx))
-    uu_next = np.zeros((N_MPC-2, nq))
+    # method 1: accurate next state simulation
+    # xx_next = np.zeros((N_MPC-1, nx))
+    # for j in range(0, N_MPC-1):
+    #     xk = ddp.xs[j]
+    #     uk = ddp.us[j]
 
-    for j in range(0, N_MPC-1):
-        xk = ddp.xs[j]
-        uk = ddp.us[j]
+    #     # Modell Simulation
+    #     tau_k = uk
+    #     q = xk[:nq]
+    #     q_p = xk[nq:nx]
 
-        # Modell Simulation
-        tau_k = uk
-        q = xk[:nq]
-        q_p = xk[nq:nx]
-
-        q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
-        xx_next[j] = np.hstack([q_next, q_p_next])
-
-        if(j < N_MPC-2):
-            dtau = (ddp.us[j+1] - ddp.us[j])/int_time[j]
-            uu_next[j] = ddp.us[j] + dt * dtau # letztes dtau ist falsch
-
+    #     q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
+    #     xx_next[j] = np.hstack([q_next, q_p_next])
+    
+    # # method 2: approximate dynamics
     # d_xx_next = np.diff(ddp.xs, axis=0) / int_time[:N_MPC-1, np.newaxis]
     # xx_next = ddp.xs[:-1] + dt * d_xx_next
 
     # # Vectorized calculation for uu_next
-    # dtau = np.diff(ddp.us, axis=0) / int_time[:N_MPC-2, np.newaxis]
-    # uu_next = ddp.us[:-1] + dt * dtau
+    dtau = np.diff(ddp.us, axis=0) / int_time[:N_MPC-2, np.newaxis]
+    uu_next = ddp.us[:-1] + dt * dtau
 
-    # besser init guess als nominelle ideale lösung (= perfekte prädiktion):
-    # wobei der letzte unbekannte wert einfach gleich gelassen wird.
-
-    # ddp.xs[0:-1] = ddp.xs[1::] # Problem: geht nur wenn alle werte in Ta abstand (TsMPC ist aber > Ta)
-    # ddp.us[0:-1] = ddp.us[1::] # fehler da TsMPC > Ta ist.
-    ddp.xs[0:-1] = xx_next # genauere Lösung
     ddp.us[0:-1] = uu_next # approximativ bestimmt
+
+    # method 3: calculate only first two steps because this are the not equidistant steps in distance of Ts and TsMPC-Ts
+    # all other values are in distance of Ts_MPC and therefore they can be shiftet
+    q_next1, q_p_next1 = sim_model(robot_model, robot_data, ddp.xs[0][:nq], ddp.xs[0][nq:nx], ddp.us[0], dt)
+    q_next2, q_p_next2 = sim_model(robot_model, robot_data, ddp.xs[1][:nq], ddp.xs[1][nq:nx], ddp.us[1], dt)
+    ddp.xs[0] = np.hstack([q_next1, q_p_next1])
+    ddp.xs[1] = np.hstack([q_next2, q_p_next2])
+    ddp.xs[2:-1] = ddp.xs[3::]
+
+    # Problem: geht nur wenn alle werte in Ta abstand (TsMPC ist aber > Ta)
+    # ddp.xs[0:-1] = ddp.xs[1::] # macht aber eig kaum einen unterschied ob man method 3 oder das verwendet...
+    # ddp.us[0:-1] = ddp.xs[1::] # das macht einen großen unterschied und der fehler wird fast doppelt so groß
    
     xs_init_guess = ddp.xs
     us_init_guess = ddp.us
 
     return xs_init_guess, us_init_guess
 
-def simulate_model_mpc_v1(xk, uk, dt, nq, nx, robot_model, robot_data, traj_data):
+def simulate_model_mpc_v1(xk, uk, dt, nq, nx, robot_model, robot_data, param_robot, traj_data):
 
     # Modell Simulation
     tau_k = uk
@@ -1304,15 +1295,13 @@ def simulate_model_mpc_v1(xk, uk, dt, nq, nx, robot_model, robot_data, traj_data
     q_p   = xk[nq:nx]
 
     q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
-    lb = np.hstack([robot_model.lowerPositionLimit, -robot_model.velocityLimit])
-    ub = np.hstack([robot_model.upperPositionLimit, robot_model.velocityLimit])
     
     xkp1 = np.hstack([q_next, q_p_next])
-    xkp1_lim = np.clip(xkp1, lb, ub)
+    np.clip(xkp1, param_robot['x_min'], param_robot['x_max'], out=xkp1)
 
-    return xkp1_lim
+    return xkp1
 
-def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, traj_data):
+def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, param_robot, traj_data):
 
     xk = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
     uk = ddp.us[0]
@@ -1394,22 +1383,29 @@ def check_solver_status(warn_cnt, hasConverged, ddp, i, dt, conv_max_limit=5):
         # print("\033[93mWarning: Solver is not feasible at time t = ", f"{i*dt:.3f}", "\033[0m")
         print("\033[91mError: Solver is not feasible at time t =", f"{i*dt:.3f}", "\033[0m")
         error = 1
-    if np.isnan(ddp.xs).any() or np.isnan(ddp.us).any():
-        # print("\033[93mWarning: NaN values detected in xs or us arrays at time t = ", f"{i*dt:.3f}", "\033[0m")
-        print("\033[91mError: NaN values detected in xs or us arrays at time t =", f"{i*dt:.3f}", "\033[0m")
-        error = 1
+
+    # ist recht langsam
+    # if np.isnan(ddp.xs).any() or np.isnan(ddp.us).any():
+    #     # print("\033[93mWarning: NaN values detected in xs or us arrays at time t = ", f"{i*dt:.3f}", "\033[0m")
+    #     print("\033[91mError: NaN values detected in xs or us arrays at time t =", f"{i*dt:.3f}", "\033[0m")
+    #     error = 1
     return warn_cnt, error
 
-def init_crocoddyl(x_k, robot_model, robot_data, traj_data, traj_data_true, traj_init_config, param_robot, param_traj_poly, TCP_frame_id):
+def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_full, traj_data, traj_init_config, param_robot, param_traj_poly, TCP_frame_id):
     # because later I add the initial trajectory to the true trajectory
-    N_init_traj = int(param_traj_poly['T_end'] / 1e-3) + 1
-    traj_init_config['N_traj_true'] += N_init_traj
+    n_dof = param_robot['n_dof']
+
+    mpc_settings, param_mpc_weight = load_mpc_config(robot_model)
+    
+    transient_traj = create_transient_trajectory(x_k[:n_dof], TCP_frame_id, robot_model_full, robot_data_full, traj_data, mpc_settings, param_traj_poly, plot_traj=False)
+
+    N_init_traj = transient_traj['N_init']
+    N_traj = traj_init_config['N_traj_true'] + N_init_traj
 
     n_indices = param_robot['n_indices']
     n_x_indices = param_robot['n_x_indices']
-    n_dof = param_robot['n_dof']
-    mpc_settings, param_mpc_weight = load_mpc_config(robot_model)
-    p_d, p_d_p, p_d_pp, R_d, t, q_0_pp, N_traj = get_trajectory_data(traj_data, traj_data_true, traj_init_config, n_indices)
+    
+    p_d, p_d_p, p_d_pp, R_d, q_0_pp = get_trajectory_data(transient_traj, traj_init_config, n_indices)
 
     q_0 = x_k[:n_dof]
     q_0_p = x_k[n_dof:2*n_dof]
@@ -1464,10 +1460,10 @@ def init_crocoddyl(x_k, robot_model, robot_data, traj_data, traj_data_true, traj
 
     # create first problem:
 
-    param_mpc_weight['xref'] = x_k_red[:nx]
+    param_mpc_weight['xref'] = np.hstack((param_robot['x_mean'][:nq], np.zeros(nq)))
     param_mpc_weight['xprev_ref'] = x_k_red[:nx]
-    param_mpc_weight['uref'] = us_init_guess[0][:nq]
-
+    param_mpc_weight['uref'] = np.zeros(nq)
+    
     # Create a multibody state from the pinocchio model.
     state = crocoddyl.StateMultibody(robot_model)
     state.lb = np.hstack([robot_model.lowerPositionLimit, -robot_model.velocityLimit])
@@ -1486,7 +1482,7 @@ def init_crocoddyl(x_k, robot_model, robot_data, traj_data, traj_data_true, traj
     xs_init_guess = ddp.xs
     us_init_guess = ddp.us
 
-    return ddp, xs, us, xs_init_guess, us_init_guess, y_d_data, t, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, param_traj
+    return ddp, xs, us, xs_init_guess, us_init_guess, y_d_data, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, transient_traj, param_traj
 
 ###########################################################################
 ################################# PLOTTING ################################
@@ -1517,7 +1513,7 @@ def plot_trajectory(traj_data):
     plt.tight_layout()
     plt.show()
 
-def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, frep_per_Ta_step, param_robot):
+def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, frep_per_Ta_step, param_robot):
     N = len(xs)
     n = robot_model.nq
     n_indices = param_robot['n_indices']
@@ -1529,6 +1525,9 @@ def calc_7dof_data(us, xs, t, TCP_frame_id, robot_model, robot_data, traj_data, 
     quat_e = np.zeros((N, 4))
     omega_e = np.zeros((N, 3))
     omega_e_p = np.zeros((N, 3))
+
+    t = traj_data['t']
+    N_total = len(t)
 
     p_d = traj_data['p_d']
     p_d_p = traj_data['p_d_p']
