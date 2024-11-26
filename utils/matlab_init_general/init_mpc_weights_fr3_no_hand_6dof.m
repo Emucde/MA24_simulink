@@ -99,11 +99,11 @@ param_weight.(MPC).Q_ykp1   = 1e2*diag([1;1;1; 1*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_yN     = 1e5*diag([1;1;1; 1*ones(3,1)]);  % D_N
 
 % stretch arm other dir, Tsmpc=200ms pred
-param_weight.(MPC).R_q_p    = 0*diag(ones(n, 1));
-param_weight.(MPC).R_q_pp   = 0*diag(ones(n, 1));
-param_weight.(MPC).R_delta_x0 = 1*diag([1*ones(n,1); 1*ones(n,1)]);
+param_weight.(MPC).R_q_p    = 1e-5*diag(ones(n, 1));
+param_weight.(MPC).R_q_pp   = 1e-10*diag(ones(n, 1));
+param_weight.(MPC).R_delta_x0 = 1e-5*diag([1*ones(n,1); 0*ones(n,1)]);
 param_weight.(MPC).R_delta_x  = param_weight.(MPC).R_delta_x0;
-param_weight.(MPC).R_delta_u  = 1e-4*diag(ones(n, 1));
+param_weight.(MPC).R_delta_u  = 0*diag(ones(n, 1));
 
 % stretch arm noise Tsmpc=5ms pred
 % param_weight.(MPC).R_q_p    = 1e-2*diag(ones(n, 1));
@@ -158,9 +158,9 @@ MPC='MPC10';
 
 param_weight.(MPC).Q_y    = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_yN   = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
-param_weight.(MPC).R_q_pp   = 1e-5*diag(ones(n,1));  % d_kpn
-param_weight.(MPC).R_x0     = 1e-5*diag([1*ones(n,1); 1*ones(n,1)]);
-param_weight.(MPC).R_x      = 1e-5*diag([1*ones(n,1); 1*ones(n,1)]);
+param_weight.(MPC).R_q_pp   = 1e-10*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).R_x0     = diag([0*ones(n,1); 1e-1*ones(n,1)]);
+param_weight.(MPC).R_x      = param_weight.(MPC).R_x0;
 
 % traj strecht arm out Ts5ms
 % param_weight.(MPC).Q_y    = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
@@ -184,13 +184,13 @@ param_weight.(MPC).u_max    = param_robot.q_pp_limit_upper*1;
 MPC='MPC11';
 param_weight.(MPC).Q_y    = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_yN   = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);  % D_N
-param_weight.(MPC).Q_theta = 1e2;
-param_weight.(MPC).Q_thetaN = 1e5;
+param_weight.(MPC).Q_theta = 1e0;
+param_weight.(MPC).Q_thetaN = 1e2;
 param_weight.(MPC).lambda_theta = 1;
 
-param_weight.(MPC).R_q_pp = 1e-10*diag(ones(n,1));
-param_weight.(MPC).R_x    = 1e-10*diag([1*ones(n,1); 1*ones(n,1)]);
-param_weight.(MPC).R_theta_prev = 1e-10;
+param_weight.(MPC).R_q_pp = 1e-5*diag(ones(n,1));
+param_weight.(MPC).R_x    = 1e0*diag([1*ones(n,1); 1*ones(n,1)]);
+param_weight.(MPC).R_theta_prev = 1e-2;
 
 % param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
 % param_weight.(MPC).x_max    = +inf(size(x_max)); %x_max 
@@ -243,11 +243,11 @@ param_weight.(MPC).Q_yN   = diag([1e5*ones(3,1); 1e5*ones(3,1)]);  % D_N
 % param_weight.(MPC).R_delta_x0  = 0*diag([1*ones(n,1); 0*ones(n,1)]);
 % param_weight.(MPC).R_delta_x   = param_weight.(MPC).R_delta_x0;
 % param_weight.(MPC).R_delta_u = 0*diag(ones(n,1));
-param_weight.(MPC).R_q_p  = 1e-4*diag(ones(n,1));  % d_kpn
-param_weight.(MPC).R_q_pp = 0*diag(ones(n,1));  % d_kpn
-param_weight.(MPC).R_delta_x0  = 1e-4*diag([1*ones(n,1); 1*ones(n,1)]);
-param_weight.(MPC).R_delta_x   = param_weight.(MPC).R_delta_x0;
-param_weight.(MPC).R_delta_u = 0*diag(ones(n,1));
+param_weight.(MPC).R_q_p      = 1e-6*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).R_q_pp     = 1e-10*diag(ones(n,1));  % d_kpn
+param_weight.(MPC).R_delta_x0 = 1e-6*diag([1*ones(n,1); 0*ones(n,1)]);
+param_weight.(MPC).R_delta_x  = param_weight.(MPC).R_delta_x0;
+param_weight.(MPC).R_delta_u   = 0*diag(ones(n,1));
 
 param_jointspace_ct.(MPC).K_P_q = 500*eye(n);
 param_jointspace_ct.(MPC).K_D_q = sqrt(2*param_jointspace_ct.(MPC).K_P_q);

@@ -21,7 +21,7 @@ if autostart_fr3:
 ################################################ REALTIME ###############################################
 
 use_data_from_simulink = False
-manual_traj_select = 1
+manual_traj_select = 3
 use_feedforward = True
 use_clipping = False
 use_gravity = False
@@ -209,10 +209,10 @@ param_robot = {
 
 x_k_ndof = np.zeros(2*n_dof)
 x_k_ndof[:n_dof] = q_0_ref
-x_k_ndof[n_x_indices] = np.array([-4.71541765e-05, -7.70960138e-01, -2.35629353e+00, 8.63920206e-05, \
-                                1.57111388e+00, 7.85625356e-01, 1.18528803e-04, 1.41223310e-03, \
-                                4.93944513e-04, -9.78304970e-04, -2.07886725e-04, -3.13358760e-03])
-x_k_ndof[n_dof::] = 0 # weil er stillsteht, jegliche Geschwindigkeitsmessung ist noise!
+# x_k_ndof[n_x_indices] = np.array([-4.71541765e-05, -7.70960138e-01, -2.35629353e+00, 8.63920206e-05, \
+#                                 1.57111388e+00, 7.85625356e-01, 1.18528803e-04, 1.41223310e-03, \
+#                                 4.93944513e-04, -9.78304970e-04, -2.07886725e-04, -3.13358760e-03])
+# x_k_ndof[n_dof::] = 0 # weil er stillsteht, jegliche Geschwindigkeitsmessung ist noise!
 x_k = x_k_ndof[n_x_indices]
 
 # TODO: in init_crocoddyl die initiale trajektorie erstellen!

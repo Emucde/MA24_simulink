@@ -6,8 +6,10 @@ diff_variant_mode = struct;
 diff_variant_mode.numdiff = 1; % default forward, central, backward deviation
 diff_variant_mode.savgol = 2; % savgol filtering and deviation
 diff_variant_mode.savgol_v2 = 3; % savgol filtering without additional equations and deviation
+diff_variant_mode.savgol_not_equidist = 4; % savgol filtering without additional equations and deviation
+diff_variant_mode.savgol_not_equidist_noise_supr = 5; % savgol filtering without additional equations and deviation
 
-diff_variant = diff_variant_mode.numdiff;
+diff_variant = diff_variant_mode.savgol_not_equidist;
 
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;
@@ -137,19 +139,43 @@ y    = SX( 7, N_MPC+1 ); % TCP pose:      (y_0 ... y_N)
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 if(diff_variant == diff_variant_mode.numdiff)
-    S_v = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'fwdbwdcentralthreetimes', DT);
+    S_v = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'fwdbwdcentraltwotimes', DT);
     S_a = S_v^2;
+    disp('Selected diff method: forward central backward, non-equidistant samples');
 elseif(diff_variant == diff_variant_mode.savgol)
-    DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
+    % DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
+    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol', DT, MPC_traj_indices);
 
     S_v = DD_DT{2};
     S_a = DD_DT{3};
+    disp('Selected diff method: savgol, equidistant samples');
 elseif(diff_variant == diff_variant_mode.savgol_v2)
     DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
 
     S_q = DD_DT{1};
     S_v = DD_DT{2};
     S_a = DD_DT{3};
+    disp('Selected diff method: savgol_v2 (q = SV q)');
+elseif(diff_variant == diff_variant_mode.savgol_not_equidist)
+    param_golay = struct('Nq', 2, 'd', 2);
+    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices, param_golay);
+
+    % S_q = DD_DT{1};
+    S_v = DD_DT{2};
+    S_a = DD_DT{3};
+    disp('Selected diff method: savgol_notequidist, purely polynomial filtering');
+elseif(diff_variant == diff_variant_mode.savgol_not_equidist_noise_supr)
+    param_golay = struct('Nq', 2, 'd', 2);
+    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices, param_golay);
+    S_v = DD_DT{2};
+
+    % Funktioniert auch, ist dann aber keine polynomableitung
+    % Interessanterweise hat diese Variante eine enorm starke Rauschunterdrückung zur Folge.
+    % Dafür ist es nicht so genau wie mit DT_DT{3}. Insbesondere wenn man die Gewichtungsmatrizen
+    % für x-xprev zu klein hat, wird es instabil, wenn der TCP still stehen soll. Geht aber auch
+    % nur für Nq=2.
+    S_a = S_v^2;
+    disp('Selected diff method: savgol_notequidist_noise_supr: S_a = S_v^2');
 else
     error('invalid mode');
 end

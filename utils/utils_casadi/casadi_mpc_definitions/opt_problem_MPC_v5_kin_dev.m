@@ -7,6 +7,7 @@ diff_variant_mode.numdiff = 1; % default forward, central, backward deviation
 diff_variant_mode.savgol = 2; % savgol filtering and deviation
 diff_variant_mode.savgol_v2 = 3; % savgol filtering without additional equations and deviation
 diff_variant_mode.savgol_not_equidist = 4; % savgol filtering without additional equations and deviation
+diff_variant_mode.savgol_not_equidist_noise_supr = 5; % savgol filtering without additional equations and deviation
 
 diff_variant = diff_variant_mode.savgol_not_equidist;
 
@@ -135,30 +136,82 @@ R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 if(diff_variant == diff_variant_mode.numdiff)
     S_v = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'fwdbwdcentraltwotimes', DT);
     S_a = S_v^2;
+    disp('Selected diff method: forward central backward, non-equidistant samples');
 elseif(diff_variant == diff_variant_mode.savgol)
     % DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
     DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol', DT, MPC_traj_indices);
 
     S_v = DD_DT{2};
     S_a = DD_DT{3};
+    disp('Selected diff method: savgol, equidistant samples');
 elseif(diff_variant == diff_variant_mode.savgol_v2)
     DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
 
     S_q = DD_DT{1};
     S_v = DD_DT{2};
     S_a = DD_DT{3};
+    disp('Selected diff method: savgol_v2 (q = SV q)');
 elseif(diff_variant == diff_variant_mode.savgol_not_equidist)
-    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices);
+    param_golay = struct('Nq', 2, 'd', 2);
+    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices, param_golay);
 
+    % S_q = DD_DT{1};
     S_v = DD_DT{2};
     S_a = DD_DT{3};
+    disp('Selected diff method: savgol_notequidist, purely polynomial filtering');
+elseif(diff_variant == diff_variant_mode.savgol_not_equidist_noise_supr)
+    param_golay = struct('Nq', 2, 'd', 2);
+    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices, param_golay);
+    S_v = DD_DT{2};
+
+    % Funktioniert auch, ist dann aber keine polynomableitung
+    % Interessanterweise hat diese Variante eine enorm starke Rauschunterdrückung zur Folge.
+    % Dafür ist es nicht so genau wie mit DT_DT{3}. Insbesondere wenn man die Gewichtungsmatrizen
+    % für x-xprev zu klein hat, wird es instabil, wenn der TCP still stehen soll. Geht aber auch
+    % nur für Nq=2.
+    S_a = S_v^2;
+    disp('Selected diff method: savgol_notequidist_noise_supr: S_a = S_v^2');
 else
     error('invalid mode');
 end
 %      x = [q(t0),   q(t1), ...  q(tN),  dq(t0),  dq(t1), ...  dq(tN)] = [qq;   qq_p ]
 % d/dt x = [dq(t0), dq(t1), ... dq(tN), ddq(t0), ddq(t1), ... ddq(tN)] = [qq_p; qq_pp]
 
+% p_d_p_0 = param_trajectory.p_d_p( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
+% pp = reshape(p_d_0, 3*(N_MPC+1), 1);
+% S_v1 = create_numdiff_matrix(DT_ctl, 3, N_MPC+1, 'fwdbwdcentraltwotimes', DT);
+% pp_p_v1 = S_v1 * pp;
+% p_p_v1 = reshape(pp_p_v1, 3, N_MPC+1);
+% plot(p_p_v1', 'linewidth',0.5); hold on; plot(p_d_p_0', '--', 'linewidth', 2)
+
+% figure(2)
+% DD_DT2  = create_numdiff_matrix(DT_ctl, 3, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices);
+% S_v2 = DD_DT2{2};
+% pp_p_v2 = S_v2 * pp;
+% p_p_v2 = reshape(pp_p_v2, 3, N_MPC+1);
+% plot(p_p_v2', 'linewidth',0.5); hold on; plot(p_d_p_0', '--', 'linewidth', 2)
+
+% N_traj = 100;
+% MPC_traj_indices = [0, 1, (1:1+(N_traj-3))*N_step_MPC]+1;
+% p_d_tst = param_trajectory.p_d( 1:3, MPC_traj_indices);
+% p_d_p_tst = param_trajectory.p_d_p( 1:3, MPC_traj_indices);
+% p_d_pp_tst = param_trajectory.p_d_pp( 1:3, MPC_traj_indices);
+% pp = reshape(p_d_tst, 3*(N_traj), 1);
+% DD_DT2  = create_numdiff_matrix(DT_ctl, 3, N_traj, 'savgol_notequidist', DT, MPC_traj_indices);
+% S_v2 = DD_DT2{2};
+% S_a2 = DD_DT2{3};
+
+% % S_v2 = create_numdiff_matrix(DT_ctl, 3, N_traj, 'fwdbwdcentraltwotimes', DT);
+% % S_a2 = S_v2^2;
+% % pp_p_v2 = S_v2 * pp;
+% % p_p_v2 = reshape(pp_p_v2, 3, N_traj);
+% % plot(p_p_v2', 'linewidth',0.5); hold on; plot(p_d_p_tst', '--', 'linewidth', 2)
+% pp_pp_v2 = S_a2 * pp;
+% p_pp_v2 = reshape(pp_pp_v2, 3, N_traj);
+% plot(p_pp_v2', 'linewidth',0.5); hold on; plot(p_d_pp_tst', '--', 'linewidth', 2)
+
 qq = reshape(q, n_red*(N_MPC+1), 1);
+
 qq_p  = S_v * qq;
 qq_pp = S_a * qq;
 
@@ -218,8 +271,9 @@ else
 end
 
 qq_prev = reshape(q_prev, n_red*(N_MPC+1), 1);
-qq_prev_p  = S_v * qq;
-qq_prev_pp = S_a * qq;
+qq_prev_p  = S_v * qq_prev;
+qq_prev_pp = S_a * qq_prev;
+
 q_prev_p = reshape(qq_prev_p, n_red, N_MPC+1);
 q_prev_pp = reshape(qq_prev_pp, n_red, N_MPC+1);
 

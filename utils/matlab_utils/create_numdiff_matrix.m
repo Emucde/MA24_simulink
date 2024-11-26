@@ -1,4 +1,4 @@
-function D = create_numdiff_matrix(T_a, n, N, variant, T_a_MPC, MPC_traj_indices)
+function D = create_numdiff_matrix(T_a, n, N, variant, T_a_MPC, MPC_traj_indices, param_golay)
 arguments
     T_a (1,1) double
     n (1,1) double
@@ -6,6 +6,7 @@ arguments
     variant char {mustBeMember(variant, {'fwdbwdcentral', 'bwd', 'savgol', 'savgol_notequidist', 'fwdbwdcentraltwotimes', 'fwdbwdcentralthreetimes'})} = 'fwdbwdcentral'
     T_a_MPC (1,1) double = T_a
     MPC_traj_indices = 1:N
+    param_golay struct = struct('Nq', 2, 'd', 2)
 end
     if(T_a == T_a_MPC && (strcmp(variant, 'fwdbwdcentraltwotimes') || strcmp(variant, 'fwdbwdcentralthreetimes')))
         variant = 'fwdbwdcentral';
@@ -37,8 +38,8 @@ end
         S_v = S_v / T_a;
         D = S_v;
     elseif(strcmp(variant, 'savgol'))
-        Nq = 2;
-        d = 2;
+        Nq = param_golay.Nq;
+        d = param_golay.d;
         DD = create_savgol_deviation_matrices(T_a, Nq, d, N);
         % idea: S_v is first created for one scalar state and then for a n
         % dimensional data it is necessary to use this data multiple time
@@ -55,8 +56,9 @@ end
         end
         D = DD_vec;
     elseif(strcmp(variant, 'savgol_notequidist'))
-        Nq = 2;
-        d = 2;
+        % Warum auch immer klappt es für Nq=1 überhaupt nicht???? Dann gibt die MPC nur 0 aus
+        Nq = param_golay.Nq;
+        d = param_golay.d;
         DD = create_savgol_deviation_matrices_not_equidist(T_a, Nq, d, N, MPC_traj_indices);
         % idea: S_v is first created for one scalar state and then for a n
         % dimensional data it is necessary to use this data multiple time

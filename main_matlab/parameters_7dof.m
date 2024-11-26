@@ -93,6 +93,7 @@ create_trajectory_frame_data;
 create_traj_data_bus;
 
 param_ct_pdplus_control_init;
+param_EKF_init;
 
 param_debug;
 

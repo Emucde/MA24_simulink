@@ -7,7 +7,7 @@
 #define MPC13_IW_LEN 420
 #define MPC13_ARG_LEN 23
 #define MPC13_RES_LEN 21
-#define MPC13_W_LEN 7267
+#define MPC13_W_LEN 8155
 static const uint32_t MPC13_ARG[] = {0,90,228};
 static const uint32_t MPC13_RES[] = {881,911,1049,1050,1051,1052,1053,1054,1055,1056,1057};
 #define MPC13_W_END_ADDRESS 1058
