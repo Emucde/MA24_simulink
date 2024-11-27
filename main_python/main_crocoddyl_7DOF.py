@@ -201,7 +201,8 @@ param_robot = {
     'q_0_ref': q_0_ref,
     'x_min': x_min,
     'x_max': x_max,
-    'x_mean': (x_max + x_min)/2
+    'x_mean': (x_max + x_min)/2,
+    'use_gravity': use_gravity,
 }
 #########################################################################################################
 ############################################# INIT MPC ##################################################
@@ -217,17 +218,12 @@ x_k = x_k_ndof[n_x_indices]
 
 # TODO: in init_crocoddyl die initiale trajektorie erstellen!
 
-ddp, xs, us, xs_init_guess, us_init_guess, y_d_data, TCP_frame_id, \
+ddp, xs, us, xs_init_guess, us_init_guess, TCP_frame_id, \
 N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
 simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, \
-transient_traj, param_traj =   \
+transient_traj, param_traj, title_text =   \
     init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data,     \
                     traj_init_config, param_robot, param_traj_poly, TCP_frame_id)
-
-p_d = y_d_data['p_d']
-p_d_p = y_d_data['p_d_p']
-p_d_pp = y_d_data['p_d_pp']
-R_d = y_d_data['R_d']
 
 p_d = transient_traj['p_d']
 p_d_p = transient_traj['p_d_p']
@@ -276,6 +272,7 @@ folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 outputname = 'test.html'
 output_file_path = os.path.join(folderpath, outputname)
 
+new_data_flag = False
 run_loop = True
 try:
     while run_loop and err_state == False:
@@ -286,6 +283,7 @@ try:
                 data_from_python_valid[:] = 0
                 x_k_ndof = data_from_simulink.copy()
                 x_k = x_k_ndof[n_x_indices]
+                new_data_flag = True
 
             if data_from_python_valid[0] == 1:
                 data_from_python_valid[:] = 0
@@ -297,7 +295,7 @@ try:
             
             if run_flag == False:
                 data_from_python[:] = np.zeros(n_dof)
-                if start == 1 and reset == 0 and stop == 0:
+                if start == 1 and reset == 0 and stop == 0 and new_data_flag:
                     new_traj_select = data_from_simulink_traj_switch[0]
                     data_from_simulink_start[:] = 0
 
@@ -318,15 +316,16 @@ try:
 
                     if i == 0:
                         # update mpc settings and problem
-                        ddp, xs, us, xs_init_guess, us_init_guess, y_d_data, TCP_frame_id, \
+                        ddp, xs, us, xs_init_guess, us_init_guess, TCP_frame_id, \
                         N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
                         simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, \
-                        transient_traj, param_traj =   \
+                        transient_traj, param_traj, title_text =   \
                             init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data,     \
                                             traj_init_config, param_robot, param_traj_poly, TCP_frame_id)
 
                     run_flag = True
                     print("MPC started by Simulink")
+
             if run_flag == True:
                 if stop == 1:
                     print("MPC stopped by Simulink")
@@ -341,91 +340,13 @@ try:
                     run_flag = False
                     start_solving = False
                     subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
-                    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page)
+                    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
                     i = 0
-                else:
+                elif new_data_flag:
                     start_solving = True
+                    new_data_flag = False
         if start_solving:
             measureSimu.tic()
-            
-            if use_gravity:
-                g_k = pin.computeGeneralizedGravity(robot_model, robot_data, x_k[:nq])
-            else:
-                g_k = np.zeros(nq)
-
-            # if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
-            #     xs_init_guess_prev = np.array(xs_init_guess)
-            #     xs_init_guess_model2 = xs_init_guess_prev[:, 6::]
-            #     xs_init_guess_model2[:,nq:nx] = 0
-
-            #     # v2: update reference values
-            #     for j, runningModel in enumerate(ddp.problem.runningModels):
-            #         ddp.problem.runningModels[j].model1.differential.y_d = p_d[:, i+MPC_traj_indices[j]]
-            #         ddp.problem.runningModels[j].model1.differential.y_d_p = p_d_p[:, i+MPC_traj_indices[j]]
-            #         ddp.problem.runningModels[j].model1.differential.y_d_pp = p_d_pp[:, i+MPC_traj_indices[j]]
-
-            #         ddp.problem.runningModels[j].model2.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
-            #         if(nq >= 6):
-            #             ddp.problem.runningModels[j].model2.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
-            #         ddp.problem.runningModels[j].model2.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_model2[j]
-            #         ddp.problem.runningModels[j].model2.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_model2[j]
-            #         ddp.problem.runningModels[j].model2.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-            #         ddp.problem.runningModels[j].model2.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-
-            #     ddp.problem.terminalModel.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
-            #     if(nq >= 6):
-            #         ddp.problem.terminalModel.model2.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
-            #     ddp.problem.terminalModel.model2.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_model2[j+1]
-            #     ddp.problem.terminalModel.model2.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_model2[j+1]
-            #     ddp.problem.terminalModel.model2.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-            #     ddp.problem.terminalModel.model2.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-                
-            #     x0_new = x_k
-            #     x0_new[:6] = xs_init_guess_prev[1, :6]
-            #     ddp.problem.x0 = x0_new
-            # else:
-            
-            xs_init_guess_prev = np.array(xs_init_guess)
-            if i==0:
-                us_init_guess_prev = g_k * np.ones((mpc_settings['N_MPC']-1, nu))
-            else:
-                us_init_guess_prev = np.array(us_init_guess)
-
-            # v2: update reference values
-            for j, runningModel in enumerate(ddp.problem.runningModels):
-                ddp.problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
-                if(nq >= 6):
-                    ddp.problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
-                if(param_mpc_weight['q_pp_common_weight'] > 0):
-                    ddp.problem.runningModels[j].differential.costs.costs["q_ppReg"].cost.residual.reference = xs_init_guess_prev[j] # because qpp is calculated approximated
-                if(param_mpc_weight['q_xprev_common_weight'] > 0):
-                    ddp.problem.runningModels[j].differential.costs.costs["xprevReg"].cost.residual.reference = xs_init_guess_prev[j]
-                # ddp.problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-                if(param_mpc_weight['q_uprev_cost'] > 0):
-                    ddp.problem.runningModels[j].differential.costs.costs["ctrlPrev"].cost.residual.reference = us_init_guess_prev[j] #first us[0] is torque for gravity compensation
-                # ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.activation.bounds.lb = us_init_guess_prev[j] - 0.1
-                # ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.activation.bounds.ub = us_init_guess_prev[j] + 0.1
-
-            ddp.problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
-            if(nq >= 6):
-                ddp.problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
-            if(param_mpc_weight['q_pp_common_weight'] > 0):
-                ddp.problem.terminalModel.differential.costs.costs["q_ppReg"].cost.residual.reference = xs_init_guess_prev[j+1] # because qpp is calculated approximated
-            if(param_mpc_weight['q_xprev_common_weight'] > 0):
-                ddp.problem.terminalModel.differential.costs.costs["xprevReg"].cost.residual.reference = xs_init_guess_prev[j+1]
-            # ddp.problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-            if(param_mpc_weight['q_uprev_cost'] > 0):
-                ddp.problem.terminalModel.differential.costs.costs["ctrlPrev"].cost.residual.reference = us_init_guess_prev[j] #first us[0] is torque for gravity compensation
-            # ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.activation.bounds.lb = us_init_guess_prev[j] - 0.1
-            # ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.activation.bounds.ub = us_init_guess_prev[j] + 0.1
-
-            ddp.problem.x0 = x_k
-
-            
-            # v2 end
-
-            # ddp = solver(problem)
-            # ddp.setCallbacks([cro.CallbackVerbose()])
 
             measureSolver.tic()
             hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
@@ -532,6 +453,88 @@ try:
             
             if i == N_traj-1 and not use_data_from_simulink:
                 run_loop = False
+
+            ##################################################################################
+            ################ Set new data for the next optimization problem ##################
+            ##################################################################################
+            if use_gravity:
+                g_k = pin.computeGeneralizedGravity(robot_model, robot_data, x_k[:nq])
+            else:
+                g_k = np.zeros(nq)
+
+            # if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
+            #     xs_init_guess_prev = np.array(xs_init_guess)
+            #     xs_init_guess_model2 = xs_init_guess_prev[:, 6::]
+            #     xs_init_guess_model2[:,nq:nx] = 0
+
+            #     # v2: update reference values
+            #     for j, runningModel in enumerate(ddp.problem.runningModels):
+            #         ddp.problem.runningModels[j].model1.differential.y_d = p_d[:, i+MPC_traj_indices[j]]
+            #         ddp.problem.runningModels[j].model1.differential.y_d_p = p_d_p[:, i+MPC_traj_indices[j]]
+            #         ddp.problem.runningModels[j].model1.differential.y_d_pp = p_d_pp[:, i+MPC_traj_indices[j]]
+
+            #         ddp.problem.runningModels[j].model2.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
+            #         if(nq >= 6):
+            #             ddp.problem.runningModels[j].model2.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
+            #         ddp.problem.runningModels[j].model2.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_model2[j]
+            #         ddp.problem.runningModels[j].model2.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_model2[j]
+            #         ddp.problem.runningModels[j].model2.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+            #         ddp.problem.runningModels[j].model2.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+
+            #     ddp.problem.terminalModel.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
+            #     if(nq >= 6):
+            #         ddp.problem.terminalModel.model2.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
+            #     ddp.problem.terminalModel.model2.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_model2[j+1]
+            #     ddp.problem.terminalModel.model2.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_model2[j+1]
+            #     ddp.problem.terminalModel.model2.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+            #     ddp.problem.terminalModel.model2.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                
+            #     x0_new = x_k
+            #     x0_new[:6] = xs_init_guess_prev[1, :6]
+            #     ddp.problem.x0 = x0_new
+            # else:
+            
+            xs_init_guess_prev = xs_init_guess
+            if i==0:
+                us_init_guess_prev = g_k * np.ones((mpc_settings['N_MPC']-1, nu))
+            else:
+                us_init_guess_prev = us_init_guess
+
+            # v2: update reference values
+            for j, runningModel in enumerate(ddp.problem.runningModels):
+                if j > 0:
+                    ddp.problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
+                    if(nq >= 6):
+                        ddp.problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
+                
+                if(param_mpc_weight['q_pp_common_weight'] > 0):
+                    ddp.problem.runningModels[j].differential.costs.costs["q_ppReg"].cost.residual.reference = xs_init_guess_prev[j] # because qpp is calculated approximated
+                if(param_mpc_weight['q_xprev_common_weight'] > 0):
+                    ddp.problem.runningModels[j].differential.costs.costs["xprevReg"].cost.residual.reference = xs_init_guess_prev[j]
+                # ddp.problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+                if(param_mpc_weight['q_uprev_cost'] > 0):
+                    ddp.problem.runningModels[j].differential.costs.costs["ctrlPrev"].cost.residual.reference = us_init_guess_prev[j] #first us[0] is torque for gravity compensation
+                # ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.activation.bounds.lb = us_init_guess_prev[j] - 0.1
+                # ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.activation.bounds.ub = us_init_guess_prev[j] + 0.1
+
+            ddp.problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
+            if(nq >= 6):
+                ddp.problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
+            if(param_mpc_weight['q_pp_common_weight'] > 0):
+                ddp.problem.terminalModel.differential.costs.costs["q_ppReg"].cost.residual.reference = xs_init_guess_prev[j+1] # because qpp is calculated approximated
+            if(param_mpc_weight['q_xprev_common_weight'] > 0):
+                ddp.problem.terminalModel.differential.costs.costs["xprevReg"].cost.residual.reference = xs_init_guess_prev[j+1]
+            # ddp.problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
+            if(param_mpc_weight['q_uprev_cost'] > 0):
+                ddp.problem.terminalModel.differential.costs.costs["ctrlPrev"].cost.residual.reference = us_init_guess_prev[j] #first us[0] is torque for gravity compensation
+            # ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.activation.bounds.lb = us_init_guess_prev[j] - 0.1
+            # ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.activation.bounds.ub = us_init_guess_prev[j] + 0.1
+
+            ddp.problem.x0 = x_k
+            # v2 end
+
+            # ddp = solver(problem)
+            # ddp.setCallbacks([cro.CallbackVerbose()])
             
             elapsed_time = measureSimu.toc()
             freq_per_Ta_step[i] = 1/elapsed_time
@@ -606,7 +609,7 @@ output_file_path = os.path.join(folderpath, outputname)
 
 plot_sol=True
 if plot_sol == True or use_data_from_simulink == False:# and err_state == False:
-    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page)
+    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
 
 # print('Max error:       y - y_d = {:.2e}'.format(np.max(np.abs(e))), 'm')
 # print('Max error:   y_p - y_d_p = {:.2e}'.format(np.max(np.abs(e_p))), 'm/s')

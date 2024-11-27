@@ -274,18 +274,29 @@ class TicToc:
         self.start_time = None
         self.elapsed_total_time = 0
 
-def format_time(elapsed_time):
+def format_time(elapsed_time, precision=2):
     """Formats the elapsed time based on its magnitude."""
-    if elapsed_time < 1e-3:
-        return f"{elapsed_time * 1e6:.2f} μs"  # Microseconds
+    if elapsed_time == 0:
+        return "0 s"
+    elif elapsed_time < 1e-6:
+        return f"{elapsed_time * 1e9:.{precision}f} ns"  # Nanoseconds
+    elif elapsed_time < 1e-3:
+        return f"{elapsed_time * 1e6:.{precision}f} µs"  # Microseconds
     elif elapsed_time < 1:
-        return f"{elapsed_time * 1e3:.2f} ms"  # Milliseconds
+        return f"{elapsed_time * 1e3:.{precision}f} ms"  # Milliseconds
     elif elapsed_time < 60:
-        return f"{elapsed_time:.2f} s"  # Seconds
+        return f"{elapsed_time:.{precision}f} s"         # Seconds
     else:
         minutes = int(elapsed_time // 60)
         seconds = elapsed_time % 60
-        return f"{minutes}m {seconds:.2f}s"  # Minutes and seconds
+        return f"{minutes} min {seconds:.{precision}f} s"
+
+def format_long_list(time_list, max_entries=8):
+    if len(time_list) <= max_entries:
+        return str(time_list).replace("'", "")
+    else:
+        formatted_start = str(time_list[:max_entries]).replace("'", "")[:-1]  # Remove last bracket
+        return f"{formatted_start}, ..., {time_list[-2]}, {time_list[-1]}]"
 
 def block_diag_onlydiagmatr(a, b):
     return np.kron(a, b)
@@ -879,9 +890,8 @@ def get_int_type(int_type):
 def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=False):
     int_type = mpc_settings['int_method']
     N_MPC = mpc_settings['N_MPC']
-    
-    Ts_MPC = mpc_settings['Ts_MPC']/N_MPC
-
+    Ts_MPC = mpc_settings['Ts_MPC']
+    use_dt_scale = mpc_settings['use_dt_scale']
     int_time = param_traj['int_time']
 
     IntegratedActionModel = get_int_type(int_type)
@@ -926,7 +936,13 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     for i in range(0, N_MPC):
         dt = int_time[i]
 
-        scale = 1
+        if use_dt_scale:
+            if i == 0:
+                scale = Ts_MPC/int_time[0]
+            else:
+                scale = Ts_MPC/int_time[i-1]
+        else:
+            scale = 1
 
         p_d = p_d_ref[i]
         if state.nq >= 6:
@@ -977,19 +993,21 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
             q_yr_terminateCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(Q_yr_terminal), crocoddyl.ResidualModelFrameRotation(state, TCP_frame_id, R_d))
 
         if i < N_MPC-1:
-            runningCostModel.addCost("TCP_pose", q_ytCost, q_yt_common_weight)
-            if state.nq >= 6:
-                runningCostModel.addCost("TCP_rot", q_yrCost, q_yr_common_weight)
+            if i > 0:
+                runningCostModel.addCost("TCP_pose", q_ytCost,         weight = scale * q_yt_common_weight)
+                if state.nq >= 6:
+                    runningCostModel.addCost("TCP_rot", q_yrCost,      weight = scale * q_yr_common_weight)
+
             if q_p_common_weight not in [0, None]:
-                runningCostModel.addCost("q_pReg", q_pCost, weight=q_p_common_weight)
+                runningCostModel.addCost("q_pReg", q_pCost,        weight = scale * q_p_common_weight) # Q q_p
             if q_pp_common_weight not in [0, None]:
-                runningCostModel.addCost("q_ppReg", q_ppCost, weight=q_pp_common_weight*dt) # approx qpp = (q_p - q_p_prev)/dt
+                runningCostModel.addCost("q_ppReg", q_ppCost,      weight = scale * q_pp_common_weight/dt) # approx Q qpp = Q (q_p - q_p_prev)/dt
             if q_xprev_common_weight not in [0, None]:
-                runningCostModel.addCost("xprevReg", xprevRegCost, weight=q_xprev_common_weight)
+                runningCostModel.addCost("xprevReg", xprevRegCost, weight = scale * q_xprev_common_weight) # Q xprev = Q (x-x_prev)
             if q_ureg_cost not in [0, None]:
-                runningCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_cost)
+                runningCostModel.addCost("ctrlReg", uRegCost,      weight = scale * q_ureg_cost) # Q u
             if q_uprev_cost not in [0, None]:
-                runningCostModel.addCost("ctrlPrev", uprevCost, scale * q_uprev_cost)
+                runningCostModel.addCost("ctrlPrev", uprevCost,    weight = scale * q_uprev_cost) # Q (u-u_prev)
 
             running_cost_models.append(IntegratedActionModel(
                 crocoddyl.DifferentialActionModelFreeFwdDynamics(
@@ -998,19 +1016,19 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                 dt
             ))
         else: # i == N: # Endkostenterm
-            terminalDifferentialCostModel.addCost("TCP_pose", q_yt_terminateCost, scale * q_yt_terminal_common_weight)
+            terminalDifferentialCostModel.addCost("TCP_pose", q_yt_terminateCost,    weight = scale * q_yt_terminal_common_weight)
             if state.nq >= 6:
-                terminalDifferentialCostModel.addCost("TCP_rot", q_yr_terminateCost, scale * q_yr_terminal_common_weight)
+                terminalDifferentialCostModel.addCost("TCP_rot", q_yr_terminateCost, weight = scale * q_yr_terminal_common_weight)
             if q_p_common_weight not in [0, None]:
-                terminalDifferentialCostModel.addCost("q_pReg", q_pCost, weight=q_p_common_weight)
+                terminalDifferentialCostModel.addCost("q_pReg", q_pCost,             weight = scale * q_p_common_weight)
             if q_pp_common_weight not in [0, None]:
-                terminalDifferentialCostModel.addCost("q_ppReg", q_ppCost, weight=q_pp_common_weight*dt)
+                terminalDifferentialCostModel.addCost("q_ppReg", q_ppCost,           weight = scale * q_pp_common_weight/dt)
             if q_xprev_common_weight not in [0, None]:
-                terminalDifferentialCostModel.addCost("xprevReg", xprevRegCost, weight=q_xprev_common_weight)
+                terminalDifferentialCostModel.addCost("xprevReg", xprevRegCost,      weight = scale * q_xprev_common_weight)
             if q_ureg_cost not in [0, None]:
-                terminalDifferentialCostModel.addCost("ctrlReg", uRegCost, scale * q_ureg_cost)
+                terminalDifferentialCostModel.addCost("ctrlReg", uRegCost,           weight = scale * q_ureg_cost)
             if q_uprev_cost not in [0, None]:
-                terminalDifferentialCostModel.addCost("ctrlPrev", uprevCost, scale * q_uprev_cost)
+                terminalDifferentialCostModel.addCost("ctrlPrev", uprevCost,         weight = scale * q_uprev_cost)
 
     dt = int_time[-1]
     # integrate terminal cost model (necessary?)
@@ -1036,9 +1054,7 @@ def ocp_problem_v3(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
 
     int_type = mpc_settings['int_method']
     N_MPC = mpc_settings['N_MPC']
-    
-    Ts_MPC = mpc_settings['Ts_MPC']/N_MPC
-
+    Ts_MPC = mpc_settings['Ts_MPC']
     int_time = param_traj['int_time']
 
     IntegratedActionModel = get_int_type(int_type)
@@ -1417,19 +1433,52 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
     opt_type = mpc_settings['version']
     N_solver_steps = mpc_settings['solver_steps']
     N_MPC = mpc_settings['N_MPC']
-    Ts_MPC = mpc_settings['Ts_MPC']
+
     Ts = mpc_settings['Ts']  # Time step of control
-    N_step = int(Ts_MPC/Ts)
-    T_horizon = (N_MPC-1) * Ts_MPC
+    N_Ts_samples = mpc_settings['N_extra_Ts_samples']  # Time step of control
+    use_T_horizon = mpc_settings['use_T_horizon']
 
-    print(f'T_horizon: {T_horizon} s, Ts: {Ts} s, N_MPC: {N_MPC}\n')
-
-    if N_step <= 2:
-        MPC_traj_indices = np.arange(0, N_MPC)
-        MPC_int_time = Ts*np.ones(N_MPC)
+    if use_T_horizon:
+        T_horizon = mpc_settings['T_horizon']
     else:
-        MPC_traj_indices = np.hstack([[0, 1], N_step* np.arange(1, (N_MPC-1))])
-        MPC_int_time = np.hstack([Ts, Ts_MPC-Ts, np.ones(N_MPC-2)*Ts_MPC])
+        Ts_MPC = mpc_settings['Ts_MPC']
+        T_horizon = Ts_MPC*(N_MPC-N_Ts_samples)
+
+    # find smalles multiple of T_horizon and N_MPC:
+    if np.mod(T_horizon, Ts) != 0:
+        print('T_horizon is not a multiple of Ts, T_horizon rounded to nearest Ts multiple!')
+    max_time_index = np.round(T_horizon/Ts).astype(int)
+
+    N_step = (max_time_index - N_Ts_samples)//(N_MPC-N_Ts_samples)
+
+    if use_T_horizon:
+        MPC_traj_indices = np.round(np.linspace(N_Ts_samples + N_step, max_time_index, N_MPC-N_Ts_samples)).astype(int)
+    else:
+        N_step = int(Ts_MPC/Ts)
+        if N_Ts_samples >= N_step:
+            print('N_Ts_samples > N_step, N_Ts_samples set to 0!')
+            N_Ts_samples = 0
+        MPC_traj_indices = N_step*np.arange(1, N_MPC+1-N_Ts_samples)
+
+    if len(np.unique(MPC_traj_indices)) != len(MPC_traj_indices):
+        print('MPC_traj_indices are not unique, N_MPC too large for T_horizon, N_MPC set to 1 and T_horizon ignored!')
+
+    if use_T_horizon:
+        Ts_MPC = N_step*Ts
+    
+    if N_step <= 1:
+        MPC_traj_indices = np.arange(0, N_MPC+1)
+    else:       
+        extra_indices = np.arange(0, N_Ts_samples+1)
+        MPC_traj_indices = np.hstack([extra_indices, MPC_traj_indices])
+
+    MPC_int_time = (np.hstack((MPC_traj_indices[1::] - MPC_traj_indices[0:-1], MPC_traj_indices[-1] - MPC_traj_indices[-2])))*Ts
+
+    T_horizon = MPC_traj_indices[-1]*Ts
+
+    str_times = format_long_list([format_time(i, 0) for i in MPC_traj_indices*Ts])
+    title_text = f'T_horizon: {format_time(T_horizon, 0)}, N_MPC = {N_MPC}, timesteps = {str_times}\n'
+    print(title_text)
 
     param_traj = {
         'traj_indices': MPC_traj_indices,
@@ -1462,7 +1511,12 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
 
     param_mpc_weight['xref'] = np.hstack((param_robot['x_mean'][:nq], np.zeros(nq)))
     param_mpc_weight['xprev_ref'] = x_k_red[:nx]
-    param_mpc_weight['uref'] = np.zeros(nq)
+
+    if param_robot['use_gravity']:
+        g_k = pinocchio.computeGeneralizedGravity(robot_model, robot_data, x_k[:nq])
+    else:
+        g_k = np.zeros(nq)
+    param_mpc_weight['uref'] = g_k
     
     # Create a multibody state from the pinocchio model.
     state = crocoddyl.StateMultibody(robot_model)
@@ -1482,7 +1536,7 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
     xs_init_guess = ddp.xs
     us_init_guess = ddp.us
 
-    return ddp, xs, us, xs_init_guess, us_init_guess, y_d_data, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, transient_traj, param_traj
+    return ddp, xs, us, xs_init_guess, us_init_guess, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, transient_traj, param_traj, title_text
 
 ###########################################################################
 ################################# PLOTTING ################################
@@ -1895,7 +1949,7 @@ async def send_message(message, port=8765):
         await websocket.send(message)
         print(f"Nachricht gesendet: {message}")
 
-def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', plot_fig=True, matlab_import=True, reload_page=False):
+def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', plot_fig=True, matlab_import=True, reload_page=False, title_text=''):
     subplot_number = len(subplot_data)
     sig_labels = np.empty(24, dtype=object)
 
@@ -1956,6 +2010,9 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
         hovermode = 'closest',
         margin=dict(l=10, r=10, t=50, b=70),
         height=1080,
+        title=title_text,
+        title_x=0,
+        title_y=1,
         # legend_indentation = 0,
         # margin_pad=0,
         # Gridline customization for all subplots
