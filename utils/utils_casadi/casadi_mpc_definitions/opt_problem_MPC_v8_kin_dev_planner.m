@@ -243,27 +243,43 @@ end
 
 g = g_x;
 
-J_q_p = Q_norm_square(q_p, pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
-J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+% J_q_p = Q_norm_square(q_p, pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+% J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+
+% qq_prev = reshape(q_prev, n_red*(N_MPC+1), 1);
+% qq_prev_p = S_v * qq_prev;
+% qq_prev_pp = S_a * qq_prev;
+% q_prev_p = reshape(qq_prev_p, n_red, N_MPC+1);
+% q_prev_pp = reshape(qq_prev_pp, n_red, N_MPC+1);
+
+% dq = q - q_prev;
+% dq_p = q_p - q_prev_p;
+% dq_pp = q_pp - q_prev_pp;
+% delta_x = [dq; dq_p];
+% delta_u = dq_pp;
+
+% J_delta_x0 = Q_norm_square(delta_x(:, 1 + (0)),       pp.R_delta_x0(n_x_indices, n_x_indices));
+% J_delta_x  = Q_norm_square(delta_x(:, 1 + (1:N_MPC)), pp.R_delta_x(n_x_indices, n_x_indices));
+
+% J_delta_u = Q_norm_square(delta_u, pp.R_delta_u(n_indices, n_indices));
+
+% cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_p, J_q_pp, J_delta_x, J_delta_x0, J_delta_u}';
 
 qq_prev = reshape(q_prev, n_red*(N_MPC+1), 1);
-qq_prev_p = S_v * qq_prev;
+qq_prev_p  = S_v * qq_prev;
 qq_prev_pp = S_a * qq_prev;
+
 q_prev_p = reshape(qq_prev_p, n_red, N_MPC+1);
 q_prev_pp = reshape(qq_prev_pp, n_red, N_MPC+1);
 
-dq = q - q_prev;
-dq_p = q_p - q_prev_p;
-dq_pp = q_pp - q_prev_pp;
-delta_x = [dq; dq_p];
-delta_u = dq_pp;
+J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 
-J_delta_x0 = Q_norm_square(delta_x(:, 1 + (0)),       pp.R_delta_x0(n_x_indices, n_x_indices));
-J_delta_x  = Q_norm_square(delta_x(:, 1 + (1:N_MPC)), pp.R_delta_x(n_x_indices, n_x_indices));
+x_err = [q - q_prev; q_p];
 
-J_delta_u = Q_norm_square(delta_u, pp.R_delta_u(n_indices, n_indices));
+J_x0 = Q_norm_square(x_err(:, 1 + (0)),       pp.R_x0(n_x_indices, n_x_indices));
+J_x  = Q_norm_square(x_err(:, 1 + (1:N_MPC)), pp.R_x(n_x_indices, n_x_indices));
 
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_p, J_q_pp, J_delta_x, J_delta_x0, J_delta_u}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_x, J_x0}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

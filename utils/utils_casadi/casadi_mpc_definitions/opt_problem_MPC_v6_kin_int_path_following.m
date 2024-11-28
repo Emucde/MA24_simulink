@@ -73,50 +73,65 @@ theta_i = param_traj_time/param_traj_time(end);
 
 % if_else_and = @(cond1, cond2, true_val, false_val) if_else(cond1, if_else(cond2, true_val, false_val), false_val);
 % [TODO]
-if(strcmp(robot_name, 'ur5e_6dof'))
-    sigma_t = if_else(theta < theta_i(1), pose(:,1), ...
-              if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2), theta_i(2)), ...
-              if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), ...
-              if_else(theta < theta_i(4), trajectory_poly(theta-theta_i(3), pose(:,3), pose(:,4), theta_i(4)-theta_i(3)), pose(:,end)))));
-else % only 3 points
-    sigma_t = if_else(theta < theta_i(1), pose(:,1), ...
-              if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2), theta_i(2)), ...
-              if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), pose(:,end))));
 
-    alpha_i = trajectory_poly(theta,            alpha(1), alpha(2), theta_i(2));
-    skew_ew = skew(rot_ax(:, 2));
-    RR1 = (eye(3) + sin(alpha_i-alpha(1))*skew_ew + (1-cos(alpha_i-alpha(1)))*skew_ew^2) * rotation(:, :, 1);
+% if(strcmp(robot_name, 'ur5e_6dof'))
+%     sigma_t = if_else(theta < theta_i(1), pose(:,1), ...
+%               if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2), theta_i(2)), ...
+%               if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), ...
+%               if_else(theta < theta_i(4), trajectory_poly(theta-theta_i(3), pose(:,3), pose(:,4), theta_i(4)-theta_i(3)), pose(:,end)))));
+% else % only 3 points
+%     sigma_t = if_else(theta < theta_i(1), pose(:,1), ...
+%               if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2),            theta_i(2)), ...
+%               if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), pose(:,end))));
 
-    alpha_i = trajectory_poly(theta-theta_i(2), alpha(2), alpha(3), theta_i(3)-theta_i(2));
-    skew_ew = skew(rot_ax(:, 3));
-    RR2 = (eye(3) + sin(alpha_i-alpha(2))*skew_ew + (1-cos(alpha_i-alpha(2)))*skew_ew^2) * rotation(:, :, 2);
+    % alpha_i = trajectory_poly(theta,            alpha(1), alpha(2), theta_i(2));
+    % skew_ew = skew(rot_ax(:, 2));
+    % RR1 = (eye(3) + sin(alpha_i-alpha(1))*skew_ew + (1-cos(alpha_i-alpha(1)))*skew_ew^2) * rotation(:, :, 1);
 
-    sigma_r = if_else(theta < theta_i(1), rotation(:, :, 1), ...
-              if_else(theta < theta_i(2), RR1, ...
-              if_else(theta < theta_i(3), RR2, rotation(:, :,end))));
-end
+    % alpha_i = trajectory_poly(theta-theta_i(2), alpha(2), alpha(3), theta_i(3)-theta_i(2));
+    % skew_ew = skew(rot_ax(:, 3));
+    % RR2 = (eye(3) + sin(alpha_i-alpha(2))*skew_ew + (1-cos(alpha_i-alpha(2)))*skew_ew^2) * rotation(:, :, 2);
 
-%{
-for i = num_points-1:-1:1
-    if i == 1
-        condition = theta < theta_i(i);
-    else
-        condition = (theta >= theta_i(i-1)) & (theta < theta_i(i));
-    end
-    
-    if i == 1
-        true_value = rotation(:, :, i);
-    else
-        alpha_i = trajectory_poly(theta - theta_i(i-1), alpha(i-1), alpha(i), theta_i(i) - theta_i(i-1));
+    % sigma_r = if_else(theta < theta_i(1), rotation(:, :, 1), ...
+    %           if_else(theta < theta_i(2), RR1, ...
+    %           if_else(theta < theta_i(3), RR2, rotation(:, :,end))));
+% end
+
+N = size(pose,2);
+single_path_t = cell(1,N);
+single_path_r = cell(1,N);
+for i = 1:N
+    if(i==1)
+        single_path_t{i} = pose(:,1);
+
+        single_path_r{i} = rotation(:, :, 1);
+    elseif(i==2)
+        single_path_t{i} = trajectory_poly(theta, pose(:,i-1), pose(:,i), theta_i(i));
+
+        alpha_i = trajectory_poly(theta,            alpha(i-1), alpha(i), theta_i(i));
         skew_ew = skew(rot_ax(:, i));
-        RR = (eye(3) + sin(alpha_i - alpha(i-1)) * skew_ew + (1 - cos(alpha_i - alpha(i-1))) * skew_ew^2) * rotation(:, :, i-1);
-        true_value = RR;
-    end
-    
-    sigma_r = if_else(condition, true_value, sigma_r);
-end
-%}
+        RR1 = (eye(3) + sin(alpha_i-alpha(i-1))*skew_ew + (1-cos(alpha_i-alpha(i-1)))*skew_ew^2) * rotation(:, :, i-1);
+        single_path_r{i} = RR1;
+    elseif(i < N)
+        single_path_t{i} = trajectory_poly(theta-theta_i(i-1), pose(:,i-1), pose(:,i), theta_i(i)-theta_i(i-1));
 
+        alpha_i = trajectory_poly(theta-theta_i(i-1), alpha(i-1), alpha(i), theta_i(i)-theta_i(i-1));
+        skew_ew = skew(rot_ax(:, i));
+        RR2 = (eye(3) + sin(alpha_i-alpha(i-1))*skew_ew + (1-cos(alpha_i-alpha(i-1)))*skew_ew^2) * rotation(:, :, i-1);
+        single_path_r{i} = RR2;
+    elseif(i==N)
+        single_path_t{i} = pose(:,N);
+
+        single_path_r{i} = rotation(:, :, N);
+    end
+end
+
+sigma_t = single_path_t{end};
+sigma_r = single_path_r{end};
+for i = N:-1:2
+    sigma_t = if_else(theta < theta_i(i-1), single_path_t{i-1}, sigma_t);
+    sigma_r = if_else(theta < theta_i(i-1), single_path_r{i-1}, sigma_r);
+end
 %% Calculate Initial Guess
 if(N_step_MPC <= 2)
     MPC_traj_indices = 1:(N_MPC+1);
@@ -357,9 +372,9 @@ for i=1:N_MPC
         J_x = J_x + Q_norm_square(x_err(:, 1 + (i)), pp.R_x(n_x_indices, n_x_indices));
     % end
 end
-J_theta = Q_norm_square(theta_err, pp.R_theta_prev);
+J_theta_prev = Q_norm_square(theta_err, pp.R_theta_prev);
 
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_theta, J_thetaN, J_x}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_theta, J_thetaN, J_x, J_theta_prev}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

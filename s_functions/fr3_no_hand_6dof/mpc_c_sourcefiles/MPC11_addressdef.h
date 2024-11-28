@@ -6,11 +6,11 @@
 
 #define MPC11_IW_LEN 900
 #define MPC11_ARG_LEN 25
-#define MPC11_RES_LEN 20
-#define MPC11_W_LEN 12612
+#define MPC11_RES_LEN 21
+#define MPC11_W_LEN 12614
 static const uint32_t MPC11_ARG[] = {0,92,380};
-static const uint32_t MPC11_RES[] = {743,749,1037,1038,1039,1040,1041,1042,1043,1044};
-#define MPC11_W_END_ADDRESS 1045
+static const uint32_t MPC11_RES[] = {743,749,1037,1038,1039,1040,1041,1042,1043,1044,1045};
+#define MPC11_W_END_ADDRESS 1046
 
 // INPUT DIMENSIONS:
 #define MPC11_X_K_LEN 12        /*x_k: [12 1] array values */
@@ -90,6 +90,7 @@ static const uint32_t MPC11_RES[] = {743,749,1037,1038,1039,1040,1041,1042,1043,
 #define MPC11_J_THETA_LEN 1        /*J_theta: [1 1] array values */
 #define MPC11_J_THETAN_LEN 1        /*J_thetaN: [1 1] array values */
 #define MPC11_J_X_LEN 1        /*J_x: [1 1] array values */
+#define MPC11_J_THETA_PREV_LEN 1        /*J_theta_prev: [1 1] array values */
 
 // OUTPUT ADDRESSES:
 #define MPC11_U_OPT_ADDR 743        /*u_opt: [6 1] array values */
@@ -108,6 +109,7 @@ static const uint32_t MPC11_RES[] = {743,749,1037,1038,1039,1040,1041,1042,1043,
 #define MPC11_J_THETA_ADDR 1042        /*J_theta: [1 1] array values */
 #define MPC11_J_THETAN_ADDR 1043        /*J_thetaN: [1 1] array values */
 #define MPC11_J_X_ADDR 1044        /*J_x: [1 1] array values */
+#define MPC11_J_THETA_PREV_ADDR 1045        /*J_theta_prev: [1 1] array values */
 
 // CASADI FUN OUTPUT ADRESSES:
 #define MPC11_OUT_U_OPT_ADDR 743        /* u_opt = [u[0:5](6x1)] */
@@ -120,5 +122,6 @@ static const uint32_t MPC11_RES[] = {743,749,1037,1038,1039,1040,1041,1042,1043,
 #define MPC11_OUT_COST_FUN_6_ADDR 1042        /* cost_fun_6 = [J_theta(1x1)] */
 #define MPC11_OUT_COST_FUN_7_ADDR 1043        /* cost_fun_7 = [J_thetaN(1x1)] */
 #define MPC11_OUT_COST_FUN_8_ADDR 1044        /* cost_fun_8 = [J_x(1x1)] */
+#define MPC11_OUT_COST_FUN_9_ADDR 1045        /* cost_fun_9 = [J_theta_prev(1x1)] */
 
 #endif /* MPC8_ADRESSDEF_H */
