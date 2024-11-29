@@ -20,8 +20,8 @@ elseif(strcmp(MPC_version, "v5_kin_dev"))
     opt_problem_MPC_v5_kin_dev;
 elseif(strcmp(MPC_version, "v6_kin_int_path_following"))
     opt_problem_MPC_v6_kin_int_path_following;
-elseif(strcmp(MPC_version, "v6_2_kin_dev_path_following"))
-    opt_problem_MPC_v6_2_kin_dev_path_following;
+elseif(strcmp(MPC_version, "v6_kin_dev_path_following"))
+    opt_problem_MPC_v6_kin_dev_path_following;
 elseif(strcmp(MPC_version, "v7_kin_int_planner"))
     opt_problem_MPC_v7_kin_int_planner;
 elseif(strcmp(MPC_version, "v8_kin_dev_planner"))

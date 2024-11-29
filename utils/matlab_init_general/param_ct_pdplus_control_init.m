@@ -43,10 +43,10 @@ ctrl_param.pd.K_d_jointspace = ctrl_param.pd.D_d_jointspace^2/4; % (NOT USED)
 ctrl_param.regularization.mode = 3;
 
 % 1:
-ctrl_param.regularization.k = 1e-3;
+ctrl_param.regularization.k = 1e-1;
 
 % 2:
-ctrl_param.regularization.W_bar_N = 1e-3*param_robot.sugihara_limb_vector;
+ctrl_param.regularization.W_bar_N = 1e-1*param_robot.sugihara_limb_vector;
 % ctrl_param.regularization.W_bar_N = 1e-1*ones(n,1);
 ctrl_param.regularization.W_E = 1 * eye(6); %ctrl_param.regularization.w_bar_N;
 
@@ -57,7 +57,7 @@ ctrl_param.regularization.eps  = 1e-1;
 ctrl_param.regularization.eps_collinear = 0.95;
 
 % 5:
-ctrl_param.regularization.lambda_min = 1e-1;
+ctrl_param.regularization.lambda_min = 1e-3;
 
 %% nullspace for CT controller
 ctrl_param.ct.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;
@@ -67,8 +67,8 @@ ctrl_param.ct.D_n = sqrt(4*ctrl_param.ct.K_n) + 1 * eye(n);
 %ctrl_param.ct.K_n = 64*eye(n);
 %ctrl_param.ct.D_n = 16*eye(n);
 
-ctrl_param.ct.k_n_nl = 10*eye(n);
-ctrl_param.ct.nl_spring_threshold = [0.2; 0.2; 0.2; 0.2; 0.2; 0.2; 0.2];
+ctrl_param.k_n_nl = 1e-10*eye(n);
+ctrl_param.nl_spring_threshold = [1; 1; 1; 1; 1; 1; 1];
 
 % DEBUG
 ew_test_CT_CTRL = [diag(-ctrl_param.ct.Kd1/2 + sqrt(ctrl_param.ct.Kd1^2/4 - ctrl_param.ct.Kp1)) diag(-ctrl_param.ct.Kd1/2 - sqrt(ctrl_param.ct.Kd1^2/4 - ctrl_param.ct.Kp1))]';
