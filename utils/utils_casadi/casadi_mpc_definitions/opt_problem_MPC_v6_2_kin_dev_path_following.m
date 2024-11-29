@@ -2,6 +2,15 @@
 
 import casadi.*
 
+diff_variant_mode = struct;
+diff_variant_mode.numdiff = 1; % default forward, central, backward deviation
+diff_variant_mode.savgol = 2; % savgol filtering and deviation
+diff_variant_mode.savgol_v2 = 3; % savgol filtering without additional equations and deviation
+diff_variant_mode.savgol_not_equidist = 4; % savgol filtering without additional equations and deviation
+diff_variant_mode.savgol_not_equidist_noise_supr = 5; % savgol filtering without additional equations and deviation
+
+diff_variant = diff_variant_mode.savgol_not_equidist;
+
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;
 
@@ -18,8 +27,6 @@ q_red = SX.sym( 'q',     n_red, 1 );
 x_red = SX.sym( 'x',   2*n_red, 1 );
 u_red = SX.sym( 'u',     n_red, 1 );
 theta = SX.sym('theta', 1); % path parameter
-lambda_theta = SX.sym('lambda_theta', 1);
-v = SX.sym('v', 1);
 
 q_subs            = SX(q_0);
 q_subs(n_indices) = q_red;
@@ -40,22 +47,6 @@ end
 
 opt = struct;
 opt.allow_free = true;
-
-% integrator for x
-f_red = Function('f_red', {x_red, u_red}, {[x_red(n_red+1:2*n_red); u_red]});
-h = Function('h', {theta, v}, {-lambda_theta*theta + v}, opt);
-
-F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
-H_int = integrate_casadi(h, DT, M, int_method); % runs with Ts_MPC
-H = Function('H', {theta, v, lambda_theta}, {H_int(theta, v)});
-
-F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
-H_kp1_int = integrate_casadi(h, DT_ctl, M, int_method); % runs with Ta from sensors
-H_kp1 = Function('H', {theta, v, lambda_theta}, {H_kp1_int(theta, v)});
-
-F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-2*Ta
-H2_int = integrate_casadi(h, DT2, M, int_method); % runs with Ts_MPC-2*Ta
-H2 = Function('H', {theta, v, lambda_theta}, {H2_int(theta, v)});
 
 %% set up path function (hardcoded here, TODO: make it more general)
 param_traj_pose_idx = param_traj.start_index(traj_select_mpc):param_traj.stop_index(traj_select_mpc);
@@ -100,38 +91,31 @@ theta_i = param_traj_time/param_traj_time(end);
 N = size(pose,2);
 single_path_t = cell(1,N);
 single_path_r = cell(1,N);
-for i = 1:N
-    if(i==1)
-        single_path_t{i} = pose(:,1);
+for i = 0:N
+    if(i == 0)
+        single_path_t{1} = pose(:,1);
 
-        single_path_r{i} = rotation(:, :, 1);
-    elseif(i==2)
-        single_path_t{i} = trajectory_poly(theta, pose(:,i-1), pose(:,i), theta_i(i));
-
-        alpha_i = trajectory_poly(theta,            alpha(i-1), alpha(i), theta_i(i));
-        skew_ew = skew(rot_ax(:, i));
-        RR1 = (eye(3) + sin(alpha_i-alpha(i-1))*skew_ew + (1-cos(alpha_i-alpha(i-1)))*skew_ew^2) * rotation(:, :, i-1);
-        single_path_r{i} = RR1;
+        single_path_r{1} = rotation(:, :, 1);
     elseif(i < N)
-        single_path_t{i} = trajectory_poly(theta-theta_i(i-1), pose(:,i-1), pose(:,i), theta_i(i)-theta_i(i-1));
+        single_path_t{i+1} = trajectory_poly(theta-theta_i(i), pose(:,i), pose(:,i+1), theta_i(i+1)-theta_i(i));
 
-        alpha_i = trajectory_poly(theta-theta_i(i-1), alpha(i-1), alpha(i), theta_i(i)-theta_i(i-1));
-        skew_ew = skew(rot_ax(:, i));
-        RR2 = (eye(3) + sin(alpha_i-alpha(i-1))*skew_ew + (1-cos(alpha_i-alpha(i-1)))*skew_ew^2) * rotation(:, :, i-1);
-        single_path_r{i} = RR2;
-    elseif(i==N)
-        single_path_t{i} = pose(:,N);
-
-        single_path_r{i} = rotation(:, :, N);
+        alpha_i = trajectory_poly(theta-theta_i(i), alpha(i), alpha(i+1), theta_i(i+1)-theta_i(i));
+        skew_ew = skew(rot_ax(:, i+1));
+        RR2 = (eye(3) + sin(alpha_i-alpha(i))*skew_ew + (1-cos(alpha_i-alpha(i)))*skew_ew^2) * rotation(:, :, i);
+        single_path_r{i+1} = RR2;
+    elseif(i == N)
+        single_path_t{i+1} = pose(:,N);
+        single_path_r{i+1} = rotation(:, :, N);
     end
 end
 
 sigma_t = single_path_t{end};
 sigma_r = single_path_r{end};
-for i = N:-1:2
-    sigma_t = if_else(theta < theta_i(i-1), single_path_t{i-1}, sigma_t);
-    sigma_r = if_else(theta < theta_i(i-1), single_path_r{i-1}, sigma_r);
+for i = N:-1:1
+    sigma_t = if_else(theta < theta_i(i), single_path_t{i}, sigma_t);
+    sigma_r = if_else(theta < theta_i(i), single_path_r{i}, sigma_r);
 end
+
 %% Calculate Initial Guess
 if(N_step_MPC <= 2)
     MPC_traj_indices = 1:(N_MPC+1);
@@ -152,8 +136,8 @@ x_0_0  = [q_0_red; q_0_red_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parame
 
 u_k_0  = q_0_red_pp;
 
-u_init_guess_0 = ones(n_red, N_MPC).*u_k_0;
-x_init_guess_0 = [x_0_0 ones(2*n_red, N_MPC).*x_0_0];
+u_init_guess_0 = u_k_0;
+q_init_guess_0 = ones(n_red, N_MPC+1).*x_0_0(1:n_red);
 
 if(N_step_MPC <= 2)
     t_init_guess = linspace(0, N_MPC*DT_ctl, N_MPC+1);
@@ -162,28 +146,11 @@ else
 end
 theta_init_guess_0 = t_init_guess/T;
 theta_0_0 = theta_init_guess_0(1);
-v_init_guess_0 = zeros(1, N_MPC);
 
-theta_sys = false; % funktioniert zwar, aber macht keinen sinn da theta_k nicht korrekt ist!
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(q_init_guess_0)+numel(theta_init_guess_0), 1);
+lam_g_init_guess_0 = zeros(numel(u_init_guess_0) + numel(x_0_0), 1);
 
-if(theta_sys)
-    lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(theta_init_guess_0)+numel(v_init_guess_0), 1);
-    lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(theta_init_guess_0), 1); %-1 because theta_i(0) - theta_d(0) is not weighted
-    % The core idea here:
-    % Only if a dynamic for theta is used it is important to determine theta_0 so that y - sigma(theta_0) is as small as possible.
-    % this and only this theta value is the true path parameter at the beginning of the MPC horizon.
-    % when no theta_sys is used theta_0 is not important because q_0 is not a optimization variable, therefore theta_0 have
-    % no influence on the optimization problem. You only choose the newer theta value for the prediction horizon so that the
-    % y(theta_i) - sigma(theta_i) s.t. theta_i - t_i is as small as possible. In case of theta_i = t_i, sigma(theta_i) = y_d(t_i).
-    % If theta_i != t_i, sigma(theta_i) != y_d(t_i) but maybe y(theta_i) - sigma(theta_i) is smaller than y(theta_i) - sigma(t_i)...
-
-    init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); theta_init_guess_0(:); v_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
-else
-    lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(theta_init_guess_0), 1);
-    lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
-
-    init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); theta_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
-end
+init_guess_0 = [u_init_guess_0(:); q_init_guess_0(:); theta_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 if(any(isnan(full(init_guess_0))))
     error('115: init_guess_0 contains NaN values!');
@@ -200,16 +167,12 @@ else % hardcoded weights
 end
 
 % Optimization Variables:
-u     = SX.sym( 'u',  n_red,   N_MPC   ); % u = q_0_pp
-x     = SX.sym( 'x',  2*n_red, N_MPC+1 );
+u     = SX.sym( 'u',    n_red,       1 ); % %u0=q0pp (0 to Ta)
+q     = SX.sym( 'q',    n_red, N_MPC+1 );
 theta = SX.sym( 'theta', 1, N_MPC+1 );
-v = SX.sym( 'v', 1, N_MPC );
+x = q;
 
-if(theta_sys)
-    mpc_opt_var_inputs = {u, x, theta, v};
-else
-    mpc_opt_var_inputs = {u, x, theta};
-end
+mpc_opt_var_inputs = {u, x, theta};
 
 % u = [u0; u1; ... uN-1], x = [x0; x1; ... xN] = [q_0;q_0_p;q_1;q_1_p;...;q_N;q_N_p]
 % xx = [u; x] = [u0; u1; ... uN-1; x0; x1; ... xN]
@@ -217,30 +180,25 @@ end
 %   u0 = q_0_pp = xx(  1 :   n_red) | q_0 = xx(N_u+1     : n_red+N_u  ) | q_0_p = xx(N_u+1+  n_red : N_u+2*n_red)
 %   u1 = q_1_pp = u( n_red+1 : 2*n_red) | q_1 = x(     1+2*n_red :     3*n_red) | q_1_p = x(     1+3*n_red :     4*n_red)
 %   u1 = q_1_pp = xx(n_red+1 : 2*n_red) | q_1 = xx(N_u+1+2*n_red : N_u+3*n_red) | q_1_p = xx(N_u+1+3*n_red : N_u+4*n_red)
-N_u = numel(u);
+% N_u = numel(u);
 q0_pp_idx = 1 : n_red;
 u_opt_indices = q0_pp_idx;
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
 
-if(theta_sys)
-    lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n]), size(x, 2), 1); -inf(numel(theta), 1); -inf(numel(v), 1)];
-    ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n]), size(x, 2), 1);  inf(numel(theta), 1);  inf(numel(v), 1)];
-else
-    lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n]), size(x, 2), 1); -inf(numel(theta), 1)];
-    ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n]), size(x, 2), 1);  inf(numel(theta), 1)];
-end
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min(n_indices), size(q, 2), 1); -inf(numel(theta), 1)];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max(n_indices), size(q, 2), 1);  inf(numel(theta), 1)];
 
 % input parameter
 x_k = SX.sym( 'x_k', 2*n_red, 1 ); % current x state = initial x state
 theta_k = SX.sym( 'theta_k', 1, 1 ); % next theta state
 t_k = SX.sym( 't_k', 1, 1 ); % current time
-x_prev = SX.sym( 'x_prev',  2*n_red, N_MPC+1 );
+q_prev = SX.sym( 'q_prev',  n_red, N_MPC+1 );
 theta_prev = SX.sym( 'theta_prev', 1, N_MPC+1 );
 
-mpc_parameter_inputs = {x_k, theta_k, t_k, x_prev, theta_prev};
-mpc_init_reference_values = [x_0_0(:); theta_0_0; 0; x_init_guess_0(:); theta_init_guess_0(:)];
+mpc_parameter_inputs = {x_k, theta_k, t_k, q_prev, theta_prev};
+mpc_init_reference_values = [x_0_0(:); theta_0_0; 0; q_init_guess_0(:); theta_init_guess_0(:)];
 
 theta_d = (t_k+t_init_guess)/T;
 
@@ -251,8 +209,7 @@ if(weights_and_limits_as_parameter) % debug input parameter
 end
 
 % constraints conditions cellarray g
-g_x  = cell(1, N_MPC+1); % for F
-g_theta = cell(1, N_MPC+1); % for H
+g_x  = cell(1, 2);
 
 if(weights_and_limits_as_parameter)
     lbg = SX(numel(lam_g_init_guess_0), 1);
@@ -268,45 +225,78 @@ lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
 y       = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
-
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
-g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
-g_theta(1, 1 + (0)) = {theta_k - theta(1)};
+if(diff_variant == diff_variant_mode.numdiff)
+    S_v = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'fwdbwdcentraltwotimes', DT);
+    S_a = S_v^2;
+    disp('Selected diff method: forward central backward, non-equidistant samples');
+elseif(diff_variant == diff_variant_mode.savgol)
+    % DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
+    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol', DT, MPC_traj_indices);
+
+    S_v = DD_DT{2};
+    S_a = DD_DT{3};
+    disp('Selected diff method: savgol, equidistant samples');
+elseif(diff_variant == diff_variant_mode.savgol_v2)
+    DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
+
+    S_q = DD_DT{1};
+    S_v = DD_DT{2};
+    S_a = DD_DT{3};
+    disp('Selected diff method: savgol_v2 (q = SV q)');
+elseif(diff_variant == diff_variant_mode.savgol_not_equidist)
+    param_golay = struct('Nq', 2, 'd', 2);
+    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices, param_golay);
+
+    % S_q = DD_DT{1};
+    S_v = DD_DT{2};
+    S_a = DD_DT{3};
+    disp('Selected diff method: savgol_notequidist, purely polynomial filtering');
+elseif(diff_variant == diff_variant_mode.savgol_not_equidist_noise_supr)
+    param_golay = struct('Nq', 2, 'd', 2);
+    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices, param_golay);
+    S_v = DD_DT{2};
+
+    % Funktioniert auch, ist dann aber keine polynomableitung
+    % Interessanterweise hat diese Variante eine enorm starke Rauschunterdrückung zur Folge.
+    % Dafür ist es nicht so genau wie mit DT_DT{3}. Insbesondere wenn man die Gewichtungsmatrizen
+    % für x-xprev zu klein hat, wird es instabil, wenn der TCP still stehen soll. Geht aber auch
+    % nur für Nq=2.
+    S_a = S_v^2;
+    disp('Selected diff method: savgol_notequidist_noise_supr: S_a = S_v^2');
+else
+    error('invalid mode');
+end
+
+qq = reshape(q, n_red*(N_MPC+1), 1);
+
+qq_p  = S_v * qq;
+qq_pp = S_a * qq;
+
+if(diff_variant == diff_variant_mode.savgol_v2)
+    qq = S_q * qq;
+end
+
+q = reshape(qq, n_red, N_MPC+1);
+q_p = reshape(qq_p, n_red, N_MPC+1);
+q_pp = reshape(qq_pp, n_red, N_MPC+1);
+
+g_x(1, 1 + (0)) = {x_k  - [q(:, 1 + (0)); q_p(:, 1 + (0))]}; % x0 = xk
+g_x(1, 1 + (1)) = {u - q_pp(:, 1 + (0))}; % u0 = q0pp
 
 for i=0:N_MPC
-    q = x(1:n_red, 1 + (i));
+    q_i = q(:, 1 + (i));
 
     % calculate trajectory values (y_0 ... y_N)
-    H_e = H_red(q);
+    H_e = H_red(q_i);
     R_e = H_e(1:3, 1:3);
     y(1:3,   1 + (i)) = H_e(1:3, 4);
-    y(4:7,   1 + (i)) = quat_fun_red(q);
+    y(4:7,   1 + (i)) = quat_fun_red(q_i);
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
-
-    if(i < N_MPC)
-        % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        if(i == 0)
-            %g_theta(1, 1 + (0)) = { y(yt_indices)' - sigma_t_fun(theta( 1 + (0) )) }; %TODO: ggf ist xyz position nicht eindeutig -> vlt besser theta_k als init verwenden?
-            g_theta(1, 1 + (i+1)) = { H_kp1(theta(1 + (i)), v(1 + (i)), pp.lambda_theta) - theta(1 + (i+1)) };
-            g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
-        elseif(i == 1)
-            g_theta(1, 1 + (i+1)) = { H2(theta(1 + (i)), v(1 + (i)), pp.lambda_theta) - theta(1 + (i+1)) };
-            g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
-        else
-            g_theta(1, 1 + (i+1)) = { H(theta(1 + (i)), v(1 + (i)), pp.lambda_theta) - theta(1 + (i+1)) };
-            g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
-            % runs only to T_horizon-Ts_MPC, i. e. tilde x_{n_red-1} = x(t0+Ts_MPC*(n_red-1)) and x_N doesn't exist
-            % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(n_red-1))
-        end
-    end
 end
 
-if(theta_sys)
-    g = [g_x, g_theta];
-else
-    g = g_x;
-end
+g = g_x;
 
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
@@ -361,20 +351,23 @@ for i=0:N_MPC
     end
 end
 
-J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices));
+qq_prev = reshape(q_prev, n_red*(N_MPC+1), 1);
+qq_prev_p  = S_v * qq_prev;
+qq_prev_pp = S_a * qq_prev;
 
-x_err = x-x_prev;
+q_prev_p = reshape(qq_prev_p, n_red, N_MPC+1);
+q_prev_pp = reshape(qq_prev_pp, n_red, N_MPC+1);
+
+J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+
+x_err = [q - q_prev; q_p];
 theta_err = theta-theta_prev;
 
-J_x = 0;
-for i=1:N_MPC
-    % if(i < N_MPC)
-        J_x = J_x + Q_norm_square(x_err(:, 1 + (i)), pp.R_x(n_x_indices, n_x_indices));
-    % end
-end
+J_x0 = Q_norm_square(x_err(:, 1 + (0)),       pp.R_x0(n_x_indices, n_x_indices));
+J_x  = Q_norm_square(x_err(:, 1 + (1:N_MPC)), pp.R_x(n_x_indices, n_x_indices));
 J_theta_prev = Q_norm_square(theta_err, pp.R_theta_prev);
 
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_theta, J_thetaN, J_x, J_theta_prev}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_theta, J_thetaN, J_x, J_x0, J_theta_prev}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

@@ -185,14 +185,15 @@ param_weight.(MPC).u_max    = param_robot.q_pp_limit_upper*1;
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 11) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % kinematic integrator path following mpc v6
 MPC='MPC11';
-param_weight.(MPC).Q_y    = 1e0*diag([1*ones(3,1); 1e-2*ones(3,1)]);  % d_kpn
-param_weight.(MPC).Q_yN   = 1e3*diag([1*ones(3,1); 1e-2*ones(3,1)]);  % D_N
+param_weight.(MPC).Q_y    = 1e2*diag([1*ones(3,1); 1e-2*ones(3,1)]);  % d_kpn
+param_weight.(MPC).Q_yN   = 1e5*diag([1*ones(3,1); 1e-2*ones(3,1)]);  % D_N
 param_weight.(MPC).Q_theta = 1e5;
-param_weight.(MPC).Q_thetaN = 1e5;
+param_weight.(MPC).Q_thetaN = 1e8;
 param_weight.(MPC).lambda_theta = 1;
 
-param_weight.(MPC).R_q_pp = 1e-8*diag(ones(n,1));
-param_weight.(MPC).R_x    = diag([1e1*ones(n,1); 1e0*ones(n,1)]);
+param_weight.(MPC).R_q_pp = 1e-5*diag(ones(n,1));
+param_weight.(MPC).R_x    = diag([0*ones(n,1); 1e-1*ones(n,1)]);
+param_weight.(MPC).R_x0   = param_weight.(MPC).R_x;
 param_weight.(MPC).R_theta_prev =0;
 
 % param_weight.(MPC).x_min    = -inf(size(x_min)); %x_min 
