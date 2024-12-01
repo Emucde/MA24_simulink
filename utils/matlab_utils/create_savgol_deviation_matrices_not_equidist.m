@@ -36,22 +36,37 @@ function [DD] = create_savgol_deviation_matrices_not_equidist(Ta, Nq, d, N, samp
     % 0  Ta           Ta_MPC         2Ta_MPC           3Ta_MPC   (N-3)Ta_MPC    (N-2)Ta_MPC    (N-1)Ta_MPC        
     % q0  q1            q2                q3                q4    qN-2              qN              qN
     %     |             |                 |                 |      |                |                |
+    % ------------------|                 |                 |      |                |                |
     % [   Fenster 1    ]|                 |                 |      |                |                |
     % [-1,0,          4]|                 |                 |      |                |                |
-    %                   |                 |                 |      |                |                |
-    %      [         Fenster 2           ]|                 |      |                |                |
-    %      [-4,         0,        5      ]|                 |      |                |                |
-    %                                     |                 |      |                |                |
-    %                    [            Fenster 3            ]|      |                |                |
-    %                    [-5,             0,              5]|      |                |                |
-    %                                                       |      |                |                |
-    %                                                      ...    ...              ...              ...
-    %                                                       |      |                |                |
-    %                                                       |      |[           Fenster N           ]|
-    %                                                       |      |[-5,            0,             5]|
+    % ------------------|                 |                 |      |                |                |
+    %     |             |                 |                 |      |                |                |
+    %     |-------------------------------|                 |      |                |                |
+    %     |[         Fenster 2           ]|                 |      |                |                |
+    %     |[-4,         0,              5]|                 |      |                |                |
+    %     |-------------------------------|                 |      |                |                |
+    %     |             |                 |                 |      |                |                |
+    %     |             |-----------------------------------|      |                |                |
+    %     |             |[            Fenster 3            ]|      |                |                |
+    %     |             |[-5,             0,              5]|      |                |                |
+    %     |             |-----------------------------------|      |                |                |
+    %     |             |                 |                 |      |                |                |
+    %     |             |                 |                ...    ...              ...              ...
+    %     |             |                 |                 |      |                |                |
+    %     |             |                 |                 |      |---------------------------------|
+    %     |             |                 |                 |      |[           Fenster N           ]|
+    %     |             |                 |                 |      |[-5,            0,             5]|
+    %     |             |                 |                 |      |---------------------------------|
     %
     % Ta ... Abtastzeit des CT Reglers und Sensoren
     % Ta_MPC ... Interne Abtastzeit der MPC: So grob wird Trajektorie abgetastet
+    % 
+    % Beim Sarvitsky Golay filter wird bekanntlich in jedem Fenster ein eigenes Polynom approximiert.
+    % Indem dieses abgeleitet wird, kann auch ein Ableitungsfilter berechnet werden.
+    % Besondere Vorsicht aber auf die Polynomordnung: Ist diese 2 oder kleiner, ist die zweite Ableitung
+    % konstant. Möchte man so wie hier Randpunkte approximieren, sind diese sehr ungenau, da sie an den
+    % dann auch an den Rändern konstant gehalten werden. Das ist insbesonders bei großen Nq ein riesiges Problem!
+    % Daher ist es dann genauer die Randpunkte über numerisches Differenzieren zu berechnen.
     %
     % Beispiel für Fenster im Fall von Ta_MPC = 5 * Ta:
     % für Nq=1:

@@ -37,10 +37,11 @@ ctrl_param.pd.K_d_jointspace = ctrl_param.pd.D_d_jointspace^2/4; % (NOT USED)
 % 0: no sing robust (not fully true, use pinv() from matlab - this commands eliminates too small singular values)
 % 1: simpliy use J_pinv = (J'*J + k*E)^(-1)*J' = (J'*J + k*E)\J'
 % 2: use Sugihara singular robust method: J_pinv = (J'*W_E*J + W_N)^(-1)*J' = (J'*W_E*J + W_N)\J'
-% 3: set sing values sigma_i < eps to sign(sigma_i)/q_i_max
-% 4: collinearity approach 1: only works if joint is exact replaceable (linear dependent) by one other joint (but not by multiple joints!!)
-% 5: collinearity approach after steinböck: works for all joints
-ctrl_param.regularization.mode = 3;
+% 3: set sing values sigma_i < eps to eps
+% 4: set sing values sigma_i < eps to sqrt(sigma_i^2 + eps^2)
+% 5: collinearity approach 1: only works if joint is exact replaceable (linear dependent) by one other joint (but not by multiple joints!!)
+% 6: collinearity approach after steinböck: works for all joints
+ctrl_param.regularization.mode = 1;
 
 % 1:
 ctrl_param.regularization.k = 1e-3;
@@ -50,14 +51,14 @@ ctrl_param.regularization.W_bar_N = 1e-3*param_robot.sugihara_limb_vector;
 % ctrl_param.regularization.W_bar_N = 1e-1*ones(n,1);
 ctrl_param.regularization.W_E = 1 * eye(6); %ctrl_param.regularization.w_bar_N;
 
-% 3:
+% 3, 4:
 ctrl_param.regularization.eps  = 1e-1;
 
-% 4:
+% 5:
 ctrl_param.regularization.eps_collinear = 0.95;
 
-% 5:
-ctrl_param.regularization.lambda_min = 1e-1;
+% 6:
+ctrl_param.regularization.lambda_min = 5e-3;
 
 %% nullspace for CT controller
 ctrl_param.ct.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;
