@@ -2,12 +2,16 @@
 
 import casadi.*
 
+implicit_xk = false; % false liefert robustere lösungen, true ist etwas schneller aber führt oft zu numerischen noise
+
 diff_variant_mode = struct;
-diff_variant_mode.numdiff = 1; % default forward, central, backward deviation
+diff_variant_mode.numdiff = 1; % default forward, central, backward deviation, tens to peaks, does not work with implicit_xk=true
 diff_variant_mode.savgol = 2; % savgol filtering and deviation
 diff_variant_mode.savgol_v2 = 3; % savgol filtering without additional equations and deviation
-diff_variant_mode.savgol_not_equidist = 4; % savgol filtering without additional equations and deviation
+diff_variant_mode.savgol_not_equidist = 4; % savgol filtering, non equidistant samples, for feedforward
 diff_variant_mode.savgol_not_equidist_noise_supr = 5; % savgol filtering without additional equations and deviation
+diff_variant_mode.savgol_not_equidist_combined = 6; % savgol filtering, non equidistant samples, for pd control, first derivatve approximated
+diff_variant_mode.savgol_not_equidist_combined2 = 7; % savgol filtering, non equidistant samples, for pd control, first derivatve approximated
 
 diff_variant = diff_variant_mode.savgol_not_equidist;
 
@@ -209,7 +213,13 @@ if(weights_and_limits_as_parameter) % debug input parameter
 end
 
 % constraints conditions cellarray g
-g_x  = cell(1, 2);
+if(implicit_xk)
+    g_x  = cell(1, N_MPC+1);
+else
+    g_x  = cell(1, N_MPC+2);
+end
+g_u  = cell(1, size(u,2));
+
 
 if(weights_and_limits_as_parameter)
     lbg = SX(numel(lam_g_init_guess_0), 1);
@@ -229,8 +239,10 @@ R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 if(diff_variant == diff_variant_mode.numdiff)
     S_v = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'fwdbwdcentraltwotimes', DT);
-    S_a = S_v^2;
-    disp('Selected diff method: forward central backward, non-equidistant samples');
+    S_v_temp = S_v/DT_ctl;
+    S_a_temp = S_v_temp^2;
+    S_a = S_a_temp * DT_ctl^2;
+    disp('Selected diff method: forward central backward, non-equidistant samples, good for pd but tends to peaks in u');
 elseif(diff_variant == diff_variant_mode.savgol)
     % DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
     DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol', DT, MPC_traj_indices);
@@ -245,7 +257,7 @@ elseif(diff_variant == diff_variant_mode.savgol_v2)
     S_v = DD_DT{2};
     S_a = DD_DT{3};
     disp('Selected diff method: savgol_v2 (q = SV q)');
-elseif(diff_variant == diff_variant_mode.savgol_not_equidist)
+elseif(diff_variant == diff_variant_mode.savgol_not_equidist || diff_variant == diff_variant_mode.savgol_not_equidist_combined2)
     param_golay = struct('Nq', 2, 'd', 2);
     DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices, param_golay);
 
@@ -265,11 +277,56 @@ elseif(diff_variant == diff_variant_mode.savgol_not_equidist_noise_supr)
     % nur für Nq=2.
     S_a = S_v^2;
     disp('Selected diff method: savgol_notequidist_noise_supr: S_a = S_v^2');
+elseif(diff_variant == diff_variant_mode.savgol_not_equidist_combined)
+    param_golay = struct('Nq', 2, 'd', 2);
+    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices, param_golay);
+
+    % S_q = DD_DT{1};
+    S_v = DD_DT{2};
+    S_a = DD_DT{3};
+    disp('Selected diff method: savgol_notequidist, for d > 2 better with implicit_xk = false, good for pd control');
+
+    % if the polynomordering d is 2 or lower, e.g. you have
+    % in case of d = 2: q(t) = c0 + c1*t + c2*t^2
+    % in case of d = 1: q(t) = c0 + c1*t
+
+    % the problem is, that the second derivative is
+    % in case of d = 2: q''(t) = 2*c2
+    % in case of d = 1: q''(t) = 0
+
+    % this means, the left and right side points are approximated by using q''(t) of the most left and right
+    % window, the joint accelerations would be hold constant. This is not a big problem, if the feedforward is
+    % used to calculate the torque out of q_pp. But if you try to use the PD controller it would lead to incorrect
+    % q_pp at the approximated points. Therefore, in case of d <= 2 I use instead of q''(t) the numerical derivative
+    % from create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'fwdbwdcentraltwotimes', DT);
+
+    % (a) for joint angle q: use forward backward derivatives at end and begin
+
+    % first derivative should be as easy as possible because it should fit x_k(1+n_red:2*n_red) = q_p
+    % Achtung, dann geht feedforward nicht mehr!
+    if(param_golay.d <= 2)
+        S_v_2 = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'fwdbwdcentraltwotimes', DT);
+        S_a_2 = S_v_2^2;
+
+        S_v(1:2*n_red, :) = S_v_2(1:2*n_red, :);
+        S_v(end-2*n_red+1:end, :) = S_v_2(end-2*n_red+1:end, :);
+        %S_a(1:2*n_red, :) = S_a_2(1:2*n_red, :);
+        %S_a(end-2*n_red+1:end, :) = S_a_2(end-2*n_red+1:end, :);
+
+        S_a_v3 = S_v^2;
+        S_a(1:2*n_red, :) = S_a_v3(1:2*n_red, :);
+        S_a(end-2*n_red+1:end, :) = S_a_v3(end-2*n_red+1:end, :);
+    end
 else
     error('invalid mode');
 end
 
-qq = reshape(q, n_red*(N_MPC+1), 1);
+if(implicit_xk)
+    qq = reshape(x(1:n_red, 2:end), n_red*(N_MPC+1-1), 1);
+    qq = [x_k(1:n_red); qq];
+else
+    qq = reshape(x(1:n_red, :), n_red*(N_MPC+1), 1);
+end
 
 qq_p  = S_v * qq;
 qq_pp = S_a * qq;
@@ -281,6 +338,22 @@ end
 q = reshape(qq, n_red, N_MPC+1);
 q_p = reshape(qq_p, n_red, N_MPC+1);
 q_pp = reshape(qq_pp, n_red, N_MPC+1);
+
+if(diff_variant == diff_variant_mode.savgol_not_equidist_combined2)
+    if(implicit_xk)
+        q_p(:, 1) = x_k(1+n_red:2*n_red);
+    else
+        q_p(:, 1) = (q(:, 2) - q(:, 1))/(DT_ctl);
+    end
+    q_pp(:, 1) = (q_p(:, 2) - q_p(:, 1))/(DT_ctl);
+
+    % q_p(:, 2) = (q(:, 3) - q(:, 1))/(DT); % optional, verschlechterts aber
+    % q_pp(:, 2) = (q_p(:, 3) - q_p(:, 1))/(DT); % optional, verschlechterts aber
+    q_p(:, end) = (q(:, end) - q(:, end-1))/(DT);
+    q_pp(:, end) = (q_p(:, end) - q_p(:, end-1))/(DT);
+elseif(implicit_xk)
+    q_p(:, 1) = x_k(1+n_red:2*n_red);
+end
 
 g_x(1, 1 + (0)) = {x_k  - [q(:, 1 + (0)); q_p(:, 1 + (0))]}; % x0 = xk
 g_x(1, 1 + (1)) = {u - q_pp(:, 1 + (0))}; % u0 = q0pp
@@ -351,23 +424,11 @@ for i=0:N_MPC
     end
 end
 
-qq_prev = reshape(q_prev, n_red*(N_MPC+1), 1);
-qq_prev_p  = S_v * qq_prev;
-qq_prev_pp = S_a * qq_prev;
-
-q_prev_p = reshape(qq_prev_p, n_red, N_MPC+1);
-q_prev_pp = reshape(qq_prev_pp, n_red, N_MPC+1);
-
+J_q_p = Q_norm_square(q_p, pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_theta_prev = Q_norm_square(theta-theta_prev, pp.R_theta_prev);
 
-x_err = [q - q_prev; q_p];
-theta_err = theta-theta_prev;
-
-J_x0 = Q_norm_square(x_err(:, 1 + (0)),       pp.R_x0(n_x_indices, n_x_indices));
-J_x  = Q_norm_square(x_err(:, 1 + (1:N_MPC)), pp.R_x(n_x_indices, n_x_indices));
-J_theta_prev = Q_norm_square(theta_err, pp.R_theta_prev);
-
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_theta, J_thetaN, J_x, J_x0, J_theta_prev}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_p, J_q_pp, J_theta, J_thetaN, J_theta_prev}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

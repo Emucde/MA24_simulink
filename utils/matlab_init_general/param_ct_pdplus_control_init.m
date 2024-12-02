@@ -57,13 +57,7 @@ ctrl_param.regularization.eps  = 1e-1;
 % 5:
 ctrl_param.regularization.eps_collinear = 0.95;
 
-<<<<<<< HEAD
-% 6:
 ctrl_param.regularization.lambda_min = 5e-3;
-=======
-% 5:
-ctrl_param.regularization.lambda_min = 1e-3;
->>>>>>> 148f7b5caed8c04f42aef22345d8e3d4cb742e06
 
 %% nullspace for CT controller
 ctrl_param.ct.q_n = param_robot.q_n; % q_n = (q_max + q_min) / 2;

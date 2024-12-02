@@ -4,108 +4,100 @@
 #ifndef MPC8_ADRESSDEF_H
 #define MPC8_ADRESSDEF_H
 
-#define MPC10_IW_LEN 1260
+#define MPC10_IW_LEN 900
 #define MPC10_ARG_LEN 23
 #define MPC10_RES_LEN 19
-#define MPC10_W_LEN 17785
-static const uint32_t MPC10_ARG[] = {0,126,516};
-static const uint32_t MPC10_RES[] = {1071,1095,1485,1486,1487,1488,1489,1490,1491};
-#define MPC10_W_END_ADDRESS 1492
+#define MPC10_W_LEN 13671
+static const uint32_t MPC10_ARG[] = {0,90,372};
+static const uint32_t MPC10_RES[] = {633,657,939,940,941,942,943,944,945};
+#define MPC10_W_END_ADDRESS 946
 
 // INPUT DIMENSIONS:
 #define MPC10_X_K_LEN 12        /*x_k: [12 1] array values */
 #define MPC10_Y_D_LEN 42        /*y_d: 7x6 matrix values */
-#define MPC10_X_PREV_LEN 72        /*x_prev: 12x6 matrix values */
+#define MPC10_Q_PREV_LEN 36        /*q_prev: 6x6 matrix values */
 #define MPC10_U_LEN 30        /*u: 6x5 matrix values */
 #define MPC10_X_LEN 72        /*x: 12x6 matrix values */
-#define MPC10_X_LEN 36        /*x: 6x6 matrix values */
 #define MPC10_LAMBDA_U_LEN 30        /*lambda_u: 6x5 matrix values */
 #define MPC10_LAMBDA_X_LEN 72        /*lambda_x: 12x6 matrix values */
-#define MPC10_LAMBDA_X_LEN 36        /*lambda_x: 6x6 matrix values */
 #define MPC10_G_LEN 144        /*g: 12x12 matrix values */
 #define MPC10_Q_Y_LEN 36        /*Q_y: 6x6 matrix values */
 #define MPC10_Q_YN_LEN 36        /*Q_yN: 6x6 matrix values */
+#define MPC10_R_Q_P_LEN 49        /*R_q_p: 7x7 matrix values */
 #define MPC10_R_Q_PP_LEN 49        /*R_q_pp: 7x7 matrix values */
-#define MPC10_R_X0_LEN 196        /*R_x0: 14x14 matrix values */
-#define MPC10_R_X_LEN 196        /*R_x: 14x14 matrix values */
+#define MPC10_R_Q_PREV_LEN 49        /*R_q_prev: 7x7 matrix values */
 #define MPC10_X_MIN_LEN 14        /*x_min: [14 1] array values */
 #define MPC10_X_MAX_LEN 14        /*x_max: [14 1] array values */
 #define MPC10_U_MIN_LEN 7        /*u_min: [7 1] array values */
 #define MPC10_U_MAX_LEN 7        /*u_max: [7 1] array values */
 
-#define MPC10_REFERENCE_VALUES_LEN 126        /* reference_values = [x_k(12x1), y_d(7x6), x_prev(12x6)] */
-#define MPC10_INIT_GUESS_LEN 390        /* init_guess = [u(6x5), x(12x6), x(6x6), lambda_u(6x5), lambda_x(12x6), lambda_x(6x6), g(12x12)] */
-#define MPC10_PARAM_WEIGHT_LEN 555        /* param_weight = [Q_y(6x6), Q_yN(6x6), R_q_pp(7x7), R_x0(14x14), R_x(14x14), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
+#define MPC10_REFERENCE_VALUES_LEN 90        /* reference_values = [x_k(12x1), y_d(7x6), q_prev(6x6)] */
+#define MPC10_INIT_GUESS_LEN 282        /* init_guess = [u(6x5), x(12x6), lambda_u(6x5), lambda_x(12x6), g(12x12)] */
+#define MPC10_PARAM_WEIGHT_LEN 261        /* param_weight = [Q_y(6x6), Q_yN(6x6), R_q_p(7x7), R_q_pp(7x7), R_q_prev(7x7), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
 
 // INPUT ADDRESSES:
 #define MPC10_X_K_ADDR 0        /*x_k: [12 1] array values */
 #define MPC10_Y_D_ADDR 12        /*y_d: 7x6 matrix values */
-#define MPC10_X_PREV_ADDR 54        /*x_prev: 12x6 matrix values */
-#define MPC10_U_ADDR 126        /*u: 6x5 matrix values */
-#define MPC10_X_ADDR 156        /*x: 12x6 matrix values */
-#define MPC10_X_ADDR 228        /*x: 6x6 matrix values */
-#define MPC10_LAMBDA_U_ADDR 264        /*lambda_u: 6x5 matrix values */
-#define MPC10_LAMBDA_X_ADDR 294        /*lambda_x: 12x6 matrix values */
-#define MPC10_LAMBDA_X_ADDR 366        /*lambda_x: 6x6 matrix values */
-#define MPC10_G_ADDR 402        /*g: 12x12 matrix values */
-#define MPC10_Q_Y_ADDR 546        /*Q_y: 6x6 matrix values */
-#define MPC10_Q_YN_ADDR 582        /*Q_yN: 6x6 matrix values */
-#define MPC10_R_Q_PP_ADDR 618        /*R_q_pp: 7x7 matrix values */
-#define MPC10_R_X0_ADDR 667        /*R_x0: 14x14 matrix values */
-#define MPC10_R_X_ADDR 863        /*R_x: 14x14 matrix values */
-#define MPC10_X_MIN_ADDR 1059        /*x_min: [14 1] array values */
-#define MPC10_X_MAX_ADDR 1073        /*x_max: [14 1] array values */
-#define MPC10_U_MIN_ADDR 1087        /*u_min: [7 1] array values */
-#define MPC10_U_MAX_ADDR 1094        /*u_max: [7 1] array values */
+#define MPC10_Q_PREV_ADDR 54        /*q_prev: 6x6 matrix values */
+#define MPC10_U_ADDR 90        /*u: 6x5 matrix values */
+#define MPC10_X_ADDR 120        /*x: 12x6 matrix values */
+#define MPC10_LAMBDA_U_ADDR 192        /*lambda_u: 6x5 matrix values */
+#define MPC10_LAMBDA_X_ADDR 222        /*lambda_x: 12x6 matrix values */
+#define MPC10_G_ADDR 294        /*g: 12x12 matrix values */
+#define MPC10_Q_Y_ADDR 438        /*Q_y: 6x6 matrix values */
+#define MPC10_Q_YN_ADDR 474        /*Q_yN: 6x6 matrix values */
+#define MPC10_R_Q_P_ADDR 510        /*R_q_p: 7x7 matrix values */
+#define MPC10_R_Q_PP_ADDR 559        /*R_q_pp: 7x7 matrix values */
+#define MPC10_R_Q_PREV_ADDR 608        /*R_q_prev: 7x7 matrix values */
+#define MPC10_X_MIN_ADDR 657        /*x_min: [14 1] array values */
+#define MPC10_X_MAX_ADDR 671        /*x_max: [14 1] array values */
+#define MPC10_U_MIN_ADDR 685        /*u_min: [7 1] array values */
+#define MPC10_U_MAX_ADDR 692        /*u_max: [7 1] array values */
 
 // CASADI FUN INPUT ADRESSES:
-#define MPC10_IN_REFERENCE_VALUES_ADDR 0        /* reference_values = [x_k(12x1), y_d(7x6), x_prev(12x6)] */
-#define MPC10_IN_INIT_GUESS_ADDR 126        /* init_guess = [u(6x5), x(12x6), x(6x6), lambda_u(6x5), lambda_x(12x6), lambda_x(6x6), g(12x12)] */
-#define MPC10_IN_PARAM_WEIGHT_ADDR 516        /* param_weight = [Q_y(6x6), Q_yN(6x6), R_q_pp(7x7), R_x0(14x14), R_x(14x14), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
+#define MPC10_IN_REFERENCE_VALUES_ADDR 0        /* reference_values = [x_k(12x1), y_d(7x6), q_prev(6x6)] */
+#define MPC10_IN_INIT_GUESS_ADDR 90        /* init_guess = [u(6x5), x(12x6), lambda_u(6x5), lambda_x(12x6), g(12x12)] */
+#define MPC10_IN_PARAM_WEIGHT_ADDR 372        /* param_weight = [Q_y(6x6), Q_yN(6x6), R_q_p(7x7), R_q_pp(7x7), R_q_prev(7x7), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
 
 // OUTPUT DIMENSIONS:
 #define MPC10_U_OPT_LEN 24        /*u_opt: [24 1] array values */
 #define MPC10_U_OUT_LEN 30        /*u_out: 6x5 matrix values */
 #define MPC10_X_OUT_LEN 72        /*x_out: 12x6 matrix values */
-#define MPC10_X_OUT_LEN 36        /*x_out: 6x6 matrix values */
 #define MPC10_LAMBDA_U_OUT_LEN 30        /*lambda_u_out: 6x5 matrix values */
 #define MPC10_LAMBDA_X_OUT_LEN 72        /*lambda_x_out: 12x6 matrix values */
-#define MPC10_LAMBDA_X_OUT_LEN 36        /*lambda_x_out: 6x6 matrix values */
 #define MPC10_G_OUT_LEN 144        /*g_out: 12x12 matrix values */
 #define MPC10_J_YT_LEN 1        /*J_yt: [1 1] array values */
 #define MPC10_J_YT_N_LEN 1        /*J_yt_N: [1 1] array values */
 #define MPC10_J_YR_LEN 1        /*J_yr: [1 1] array values */
 #define MPC10_J_YR_N_LEN 1        /*J_yr_N: [1 1] array values */
+#define MPC10_J_Q_P_LEN 1        /*J_q_p: [1 1] array values */
 #define MPC10_J_Q_PP_LEN 1        /*J_q_pp: [1 1] array values */
-#define MPC10_J_X_LEN 1        /*J_x: [1 1] array values */
-#define MPC10_J_X0_LEN 1        /*J_x0: [1 1] array values */
+#define MPC10_J_Q_PREV_LEN 1        /*J_q_prev: [1 1] array values */
 
 // OUTPUT ADDRESSES:
-#define MPC10_U_OPT_ADDR 1071        /*u_opt: [24 1] array values */
-#define MPC10_U_OUT_ADDR 1095        /*u_out: 6x5 matrix values */
-#define MPC10_X_OUT_ADDR 1125        /*x_out: 12x6 matrix values */
-#define MPC10_X_OUT_ADDR 1197        /*x_out: 6x6 matrix values */
-#define MPC10_LAMBDA_U_OUT_ADDR 1233        /*lambda_u_out: 6x5 matrix values */
-#define MPC10_LAMBDA_X_OUT_ADDR 1263        /*lambda_x_out: 12x6 matrix values */
-#define MPC10_LAMBDA_X_OUT_ADDR 1335        /*lambda_x_out: 6x6 matrix values */
-#define MPC10_G_OUT_ADDR 1371        /*g_out: 12x12 matrix values */
-#define MPC10_J_YT_ADDR 1515        /*J_yt: [1 1] array values */
-#define MPC10_J_YT_N_ADDR 1516        /*J_yt_N: [1 1] array values */
-#define MPC10_J_YR_ADDR 1517        /*J_yr: [1 1] array values */
-#define MPC10_J_YR_N_ADDR 1518        /*J_yr_N: [1 1] array values */
-#define MPC10_J_Q_PP_ADDR 1519        /*J_q_pp: [1 1] array values */
-#define MPC10_J_X_ADDR 1520        /*J_x: [1 1] array values */
-#define MPC10_J_X0_ADDR 1521        /*J_x0: [1 1] array values */
+#define MPC10_U_OPT_ADDR 633        /*u_opt: [24 1] array values */
+#define MPC10_U_OUT_ADDR 657        /*u_out: 6x5 matrix values */
+#define MPC10_X_OUT_ADDR 687        /*x_out: 12x6 matrix values */
+#define MPC10_LAMBDA_U_OUT_ADDR 759        /*lambda_u_out: 6x5 matrix values */
+#define MPC10_LAMBDA_X_OUT_ADDR 789        /*lambda_x_out: 12x6 matrix values */
+#define MPC10_G_OUT_ADDR 861        /*g_out: 12x12 matrix values */
+#define MPC10_J_YT_ADDR 1005        /*J_yt: [1 1] array values */
+#define MPC10_J_YT_N_ADDR 1006        /*J_yt_N: [1 1] array values */
+#define MPC10_J_YR_ADDR 1007        /*J_yr: [1 1] array values */
+#define MPC10_J_YR_N_ADDR 1008        /*J_yr_N: [1 1] array values */
+#define MPC10_J_Q_P_ADDR 1009        /*J_q_p: [1 1] array values */
+#define MPC10_J_Q_PP_ADDR 1010        /*J_q_pp: [1 1] array values */
+#define MPC10_J_Q_PREV_ADDR 1011        /*J_q_prev: [1 1] array values */
 
 // CASADI FUN OUTPUT ADRESSES:
-#define MPC10_OUT_U_OPT_ADDR 1071        /* u_opt = [u[0:11](24x1)] */
-#define MPC10_OUT_INIT_GUESS_OUT_ADDR 1095        /* init_guess_out = [u_out(6x5), x_out(12x6), x_out(6x6), lambda_u_out(6x5), lambda_x_out(12x6), lambda_x_out(6x6), g_out(12x12)] */
-#define MPC10_OUT_COST_FUN_1_ADDR 1485        /* cost_fun_1 = [J_yt(1x1)] */
-#define MPC10_OUT_COST_FUN_2_ADDR 1486        /* cost_fun_2 = [J_yt_N(1x1)] */
-#define MPC10_OUT_COST_FUN_3_ADDR 1487        /* cost_fun_3 = [J_yr(1x1)] */
-#define MPC10_OUT_COST_FUN_4_ADDR 1488        /* cost_fun_4 = [J_yr_N(1x1)] */
-#define MPC10_OUT_COST_FUN_5_ADDR 1489        /* cost_fun_5 = [J_q_pp(1x1)] */
-#define MPC10_OUT_COST_FUN_6_ADDR 1490        /* cost_fun_6 = [J_x(1x1)] */
-#define MPC10_OUT_COST_FUN_7_ADDR 1491        /* cost_fun_7 = [J_x0(1x1)] */
+#define MPC10_OUT_U_OPT_ADDR 633        /* u_opt = [u[0:11](24x1)] */
+#define MPC10_OUT_INIT_GUESS_OUT_ADDR 657        /* init_guess_out = [u_out(6x5), x_out(12x6), lambda_u_out(6x5), lambda_x_out(12x6), g_out(12x12)] */
+#define MPC10_OUT_COST_FUN_1_ADDR 939        /* cost_fun_1 = [J_yt(1x1)] */
+#define MPC10_OUT_COST_FUN_2_ADDR 940        /* cost_fun_2 = [J_yt_N(1x1)] */
+#define MPC10_OUT_COST_FUN_3_ADDR 941        /* cost_fun_3 = [J_yr(1x1)] */
+#define MPC10_OUT_COST_FUN_4_ADDR 942        /* cost_fun_4 = [J_yr_N(1x1)] */
+#define MPC10_OUT_COST_FUN_5_ADDR 943        /* cost_fun_5 = [J_q_p(1x1)] */
+#define MPC10_OUT_COST_FUN_6_ADDR 944        /* cost_fun_6 = [J_q_pp(1x1)] */
+#define MPC10_OUT_COST_FUN_7_ADDR 945        /* cost_fun_7 = [J_q_prev(1x1)] */
 
 #endif /* MPC8_ADRESSDEF_H */
