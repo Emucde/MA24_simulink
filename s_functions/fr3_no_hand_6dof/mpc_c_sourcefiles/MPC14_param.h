@@ -53,10 +53,10 @@ const casadi_real MPC14_param_weight[265] = {
     0, 0, 0, 0, 0, 100, 
 
     /* Q_theta : [1 1] array values */
-    1, 
+    100000, 
 
     /* Q_thetaN : [1 1] array values */
-    1, 
+    1e+08, 
 
     /* lambda_theta : [1 1] array values */
     1, 

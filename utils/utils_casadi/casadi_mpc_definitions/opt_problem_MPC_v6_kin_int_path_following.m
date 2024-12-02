@@ -57,73 +57,67 @@ F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 H2_int = integrate_casadi(h, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 H2 = Function('H', {theta, v, lambda_theta}, {H2_int(theta, v)});
 
-%% set up path function (hardcoded here, TODO: make it more general)
-param_traj_pose_idx = param_traj.start_index(traj_select_mpc):param_traj.stop_index(traj_select_mpc);
-pose     = param_traj.pose(yt_indices, param_traj_pose_idx);
-quat     = param_traj.pose(4:7, param_traj_pose_idx);
-rotation = param_traj.rotation(:, :, param_traj_pose_idx);
-rot_ax   = param_traj.rot_ax(:, param_traj_pose_idx);
-alpha    = param_traj.alpha(:, param_traj_pose_idx);
-t_val    = param_traj.time(param_traj_pose_idx);
+%% set up path function: TODO: input for path selection
 
-param_traj_time = param_traj.time(:, param_traj_pose_idx);
-theta_i = param_traj_time/param_traj_time(end);
+traj_fun_cell = cell(1, param_traj.N_traj);
+for traj_select_index = 1:param_traj.N_traj
+    param_traj_pose_idx = param_traj.start_index(traj_select_index):param_traj.stop_index(traj_select_index);
+    pose     = param_traj.pose(yt_indices, param_traj_pose_idx);
+    quat     = param_traj.pose(4:7, param_traj_pose_idx);
+    rotation = param_traj.rotation(:, :, param_traj_pose_idx);
+    rot_ax   = param_traj.rot_ax(:, param_traj_pose_idx);
+    alpha    = param_traj.alpha(:, param_traj_pose_idx);
+    t_val    = param_traj.time(param_traj_pose_idx);
 
-% define path function
+    param_traj_time = param_traj.time(:, param_traj_pose_idx);
+    theta_i = param_traj_time/param_traj_time(end);
 
-% if_else_and = @(cond1, cond2, true_val, false_val) if_else(cond1, if_else(cond2, true_val, false_val), false_val);
-% [TODO]
+    N = size(pose,2);
+    single_path_t = cell(1,N);
+    single_path_r = cell(1,N);
+    for i = 0:N
+        if(i == 0)
+            single_path_t{1} = pose(:,1);
 
-% if(strcmp(robot_name, 'ur5e_6dof'))
-%     sigma_t = if_else(theta < theta_i(1), pose(:,1), ...
-%               if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2), theta_i(2)), ...
-%               if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), ...
-%               if_else(theta < theta_i(4), trajectory_poly(theta-theta_i(3), pose(:,3), pose(:,4), theta_i(4)-theta_i(3)), pose(:,end)))));
-% else % only 3 points
-%     sigma_t = if_else(theta < theta_i(1), pose(:,1), ...
-%               if_else(theta < theta_i(2), trajectory_poly(theta, pose(:,1), pose(:,2),            theta_i(2)), ...
-%               if_else(theta < theta_i(3), trajectory_poly(theta-theta_i(2), pose(:,2), pose(:,3), theta_i(3)-theta_i(2)), pose(:,end))));
+            single_path_r{1} = rotation(:, :, 1);
+        elseif(i < N)
+            single_path_t{i+1} = trajectory_poly(theta-theta_i(i), pose(:,i), pose(:,i+1), theta_i(i+1)-theta_i(i));
 
-    % alpha_i = trajectory_poly(theta,            alpha(1), alpha(2), theta_i(2));
-    % skew_ew = skew(rot_ax(:, 2));
-    % RR1 = (eye(3) + sin(alpha_i-alpha(1))*skew_ew + (1-cos(alpha_i-alpha(1)))*skew_ew^2) * rotation(:, :, 1);
-
-    % alpha_i = trajectory_poly(theta-theta_i(2), alpha(2), alpha(3), theta_i(3)-theta_i(2));
-    % skew_ew = skew(rot_ax(:, 3));
-    % RR2 = (eye(3) + sin(alpha_i-alpha(2))*skew_ew + (1-cos(alpha_i-alpha(2)))*skew_ew^2) * rotation(:, :, 2);
-
-    % sigma_r = if_else(theta < theta_i(1), rotation(:, :, 1), ...
-    %           if_else(theta < theta_i(2), RR1, ...
-    %           if_else(theta < theta_i(3), RR2, rotation(:, :,end))));
-% end
-
-N = size(pose,2);
-single_path_t = cell(1,N);
-single_path_r = cell(1,N);
-for i = 0:N
-    if(i == 0)
-        single_path_t{1} = pose(:,1);
-
-        single_path_r{1} = rotation(:, :, 1);
-    elseif(i < N)
-        single_path_t{i+1} = trajectory_poly(theta-theta_i(i), pose(:,i), pose(:,i+1), theta_i(i+1)-theta_i(i));
-
-        alpha_i = trajectory_poly(theta-theta_i(i), alpha(i), alpha(i+1), theta_i(i+1)-theta_i(i));
-        skew_ew = skew(rot_ax(:, i+1));
-        RR2 = (eye(3) + sin(alpha_i-alpha(i))*skew_ew + (1-cos(alpha_i-alpha(i)))*skew_ew^2) * rotation(:, :, i);
-        single_path_r{i+1} = RR2;
-    elseif(i == N)
-        single_path_t{i+1} = pose(:,N);
-        single_path_r{i+1} = rotation(:, :, N);
+            alpha_i = trajectory_poly(theta-theta_i(i), alpha(i), alpha(i+1), theta_i(i+1)-theta_i(i));
+            skew_ew = skew(rot_ax(:, i+1));
+            RR2 = (eye(3) + sin(alpha_i-alpha(i))*skew_ew + (1-cos(alpha_i-alpha(i)))*skew_ew^2) * rotation(:, :, i);
+            single_path_r{i+1} = RR2;
+        elseif(i == N)
+            single_path_t{i+1} = pose(:,N);
+            single_path_r{i+1} = rotation(:, :, N);
+        end
     end
+
+    sigma_t = single_path_t{end};
+    sigma_r = single_path_r{end};
+    for i = N:-1:1
+        sigma_t = if_else(theta < theta_i(i), single_path_t{i}, sigma_t);
+        sigma_r = if_else(theta < theta_i(i), single_path_r{i}, sigma_r);
+    end
+
+    traj_fun_cell{traj_select_index} = {sigma_t, sigma_r};
 end
 
-sigma_t = single_path_t{end};
-sigma_r = single_path_r{end};
-for i = N:-1:1
-    sigma_t = if_else(theta < theta_i(i), single_path_t{i}, sigma_t);
-    sigma_r = if_else(theta < theta_i(i), single_path_r{i}, sigma_r);
+sigma_t_all = traj_fun_cell{end}{1};
+sigma_r_all = traj_fun_cell{end}{2};
+traj_select = SX.sym( 'traj_select', 1, 1);
+for traj_select_index = param_traj.N_traj:-1:1
+    sigma_t = traj_fun_cell{traj_select_index}{1};
+    sigma_r = traj_fun_cell{traj_select_index}{2};
+
+    sigma_t_all = if_else(traj_select == traj_select_index, sigma_t, sigma_t_all);
+    sigma_r_all = if_else(traj_select == traj_select_index, sigma_r, sigma_r_all);
 end
+
+T = param_traj_time(end);
+sigma_t_fun = Function('sigma_t_fun', {theta, traj_select}, {sigma_t_all});
+sigma_r_fun = Function('sigma_r_fun', {theta, traj_select}, {sigma_r_all});
+sigma_r_quat_fun = Function('sigma_r_quat_fun', {theta}, {rotm2quat_v4_casadi(sigma_r)});
 
 %% Calculate Initial Guess
 if(N_step_MPC <= 2)
@@ -131,11 +125,6 @@ if(N_step_MPC <= 2)
 else
     MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
 end
-
-T = param_traj_time(end);
-sigma_t_fun = Function('sigma_t_fun', {theta}, {sigma_t});
-sigma_r_fun = Function('sigma_r_fun', {theta}, {sigma_r});
-sigma_r_quat_fun = Function('sigma_r_quat_fun', {theta}, {rotm2quat_v4_casadi(sigma_r)});
 
 % Robot System: Initial guess
 q_0_red    = q_0(n_indices);
@@ -148,13 +137,9 @@ u_k_0  = q_0_red_pp;
 u_init_guess_0 = ones(n_red, N_MPC).*u_k_0;
 x_init_guess_0 = [x_0_0 ones(2*n_red, N_MPC).*x_0_0];
 
-if(N_step_MPC <= 2)
-    t_init_guess = linspace(0, N_MPC*DT_ctl, N_MPC+1);
-else
-    t_init_guess = [0; DT_ctl; linspace(DT, (N_MPC-1)*DT, N_MPC-1)'];
-end
+t_init_guess = (MPC_traj_indices(2:end)-1)*DT_ctl;
 theta_init_guess_0 = t_init_guess/T;
-theta_0_0 = theta_init_guess_0(1);
+theta_0 = theta_init_guess_0(1);
 v_init_guess_0 = zeros(1, N_MPC);
 
 theta_sys = false; % funktioniert zwar, aber macht keinen sinn da theta_k nicht korrekt ist!
@@ -173,7 +158,7 @@ if(theta_sys)
     init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); theta_init_guess_0(:); v_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 else
     lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(theta_init_guess_0), 1);
-    lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
+    lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(theta_0), 1);
 
     init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); theta_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 end
@@ -195,7 +180,7 @@ end
 % Optimization Variables:
 u     = SX.sym( 'u',  n_red,   N_MPC   ); % u = q_0_pp
 x     = SX.sym( 'x',  2*n_red, N_MPC+1 );
-theta = SX.sym( 'theta', 1, N_MPC+1 );
+theta = SX.sym( 'theta', 1, N_MPC );
 v = SX.sym( 'v', 1, N_MPC );
 
 if(theta_sys)
@@ -211,8 +196,15 @@ end
 %   u1 = q_1_pp = u( n_red+1 : 2*n_red) | q_1 = x(     1+2*n_red :     3*n_red) | q_1_p = x(     1+3*n_red :     4*n_red)
 %   u1 = q_1_pp = xx(n_red+1 : 2*n_red) | q_1 = xx(N_u+1+2*n_red : N_u+3*n_red) | q_1_p = xx(N_u+1+3*n_red : N_u+4*n_red)
 N_u = numel(u);
-q0_pp_idx = 1 : n_red;
-u_opt_indices = q0_pp_idx;
+N_x = numel(x);
+
+u_idx = [1 : numel(u)];
+x_idx = N_u + [1 : numel(x)];
+
+q0_pp_idx = u_idx(1:n_red);
+x1_idx = x_idx(1+2*n_red : 4*n_red);
+q1_pp_idx = u_idx(1+n_red : 2*n_red);
+u_opt_indices = [q0_pp_idx, x1_idx, q1_pp_idx];
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
@@ -227,13 +219,12 @@ end
 
 % input parameter
 x_k = SX.sym( 'x_k', 2*n_red, 1 ); % current x state = initial x state
-theta_k = SX.sym( 'theta_k', 1, 1 ); % next theta state
 t_k = SX.sym( 't_k', 1, 1 ); % current time
 x_prev = SX.sym( 'x_prev',  2*n_red, N_MPC+1 );
-theta_prev = SX.sym( 'theta_prev', 1, N_MPC+1 );
+theta_prev = SX.sym( 'theta_prev', 1, N_MPC );
 
-mpc_parameter_inputs = {x_k, theta_k, t_k, x_prev, theta_prev};
-mpc_init_reference_values = [x_0_0(:); theta_0_0; 0; x_init_guess_0(:); theta_init_guess_0(:)];
+mpc_parameter_inputs = {x_k, t_k, x_prev, theta_prev, traj_select};
+mpc_init_reference_values = [x_0_0(:); DT_ctl; x_init_guess_0(:); theta_init_guess_0(:); traj_select_mpc];
 
 theta_d = (t_k+t_init_guess)/T;
 
@@ -265,7 +256,7 @@ y       = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
-g_theta(1, 1 + (0)) = {theta_k - theta(1)};
+g_theta = {theta(1) - theta_d(1)};
 
 for i=0:N_MPC
     q = x(1:n_red, 1 + (i));
@@ -280,26 +271,16 @@ for i=0:N_MPC
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
         if(i == 0)
-            %g_theta(1, 1 + (0)) = { y(yt_indices)' - sigma_t_fun(theta( 1 + (0) )) }; %TODO: ggf ist xyz position nicht eindeutig -> vlt besser theta_k als init verwenden?
-            g_theta(1, 1 + (i+1)) = { H_kp1(theta(1 + (i)), v(1 + (i)), pp.lambda_theta) - theta(1 + (i+1)) };
             g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
         elseif(i == 1)
-            g_theta(1, 1 + (i+1)) = { H2(theta(1 + (i)), v(1 + (i)), pp.lambda_theta) - theta(1 + (i+1)) };
             g_x(1, 1 + (i+1))  = { F2(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
         else
-            g_theta(1, 1 + (i+1)) = { H(theta(1 + (i)), v(1 + (i)), pp.lambda_theta) - theta(1 + (i+1)) };
             g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
-            % runs only to T_horizon-Ts_MPC, i. e. tilde x_{n_red-1} = x(t0+Ts_MPC*(n_red-1)) and x_N doesn't exist
-            % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(n_red-1))
         end
     end
 end
 
-if(theta_sys)
-    g = [g_x, g_theta];
-else
-    g = g_x;
-end
+g = [g_x, g_theta];
 
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
@@ -309,11 +290,11 @@ if isempty(yt_indices)
     J_yt_N = 0;
 else
     J_yt = 0;
-    for i=0:N_MPC
+    for i=1:N_MPC
         if(i < N_MPC)
-            J_yt = J_yt + Q_norm_square( y(yt_indices, 1 + (i)) - sigma_t_fun(theta(1 + (i))), pp.Q_y(yt_indices,yt_indices)  );
+            J_yt = J_yt + Q_norm_square( y(yt_indices, 1 + (i)) - sigma_t_fun(theta(1 + (i-1)), traj_select), pp.Q_y(yt_indices,yt_indices)  );
         else
-            J_yt_N = Q_norm_square( y(yt_indices, 1 + (i)) - sigma_t_fun(theta(1 + (i))), pp.Q_yN(yt_indices,yt_indices)  );
+            J_yt_N = Q_norm_square( y(yt_indices, 1 + (i)) - sigma_t_fun(theta(1 + (i-1)), traj_select), pp.Q_yN(yt_indices,yt_indices)  );
         end
     end
 end
@@ -323,10 +304,13 @@ if isempty(yr_indices)
     J_yr_N = 0;
 else
     J_yr = 0;
-    for i=0:N_MPC
-        R_y_yr = R_e_arr{1 + (i)} * sigma_r_fun(theta(1 + (i)))';
-        q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];  % am genauesten
+    for i=1:N_MPC
+        % R_y_yr = R_e_arr{1 + (i)} * sigma_r_fun(theta(1 + (i)))';
+        % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];  % am genauesten
         
+        R_y_yr = R_e_arr{1 + (i)} * sigma_r_fun(theta(1 + (i-1)), traj_select)' - sigma_r_fun(theta(1 + (i-1)), traj_select) * R_e_arr{1 + (i)}';
+        q_y_yr_err = [1; R_y_yr(3,2); R_y_yr(1,3); R_y_yr(2,1)];
+
         % die beiden methoden weisen größere Quaternionenfehler auf:
         % q_y_yr_err = rotm2quat_v4_casadi(R_y_yr);
         % y_d = rotm2quat_v4_casadi(sigma_r_fun(theta(1 + (i)))');
@@ -346,28 +330,21 @@ end
 % Kosten gewichtet wird. Sauber ist es daher, theta* außerhalb der MPC zu berechnen und als Startwert zu verwenden.
 % ... geht aber nicht... [TODO]
 J_theta = 0;
-for i=0:N_MPC
+for i=2:N_MPC
     if(i < N_MPC)
-        J_theta = J_theta + Q_norm_square( theta(1 + (i)) - theta_d(1 + (i)), pp.Q_theta  );
+        J_theta = J_theta + Q_norm_square( theta(1 + (i-1)) - theta_d(1 + (i-1)), pp.Q_theta  );
     else
-        J_thetaN = Q_norm_square( theta(1 + (i)) - theta_d(1 + (i)), pp.Q_thetaN  );
+        J_thetaN = Q_norm_square( theta(1 + (i-1)) - theta_d(1 + (i-1)), pp.Q_thetaN  );
     end
 end
 
-J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices));
+J_q_p = Q_norm_square(x(1+n_red:2*n_red, :), pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 
-x_err = x-x_prev;
-theta_err = theta-theta_prev;
+J_x_prev = Q_norm_square(x-x_prev, pp.R_x_prev(n_x_indices, n_x_indices));
+J_theta_prev = Q_norm_square(theta-theta_prev, pp.R_theta_prev);
 
-J_x = 0;
-for i=1:N_MPC
-    % if(i < N_MPC)
-        J_x = J_x + Q_norm_square(x_err(:, 1 + (i)), pp.R_x(n_x_indices, n_x_indices));
-    % end
-end
-J_theta_prev = Q_norm_square(theta_err, pp.R_theta_prev);
-
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_theta, J_thetaN, J_x, J_theta_prev}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_p, J_q_pp, J_theta, J_thetaN, J_x_prev, J_theta_prev}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
