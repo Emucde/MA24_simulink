@@ -4,129 +4,127 @@
 #ifndef MPC8_ADRESSDEF_H
 #define MPC8_ADRESSDEF_H
 
-#define MPC14_IW_LEN 330
-#define MPC14_ARG_LEN 26
+#define MPC14_IW_LEN 930
+#define MPC14_ARG_LEN 25
 #define MPC14_RES_LEN 22
-#define MPC14_W_LEN 7406
-static const uint32_t MPC14_ARG[] = {0,56,170};
-static const uint32_t MPC14_RES[] = {729,735,849,850,851,852,853,854,855,856,857,858};
-#define MPC14_W_END_ADDRESS 859
+#define MPC14_W_LEN 14622
+static const uint32_t MPC14_ARG[] = {0,54,347};
+static const uint32_t MPC14_RES[] = {612,636,929,930,931,932,933,934,935,936,937,938};
+#define MPC14_W_END_ADDRESS 939
 
 // INPUT DIMENSIONS:
 #define MPC14_X_K_LEN 12        /*x_k: [12 1] array values */
-#define MPC14_THETA_LEN 1        /*theta: [1 1] array values */
 #define MPC14_T_LEN 1        /*t: [1 1] array values */
 #define MPC14_Q_PREV_LEN 36        /*q_prev: 6x6 matrix values */
-#define MPC14_THETA_PREV_LEN 6        /*theta_prev: [1 6] array values */
-#define MPC14_U_LEN 6        /*u: [6 1] array values */
-#define MPC14_Q_LEN 36        /*q: 6x6 matrix values */
-#define MPC14_THETA_LEN 6        /*theta: [1 6] array values */
-#define MPC14_LAMBDA_U_LEN 6        /*lambda_u: [6 1] array values */
-#define MPC14_LAMBDA_Q_LEN 36        /*lambda_q: 6x6 matrix values */
-#define MPC14_LAMBDA_THETA_LEN 6        /*lambda_theta: [1 6] array values */
-#define MPC14_G_LEN 24        /*g: 12x2 matrix values */
+#define MPC14_THETA_PREV_LEN 5        /*theta_prev: [1 5] array values */
+#define MPC14_U_LEN 30        /*u: 6x5 matrix values */
+#define MPC14_X_LEN 72        /*x: 12x6 matrix values */
+#define MPC14_THETA_LEN 5        /*theta: [1 5] array values */
+#define MPC14_LAMBDA_U_LEN 30        /*lambda_u: 6x5 matrix values */
+#define MPC14_LAMBDA_X_LEN 72        /*lambda_x: 12x6 matrix values */
+#define MPC14_LAMBDA_THETA_LEN 5        /*lambda_theta: [1 5] array values */
+#define MPC14_G_LEN 156        /*g: 12x13 matrix values */
 #define MPC14_Q_Y_LEN 36        /*Q_y: 6x6 matrix values */
 #define MPC14_Q_YN_LEN 36        /*Q_yN: 6x6 matrix values */
 #define MPC14_Q_LEN 1        /*Q: [1 1] array values */
 #define MPC14_Q_LEN 1        /*Q: [1 1] array values */
 #define MPC14_LAMBDA_LEN 1        /*lambda: [1 1] array values */
+#define MPC14_R_Q_P_LEN 49        /*R_q_p: 7x7 matrix values */
 #define MPC14_R_Q_PP_LEN 49        /*R_q_pp: 7x7 matrix values */
-#define MPC14_R_X_LEN 196        /*R_x: 14x14 matrix values */
-#define MPC14_R_X0_LEN 196        /*R_x0: 14x14 matrix values */
+#define MPC14_R_Q_PREV_LEN 49        /*R_q_prev: 7x7 matrix values */
 #define MPC14_R_THETA_LEN 1        /*R_theta: [1 1] array values */
 #define MPC14_X_MIN_LEN 14        /*x_min: [14 1] array values */
 #define MPC14_X_MAX_LEN 14        /*x_max: [14 1] array values */
 #define MPC14_U_MIN_LEN 7        /*u_min: [7 1] array values */
 #define MPC14_U_MAX_LEN 7        /*u_max: [7 1] array values */
 
-#define MPC14_REFERENCE_VALUES_LEN 56        /* reference_values = [x_k(12x1), theta(1x1), t(1x1), q_prev(6x6), theta_prev(1x6)] */
-#define MPC14_INIT_GUESS_LEN 114        /* init_guess = [u(6x1), q(6x6), theta(1x6), lambda_u(6x1), lambda_q(6x6), lambda_theta(1x6), g(12x2)] */
-#define MPC14_PARAM_WEIGHT_LEN 559        /* param_weight = [Q_y(6x6), Q_yN(6x6), Q(1x1), Q(1x1), lambda(1x1), R_q_pp(7x7), R_x(14x14), R_x0(14x14), R_theta(1x1), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
+#define MPC14_REFERENCE_VALUES_LEN 54        /* reference_values = [x_k(12x1), t(1x1), q_prev(6x6), theta_prev(1x5)] */
+#define MPC14_INIT_GUESS_LEN 293        /* init_guess = [u(6x5), x(12x6), theta(1x5), lambda_u(6x5), lambda_x(12x6), lambda_theta(1x5), g(12x13)] */
+#define MPC14_PARAM_WEIGHT_LEN 265        /* param_weight = [Q_y(6x6), Q_yN(6x6), Q(1x1), Q(1x1), lambda(1x1), R_q_p(7x7), R_q_pp(7x7), R_q_prev(7x7), R_theta(1x1), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
 
 // INPUT ADDRESSES:
 #define MPC14_X_K_ADDR 0        /*x_k: [12 1] array values */
-#define MPC14_THETA_ADDR 12        /*theta: [1 1] array values */
-#define MPC14_T_ADDR 13        /*t: [1 1] array values */
-#define MPC14_Q_PREV_ADDR 14        /*q_prev: 6x6 matrix values */
-#define MPC14_THETA_PREV_ADDR 50        /*theta_prev: [1 6] array values */
-#define MPC14_U_ADDR 56        /*u: [6 1] array values */
-#define MPC14_Q_ADDR 62        /*q: 6x6 matrix values */
-#define MPC14_THETA_ADDR 98        /*theta: [1 6] array values */
-#define MPC14_LAMBDA_U_ADDR 104        /*lambda_u: [6 1] array values */
-#define MPC14_LAMBDA_Q_ADDR 110        /*lambda_q: 6x6 matrix values */
-#define MPC14_LAMBDA_THETA_ADDR 146        /*lambda_theta: [1 6] array values */
-#define MPC14_G_ADDR 152        /*g: 12x2 matrix values */
-#define MPC14_Q_Y_ADDR 176        /*Q_y: 6x6 matrix values */
-#define MPC14_Q_YN_ADDR 212        /*Q_yN: 6x6 matrix values */
-#define MPC14_Q_ADDR 248        /*Q: [1 1] array values */
-#define MPC14_Q_ADDR 249        /*Q: [1 1] array values */
-#define MPC14_LAMBDA_ADDR 250        /*lambda: [1 1] array values */
-#define MPC14_R_Q_PP_ADDR 251        /*R_q_pp: 7x7 matrix values */
-#define MPC14_R_X_ADDR 300        /*R_x: 14x14 matrix values */
-#define MPC14_R_X0_ADDR 496        /*R_x0: 14x14 matrix values */
-#define MPC14_R_THETA_ADDR 692        /*R_theta: [1 1] array values */
-#define MPC14_X_MIN_ADDR 693        /*x_min: [14 1] array values */
-#define MPC14_X_MAX_ADDR 707        /*x_max: [14 1] array values */
-#define MPC14_U_MIN_ADDR 721        /*u_min: [7 1] array values */
-#define MPC14_U_MAX_ADDR 728        /*u_max: [7 1] array values */
+#define MPC14_T_ADDR 12        /*t: [1 1] array values */
+#define MPC14_Q_PREV_ADDR 13        /*q_prev: 6x6 matrix values */
+#define MPC14_THETA_PREV_ADDR 49        /*theta_prev: [1 5] array values */
+#define MPC14_U_ADDR 54        /*u: 6x5 matrix values */
+#define MPC14_X_ADDR 84        /*x: 12x6 matrix values */
+#define MPC14_THETA_ADDR 156        /*theta: [1 5] array values */
+#define MPC14_LAMBDA_U_ADDR 161        /*lambda_u: 6x5 matrix values */
+#define MPC14_LAMBDA_X_ADDR 191        /*lambda_x: 12x6 matrix values */
+#define MPC14_LAMBDA_THETA_ADDR 263        /*lambda_theta: [1 5] array values */
+#define MPC14_G_ADDR 268        /*g: 12x13 matrix values */
+#define MPC14_Q_Y_ADDR 424        /*Q_y: 6x6 matrix values */
+#define MPC14_Q_YN_ADDR 460        /*Q_yN: 6x6 matrix values */
+#define MPC14_Q_ADDR 496        /*Q: [1 1] array values */
+#define MPC14_Q_ADDR 497        /*Q: [1 1] array values */
+#define MPC14_LAMBDA_ADDR 498        /*lambda: [1 1] array values */
+#define MPC14_R_Q_P_ADDR 499        /*R_q_p: 7x7 matrix values */
+#define MPC14_R_Q_PP_ADDR 548        /*R_q_pp: 7x7 matrix values */
+#define MPC14_R_Q_PREV_ADDR 597        /*R_q_prev: 7x7 matrix values */
+#define MPC14_R_THETA_ADDR 646        /*R_theta: [1 1] array values */
+#define MPC14_X_MIN_ADDR 647        /*x_min: [14 1] array values */
+#define MPC14_X_MAX_ADDR 661        /*x_max: [14 1] array values */
+#define MPC14_U_MIN_ADDR 675        /*u_min: [7 1] array values */
+#define MPC14_U_MAX_ADDR 682        /*u_max: [7 1] array values */
 
 // CASADI FUN INPUT ADRESSES:
-#define MPC14_IN_REFERENCE_VALUES_ADDR 0        /* reference_values = [x_k(12x1), theta(1x1), t(1x1), q_prev(6x6), theta_prev(1x6)] */
-#define MPC14_IN_INIT_GUESS_ADDR 56        /* init_guess = [u(6x1), q(6x6), theta(1x6), lambda_u(6x1), lambda_q(6x6), lambda_theta(1x6), g(12x2)] */
-#define MPC14_IN_PARAM_WEIGHT_ADDR 170        /* param_weight = [Q_y(6x6), Q_yN(6x6), Q(1x1), Q(1x1), lambda(1x1), R_q_pp(7x7), R_x(14x14), R_x0(14x14), R_theta(1x1), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
+#define MPC14_IN_REFERENCE_VALUES_ADDR 0        /* reference_values = [x_k(12x1), t(1x1), q_prev(6x6), theta_prev(1x5)] */
+#define MPC14_IN_INIT_GUESS_ADDR 54        /* init_guess = [u(6x5), x(12x6), theta(1x5), lambda_u(6x5), lambda_x(12x6), lambda_theta(1x5), g(12x13)] */
+#define MPC14_IN_PARAM_WEIGHT_ADDR 347        /* param_weight = [Q_y(6x6), Q_yN(6x6), Q(1x1), Q(1x1), lambda(1x1), R_q_p(7x7), R_q_pp(7x7), R_q_prev(7x7), R_theta(1x1), x_min(14x1), x_max(14x1), u_min(7x1), u_max(7x1)] */
 
 // OUTPUT DIMENSIONS:
-#define MPC14_U_OPT_LEN 6        /*u_opt: [6 1] array values */
-#define MPC14_U_OUT_LEN 6        /*u_out: [6 1] array values */
-#define MPC14_Q_OUT_LEN 36        /*q_out: 6x6 matrix values */
-#define MPC14_THETA_OUT_LEN 6        /*theta_out: [1 6] array values */
-#define MPC14_LAMBDA_U_OUT_LEN 6        /*lambda_u_out: [6 1] array values */
-#define MPC14_LAMBDA_Q_OUT_LEN 36        /*lambda_q_out: 6x6 matrix values */
-#define MPC14_LAMBDA_THETA_OUT_LEN 6        /*lambda_theta_out: [1 6] array values */
-#define MPC14_G_OUT_LEN 24        /*g_out: 12x2 matrix values */
+#define MPC14_U_OPT_LEN 24        /*u_opt: [24 1] array values */
+#define MPC14_U_OUT_LEN 30        /*u_out: 6x5 matrix values */
+#define MPC14_X_OUT_LEN 72        /*x_out: 12x6 matrix values */
+#define MPC14_THETA_OUT_LEN 5        /*theta_out: [1 5] array values */
+#define MPC14_LAMBDA_U_OUT_LEN 30        /*lambda_u_out: 6x5 matrix values */
+#define MPC14_LAMBDA_X_OUT_LEN 72        /*lambda_x_out: 12x6 matrix values */
+#define MPC14_LAMBDA_THETA_OUT_LEN 5        /*lambda_theta_out: [1 5] array values */
+#define MPC14_G_OUT_LEN 156        /*g_out: 12x13 matrix values */
 #define MPC14_J_YT_LEN 1        /*J_yt: [1 1] array values */
 #define MPC14_J_YT_N_LEN 1        /*J_yt_N: [1 1] array values */
 #define MPC14_J_YR_LEN 1        /*J_yr: [1 1] array values */
 #define MPC14_J_YR_N_LEN 1        /*J_yr_N: [1 1] array values */
+#define MPC14_J_Q_P_LEN 1        /*J_q_p: [1 1] array values */
 #define MPC14_J_Q_PP_LEN 1        /*J_q_pp: [1 1] array values */
+#define MPC14_J_Q_PREV_LEN 1        /*J_q_prev: [1 1] array values */
 #define MPC14_J_THETA_LEN 1        /*J_theta: [1 1] array values */
 #define MPC14_J_THETAN_LEN 1        /*J_thetaN: [1 1] array values */
-#define MPC14_J_X_LEN 1        /*J_x: [1 1] array values */
-#define MPC14_J_X0_LEN 1        /*J_x0: [1 1] array values */
 #define MPC14_J_THETA_PREV_LEN 1        /*J_theta_prev: [1 1] array values */
 
 // OUTPUT ADDRESSES:
-#define MPC14_U_OPT_ADDR 729        /*u_opt: [6 1] array values */
-#define MPC14_U_OUT_ADDR 735        /*u_out: [6 1] array values */
-#define MPC14_Q_OUT_ADDR 741        /*q_out: 6x6 matrix values */
-#define MPC14_THETA_OUT_ADDR 777        /*theta_out: [1 6] array values */
-#define MPC14_LAMBDA_U_OUT_ADDR 783        /*lambda_u_out: [6 1] array values */
-#define MPC14_LAMBDA_Q_OUT_ADDR 789        /*lambda_q_out: 6x6 matrix values */
-#define MPC14_LAMBDA_THETA_OUT_ADDR 825        /*lambda_theta_out: [1 6] array values */
-#define MPC14_G_OUT_ADDR 831        /*g_out: 12x2 matrix values */
-#define MPC14_J_YT_ADDR 855        /*J_yt: [1 1] array values */
-#define MPC14_J_YT_N_ADDR 856        /*J_yt_N: [1 1] array values */
-#define MPC14_J_YR_ADDR 857        /*J_yr: [1 1] array values */
-#define MPC14_J_YR_N_ADDR 858        /*J_yr_N: [1 1] array values */
-#define MPC14_J_Q_PP_ADDR 859        /*J_q_pp: [1 1] array values */
-#define MPC14_J_THETA_ADDR 860        /*J_theta: [1 1] array values */
-#define MPC14_J_THETAN_ADDR 861        /*J_thetaN: [1 1] array values */
-#define MPC14_J_X_ADDR 862        /*J_x: [1 1] array values */
-#define MPC14_J_X0_ADDR 863        /*J_x0: [1 1] array values */
-#define MPC14_J_THETA_PREV_ADDR 864        /*J_theta_prev: [1 1] array values */
+#define MPC14_U_OPT_ADDR 612        /*u_opt: [24 1] array values */
+#define MPC14_U_OUT_ADDR 636        /*u_out: 6x5 matrix values */
+#define MPC14_X_OUT_ADDR 666        /*x_out: 12x6 matrix values */
+#define MPC14_THETA_OUT_ADDR 738        /*theta_out: [1 5] array values */
+#define MPC14_LAMBDA_U_OUT_ADDR 743        /*lambda_u_out: 6x5 matrix values */
+#define MPC14_LAMBDA_X_OUT_ADDR 773        /*lambda_x_out: 12x6 matrix values */
+#define MPC14_LAMBDA_THETA_OUT_ADDR 845        /*lambda_theta_out: [1 5] array values */
+#define MPC14_G_OUT_ADDR 850        /*g_out: 12x13 matrix values */
+#define MPC14_J_YT_ADDR 1006        /*J_yt: [1 1] array values */
+#define MPC14_J_YT_N_ADDR 1007        /*J_yt_N: [1 1] array values */
+#define MPC14_J_YR_ADDR 1008        /*J_yr: [1 1] array values */
+#define MPC14_J_YR_N_ADDR 1009        /*J_yr_N: [1 1] array values */
+#define MPC14_J_Q_P_ADDR 1010        /*J_q_p: [1 1] array values */
+#define MPC14_J_Q_PP_ADDR 1011        /*J_q_pp: [1 1] array values */
+#define MPC14_J_Q_PREV_ADDR 1012        /*J_q_prev: [1 1] array values */
+#define MPC14_J_THETA_ADDR 1013        /*J_theta: [1 1] array values */
+#define MPC14_J_THETAN_ADDR 1014        /*J_thetaN: [1 1] array values */
+#define MPC14_J_THETA_PREV_ADDR 1015        /*J_theta_prev: [1 1] array values */
 
 // CASADI FUN OUTPUT ADRESSES:
-#define MPC14_OUT_U_OPT_ADDR 729        /* u_opt = [u[0:5](6x1)] */
-#define MPC14_OUT_INIT_GUESS_OUT_ADDR 735        /* init_guess_out = [u_out(6x1), q_out(6x6), theta_out(1x6), lambda_u_out(6x1), lambda_q_out(6x6), lambda_theta_out(1x6), g_out(12x2)] */
-#define MPC14_OUT_COST_FUN_1_ADDR 849        /* cost_fun_1 = [J_yt(1x1)] */
-#define MPC14_OUT_COST_FUN_2_ADDR 850        /* cost_fun_2 = [J_yt_N(1x1)] */
-#define MPC14_OUT_COST_FUN_3_ADDR 851        /* cost_fun_3 = [J_yr(1x1)] */
-#define MPC14_OUT_COST_FUN_4_ADDR 852        /* cost_fun_4 = [J_yr_N(1x1)] */
-#define MPC14_OUT_COST_FUN_5_ADDR 853        /* cost_fun_5 = [J_q_pp(1x1)] */
-#define MPC14_OUT_COST_FUN_6_ADDR 854        /* cost_fun_6 = [J_theta(1x1)] */
-#define MPC14_OUT_COST_FUN_7_ADDR 855        /* cost_fun_7 = [J_thetaN(1x1)] */
-#define MPC14_OUT_COST_FUN_8_ADDR 856        /* cost_fun_8 = [J_x(1x1)] */
-#define MPC14_OUT_COST_FUN_9_ADDR 857        /* cost_fun_9 = [J_x0(1x1)] */
-#define MPC14_OUT_COST_FUN_10_ADDR 858        /* cost_fun_10 = [J_theta_prev(1x1)] */
+#define MPC14_OUT_U_OPT_ADDR 612        /* u_opt = [u[0:11](24x1)] */
+#define MPC14_OUT_INIT_GUESS_OUT_ADDR 636        /* init_guess_out = [u_out(6x5), x_out(12x6), theta_out(1x5), lambda_u_out(6x5), lambda_x_out(12x6), lambda_theta_out(1x5), g_out(12x13)] */
+#define MPC14_OUT_COST_FUN_1_ADDR 929        /* cost_fun_1 = [J_yt(1x1)] */
+#define MPC14_OUT_COST_FUN_2_ADDR 930        /* cost_fun_2 = [J_yt_N(1x1)] */
+#define MPC14_OUT_COST_FUN_3_ADDR 931        /* cost_fun_3 = [J_yr(1x1)] */
+#define MPC14_OUT_COST_FUN_4_ADDR 932        /* cost_fun_4 = [J_yr_N(1x1)] */
+#define MPC14_OUT_COST_FUN_5_ADDR 933        /* cost_fun_5 = [J_q_p(1x1)] */
+#define MPC14_OUT_COST_FUN_6_ADDR 934        /* cost_fun_6 = [J_q_pp(1x1)] */
+#define MPC14_OUT_COST_FUN_7_ADDR 935        /* cost_fun_7 = [J_q_prev(1x1)] */
+#define MPC14_OUT_COST_FUN_8_ADDR 936        /* cost_fun_8 = [J_theta(1x1)] */
+#define MPC14_OUT_COST_FUN_9_ADDR 937        /* cost_fun_9 = [J_thetaN(1x1)] */
+#define MPC14_OUT_COST_FUN_10_ADDR 938        /* cost_fun_10 = [J_theta_prev(1x1)] */
 
 #endif /* MPC8_ADRESSDEF_H */
