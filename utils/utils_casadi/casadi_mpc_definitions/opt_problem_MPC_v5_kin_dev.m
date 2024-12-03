@@ -1,7 +1,7 @@
 % MPC v4: Optimization problem 
 
 import casadi.*
-N_MPC=200
+
 implicit_xk = false; % false liefert robustere lösungen, true ist etwas schneller aber führt oft zu numerischen noise
 
 diff_variant_mode = struct;
@@ -48,9 +48,9 @@ end
 
 %% Calculate Initial Guess
 if(N_step_MPC <= 2)
-    MPC_traj_indices = 100+[1:(N_MPC+1)];
+    MPC_traj_indices = [1:(N_MPC+1)];
 else
-    MPC_traj_indices = 100+[0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
+    MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
 end
 
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
