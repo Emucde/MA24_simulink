@@ -209,14 +209,6 @@ u_opt_indices = [q0_pp_idx, x1_idx, q1_pp_idx];
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
 
-if(theta_sys)
-    lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n]), size(x, 2), 1); -inf(numel(theta), 1); -inf(numel(v), 1)];
-    ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n]), size(x, 2), 1);  inf(numel(theta), 1);  inf(numel(v), 1)];
-else
-    lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n]), size(x, 2), 1); -inf(numel(theta), 1)];
-    ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n]), size(x, 2), 1);  inf(numel(theta), 1)];
-end
-
 % input parameter
 x_k = SX.sym( 'x_k', 2*n_red, 1 ); % current x state = initial x state
 t_k = SX.sym( 't_k', 1, 1 ); % current time
@@ -227,6 +219,16 @@ mpc_parameter_inputs = {x_k, t_k, x_prev, theta_prev, traj_select};
 mpc_init_reference_values = [x_0_0(:); DT_ctl; x_init_guess_0(:); theta_init_guess_0(:); traj_select_mpc];
 
 theta_d = (t_k+t_init_guess)/T;
+
+if(theta_sys)
+    lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n]), size(x, 2), 1); -inf(numel(theta), 1); -inf(numel(v), 1)];
+    ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n]), size(x, 2), 1);  inf(numel(theta), 1);  inf(numel(v), 1)];
+else
+    lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n]), size(x, 2), 1); -inf(numel(theta), 1)];
+    ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n]), size(x, 2), 1);  inf(numel(theta), 1)];
+    % lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n]), size(x, 2), 1); theta_d'+pp.d_theta_min];
+    % ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n]), size(x, 2), 1); theta_d'+pp.d_theta_max];
+end
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';

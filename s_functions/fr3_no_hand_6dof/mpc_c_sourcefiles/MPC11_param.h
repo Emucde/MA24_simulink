@@ -53,7 +53,7 @@ const casadi_real MPC11_param_weight[412] = {
     0, 0, 0, 0, 0, 100, 
 
     /* Q_theta : [1 1] array values */
-    100000, 
+    100, 
 
     /* Q_thetaN : [1 1] array values */
     1e+08, 
