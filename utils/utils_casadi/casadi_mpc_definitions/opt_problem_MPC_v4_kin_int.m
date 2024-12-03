@@ -57,6 +57,9 @@ else
     MPC_traj_indices = [0, 1, 2, (1:1+(N_MPC-3))*N_step_MPC]+1;
 end
 
+int_times = 1./(MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1));
+int_times = ones(size(int_times));
+
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
 q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
 y_d_0 = [p_d_0; q_d_0];
@@ -200,12 +203,16 @@ Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 %     y_t_err_perp(:, i) = y_t_err(:, i) - y_t_err_tang(:, i);
 % end
 
+int_times_eye4_1 = eye(N_MPC-1) .* int_times(1:end-1);
+int_times_eye4_2 = eye(N_MPC-1) .* int_times(2:end);
+int_times_eye5 = eye(N_MPC) .* int_times;
+int_times_eye6 = eye(N_MPC+1) .* [1, int_times];
+
 J_yt = 0;
 J_yt_N = 0;
 if ~isempty(yt_indices)
-    J_yt   =        Q_norm_square( y(yt_indices, 1 + ( 1       ) ) - y_d(yt_indices, 1 + ( 1       )), pp.Q_ykp1(yt_indices,yt_indices) );
-    J_yt   = J_yt + Q_norm_square( y(yt_indices, 1 + (2:N_MPC-1) ) - y_d(yt_indices, 1 + (2:N_MPC-1)), pp.Q_y(   yt_indices,yt_indices) );
-    J_yt_N =        Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(  yt_indices,yt_indices) );
+    J_yt   =  Q_norm_square( (y(yt_indices, 1 + (1:N_MPC-1) ) - y_d(yt_indices, 1 + (1:N_MPC-1))) * int_times_eye4_1, pp.Q_y(   yt_indices,yt_indices) );
+    J_yt_N =  Q_norm_square( (y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  ))) * int_times(end), pp.Q_yN(  yt_indices,yt_indices) );
 
     % Hier macht gesondertes gewichten in x,y,z keinen Sinn
     %J_yt_tang = Q_norm_square( y_t_err_tang(yt_indices, 1:N_MPC-1), pp.Q_yt_tang(1:3,1:3) );
@@ -229,15 +236,19 @@ else
         
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
-        if(i==1)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_ykp1(3+yr_indices,3+yr_indices)  );
-        elseif(i < N_MPC)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
+        if(i < N_MPC)
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , int_times(i)*pp.Q_y(3+yr_indices,3+yr_indices)  );
         else
-            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );
+            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , int_times(i)*pp.Q_yN(3+yr_indices,3+yr_indices)  );
         end
     end
 end
+
+int_times = ones(size(int_times));
+int_times_eye4_1 = eye(N_MPC-1);
+int_times_eye4_2 = eye(N_MPC-1);
+int_times_eye5 = eye(N_MPC);
+int_times_eye6 = eye(N_MPC+1);
 
 q        = x(   1:n_red, :);
 q_prev = x_prev(1:n_red, :);
@@ -246,16 +257,14 @@ q_prev_p = x_prev(n_red+1:2*n_red, :);
 
 x_err = [q - q_prev; q_p - q_prev_p];
 
+J_q_p = Q_norm_square(q_p*int_times_eye6, pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_q_pp = Q_norm_square(u*int_times_eye5, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 
-J_q_p = Q_norm_square(q_p, pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
-J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_delta_x1 = Q_norm_square(x_err(:, 1 + (1))*int_times(1),       pp.R_delta_x1(n_x_indices, n_x_indices));
+J_delta_x  = Q_norm_square(x_err(:, 1 + (2:N_MPC))*int_times_eye4_2, pp.R_delta_x(n_x_indices, n_x_indices));
+J_delta_u = Q_norm_square((u - u_prev)*int_times_eye5, pp.R_delta_u(n_indices, n_indices));
 
-J_delta_x0 = Q_norm_square(x_err(:, 1 + (0)),       pp.R_delta_x0(n_x_indices, n_x_indices));
-J_delta_x  = Q_norm_square(x_err(:, 1 + (1:N_MPC)), pp.R_delta_x(n_x_indices, n_x_indices));
-J_delta_u = Q_norm_square(u - u_prev, pp.R_delta_u(n_indices, n_indices));
-
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_p, J_q_pp, J_delta_x0, J_delta_x, J_delta_u}';
-
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_p, J_q_pp, J_delta_x1, J_delta_x, J_delta_u}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

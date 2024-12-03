@@ -94,19 +94,24 @@ param_weight.(MPC).q_pp_max    = param_robot.q_pp_limit_upper;
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 8) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % kinematic mpc with integration without refsys after thelenberg
 MPC='MPC8';
+lambda = -1;
+n_p = 3;
+A = [zeros(n_p), eye(n_p); -eye(n_p)*lambda^2, 2*eye(n_p)*lambda]; % = d/dt x = Ax + Bu = (A + BC)x, u=Cx
+Q = 1e5*eye(2*n_p); % d/dt V = -x'Qx
+P = lyap(A, Q); % V = x'Px => Idea: Use V as end cost term
+
 param_weight.(MPC).Q_y      = 1e2*diag([1*ones(3,1); 1e-2*ones(3,1)]);  % d_kpn
-param_weight.(MPC).Q_ykp1   = 1e2*diag([1*ones(3,1); 1e-2*ones(3,1)]);  % d_kpn
 param_weight.(MPC).Q_yN     = 1e5*diag([1*ones(3,1); 1e-2*ones(3,1)]);  % D_N
 
 % stretch arm other dir, Tsmpc=200ms pred
 param_weight.(MPC).R_q_p    = 1e-2*diag(ones(n, 1));
 param_weight.(MPC).R_q_pp   = 1e-5*diag(ones(n, 1));
-param_weight.(MPC).R_delta_x0 = 1*diag([1e-10*ones(n,1); 0*ones(n,1)]);
-param_weight.(MPC).R_delta_x  = param_weight.(MPC).R_delta_x0;
+param_weight.(MPC).R_delta_x1  = 1e-10*diag([ones(n,1); 0*ones(n,1)]);
+param_weight.(MPC).R_delta_x  = 1e-10*diag([ones(n,1); 0*ones(n,1)]);
 param_weight.(MPC).R_delta_u  = 0*diag(ones(n, 1));
 
-param_jointspace_ct.(MPC).K_P_q = 100*eye(n);
-param_jointspace_ct.(MPC).K_D_q = 2*sqrt(param_jointspace_ct.(MPC).K_P_q);
+param_jointspace_ct.(MPC).K_P_q = 10*eye(n);
+param_jointspace_ct.(MPC).K_D_q = sqrt(2*param_jointspace_ct.(MPC).K_P_q);
 
 % stretch arm noise Tsmpc=5ms pred
 % param_weight.(MPC).R_q_p    = 1e-2*diag(ones(n, 1));
