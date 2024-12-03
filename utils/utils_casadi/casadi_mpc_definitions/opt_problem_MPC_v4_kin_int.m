@@ -247,7 +247,7 @@ q_prev_p = x_prev(n_red+1:2*n_red, :);
 x_err = [q - q_prev; q_p - q_prev_p];
 
 
-J_q_p = Q_norm_square(u, pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_q_p = Q_norm_square(q_p, pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 
 J_delta_x0 = Q_norm_square(x_err(:, 1 + (0)),       pp.R_delta_x0(n_x_indices, n_x_indices));
