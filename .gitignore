@@ -14,6 +14,8 @@ s_functions/*/*/*.mat
 s_functions/*/*/*.bin
 s_functions/*/*/MPC*.c
 s_functions/*/*/MPC*.h
+s_functions/*/*MPC*.c
+s_functions/*/*MPC*.h
 s_functions/MPC*.c
 s_functions/MPC*.h
 jit*.c
