@@ -929,6 +929,8 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     xprev_ref = param_mpc_weight['xprev_ref']
     uref = param_mpc_weight['uref']
 
+    xmean = (xmin + xmax)/2
+
     running_cost_models = list()
     terminalDifferentialCostModel = crocoddyl.CostModelSum(state) # darf nur eines sein:
     actuationModel = crocoddyl.ActuationModelFull(state)
@@ -958,7 +960,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                 xRegBoundCost = crocoddyl.CostModelResidual(
                     state,
                     activation=activationModel,
-                    residual=crocoddyl.ResidualModelState(state, xref)
+                    residual=crocoddyl.ResidualModelState(state, xmean)
                 )
                 if i < N_MPC-1:
                     runningCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
@@ -1313,7 +1315,7 @@ def simulate_model_mpc_v1(xk, uk, dt, nq, nx, robot_model, robot_data, param_rob
     q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
     
     xkp1 = np.hstack([q_next, q_p_next])
-    np.clip(xkp1, param_robot['x_min'], param_robot['x_max'], out=xkp1)
+    # np.clip(xkp1, param_robot['x_min'], param_robot['x_max'], out=xkp1)
 
     return xkp1
 

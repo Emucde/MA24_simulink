@@ -21,7 +21,7 @@ if autostart_fr3:
 ################################################ REALTIME ###############################################
 
 use_data_from_simulink = False
-manual_traj_select = 3
+manual_traj_select = 2
 use_feedforward = True
 use_clipping = False
 use_gravity = False
@@ -430,9 +430,9 @@ try:
                 # q_p_red = q_p_ndof[n_indices]
                 # x_k = np.hstack([q_red, q_p_red])
                 
-                # x_kp1_red, x_k_i_red, u_k_i_red = simulate_model(x_k, u_k, Ts, 6, 2*6, robot_model, robot_data, transient_traj)
+                # x_kp1_red = simulate_model(x_k, u_k, Ts, 6, 2*6, robot_model, robot_data, param_robot, transient_traj)
                 # x_k_i_ndof = np.zeros(2*n_dof)
-                # x_k_i_ndof[n_x_indices] = x_k_i_red
+                # x_k_i_ndof[n_x_indices] = x_k
                 
                 # x_kp1_ndof = np.zeros(2*n_dof)
                 # x_kp1_ndof[n_x_indices] = x_kp1_red
