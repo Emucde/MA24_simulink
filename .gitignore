@@ -10,10 +10,10 @@ slprj
 .tmp
 videos
 main_simulink/simulink_log/*.txt
-s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/*
-s_functions/fr3_no_hand_6dof/initial_guess/*
-s_functions/*.mat
-s_functions/*.bin
+s_functions/*/*/*.mat
+s_functions/*/*/*.bin
+s_functions/*/*/MPC*.c
+s_functions/*/*/MPC*.h
 s_functions/MPC*.c
 s_functions/MPC*.h
 jit*.c
