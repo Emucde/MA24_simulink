@@ -27,13 +27,42 @@ function traj_struct_out = create_param_diff_filter(traj_struct, param_global, t
     A_f = [[zeros(n_order-1,1), eye(n_order-1)]; -ai_f];
     b_f = [zeros(n_order-1,1); a0_f];
     C_f = eye(n_order)*a0_f; % damit [yf ; d/dt yf; d^2/dt^2 yf] = a0^3 * xf gilt.
-    D_f = [0; 0; 0; 0; 0; 0];
+    D_f = zeros(n_order,1);
 
     %SYS_f = ss(A_f,b_f,C_f,D_f); % kontinuierliches System für y
-    %SYS_f_z = c2d(SYS_f, param_global.Ta); % diskretes System für y (macht eh euler vorwärts)
+    %SYS_f_z = c2d(SYS_f, param_global.Ta, 'damped'); % diskretes System für y (macht eh euler vorwärts)
 
+    %Phi = SYS_f_z.A;
+    %Gamma = SYS_f_z.B;
+
+    %EULER:
     Phi = (eye(n_order) + A_f*param_global.Ta); % euler vorwärts
     Gamma = b_f*param_global.Ta;  % euler vorwärts
+
+    %RK4:
+    % d/dt x = Ax + bu = f(x,u)
+    % k1 = f(x0,u) = Ax0 + bu
+    % k2 = f(x0 + Ta/2 * k1, u) = (E+Ta/2*A)*A x0 + (A*Ta/2*b) u = A1 x0 + b1 u
+    % k3 = f(x0 + Ta/2 * k2, u) = A*(E+Ta/2*A1) x0 + (A*Ta/2*b1+b) u = A2 x0 + b2 u
+    % k4 = f(x0 + Ta   * k3, u) = A*(E+Ta  *A2) x0 + (A*Ta  *b2+b) u = A3 x0 + b3 u
+    % x1 = x0 + Ta/6 * (k1 + 2*k2 + 2*k3 + k4) = 
+    %    = (E + Ta/6 * (A + 2*A1 + 2*A2 + A3)) x0 + (b + Ta/6 * (b + 2*b1 + 2*b2 + b3)) u
+    %    = Phi x0 + Gamma u
+    % A = A_f;
+    % b = b_f;
+    % Ta = param_global.Ta;
+    % E = eye(n_order);
+    % A1 = A*(E+Ta/2*A);
+    % A2 = A*(E+Ta/2*A1);
+    % A3 = A*(E+Ta*  A2);
+
+    % b1 = A*Ta/2*b;
+    % b2 = A*Ta/2*b1+b;
+    % b3 = A*Ta*b2+b;
+
+    % Phi = (E + Ta/6 * (A + 2*A1 + 2*A2 + A3));
+    % Gamma = Ta/6 * (b + 2*b1 + 2*b2 + b3);
+
 
     A_f_cells   = reshape(mat2cell(repmat(A_f, 1,1,n_input),   n_order, n_order, ones(1, n_input)), 1, []);
     b_f_cells   = reshape(mat2cell(repmat(b_f, 1,1,n_input),   n_order, 1,       ones(1, n_input)), 1, []);

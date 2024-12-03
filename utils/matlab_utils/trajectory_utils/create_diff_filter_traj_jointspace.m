@@ -71,5 +71,7 @@ function [x_d, x_kp1] = create_diff_filter_traj_jointspace(traj_select, t, x_k, 
     x_d.alpha_d_offset = 0;
     x_d.q_d_rel = q_d;
 
-    warning('Achtung, die Ableitungen beim Diff Filter sind nicht konsistent! Daher kann der Trajektorie niemals perfekt gefolgt werden');
+    % falsch: ja zum originalsignal gesehen stimm es aber vom gefilterten signal gesehen sind die Ableitungen korrekt.
+    % D. h. solange man nicht mehr die Originalsignale verwendet, ist es egal.
+    % warning('Achtung, die Ableitungen beim Diff Filter sind nicht konsistent! Daher kann der Trajektorie niemals perfekt gefolgt werden');
 end

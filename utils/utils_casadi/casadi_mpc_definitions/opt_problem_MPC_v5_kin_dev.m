@@ -1,7 +1,7 @@
 % MPC v4: Optimization problem 
 
 import casadi.*
-
+N_MPC=200
 implicit_xk = false; % false liefert robustere lösungen, true ist etwas schneller aber führt oft zu numerischen noise
 
 diff_variant_mode = struct;
@@ -12,6 +12,7 @@ diff_variant_mode.savgol_not_equidist = 4; % savgol filtering, non equidistant s
 diff_variant_mode.savgol_not_equidist_noise_supr = 5; % savgol filtering without additional equations and deviation
 diff_variant_mode.savgol_not_equidist_combined = 6; % savgol filtering, non equidistant samples, for pd control, first derivatve approximated
 diff_variant_mode.savgol_not_equidist_combined2 = 7; % savgol filtering, non equidistant samples, for pd control, first derivatve approximated
+diff_variant_mode.diff_filter = 8; % differential filter
 
 diff_variant = diff_variant_mode.savgol_not_equidist_combined2;
 
@@ -47,9 +48,9 @@ end
 
 %% Calculate Initial Guess
 if(N_step_MPC <= 2)
-    MPC_traj_indices = 1:(N_MPC+1);
+    MPC_traj_indices = 100+[1:(N_MPC+1)];
 else
-    MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
+    MPC_traj_indices = 100+[0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
 end
 
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
@@ -240,13 +241,39 @@ elseif(diff_variant == diff_variant_mode.savgol_not_equidist_combined)
         S_a(1:2*n_red, :) = S_a_v3(1:2*n_red, :);
         S_a(end-2*n_red+1:end, :) = S_a_v3(end-2*n_red+1:end, :);
     end
+elseif(diff_variant == diff_variant_mode.diff_filter)
+    warning('Das Ergebnis passt erst nach n_order steps, es sei denn man initialisiert die Filter mit dem korrekten Wert, den es vor n_order steps hat.');
+    param_global_DT.Ta = DT; % Ts_MPC
+    param_global_DT2.Ta = DT2; % DT - DT_ctl
+    param_global_ctl.Ta = DT_ctl; % Ta
+    lambda = -1000;
+    traj_struct_DT_ctl = create_param_diff_filter(struct, param_global_ctl, 'lambda (1/s)', lambda, 'n_order', 3, 'n_input', 6, 'diff_filter_jointspace');
+    traj_struct_DT2 = create_param_diff_filter(struct, param_global_DT2, 'lambda (1/s)', lambda, 'n_order', 3, 'n_input', 6, 'diff_filter_jointspace');
+    traj_struct_DT = create_param_diff_filter(struct, param_global_DT, 'lambda (1/s)', lambda, 'n_order', 3, 'n_input', 6, 'diff_filter_jointspace');
+
+    Phi_DT_ctl = traj_struct_DT_ctl.diff_filter_jointspace.Phi;
+    Gamma_DT_ctl = traj_struct_DT_ctl.diff_filter_jointspace.Gamma;
+
+    Phi_DT2 = traj_struct_DT2.diff_filter_jointspace.Phi;
+    Gamma_DT2 = traj_struct_DT2.diff_filter_jointspace.Gamma;
+
+    Phi_DT = traj_struct_DT.diff_filter_jointspace.Phi;
+    Gamma_DT = traj_struct_DT.diff_filter_jointspace.Gamma;
+
+    q_filt_index = double(traj_struct_DT_ctl.diff_filter_jointspace.p_d_index);
+    q_p_filt_index = double(traj_struct_DT_ctl.diff_filter_jointspace.p_d_p_index);
+    q_pp_filt_index = double(traj_struct_DT_ctl.diff_filter_jointspace.p_d_pp_index);
 else
     error('invalid mode');
 end
+
 %      x = [q(t0),   q(t1), ...  q(tN),  dq(t0),  dq(t1), ...  dq(tN)] = [qq;   qq_p ]
 % d/dt x = [dq(t0), dq(t1), ... dq(tN), ddq(t0), ddq(t1), ... ddq(tN)] = [qq_p; qq_pp]
 
+% p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
 % p_d_p_0 = param_trajectory.p_d_p( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
+% p_d_pp_0 = param_trajectory.p_d_pp( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
+
 % pp = reshape(p_d_0, 3*(N_MPC+1), 1);
 % S_v1 = create_numdiff_matrix(DT_ctl, 3, N_MPC+1, 'fwdbwdcentraltwotimes', DT);
 % pp_p_v1 = S_v1 * pp;
@@ -279,38 +306,92 @@ end
 % p_pp_v2 = reshape(pp_pp_v2, 3, N_traj);
 % plot(p_pp_v2', 'linewidth',0.5); hold on; plot(p_d_pp_tst', '--', 'linewidth', 2)
 
-if(implicit_xk)
-    qq = reshape(x(1:n_red, 2:end), n_red*(N_MPC+1-1), 1);
-    qq = [x_k(1:n_red); qq];
-else
-    qq = reshape(x(1:n_red, :), n_red*(N_MPC+1), 1);
-end
+% q = zeros( 3, N_MPC+1 );
+% q_p = zeros( 3, N_MPC+1 );
+% q_pp = zeros( 3, N_MPC+1 );
+% x_0 = [ p_d_0(:,1)'; zeros(3-1, 3)];
+% % x_0 = [ p_d_0(:,1)'; p_d_p_0(:,1)'; p_d_pp_0(:,1)'];
+% % x_0 = [ param_trajectory.p_d( 1:3, MPC_traj_indices(1)-3 )'; param_trajectory.p_d_p( 1:3, MPC_traj_indices(1)-3 )'; param_trajectory.p_d_pp( 1:3, MPC_traj_indices(1)-3 )'];
 
-qq_p  = S_v * qq;
-qq_pp = S_a * qq;
+% x_k_i = x_0(:);
 
-if(diff_variant == diff_variant_mode.savgol_v2)
-    qq = S_q * qq;
-end
+% % calculate derivative values (q_p, q_pp)
+% for i=0:N_MPC
+%     if(i == 0)
+%         x_k_i = Phi_DT_ctl*x_k_i + Gamma_DT_ctl*p_d_0(:, 1 + (i));
+%     elseif(i == 1)
+%          x_k_i = Phi_DT2*x_k_i + Gamma_DT2*p_d_0(:, 1 + (i));
+%     else
+%          x_k_i = Phi_DT*x_k_i + Gamma_DT*p_d_0(:, 1 + (i));
+%     end
+%         q(:, 1 + (i)) = x_k_i(q_filt_index);
+%         q_p(:, 1 + (i)) = x_k_i(q_p_filt_index);
+%         q_pp(:, 1 + (i)) = x_k_i(q_pp_filt_index);
+% end
+% % plot(q');hold on;plot(p_d_0')
+% plot(q_p');hold on;plot(p_d_p_0')
+% % plot(q_pp');hold on;plot(p_d_pp_0')
 
-q = reshape(qq, n_red, N_MPC+1);
-q_p = reshape(qq_p, n_red, N_MPC+1);
-q_pp = reshape(qq_pp, n_red, N_MPC+1);
-
-if(diff_variant == diff_variant_mode.savgol_not_equidist_combined2)
+if(diff_variant == diff_variant_mode.diff_filter)
+    q = SX( n_red, N_MPC+1 );
+    q_p = SX( n_red, N_MPC+1 );
+    q_pp = SX( n_red, N_MPC+1 );
     if(implicit_xk)
-        q_p(:, 1) = x_k(1+n_red:2*n_red);
+        x_0 = [ x_k(1:n_red)'; x_k(1+n_red:2*n_red)'; zeros(3-2, n_red)];
     else
-        q_p(:, 1) = (q(:, 2) - q(:, 1))/(DT_ctl);
+        x_0 = [ x(1:n_red, 1)'; x(1+n_red:2*n_red, 1)'; zeros(3-2, n_red)];
     end
-    q_pp(:, 1) = (q_p(:, 2) - q_p(:, 1))/(DT_ctl);
 
-    % q_p(:, 2) = (q(:, 3) - q(:, 1))/(DT); % optional, verschlechterts aber
-    % q_pp(:, 2) = (q_p(:, 3) - q_p(:, 1))/(DT); % optional, verschlechterts aber
-    q_p(:, end) = (q(:, end) - q(:, end-1))/(DT);
-    q_pp(:, end) = (q_p(:, end) - q_p(:, end-1))/(DT);
-elseif(implicit_xk)
-    q_p(:, 1) = x_k(1+n_red:2*n_red);
+    x_k_i = x_0(:);
+
+    % calculate derivative values (q_p, q_pp)
+    for i=0:N_MPC
+        if(i == 0)
+            x_k_i = Phi_DT_ctl*x_k_i + Gamma_DT_ctl*x(1:n_red, 1 + (i));
+        elseif(i == 1)
+            x_k_i = Phi_DT2*x_k_i(:) + Gamma_DT2*x(1:n_red, 1 + (i));
+        else
+            x_k_i = Phi_DT*x_k_i(:) + Gamma_DT*x(1:n_red, 1 + (i));
+        end
+
+        q(:, 1 + (i)) = x_k_i(q_filt_index);
+        q_p(:, 1 + (i)) = x_k_i(q_p_filt_index);
+        q_pp(:, 1 + (i)) = x_k_i(q_pp_filt_index);
+    end
+else
+    if(implicit_xk)
+        qq = reshape(x(1:n_red, 2:end), n_red*(N_MPC+1-1), 1);
+        qq = [x_k(1:n_red); qq];
+    else
+        qq = reshape(x(1:n_red, :), n_red*(N_MPC+1), 1);
+    end
+
+    qq_p  = S_v * qq;
+    qq_pp = S_a * qq;
+
+    if(diff_variant == diff_variant_mode.savgol_v2)
+        qq = S_q * qq;
+    end
+
+    q = reshape(qq, n_red, N_MPC+1);
+    q_p = reshape(qq_p, n_red, N_MPC+1);
+    q_pp = reshape(qq_pp, n_red, N_MPC+1);
+
+    if(diff_variant == diff_variant_mode.savgol_not_equidist_combined2)
+        if(implicit_xk)
+            q_p(:, 1) = x_k(1+n_red:2*n_red);
+        else
+            q_p(:, 1) = (q(:, 2) - q(:, 1))/(DT_ctl);
+        end
+        q_pp(:, 1) = (q_p(:, 2) - q_p(:, 1))/(DT_ctl);
+
+        % q_p(:, 2) = (q(:, 3) - q(:, 1))/(DT); % optional, verschlechterts aber
+        % q_pp(:, 2) = (q_p(:, 3) - q_p(:, 1))/(DT); % optional, verschlechterts aber
+        q_p(:, end) = (q(:, end) - q(:, end-1))/(DT);
+        q_pp(:, end) = (q_p(:, end) - q_p(:, end-1))/(DT);
+    elseif(implicit_xk)
+        q_p(:, 1) = x_k(1+n_red:2*n_red);
+    end
 end
 
 g_x(1, 1 + (0)) = {x_k - x(   :, 1 + (0))}; % x0 = xk
