@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.564
+ * Model version              : 8.566
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Fri Nov 22 16:33:00 2024
+ * C++ source code generated on : Tue Dec  3 19:09:21 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -299,7 +299,7 @@ struct P_realtime_simu_franka_fr3_T_ {
   traj_data_bus traj_data_bus_init;    /* Variable: traj_data_bus_init
                                         * Referenced by: '<S2>/Constant3'
                                         */
-  struct_XqwzzZafeCsSqaSmJYqOHC param_traj;/* Variable: param_traj
+  struct_YfgHomCZWGPNJ0TPPLZfAE param_traj;/* Variable: param_traj
                                             * Referenced by:
                                             *   '<S5>/get q_0_ref'
                                             *   '<S6>/get reference pose'

@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.564
+ * Model version              : 8.566
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Fri Nov 22 16:33:00 2024
+ * C++ source code generated on : Tue Dec  3 19:09:21 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -554,8 +554,8 @@ void realtime_simu_franka_fr3_step(void)
       if (absxk - realtime_simu_franka_fr3_DW.t_start <
           realtime_simu_franka_fr3_P.t0_Value) {
         for (k = 0; k < 7; k++) {
-          realtime_simu_franka_fr3_B.K_d[k] = 10.0;
-          realtime_simu_franka_fr3_B.D_d[k] = 20.0;
+          realtime_simu_franka_fr3_B.K_d[k] = 2.0;
+          realtime_simu_franka_fr3_B.D_d[k] = 4.0;
           realtime_simu_franka_fr3_B.D_d[k] = sqrt
             (realtime_simu_franka_fr3_B.D_d[k]);
         }
@@ -1421,10 +1421,10 @@ void realtime_simu_franka_fr3_initialize(void)
   }
 
   /* External mode info */
-  realtime_simu_franka_fr3_M->Sizes.checksums[0] = (2631055712U);
-  realtime_simu_franka_fr3_M->Sizes.checksums[1] = (4007677605U);
-  realtime_simu_franka_fr3_M->Sizes.checksums[2] = (1764305089U);
-  realtime_simu_franka_fr3_M->Sizes.checksums[3] = (3359067011U);
+  realtime_simu_franka_fr3_M->Sizes.checksums[0] = (4033091696U);
+  realtime_simu_franka_fr3_M->Sizes.checksums[1] = (2166524132U);
+  realtime_simu_franka_fr3_M->Sizes.checksums[2] = (3884836425U);
+  realtime_simu_franka_fr3_M->Sizes.checksums[3] = (3474291139U);
 
   {
     static const sysRanDType rtAlwaysEnabled = SUBSYS_RAN_BC_ENABLE;

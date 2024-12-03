@@ -4,6 +4,7 @@ import numpy as np
 import crocoddyl as cro
 import pinocchio as pin
 import time
+import csv
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
 from scipy.optimize import minimize
@@ -20,8 +21,8 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = False
-manual_traj_select = 2
+use_data_from_simulink = True
+manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
 use_gravity = False
@@ -207,7 +208,9 @@ param_robot = {
 #########################################################################################################
 ############################################# INIT MPC ##################################################
 #########################################################################################################
-
+# T_horizon = 45e-3
+# N_MPC = 3
+# for run in range(40):
 x_k_ndof = np.zeros(2*n_dof)
 x_k_ndof[:n_dof] = q_0_ref
 # x_k_ndof[n_x_indices] = np.array([-4.71541765e-05, -7.70960138e-01, -2.35629353e+00, 8.63920206e-05, \
@@ -224,6 +227,8 @@ simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, \
 transient_traj, param_traj, title_text =   \
     init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data,     \
                     traj_init_config, param_robot, param_traj_poly, TCP_frame_id)
+
+# N_MPC = N_MPC + 1
 
 p_d = transient_traj['p_d']
 p_d_p = transient_traj['p_d_p']
@@ -551,8 +556,8 @@ if err_state:
 xs[N_traj-1] = x_k_ndof
 us[N_traj-1] = us[N_traj-2] # simply use previous value for display (does not exist)
 
-measureSolver.print_time(additional_text='Total Solver time')
-measureTotal.print_time(additional_text='Total MPC time')
+sol_time = measureSolver.print_time(additional_text='Total Solver time')
+tot_time = measureTotal.print_time(additional_text='Total MPC time')
 
 
 #########################################################################################################
@@ -597,6 +602,17 @@ if plot_full_model:
 else:
     subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, transient_traj, freq_per_Ta_step, param_robot)
 
+    # sum_err_x = np.mean(np.abs(subplot_data[4]['sig_ydata']))
+    # sum_err_y = np.mean(np.abs(subplot_data[8]['sig_ydata']))
+    # sum_err_z = np.mean(np.abs(subplot_data[12]['sig_ydata']))
+    # sum_quat_err_x = np.mean(np.abs(subplot_data[20]['sig_ydata'][0]))
+    # sum_quat_err_y = np.mean(np.abs(subplot_data[20]['sig_ydata'][1]))
+    # sum_quat_err_z = np.mean(np.abs(subplot_data[20]['sig_ydata'][2]))
+
+    # with open("daten_mpc_N_in_1ms_erhoehen_other_weight.csv", "a", newline="\n") as datei:
+    #     csv_writer = csv.writer(datei)
+    #     csv_writer.writerow([title_text, sol_time, tot_time, sum_err_x, sum_err_y, sum_err_z, sum_quat_err_x, sum_quat_err_y, sum_quat_err_z])
+
 
 folderpath1 = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
 folderpath2 = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
@@ -608,7 +624,7 @@ output_file_path = os.path.join(folderpath, outputname)
 
 
 plot_sol=True
-if plot_sol == True or use_data_from_simulink == False:# and err_state == False:
+if plot_sol == True:# and err_state == False:
     plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
 
 # print('Max error:       y - y_d = {:.2e}'.format(np.max(np.abs(e))), 'm')

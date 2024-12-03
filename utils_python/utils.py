@@ -269,6 +269,7 @@ class TicToc:
     def print_time(self, additional_text="time"):
         time_str = self.get_time_str(additional_text)
         print(time_str, end='\n')
+        return self.elapsed_total_time
 
     def reset(self):
         self.start_time = None
@@ -1409,11 +1410,13 @@ def check_solver_status(warn_cnt, hasConverged, ddp, i, dt, conv_max_limit=5):
     #     error = 1
     return warn_cnt, error
 
-def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_full, traj_data, traj_init_config, param_robot, param_traj_poly, TCP_frame_id):
+def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_full, traj_data, traj_init_config, param_robot, param_traj_poly, TCP_frame_id, i=3):
     # because later I add the initial trajectory to the true trajectory
     n_dof = param_robot['n_dof']
 
     mpc_settings, param_mpc_weight = load_mpc_config(robot_model)
+    # mpc_settings['N_MPC'] = i
+    # mpc_settings['T_horizon'] = i
     
     transient_traj = create_transient_trajectory(x_k[:n_dof], TCP_frame_id, robot_model_full, robot_data_full, traj_data, mpc_settings, param_traj_poly, plot_traj=False)
 
