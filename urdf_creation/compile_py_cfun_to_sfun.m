@@ -80,7 +80,7 @@ fun_arr_sfun_realtime = { ...
 
 try
     disp('Compile casadi functions to s-functions for simulink:');
-    compile_multiple_cfun(fun_arr_sfun, s_fun_path, input_dir, output_dir, opt_flag, compile_mode, true);
+    compile_multiple_cfun(fun_arr_sfun, s_fun_path, input_dir, output_dir, opt_flag, compile_mode, false);
     fprintf('\n--------------------------------------------------------------------\n\n');
 
     % disp('Compile casadi functions to s-functions for realtime simulink:');

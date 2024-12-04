@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.566
+ * Model version              : 8.623
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Tue Dec  3 19:09:21 2024
+ * C++ source code generated on : Wed Dec  4 15:54:14 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -61,24 +61,24 @@ struct traj_data_bus
 {
   real_T N;
   real_T t[12001];
-  real_T p_d[144012];
-  real_T p_d_p[144012];
-  real_T p_d_pp[144012];
-  real_T Phi_d[144012];
-  real_T Phi_d_p[144012];
-  real_T Phi_d_pp[144012];
-  real_T R_d[432036];
-  real_T q_d[192016];
-  real_T q_d_p[192016];
-  real_T q_d_pp[192016];
-  real_T omega_d[144012];
-  real_T omega_d_p[144012];
-  real_T alpha_d[48004];
-  real_T alpha_d_p[48004];
-  real_T alpha_d_pp[48004];
-  real_T rot_ax_d[144012];
-  real_T alpha_d_offset[48004];
-  real_T q_d_rel[192016];
+  real_T p_d[180015];
+  real_T p_d_p[180015];
+  real_T p_d_pp[180015];
+  real_T Phi_d[180015];
+  real_T Phi_d_p[180015];
+  real_T Phi_d_pp[180015];
+  real_T R_d[540045];
+  real_T q_d[240020];
+  real_T q_d_p[240020];
+  real_T q_d_pp[240020];
+  real_T omega_d[180015];
+  real_T omega_d_p[180015];
+  real_T alpha_d[60005];
+  real_T alpha_d_p[60005];
+  real_T alpha_d_pp[60005];
+  real_T rot_ax_d[180015];
+  real_T alpha_d_offset[60005];
+  real_T q_d_rel[240020];
 };
 
 #endif
@@ -283,13 +283,27 @@ struct struct_H7i42zUioeRMpvVnQG9wRE
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_BAQoxvk5NEutQSlALFTg0D_
-#define DEFINED_TYPEDEF_FOR_struct_BAQoxvk5NEutQSlALFTg0D_
+#ifndef DEFINED_TYPEDEF_FOR_struct_8XmNMPeT2ODBNqIYbYAfuC_
+#define DEFINED_TYPEDEF_FOR_struct_8XmNMPeT2ODBNqIYbYAfuC_
 
-struct struct_BAQoxvk5NEutQSlALFTg0D
+struct struct_8XmNMPeT2ODBNqIYbYAfuC
 {
   real_T bT[301];
   real_T N;
+  real_T bT_n[5000];
+  real_T N_n;
+};
+
+#endif
+
+#ifndef DEFINED_TYPEDEF_FOR_struct_SEj96gm5RuYSU59ZI75awD_
+#define DEFINED_TYPEDEF_FOR_struct_SEj96gm5RuYSU59ZI75awD_
+
+struct struct_SEj96gm5RuYSU59ZI75awD
+{
+  real_T Rk[196];
+  real_T Qk[196];
+  real_T P0[196];
 };
 
 #endif
@@ -374,26 +388,26 @@ struct struct_Zz654ZwXwtjsnsQgQLM11G
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_YfgHomCZWGPNJ0TPPLZfAE_
-#define DEFINED_TYPEDEF_FOR_struct_YfgHomCZWGPNJ0TPPLZfAE_
+#ifndef DEFINED_TYPEDEF_FOR_struct_rCK7CLa94c9gGZ6JXxjgCF_
+#define DEFINED_TYPEDEF_FOR_struct_rCK7CLa94c9gGZ6JXxjgCF_
 
-struct struct_YfgHomCZWGPNJ0TPPLZfAE
+struct struct_rCK7CLa94c9gGZ6JXxjgCF
 {
-  real_T start_index[4];
-  real_T stop_index[4];
-  real_T q_0[28];
-  real_T q_0_p[28];
-  real_T q_0_pp[28];
-  real_T joint_points[112];
-  real_T pose[112];
-  real_T rotation[144];
-  real_T rot_ax[48];
-  real_T alpha[16];
-  real_T time[16];
-  real_T traj_type[4];
-  struct_xtY3FIkba7D2gFmP0VadqC diff_filter[4];
-  struct_7a8eCPA4nMdHfiggL8ApbC diff_filter_jointspace[4];
-  struct_Zz654ZwXwtjsnsQgQLM11G sin_poly[4];
+  real_T start_index[5];
+  real_T stop_index[5];
+  real_T q_0[35];
+  real_T q_0_p[35];
+  real_T q_0_pp[35];
+  real_T joint_points[147];
+  real_T pose[147];
+  real_T rotation[189];
+  real_T rot_ax[63];
+  real_T alpha[21];
+  real_T time[21];
+  real_T traj_type[5];
+  struct_xtY3FIkba7D2gFmP0VadqC diff_filter[5];
+  struct_7a8eCPA4nMdHfiggL8ApbC diff_filter_jointspace[5];
+  struct_Zz654ZwXwtjsnsQgQLM11G sin_poly[5];
   real_T N_traj;
 };
 
@@ -411,7 +425,7 @@ struct struct_KEa48IyRUxLtKgH405LUqB
 
 #endif
 
-/* Custom Type definition for MATLAB Function: '<S12>/MATLAB Function' */
+/* Custom Type definition for MATLAB Function: '<S14>/MATLAB Function' */
 #include "coder_posix_time.h"
 #ifndef struct_sdAmwXbnJnEmimT0NaJRtAD_realt_T
 #define struct_sdAmwXbnJnEmimT0NaJRtAD_realt_T
@@ -425,11 +439,11 @@ struct sdAmwXbnJnEmimT0NaJRtAD_realt_T
 #endif                              /* struct_sdAmwXbnJnEmimT0NaJRtAD_realt_T */
 
 #ifndef SS_UINT64
-#define SS_UINT64                      34
+#define SS_UINT64                      35
 #endif
 
 #ifndef SS_INT64
-#define SS_INT64                       35
+#define SS_INT64                       36
 #endif
 
 /* Parameters (default storage) */

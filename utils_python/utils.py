@@ -922,6 +922,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     q_uprev_cost = param_mpc_weight['q_uprev_cost']
     q_x_bound_cost = param_mpc_weight['q_x_bound_cost']
     q_u_bound_cost = param_mpc_weight['q_u_bound_cost']
+    R_x_bounds = np.array(param_mpc_weight['R_x_bounds'])
     umin = param_mpc_weight['umin']
     umax = param_mpc_weight['umax']
     xmin = param_mpc_weight['xmin']
@@ -957,7 +958,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
         if use_bounds:
             if np.sum(q_x_bound_cost) not in [0, None]:
                 bounds = crocoddyl.ActivationBounds(xmin, xmax)
-                activationModel = crocoddyl.ActivationModelQuadraticBarrier(bounds)
+                activationModel = crocoddyl.ActivationModelWeightedQuadraticBarrier(bounds, R_x_bounds)
                 xRegBoundCost = crocoddyl.CostModelResidual(
                     state,
                     activation=activationModel,
@@ -973,7 +974,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                 uRegBoundCost = crocoddyl.CostModelResidual(
                     state,
                     activation=activationModel,
-                    residual=crocoddyl.ResidualModelControl(state, uref)
+                    residual=crocoddyl.ResidualModelControl(state, np.zeros(uref.shape))
                 )
                 if i < N_MPC-1:
                     runningCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
@@ -1917,6 +1918,8 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
 ###########################################################################
 ###########################################################################
 
+import psutil
+
 def start_server():
     LOCK_FILE = '/tmp/my_server.lock'
     SCRIPT_PATH = 'main_python/websocket_fr3.py'
@@ -1924,7 +1927,19 @@ def start_server():
 
     def is_server_running():
         if os.path.exists(LOCK_FILE):
-            return True
+            with open(PID_FILE, 'r') as pid_file:
+                pid = int(pid_file.read())
+                try:
+                    # Check if the process is running
+                    process = psutil.Process(pid)
+                    return process.is_running()
+                except psutil.NoSuchProcess:
+                    # If the process does not exist, remove the lock file and return False
+                    os.remove(LOCK_FILE)
+                    if os.path.exists(PID_FILE):
+                        os.remove(PID_FILE)
+                    return False
+        return False
 
     if is_server_running():
         print("Server is already running.")

@@ -22,16 +22,16 @@ if autostart_fr3:
 ################################################ REALTIME ###############################################
 
 use_data_from_simulink = True
-manual_traj_select = 1
+manual_traj_select = 4
 use_feedforward = True
 use_clipping = False
 use_gravity = False
 debounce_delay = 0.1
 
 param_traj_poly = {}
-param_traj_poly['T_start'] = 0.5
-param_traj_poly['T_poly'] = 1
-param_traj_poly['T_end'] = 2
+param_traj_poly['T_start'] = 0
+param_traj_poly['T_poly'] = 0.5
+param_traj_poly['T_end'] = 1
 
 if use_data_from_simulink:
     # only available for franka research 3 robot (n_dof = 7)
@@ -306,7 +306,7 @@ try:
 
                     # Selbst wenn die Messung zu beginn eine Jointgeschwindigkeit ausgibt, wird diese auf 0 gesetzt
                     # weil der Roboter zu beginn stillsteht und es damit nur noise ist
-                    x_k_ndof[n_dof::] = 0
+                    # x_k_ndof[n_dof::] = 0
                     init_cnt = 0
 
                     data_from_python[:] = np.zeros(n_dof)
@@ -327,6 +327,12 @@ try:
                         transient_traj, param_traj, title_text =   \
                             init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data,     \
                                             traj_init_config, param_robot, param_traj_poly, TCP_frame_id)
+                        
+                        p_d = transient_traj['p_d']
+                        p_d_p = transient_traj['p_d_p']
+                        p_d_pp = transient_traj['p_d_pp']
+                        R_d = transient_traj['R_d']
+
 
                     run_flag = True
                     print("MPC started by Simulink")
@@ -338,18 +344,19 @@ try:
                     data_from_simulink_stop[:] = 0
                     run_flag = False
                     start_solving = False
-                elif reset == 1:
-                    print("MPC reset by Simulink")
-                    data_from_python[:] = np.zeros(n_dof)
-                    data_from_simulink_reset[:] = 0
-                    run_flag = False
-                    start_solving = False
-                    subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
-                    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
-                    i = 0
                 elif new_data_flag:
                     start_solving = True
                     new_data_flag = False
+
+            if reset == 1:
+                print("MPC reset by Simulink")
+                data_from_python[:] = np.zeros(n_dof)
+                data_from_simulink_reset[:] = 0
+                run_flag = False
+                start_solving = False
+                subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
+                plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
+                i = 0
         if start_solving:
             measureSimu.tic()
 
@@ -619,7 +626,7 @@ folderpath2 = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 paths = [folderpath1, folderpath2]
 folderpath = next((path for path in paths if os.path.exists(path)), None)
 
-outputname = '240910_traj2_crocoddyl_T_horizon_25ms.html'
+outputname = 'test.html'
 output_file_path = os.path.join(folderpath, outputname)
 
 

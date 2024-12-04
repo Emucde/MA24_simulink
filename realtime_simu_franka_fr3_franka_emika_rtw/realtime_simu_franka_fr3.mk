@@ -2,7 +2,7 @@
 ## Makefile generated for component 'realtime_simu_franka_fr3'. 
 ## 
 ## Makefile     : realtime_simu_franka_fr3.mk
-## Generated on : Tue Oct 29 16:56:04 2024
+## Generated on : Wed Dec 04 10:51:24 2024
 ## Final product: $(RELATIVE_PATH_TO_ANCHOR)/realtime_simu_franka_fr3
 ## Product type : executable
 ## 
@@ -176,7 +176,7 @@ INCLUDES = $(INCLUDES_BUILDINFO)
 
 DEFINES_BUILD_ARGS = -DCLASSIC_INTERFACE=0 -DALLOCATIONFCN=0 -DEXT_MODE=1 -DMAT_FILE=1 -DONESTEPFCN=1 -DTERMFCN=1 -DMULTI_INSTANCE_CODE=0 -DINTEGER_CODE=0 -DMT=0
 DEFINES_CUSTOM = 
-DEFINES_OPTS = -DXCP_DAQ_SUPPORT -DXCP_CALIBRATION_SUPPORT -DXCP_TIMESTAMP_SUPPORT -DXCP_TIMESTAMP_BASED_ON_SIMULATION_TIME -DXCP_SET_MTA_SUPPORT -DEXTMODE_XCP_TRIGGER_SUPPORT -DINTERNAL_XCP_MEM_BLOCK_1_SIZE=128 -DINTERNAL_XCP_MEM_BLOCK_1_NUMBER=1 -DINTERNAL_XCP_MEM_BLOCK_2_SIZE=144 -DINTERNAL_XCP_MEM_BLOCK_2_NUMBER=4 -DINTERNAL_XCP_MEM_BLOCK_3_SIZE=384 -DINTERNAL_XCP_MEM_BLOCK_3_NUMBER=4 -DINTERNAL_XCP_MEM_RESERVED_POOLS_TOTAL_SIZE=42430 -DINTERNAL_XCP_MEM_RESERVED_POOLS_NUMBER=5 -DXCP_MEM_DAQ_RESERVED_POOL_BLOCKS_NUMBER=3 -DXCP_MEM_DAQ_RESERVED_POOLS_NUMBER=1 -DXCP_MIN_EVENT_NO_RESERVED_POOL=2 -DXCP_EXTMODE_RUN_BACKGROUND_FLUSH -DEXTMODE_STATIC -DEXTMODE_STATIC_SIZE=1000000 -DON_TARGET_WAIT_FOR_START=1 -DTID01EQ=1
+DEFINES_OPTS = -DXCP_DAQ_SUPPORT -DXCP_CALIBRATION_SUPPORT -DXCP_TIMESTAMP_SUPPORT -DXCP_TIMESTAMP_BASED_ON_SIMULATION_TIME -DXCP_SET_MTA_SUPPORT -DEXTMODE_XCP_TRIGGER_SUPPORT -DINTERNAL_XCP_MEM_BLOCK_1_SIZE=128 -DINTERNAL_XCP_MEM_BLOCK_1_NUMBER=1 -DINTERNAL_XCP_MEM_BLOCK_2_SIZE=144 -DINTERNAL_XCP_MEM_BLOCK_2_NUMBER=4 -DINTERNAL_XCP_MEM_BLOCK_3_SIZE=344 -DINTERNAL_XCP_MEM_BLOCK_3_NUMBER=4 -DINTERNAL_XCP_MEM_RESERVED_POOLS_TOTAL_SIZE=39070 -DINTERNAL_XCP_MEM_RESERVED_POOLS_NUMBER=5 -DXCP_MEM_DAQ_RESERVED_POOL_BLOCKS_NUMBER=3 -DXCP_MEM_DAQ_RESERVED_POOLS_NUMBER=1 -DXCP_MIN_EVENT_NO_RESERVED_POOL=2 -DXCP_EXTMODE_RUN_BACKGROUND_FLUSH -DEXTMODE_STATIC -DEXTMODE_STATIC_SIZE=1000000 -DON_TARGET_WAIT_FOR_START=1 -DTID01EQ=1
 DEFINES_STANDARD = -DMODEL=realtime_simu_franka_fr3 -DNUMST=2 -DNCSTATES=0 -DHAVESTDIO -DRT -DUSE_RTMODEL
 
 DEFINES = $(DEFINES_BUILD_ARGS) $(DEFINES_CUSTOM) $(DEFINES_OPTS) $(DEFINES_STANDARD)
@@ -185,7 +185,7 @@ DEFINES = $(DEFINES_BUILD_ARGS) $(DEFINES_CUSTOM) $(DEFINES_OPTS) $(DEFINES_STAN
 ## SOURCE FILES
 ###########################################################################
 
-SRCS = $(MATLAB_ROOT)/toolbox/eml/externalDependency/timefun/coder_posix_time.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_work.c $(MATLAB_ROOT)/rtw/c/src/rt_matrx.c $(MATLAB_ROOT)/rtw/c/src/rt_printf.c $(MATLAB_ROOT)/rtw/c/src/rt_logging.c $(START_DIR)/realtime_simu_franka_fr3_franka_emika_rtw/realtime_simu_franka_fr3.cpp $(START_DIR)/realtime_simu_franka_fr3_franka_emika_rtw/realtime_simu_franka_fr3_data.cpp $(START_DIR)/realtime_simu_franka_fr3_franka_emika_rtw/rtGetInf.cpp $(START_DIR)/realtime_simu_franka_fr3_franka_emika_rtw/rtGetNaN.cpp $(START_DIR)/realtime_simu_franka_fr3_franka_emika_rtw/rt_nonfinite.cpp $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_common.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_classic_trigger.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp_standard.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp_daq.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp_calibration.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src/xcp_fifo.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src/xcp_transport.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default/xcp_mem_default.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default/xcp_drv_rtiostream.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/common/xcp_utils.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src/xcp_frame_tcp.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_param_default_tcp.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default/xcp_platform_default.c $(MATLAB_ROOT)/toolbox/coder/rtiostream/src/rtiostreamtcpip/rtiostream_tcpip.c $(START_DIR)/s_functions/fr3_no_hand_6dof/s_function_opti_MPC8.c $(START_DIR)/main_franka/Controller/s_functions/s_function_opti_robot_model_bus_fun.c $(START_DIR)/main_franka/Controller/s_functions/shm_reader_sfun.c $(START_DIR)/main_franka/Controller/s_functions/shm_writer_sfun.c $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/sizes_codegen.cpp $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/gripper_api.cpp $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/robot_api.cpp $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/control_modes.cpp $(START_DIR)/s_functions/fr3_no_hand_6dof/MPC8.c $(START_DIR)/main_franka/Controller/s_functions/robot_model_bus_fun.c
+SRCS = $(MATLAB_ROOT)/toolbox/eml/externalDependency/timefun/coder_posix_time.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_work.c $(MATLAB_ROOT)/rtw/c/src/rt_matrx.c $(MATLAB_ROOT)/rtw/c/src/rt_printf.c $(MATLAB_ROOT)/rtw/c/src/rt_logging.c $(START_DIR)/realtime_simu_franka_fr3_franka_emika_rtw/realtime_simu_franka_fr3.cpp $(START_DIR)/realtime_simu_franka_fr3_franka_emika_rtw/realtime_simu_franka_fr3_data.cpp $(START_DIR)/realtime_simu_franka_fr3_franka_emika_rtw/rtGetInf.cpp $(START_DIR)/realtime_simu_franka_fr3_franka_emika_rtw/rtGetNaN.cpp $(START_DIR)/realtime_simu_franka_fr3_franka_emika_rtw/rt_nonfinite.cpp $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_common.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_classic_trigger.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp_standard.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp_daq.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/protocol/src/xcp_calibration.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src/xcp_fifo.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src/xcp_transport.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default/xcp_mem_default.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default/xcp_drv_rtiostream.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/common/xcp_utils.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/transport/src/xcp_frame_tcp.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_param_default_tcp.c $(MATLAB_ROOT)/toolbox/coder/xcp/src/target/slave/platform/default/xcp_platform_default.c $(MATLAB_ROOT)/toolbox/coder/rtiostream/src/rtiostreamtcpip/rtiostream_tcpip.c $(START_DIR)/main_franka/Controller/s_functions/s_function_opti_robot_model_bus_fun.c $(START_DIR)/main_franka/Controller/s_functions/shm_reader_sfun.c $(START_DIR)/main_franka/Controller/s_functions/shm_writer_sfun.c $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/sizes_codegen.cpp $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/gripper_api.cpp $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/robot_api.cpp $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/control_modes.cpp $(START_DIR)/main_franka/Controller/s_functions/robot_model_bus_fun.c
 
 MAIN_SRC = $(START_DIR)/realtime_simu_franka_fr3_franka_emika_rtw/rt_main.cpp
 
@@ -195,7 +195,7 @@ ALL_SRCS = $(SRCS) $(MAIN_SRC)
 ## OBJECTS
 ###########################################################################
 
-OBJS = coder_posix_time.o xcp_ext_work.o rt_matrx.o rt_printf.o rt_logging.o realtime_simu_franka_fr3.o realtime_simu_franka_fr3_data.o rtGetInf.o rtGetNaN.o rt_nonfinite.o xcp_ext_common.o xcp_ext_classic_trigger.o xcp.o xcp_standard.o xcp_daq.o xcp_calibration.o xcp_fifo.o xcp_transport.o xcp_mem_default.o xcp_drv_rtiostream.o xcp_utils.o xcp_frame_tcp.o xcp_ext_param_default_tcp.o xcp_platform_default.o rtiostream_tcpip.o s_function_opti_MPC8.o s_function_opti_robot_model_bus_fun.o shm_reader_sfun.o shm_writer_sfun.o sizes_codegen.o gripper_api.o robot_api.o control_modes.o MPC8.o robot_model_bus_fun.o
+OBJS = coder_posix_time.o xcp_ext_work.o rt_matrx.o rt_printf.o rt_logging.o realtime_simu_franka_fr3.o realtime_simu_franka_fr3_data.o rtGetInf.o rtGetNaN.o rt_nonfinite.o xcp_ext_common.o xcp_ext_classic_trigger.o xcp.o xcp_standard.o xcp_daq.o xcp_calibration.o xcp_fifo.o xcp_transport.o xcp_mem_default.o xcp_drv_rtiostream.o xcp_utils.o xcp_frame_tcp.o xcp_ext_param_default_tcp.o xcp_platform_default.o rtiostream_tcpip.o s_function_opti_robot_model_bus_fun.o shm_reader_sfun.o shm_writer_sfun.o sizes_codegen.o gripper_api.o robot_api.o control_modes.o robot_model_bus_fun.o
 
 MAIN_OBJ = rt_main.o
 
@@ -308,14 +308,6 @@ $(PRODUCT) : $(OBJS) $(PREBUILT_OBJS) $(MAIN_OBJ)
 
 
 %.o : $(RELATIVE_PATH_TO_ANCHOR)/%.cpp
-	$(CPP) $(CPPFLAGS) -o "$@" "$<"
-
-
-%.o : $(START_DIR)/s_functions/fr3_no_hand_6dof/%.c
-	$(CC) $(CFLAGS) -o"$@" "$<"
-
-
-%.o : $(START_DIR)/s_functions/fr3_no_hand_6dof/%.cpp
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
 
 
@@ -519,10 +511,6 @@ rtiostream_tcpip.o : $(MATLAB_ROOT)/toolbox/coder/rtiostream/src/rtiostreamtcpip
 	$(CC) $(CFLAGS) -o"$@" "$<"
 
 
-s_function_opti_MPC8.o : $(START_DIR)/s_functions/fr3_no_hand_6dof/s_function_opti_MPC8.c
-	$(CC) $(CFLAGS) -o"$@" "$<"
-
-
 s_function_opti_robot_model_bus_fun.o : $(START_DIR)/main_franka/Controller/s_functions/s_function_opti_robot_model_bus_fun.c
 	$(CC) $(CFLAGS) -o"$@" "$<"
 
@@ -549,10 +537,6 @@ robot_api.o : $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_libr
 
 control_modes.o : $(START_DIR)/main_franka/franka_matlab_v0.3.1/franka_simulink_library/src/control_modes.cpp
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
-
-
-MPC8.o : $(START_DIR)/s_functions/fr3_no_hand_6dof/MPC8.c
-	$(CC) $(CFLAGS) -o"$@" "$<"
 
 
 robot_model_bus_fun.o : $(START_DIR)/main_franka/Controller/s_functions/robot_model_bus_fun.c

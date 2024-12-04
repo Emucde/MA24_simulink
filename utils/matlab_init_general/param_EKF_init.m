@@ -6,6 +6,8 @@ param_EKF.Rk = diag([1/2*pi*ones(1,7)*noise_amp^2, 1/2*pi*ones(1,7)*noise_amp^2]
 param_EKF.Qk = diag([1e3*1/2*pi*ones(1,7)*noise_amp^2, 1e5*ones(1,7)]);
 param_EKF.P0 = diag([1e0*ones(1,7), 1e0*ones(1,7)]);
 
+% q Rk: 4.85e-12 bei fr3
+
 % Rk = cov(v) ... cov measurement noise
 % Qk = cov(w) ... cov process disturbance noise
 %

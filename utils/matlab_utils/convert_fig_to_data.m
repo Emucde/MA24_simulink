@@ -22,7 +22,8 @@ for i=1:subplot_number
     end
 end
 
-save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/241012_meeting/mpc_v1_dyn/traj3_T_horizon_5ms';
+save_path = '/home/rslstudent/Students/Emanuel/crocoddyl_html_files/';
+% save_path = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/241012_meeting/mpc_v1_dyn/traj3_T_horizon_5ms';
 %file_name = '240904_sim1_traj2_kin_mpc_int_40ms.mat';
 file_name = '241012_traj3_dyn_mpc_5ms.mat';
 save([save_path, '/', file_name], 'signals');
