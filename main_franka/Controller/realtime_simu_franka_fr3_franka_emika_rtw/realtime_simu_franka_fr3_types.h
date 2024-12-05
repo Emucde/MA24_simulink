@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.623
+ * Model version              : 8.629
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Wed Dec  4 15:54:14 2024
+ * C++ source code generated on : Thu Dec  5 19:08:08 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -296,14 +296,16 @@ struct struct_8XmNMPeT2ODBNqIYbYAfuC
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_SEj96gm5RuYSU59ZI75awD_
-#define DEFINED_TYPEDEF_FOR_struct_SEj96gm5RuYSU59ZI75awD_
+#ifndef DEFINED_TYPEDEF_FOR_struct_Zg6wkgqRJWe2YCwCkvyqh_
+#define DEFINED_TYPEDEF_FOR_struct_Zg6wkgqRJWe2YCwCkvyqh_
 
-struct struct_SEj96gm5RuYSU59ZI75awD
+struct struct_Zg6wkgqRJWe2YCwCkvyqh
 {
   real_T Rk[196];
   real_T Qk[196];
   real_T P0[196];
+  real_T Rk_FR3[196];
+  real_T Qk_FR3[196];
 };
 
 #endif
@@ -425,7 +427,7 @@ struct struct_KEa48IyRUxLtKgH405LUqB
 
 #endif
 
-/* Custom Type definition for MATLAB Function: '<S14>/MATLAB Function' */
+/* Custom Type definition for MATLAB Function: '<S13>/MATLAB Function' */
 #include "coder_posix_time.h"
 #ifndef struct_sdAmwXbnJnEmimT0NaJRtAD_realt_T
 #define struct_sdAmwXbnJnEmimT0NaJRtAD_realt_T
