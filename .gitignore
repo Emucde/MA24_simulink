@@ -22,3 +22,4 @@ jit*.c
 tmp_casadi_compiler*.o
 tmp_casadi_compiler*.so
 utils_python/__pycache__/
+main_franka/Controller/realtime_simu_franka_fr3_franka_emika_rtw/*
