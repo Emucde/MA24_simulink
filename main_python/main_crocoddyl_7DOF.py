@@ -22,7 +22,7 @@ if autostart_fr3:
 ################################################ REALTIME ###############################################
 
 use_data_from_simulink = True
-manual_traj_select = 4
+manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
 use_gravity = False

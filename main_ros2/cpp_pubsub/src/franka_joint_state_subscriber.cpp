@@ -35,27 +35,33 @@ private:
   void topic_callback(const sensor_msgs::msg::JointState & msg) const
   {
     RCLCPP_INFO(this->get_logger(), "Joint positions: [%f, %f, %f, %f, %f, %f, %f]",
-                msg.position[0], msg.position[1], msg.position[2],
-                msg.position[3], msg.position[4], msg.position[5], msg.position[6]);
+                msg.position[0], msg.position[3], msg.position[4],
+                msg.position[5], msg.position[1], msg.position[2], msg.position[6]);
 
     RCLCPP_INFO(this->get_logger(), "Joint velocities: [%f, %f, %f, %f, %f, %f, %f]",
-                msg.velocity[0], msg.velocity[1], msg.velocity[2],
-                msg.velocity[3], msg.velocity[4], msg.velocity[5], msg.velocity[6]);
+                msg.velocity[0], msg.velocity[3], msg.velocity[4],
+                msg.velocity[5], msg.velocity[1], msg.velocity[2], msg.velocity[6]);
 
     // Combined array for positions and velocities
     double joint_states[14];
+    int indices[] = {0, 3, 4, 5, 1, 2, 6};
 
     // Copy positions (first 7 elements)
     for (size_t i = 0; i < 7; ++i)
     {
-        joint_states[i] = msg.position[i];
+        joint_states[i] = msg.position[indices[i]];
     }
 
     // Copy velocities (next 7 elements)
     for (size_t i = 0; i < 7; ++i)
     {
-        joint_states[i + 7] = msg.velocity[i];
+        joint_states[i + 7] = msg.velocity[indices[i]];
     }
+    // Copy positions (first 7 elements)
+    // std::copy(msg.position.data(), msg.position.data() + 7, joint_states);
+
+    // // Copy velocities (next 7 elements)
+    // std::copy(msg.velocity.data(), msg.velocity.data() + 7, joint_states + 7);
 
     // Write combined positions and velocities to shared memory
     write_to_shared_memory("data_from_simulink", joint_states, sizeof(joint_states));
