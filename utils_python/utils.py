@@ -1965,9 +1965,14 @@ def start_server():
             return False
 
 async def send_message(message, port=8765):
-    async with websockets.connect(f"ws://localhost:{port}") as websocket:
-        await websocket.send(message)
-        print(f"Nachricht gesendet: {message}")
+    
+        async with websockets.connect(f"ws://localhost:{port}") as websocket:
+            try:
+                await websocket.send(message)
+                print(f"Nachricht gesendet: {message}")
+            except websockets.exceptions.ConnectionClosedError:
+                print("Server not running.")
+                return False
 
 def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', plot_fig=True, matlab_import=True, reload_page=False, title_text=''):
     subplot_number = len(subplot_data)

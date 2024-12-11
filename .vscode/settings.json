@@ -90,5 +90,16 @@
       ]
     }
   },
-  "cmake.sourceDirectory": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka"
+  "cmake.sourceDirectory": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka",
+  // better use source /opt/ros/humble/setup.bash in terminal, otherwise crocoddyl will not work
+  // "terminal.integrated.env.linux": {
+  //       "COLCON_PREFIX_PATH": "/opt/ros/humble",
+  //       "ROS_DISTRO": "humble",
+  //       "PATH": "/opt/ros/humble/bin:${env:PATH}",
+  //       "PYTHONPATH": "/opt/ros/humble/lib/python3.10/site-packages:${env:PYTHONPATH}"
+  //   }
+  "terminal.integrated.env.linux": {
+        "PATH": "/media/daten/Anwendungen/anaconda3/envs/mpc/share/rubygems/bin:/media/daten/Anwendungen/anaconda3/envs/mpc/bin:/media/daten/Anwendungen/anaconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin",
+        "PYTHONPATH": ""
+    },
 }
