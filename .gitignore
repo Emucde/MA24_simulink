@@ -24,3 +24,6 @@ tmp_casadi_compiler*.so
 utils_python/__pycache__/
 main_franka/Controller/realtime_simu_franka_fr3_franka_emika_rtw/*
 main_ros2/test_proj1/*
+main_ros2/cpp_pubsub/log
+main_ros2/cpp_pubsub/build
+main_ros2/cpp_pubsub/install
