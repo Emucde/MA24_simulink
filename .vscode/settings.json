@@ -76,7 +76,14 @@
     "cinttypes": "cpp",
     "typeindex": "cpp",
     "typeinfo": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "compare": "cpp",
+    "concepts": "cpp",
+    "forward_list": "cpp",
+    "unordered_set": "cpp",
+    "numbers": "cpp",
+    "semaphore": "cpp",
+    "stop_token": "cpp"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",
@@ -146,7 +153,7 @@
       ]
     }
   },
-  "cmake.sourceDirectory": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/franka_matlab_v0.3.1/libfranka",
+  "cmake.sourceDirectory": "${env:masterdir}/main_ros2/cpp_pubsub",
   // better use source /opt/ros/humble/setup.bash in terminal, otherwise crocoddyl will not work
   // "terminal.integrated.env.linux": {
   //       "COLCON_PREFIX_PATH": "/opt/ros/humble",

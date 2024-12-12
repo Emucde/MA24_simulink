@@ -14,14 +14,14 @@ double *read_shared_memory(const char *name, size_t size)
     int fd = shm_open(name, O_RDONLY, 0666);
     if (fd == -1)
     {
-        std::cerr << "Error opening shared memory: " << strerror(errno) << std::endl;
+        std::cerr << "Error opening shared memory: " << strerror(errno) << std::endl << "\n";
         return nullptr;
     }
 
     double *data = (double *)mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
     if (data == MAP_FAILED)
     {
-        std::cerr << "Error mapping shared memory: " << strerror(errno) << std::endl;
+        std::cerr << "Error mapping shared memory: " << strerror(errno) << std::endl << "\n";
         close(fd);
         return nullptr;
     }

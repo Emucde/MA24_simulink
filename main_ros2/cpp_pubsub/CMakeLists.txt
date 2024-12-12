@@ -5,6 +5,8 @@ project(cpp_pubsub)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)  # Add this line to find sensor_msgs
+find_package(controller_interface REQUIRED)
+find_package(hardware_interface REQUIRED)
 
 # Include directories if necessary (usually not needed for ROS 2)
 # include_directories(include)
@@ -19,6 +21,8 @@ add_executable(franka_joint_state_subscriber
 ament_target_dependencies(franka_joint_state_subscriber
   rclcpp
   sensor_msgs  # Add sensor_msgs here
+  controller_interface
+  hardware_interface
 )
 
 install(
