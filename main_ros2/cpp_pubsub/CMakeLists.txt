@@ -3,10 +3,25 @@ project(cpp_pubsub)
 
 # Find required packages
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(sensor_msgs REQUIRED)  # Add this line to find sensor_msgs
+# find_package(rclcpp REQUIRED)
+# find_package(sensor_msgs REQUIRED)  # Add this line to find sensor_msgs
+# find_package(controller_interface REQUIRED)
+# find_package(hardware_interface REQUIRED)
+# find_package(franka_msgs REQUIRED)
+# find_package(generate_parameter_library REQUIRED)
+find_package(builtin_interfaces REQUIRED)
+find_package(control_msgs REQUIRED)
 find_package(controller_interface REQUIRED)
-find_package(hardware_interface REQUIRED)
+find_package(controller_manager REQUIRED)
+find_package(franka_msgs REQUIRED)
+find_package(franka_semantic_components REQUIRED)
+find_package(generate_parameter_library REQUIRED)
+find_package(pluginlib REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(rcutils REQUIRED)
+find_package(realtime_tools REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 # Include directories if necessary (usually not needed for ROS 2)
 # include_directories(include)
@@ -18,11 +33,28 @@ add_executable(franka_joint_state_subscriber
 )
 
 # Link dependencies
+# ament_target_dependencies(franka_joint_state_subscriber
+#   rclcpp
+#   sensor_msgs  # Add sensor_msgs here
+#   controller_interface
+#   hardware_interface
+#   franka_msgs
+#   generate_parameter_library
+# )
 ament_target_dependencies(franka_joint_state_subscriber
-  rclcpp
-  sensor_msgs  # Add sensor_msgs here
+  builtin_interfaces
+  control_msgs
   controller_interface
-  hardware_interface
+  controller_manager
+  franka_msgs
+  franka_semantic_components
+  generate_parameter_library
+  pluginlib
+  rclcpp_lifecycle
+  rcutils
+  realtime_tools
+  sensor_msgs
+  visualization_msgs
 )
 
 install(

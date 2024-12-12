@@ -1,6 +1,6 @@
 {
     "traj2": "hier:",
-    "mpc_settings_traj2": {
+    "mpc_settings": {
       "version": "MPC_v1_bounds_terminate",
       "Ts": 1e-3,
       "Ts_MPC": 5e-3,
@@ -12,7 +12,7 @@
       "N_extra_Ts_samples": 0,
       "solver_steps": 1000
     },
-    "param_mpc_weight_traj2": {
+    "param_mpc_weight": {
       "q_yt_common_weight":          1e2,
       "q_yt_terminal_common_weight": 1e5,
       "Q_yt":          [1, 1, 1],
@@ -45,7 +45,7 @@
       "uref": []
     },
     "traj3": "hier:",
-    "mpc_settings": {
+    "mpc_settings_traj3": {
       "version": "MPC_v1_bounds_terminate",
       "Ts": 1e-3,
       "Ts_MPC": 5e-3,
@@ -57,7 +57,7 @@
       "N_extra_Ts_samples": 0,
       "solver_steps": 1000
     },
-    "param_mpc_weight": {
+    "param_mpc_weight_traj3": {
       "q_yt_common_weight":          1e2,
       "q_yt_terminal_common_weight": 1e6,
       "Q_yt":          [1, 1, 1],
