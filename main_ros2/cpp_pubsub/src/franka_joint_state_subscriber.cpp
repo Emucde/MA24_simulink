@@ -27,6 +27,9 @@
 // #include "franka_example_controllers/visibility_control.h"
 // controller_interface/helpers.hpp
 
+#define MY_LOG_LEVEL  RCUTILS_LOG_SEVERITY_WARN
+// #define MY_LOG_LEVEL  RCUTILS_LOG_SEVERITY_INFO
+
 using std::placeholders::_1;
 
 //////////////////////////////////////////////////////////
@@ -39,6 +42,11 @@ public:
   RobotStateSubscriber()
   : Node("joint_state_publisher")
   {
+    rcutils_ret_t ret = rcutils_logging_set_logger_level("joint_state_publisher", MY_LOG_LEVEL);
+    if (ret != RCUTILS_RET_OK) {
+        RCLCPP_ERROR(this->get_logger(), "Failed to set logger level: %d", ret);
+    }
+
     subscription_ = this->create_subscription<sensor_msgs::msg::JointState>(
       "/franka/joint_states", 10, std::bind(&RobotStateSubscriber::topic_callback, this, _1));
   }
@@ -91,8 +99,13 @@ class FrankaController : public rclcpp::Node, public controller_interface::Contr
 {
 public:
     FrankaController()
-    : Node("franka_gravity_compensation_controller"), num_joints(7)
+    : Node("franka_controller"), num_joints(7)
     {
+        rcutils_ret_t ret = rcutils_logging_set_logger_level("franka_controller", MY_LOG_LEVEL);
+        if (ret != RCUTILS_RET_OK) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to set logger level: %d", ret);
+        }
+
         this->declare_parameter("arm_id", "fr3");
         arm_id_ = this->get_parameter("arm_id").as_string();
 
