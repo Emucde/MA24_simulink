@@ -222,4 +222,4 @@ print("Minimum Found:", hasConverged)
 
 visualize=True
 if visualize==True:
-    visualize_robot(robot, q, param_trajectory, dt, 3, 1)
+    visualize_robot_2DOF(robot, q, param_trajectory, dt, 3, 1)

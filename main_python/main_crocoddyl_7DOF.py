@@ -21,7 +21,7 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = True
+use_data_from_simulink = False
 manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
@@ -109,6 +109,7 @@ n_indices_fixed = n_indices_all[~np.isin(n_indices_all, n_indices)]
 robot_model_full, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_model_path, mesh_dir)
 
 robot_data_full = robot_model_full.createData()
+# robot = pin.robot_wrapper.RobotWrapper.BuildFromURDF(urdf_model_path, mesh_dir)
 
 # https://gepettoweb.laas.fr/doc/stack-of-tasks/pinocchio/master/doxygen-html/md_doc_b_examples_e_reduced_model.html
 # create reduced model:
@@ -660,3 +661,8 @@ if autostart_fr3:
     if user_input == 'y':
         message = "stop"
         asyncio.run(send_message(message))
+
+visualize=True
+if visualize is True:
+    q_sol = xs[:, :n_dof]
+    visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id, q_sol, transient_traj, Ts, 3, 1)

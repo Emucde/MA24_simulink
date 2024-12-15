@@ -24,6 +24,7 @@ import asyncio
 import websockets
 import subprocess
 import fcntl
+import trimesh
 
 class DebouncedButton:
     def __init__(self, delay):
@@ -2394,9 +2395,198 @@ def plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, traj_data):
         'p_d_pp': traj_data['p_d_pp'][:, 0:i]
     }
     plot_solution(us[0:i], xs[0:i], t[0:i], TCP_frame_id, robot_model, param_trajectory_copy)
-####################################################### VIS ROBOT #################################################
 
-def visualize_robot(robot, q_sol, traj_data, dt, rep_cnt = np.inf, rep_delay_sec=1):
+
+def convert_stl_to_gltf(stl_path, gltf_path):
+    # Load the STL mesh
+    mesh = trimesh.load_mesh(stl_path)
+    
+    # Export the mesh to GLTF format
+    mesh.export(gltf_path)
+
+# https://github.com/meshcat-dev/meshcat-python/blob/master/src/meshcat/geometry.py
+def create_coordinate_system(vis, name, axis_length=0.1, line_width=1):
+    kos = g.LineSegments(
+        g.PointsGeometry(position=np.array([
+            [0, 0, 0], [axis_length, 0, 0],
+            [0, 0, 0], [0, axis_length, 0],
+            [0, 0, 0], [0, 0, axis_length]]).astype(np.float32).T,
+            color=np.array([
+            [1, 0, 0], [1, 0.6, 0],
+            [0, 1, 0], [0.6, 1, 0],
+            [0, 0, 1], [0, 0.6, 1]]).astype(np.float32).T
+        ),
+        g.LineBasicMaterial(vertexColors=True, linewidth=line_width))
+    vis[name].set_object(kos)
+    
+def create_homogeneous_transform(translation, rotation):
+    transform = np.eye(4)  # Create a 4x4 identity matrix
+    transform[:3, :3] = rotation  # Set the top-left 3x3 submatrix to the rotation matrix
+    transform[:3, 3] = translation  # Set the first three elements of the last column to the translation vector
+    return transform
+####################################################### VIS ROBOT #################################################
+import open3d as o3d
+
+def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, traj_data, dt, 
+                    rep_cnt = np.inf, rep_delay_sec=1,
+                    style_settings = {'N_traj_KOS': 10, 'traj_KOS_len': 0.05, 'traj_KOS_linewidth': 1, 
+                                      'TCP_KOS_len': 0.1, 'TCP_KOS_linewidth': 2, 
+                                      'traj_color': [255, 165, 0], 'traj_linewidth': 1, 'traj_linestyle': 'solid'}):
+    # Meshcat Visualize
+    robot_display = MeshcatVisualizer(robot_model)
+    robot_display.initViewer(open=False)
+
+    anim = Animation()
+    vis = robot_display.viewer
+
+    # Display trajectory as line:
+    y_d_data = traj_data['p_d'].T
+    R_d_data = traj_data['R_d']
+    vertices = np.hstack([y_d_data.T[:, 0][:, np.newaxis], np.repeat(y_d_data.T[:,1::], 2, 1)]).astype(np.float32)
+    
+    traj_color = style_settings['traj_color']
+    traj_linewidth = style_settings['traj_linewidth']
+    traj_linestyle = style_settings['traj_linestyle']
+
+    vis["line_segments"].set_object(
+        g.LineSegments(
+            g.PointsGeometry(vertices),
+            g.LineBasicMaterial(color=traj_color, linewidth=traj_linewidth, dashed=traj_linestyle == 'dashed')
+        )
+    )
+    
+    # Add coordinate systems along the trajectory
+    N_traj_KOS = style_settings['N_traj_KOS']
+    traj_KOS_len = style_settings['traj_KOS_len']
+
+    indices = traj_data['N_init'] + np.linspace(0, traj_data['N_traj'], N_traj_KOS, dtype=int)
+    for i, index in enumerate(indices):
+        create_coordinate_system(vis, f"y_coord_system_{i}", traj_KOS_len)
+        H = create_homogeneous_transform(y_d_data[index], R_d_data[:,:,index])
+        vis[f"y_coord_system_{i}"].set_transform(H)
+
+    # Display KOS at TCP
+    create_coordinate_system(vis, "TCP_KOS")
+
+    mesh_directory = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/'
+    link_to_meshes = {
+        'fr3_link0': ['link0_white.stl', 'link0_black.stl', 'link0_off_white.stl'],
+        'fr3_link1': ['link1_white.stl'],
+        'fr3_link2': ['link2_white.stl'],
+        'fr3_link3': ['link3_white.stl', 'link3_black.stl'],
+        'fr3_link4': ['link4_white.stl', 'link4_black.stl'],
+        'fr3_link5': ['link5_white.stl', 'link5_black.stl'],
+        'fr3_link6': ['link6_white.stl', 'link6_black.stl', 'link6_green.stl', 'link6_light_blue.stl', 'link6_off_white.stl'],
+        'fr3_link7': ['link7_white.stl', 'link7_black.stl'],
+    }
+
+    # Define RGBA colors for specific names
+    color_map = {
+        'white': [1.0, 1.0, 1.0, 1.0],
+        'scaled_white': [1.0, 1.0, 1.0, 1.0],
+        'off_white': [0.901961, 0.921569, 0.929412, 1.0],
+        'black': [0.25, 0.25, 0.25, 1.0],
+        'green': [0.0, 1.0, 0.0, 1.0],
+        'light_blue': [0.039216, 0.541176, 0.780392, 1.0]
+    }
+
+    #    Store geometry objects for all links
+    geometry_objects = []
+    for obj in visual_model.geometryObjects:
+        # Load mesh geometry
+        geometry_objects.append({
+            'name': obj.name[:-2],
+            'frame_id': obj.parentFrame,
+            'homogeneous': obj.placement.homogeneous,
+            'visible': False,
+        })
+
+    for obj in geometry_objects:
+        for stl_file in link_to_meshes[obj['name']]:
+            
+            # mesh = g.StlMeshGeometry.from_file('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_planar_manipulator/planar_manipulator-bulk1_fin.stl')
+            mesh_path = os.path.join(mesh_directory, stl_file)
+            mesh = g.StlMeshGeometry.from_file(mesh_path)
+
+            link_name = stl_file[:-4] # without .stl
+            color_name = link_name.split('_', 1)[-1]
+            vis[link_name].set_object(mesh)
+            # vis[obj['name']].set_property('scale', obj['scale'])
+            vis[link_name].set_property('color', color_map[color_name])
+            vis[link_name].set_property('visible', False)
+
+    robot_display.setCameraPose(np.eye(4))
+    robot_display.setCameraPosition([0,0,1])
+
+    # Iterate through trajectory data
+    for i in range(len(q_sol)):
+        pinocchio.forwardKinematics(robot_model, robot_data, q_sol[i])
+        pinocchio.updateFramePlacements(robot_model, robot_data)
+
+        with anim.at_frame(vis, i) as frame:
+            H_0_E = robot_data.oMf[TCP_frame_id].homogeneous
+            frame["TCP_KOS"].set_transform(H_0_E)
+            frame["TCP_KOS"].get_clip().fps = 1 / dt
+            for obj in geometry_objects:
+                frame_id = obj["frame_id"]
+                H_0_s = robot_data.oMf[frame_id].homogeneous
+                H_s_obj = obj['homogeneous']
+                for stl_file in link_to_meshes[obj['name']]:
+                    link_name = stl_file[:-4] # without .stl
+                    frame[link_name].set_transform(H_0_s @ H_s_obj)
+                    frame[link_name].get_clip().fps = 1 / dt
+
+    # Set the animation to the Meshcat viewer
+    vis.set_animation(anim)
+    for obj in geometry_objects:
+        for stl_file in link_to_meshes[obj['name']]:
+            link_name = stl_file[:-4] # without .stl
+            vis[link_name].set_property('visible', True)
+
+    download_html=False
+    render_standalone=True
+    if render_standalone or download_html:
+        html_out = vis.static_html()
+        with open('meshcat.html', 'w') as file:
+            file.write(html_out)
+            url = os.path.realpath(file.name)
+        if render_standalone:
+            webbrowser.open(url)
+            time.sleep(1) # othervise visualization don't work
+        #if not download_html:
+            # remove html file
+            #os.remove('meshcat.html')
+    else:
+        robot_display.viewer.open()
+
+    # i = 0
+    # cnt=rep_cnt
+    # while i < cnt:
+    #     time.sleep(rep_delay_sec)
+    #     # robot_display.displayFromSolver(ddp)
+    #     robot_display.robot.viz.play(q_sol[:, 6:6+robot_model.nq], dt)
+    #     i = i +1
+    # ffmpeg -r 60 -i "%07d.jpg" -vcodec "libx264" -preset "slow" -crf 18 -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2" output.mp4
+    # ffmpeg -r 60 -i "%07d.png" -vcodec "libx264" -preset "slow" -crf 18 -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2" output.mp4
+
+    create_video=False
+    if create_video:
+        robot_display = crocoddyl.MeshcatDisplay(robot, -1, 1, False, visibility=False)
+        with robot_display.robot.viz.create_video_ctx("test.mp4"):
+            robot_display.robot.viz.play(q_sol, dt)
+
+
+
+
+
+
+
+
+
+
+
+
+def visualize_robot_2DOF(robot, q_sol, traj_data, dt, rep_cnt = np.inf, rep_delay_sec=1):
     # Meshcat Visualize
     robot_model = robot.model
     robot_display = MeshcatVisualizer(robot.model)
@@ -2476,7 +2666,7 @@ def visualize_robot(robot, q_sol, traj_data, dt, rep_cnt = np.inf, rep_delay_sec
             frame["testobj1"].get_clip().fps=1/dt
             frame["testobj2"].get_clip().fps=1/dt
             frame["testobj3"].get_clip().fps=1/dt
-
+          
     # Set the animation to the Meshcat viewer
     vis.set_animation(anim)
     vis["testobj1"].set_property('visible', True)
