@@ -665,4 +665,6 @@ if autostart_fr3:
 visualize=True
 if visualize is True:
     q_sol = xs[:, :n_dof]
-    visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id, q_sol, transient_traj, Ts, 3, 1)
+    visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
+                    q_sol, transient_traj, Ts,
+                    frame_skip=1, create_html = True, html_name = 'robot_visualization.html')

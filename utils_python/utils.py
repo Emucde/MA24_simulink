@@ -2427,9 +2427,9 @@ def create_homogeneous_transform(translation, rotation):
 ####################################################### VIS ROBOT #################################################
 import open3d as o3d
 
-def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, traj_data, dt, 
-                    rep_cnt = np.inf, rep_delay_sec=1,
-                    style_settings = {'N_traj_KOS': 10, 'traj_KOS_len': 0.05, 'traj_KOS_linewidth': 1, 
+def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, traj_data, dt,
+                    frame_skip = 1, create_html = False, html_name = 'robot_visualization.html',
+                    style_settings = {'N_traj_KOS': 10, 'traj_KOS_len': 0.05, 'traj_KOS_linewidth': 1,
                                       'TCP_KOS_len': 0.1, 'TCP_KOS_linewidth': 2, 
                                       'traj_color': [255, 165, 0], 'traj_linewidth': 1, 'traj_linestyle': 'solid'}):
     # Meshcat Visualize
@@ -2519,7 +2519,7 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
     robot_display.setCameraPosition([0,0,1])
 
     # Iterate through trajectory data
-    for i in range(len(q_sol)):
+    for i in range(0, len(q_sol), frame_skip):
         pinocchio.forwardKinematics(robot_model, robot_data, q_sol[i])
         pinocchio.updateFramePlacements(robot_model, robot_data)
 
@@ -2543,31 +2543,15 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
             link_name = stl_file[:-4] # without .stl
             vis[link_name].set_property('visible', True)
 
-    download_html=False
-    render_standalone=True
-    if render_standalone or download_html:
+    if create_html:
         html_out = vis.static_html()
-        with open('meshcat.html', 'w') as file:
+        with open(html_name, 'w') as file:
             file.write(html_out)
             url = os.path.realpath(file.name)
-        if render_standalone:
-            webbrowser.open(url)
-            time.sleep(1) # othervise visualization don't work
-        #if not download_html:
-            # remove html file
-            #os.remove('meshcat.html')
+        webbrowser.open(url)
+        time.sleep(1) # othervise visualization don't work
     else:
         robot_display.viewer.open()
-
-    # i = 0
-    # cnt=rep_cnt
-    # while i < cnt:
-    #     time.sleep(rep_delay_sec)
-    #     # robot_display.displayFromSolver(ddp)
-    #     robot_display.robot.viz.play(q_sol[:, 6:6+robot_model.nq], dt)
-    #     i = i +1
-    # ffmpeg -r 60 -i "%07d.jpg" -vcodec "libx264" -preset "slow" -crf 18 -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2" output.mp4
-    # ffmpeg -r 60 -i "%07d.png" -vcodec "libx264" -preset "slow" -crf 18 -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2" output.mp4
 
     create_video=False
     if create_video:
