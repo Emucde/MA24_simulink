@@ -22,10 +22,11 @@ if autostart_fr3:
 ################################################ REALTIME ###############################################
 
 use_data_from_simulink = False
-manual_traj_select = 1
+manual_traj_select = 4
 use_feedforward = True
 use_clipping = False
 use_gravity = False
+visualize = False
 debounce_delay = 0.1
 
 param_traj_poly = {}
@@ -367,7 +368,7 @@ try:
 
             warn_cnt, err_state = check_solver_status(warn_cnt, hasConverged, ddp, i, Ts, conv_max_limit=5)
             
-            xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
+            # xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
             # ddp.xs[0:-1] = ddp.xs[1::] # Problem: geht nur wenn alle werte in Ta abstand (TsMPC ist aber > Ta)
             # ddp.us[0:-1] = ddp.us[1::] # fehler da TsMPC > Ta ist.
             u_k = ddp.us[0]
@@ -630,6 +631,11 @@ folderpath = next((path for path in paths if os.path.exists(path)), None)
 outputname = 'test.html'
 output_file_path = os.path.join(folderpath, outputname)
 
+if visualize is True:
+    q_sol = xs[:, :n_dof]
+    visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
+                    q_sol, transient_traj, Ts,
+                    frame_skip=1, create_html = True, html_name = 'robot_visualization.html')
 
 plot_sol=True
 if plot_sol == True:# and err_state == False:
@@ -661,10 +667,3 @@ if autostart_fr3:
     if user_input == 'y':
         message = "stop"
         asyncio.run(send_message(message))
-
-visualize=True
-if visualize is True:
-    q_sol = xs[:, :n_dof]
-    visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
-                    q_sol, transient_traj, Ts,
-                    frame_skip=1, create_html = True, html_name = 'robot_visualization.html')

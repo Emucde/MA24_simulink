@@ -46,8 +46,10 @@ function [x_d] = create_sinus_traj(traj_select, t, param_traj, init_bus_param)
     alpha_p  =  b_cos_t * omega * s   + bpb_sin_t * s_p;
     alpha_pp = -b_sin_t * omega^2 * s + b_cos_t * s_p * omega * 2 + bpb_sin_t * s_pp;
 
-    skew_ew  = -skew(rot_ax); % TODO WARUM NOTWENDIG??
-    R_act    = R_init*(eye(3) + sin(alpha-alpha0)*skew_ew + (1-cos(alpha-alpha0))*skew_ew^2);
+    RR    = eye(3) + sin(alpha-alpha0)*skew_ew + (1-cos(alpha-alpha0))*skew_ew^2;
+    
+    % R_act    = RR*R_init; % Vormultiplikation (in find_rotation_axis wird Nachmultiplikation für RR verwendet!!)
+    R_act    = R_init*RR; % Nachmultiplikation (in find_rotation_axis wird Nachmultiplikation für RR verwendet!!)
 
     alpha_d = alpha;
     alpha_d_p = alpha_p;

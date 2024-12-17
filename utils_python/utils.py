@@ -24,7 +24,6 @@ import asyncio
 import websockets
 import subprocess
 import fcntl
-import trimesh
 
 class DebouncedButton:
     def __init__(self, delay):
@@ -1975,6 +1974,18 @@ async def send_message(message, port=8765):
                 print("Server not running.")
                 return False
 
+def get_reload_tab_script():
+    return '''
+            const ws = new WebSocket('ws://localhost:8765');
+
+            ws.onmessage = function(event) {
+                console.log(event.data);
+                if (event.data === 'reload') {
+                    location.reload();
+                }
+            };
+        '''
+
 def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', plot_fig=True, matlab_import=True, reload_page=False, title_text=''):
     subplot_number = len(subplot_data)
     sig_labels = np.empty(24, dtype=object)
@@ -2154,16 +2165,7 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
         setTimeout(autoscale_function, rec_time);
         '''
 
-        reload_tab_code = '''
-            const ws = new WebSocket('ws://localhost:8765');
-
-            ws.onmessage = function(event) {
-                console.log(event.data);
-                if (event.data === 'reload') {
-                    location.reload();
-                }
-            };
-        '''
+        reload_tab_code = get_reload_tab_script()
 
         # py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False, include_plotlyjs='cdn') # online use
         py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False) # offline use
@@ -2397,13 +2399,6 @@ def plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, traj_data):
     plot_solution(us[0:i], xs[0:i], t[0:i], TCP_frame_id, robot_model, param_trajectory_copy)
 
 
-def convert_stl_to_gltf(stl_path, gltf_path):
-    # Load the STL mesh
-    mesh = trimesh.load_mesh(stl_path)
-    
-    # Export the mesh to GLTF format
-    mesh.export(gltf_path)
-
 # https://github.com/meshcat-dev/meshcat-python/blob/master/src/meshcat/geometry.py
 def create_coordinate_system(vis, name, axis_length=0.1, line_width=1):
     kos = g.LineSegments(
@@ -2425,7 +2420,6 @@ def create_homogeneous_transform(translation, rotation):
     transform[:3, 3] = translation  # Set the first three elements of the last column to the translation vector
     return transform
 ####################################################### VIS ROBOT #################################################
-import open3d as o3d
 
 def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, traj_data, dt,
                     frame_skip = 1, create_html = False, html_name = 'robot_visualization.html',
@@ -2468,7 +2462,7 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
     # Display KOS at TCP
     create_coordinate_system(vis, "TCP_KOS")
 
-    mesh_directory = '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/stl_files/Meshes_FR3/'
+    mesh_directory = 'stl_files/Meshes_FR3/'
     link_to_meshes = {
         'fr3_link0': ['link0_white.stl', 'link0_black.stl', 'link0_off_white.stl'],
         'fr3_link1': ['link1_white.stl'],
@@ -2545,10 +2539,16 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
 
     if create_html:
         html_out = vis.static_html()
+        soup = BeautifulSoup(html_out, 'html.parser')
+        script_tag = soup.new_tag('script', type='text/javascript')
+        script_tag.string = get_reload_tab_script()
+
+        # Add the script tag to the body of the HTML
+        soup.body.append(script_tag)
         with open(html_name, 'w') as file:
-            file.write(html_out)
+            file.write(str(soup))
             url = os.path.realpath(file.name)
-        webbrowser.open(url)
+        # webbrowser.open(url)
         time.sleep(1) # othervise visualization don't work
     else:
         robot_display.viewer.open()

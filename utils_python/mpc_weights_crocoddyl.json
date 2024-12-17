@@ -1,6 +1,6 @@
 {
     "traj2": "hier:",
-    "mpc_settings": {
+    "mpc_settings_traj2": {
       "version": "MPC_v1_bounds_terminate",
       "Ts": 1e-3,
       "Ts_MPC": 5e-3,
@@ -12,7 +12,7 @@
       "N_extra_Ts_samples": 0,
       "solver_steps": 1000
     },
-    "param_mpc_weight": {
+    "param_mpc_weight_traj2": {
       "q_yt_common_weight":          1e2,
       "q_yt_terminal_common_weight": 1e5,
       "Q_yt":          [1, 1, 1],
@@ -90,42 +90,42 @@
       "uref": []
     },
     "traj4": "hier:",
-    "mpc_settings_traj4": {
+    "mpc_settings": {
       "version": "MPC_v1_bounds_terminate",
-      "Ts": 1e-3,
-      "Ts_MPC": 5e-3,
+      "Ts": 1e-4,
+      "Ts_MPC": 1e-4,
       "T_horizon": 20e-3,
       "use_T_horizon": false,
-      "N_MPC": 20,
+      "N_MPC": 1000,
       "int_method": "euler",
       "use_dt_scale": false,
       "N_extra_Ts_samples": 0,
       "solver_steps": 1000
     },
-    "param_mpc_weight_traj4": {
-      "q_yt_common_weight":          1e2,
-      "q_yt_terminal_common_weight": 1e6,
+    "param_mpc_weight": {
+      "q_yt_common_weight":          1e10,
+      "q_yt_terminal_common_weight": 1e10,
       "Q_yt":          [1, 1, 1],
       "Q_yt_terminal": [1, 1, 1],
-      "q_yr_common_weight":          1e2,
-      "q_yr_terminal_common_weight": 1e6,
+      "q_yr_common_weight":          1e10,
+      "q_yr_terminal_common_weight": 1e10,
       "Q_yr":          [1, 1, 1],
       "Q_yr_terminal": [1, 1, 1],
-      "q_p_common_weight": 1e-10,
-      "R_q_p": [1, 1, 1, 1, 1, 1],
+      "q_p_common_weight": 0,
+      "R_q_p": [0, 0, 0, 0, 0, 0],
       "q_pp_common_weight": 0,
       "R_q_pp": [0, 0, 0, 0, 0, 0],
       "q_xprev_common_weight": 0,
-      "R_xprev": [1, 1, 1, 1, 1, 1,  0, 0, 0, 0, 0, 0],
-      "q_ureg_cost": 1e-10,
+      "R_xprev": [0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0],
+      "q_ureg_cost": 0,
       "q_uprev_cost": 0,
-      "q_x_bound_cost": 1e-10,
-      "R_x_bounds": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      "q_u_bound_cost": 1e-10,
+      "q_x_bound_cost": 0,
+      "R_x_bounds": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "q_u_bound_cost": 0,
       "Kd": [100, 100, 100],
       "Kp": [100, 100, 100],
-      "lb_y_ref_N": [-1e-6, -1e-6, -1e-6],
-      "ub_y_ref_N": [1e-6, 1e-6, 1e-6],
+      "lb_y_ref_N": [-1e-10, -1e-10, -1e-10],
+      "ub_y_ref_N": [1e-10, 1e-10, 1e-10],
       "umin": [],
       "umax": [],
       "xmin": [],
