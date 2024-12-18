@@ -176,7 +176,7 @@ def plot_solution(subplot_data, save_plot=False, file_name='plot_saved', plot_fi
 folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 
 # mat_file_name = '240909_traj2_kin_int_planner_1s.mat'
-mat_file_name = '241012_traj3_dyn_mpc_5ms.mat'
+mat_file_name = '241218_traj4_ct_control_Ta0_1ms.mat'
 
 mat_file_path = os.path.join(folderpath, mat_file_name)
 outputname = mat_file_name[:-4] + '.html'
