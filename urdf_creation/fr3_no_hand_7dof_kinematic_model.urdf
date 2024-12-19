@@ -1,0 +1,301 @@
+<?xml version="1.0" ?>
+<!-- 
+Changes to achieve a 7-dimensional kinematic model:
+
+Theory:
+- In a typical URDF file, the system assumes a rigid body dynamic model:
+  tau = M(q)d^2/dt^2 q + C(q, d/dt q) d/dt q + g(q),
+  with state x = [q; d/dt q] and system function:
+  d/dt x = f(x, u) = [d/dt q; M(q)^(-1) * (tau - C(q, d/dt q) d/dt q - g(q))].
+
+- For a kinematic model, we simplify the system to:
+  d/dt x = f(x, u) = [d/dt q; u],
+  where u = d^2/dt^2 q is the joint acceleration.
+
+- To implement this using Pinocchio, we modify the URDF to represent a simplified kinematic model by:
+  1. Setting the inertia matrix `M(q)` as the identity matrix (`eye(n)`).
+  2. Eliminating Coriolis and centrifugal terms (`C(q, d/dt q) = 0`).
+  3. Removing gravity effects (`g(q) = 0`).
+
+Modifications:
+- Removed the `inertial` block from all links, which defines the mass and inertia of each link, making `M(q)` effectively `eye(n)`.
+- Updated joint dynamics to remove any references to damping, friction, or other physical parameters that would contribute to torque-based dynamics.
+- These changes simplify the URDF to only represent the geometric and kinematic structure of the robot.
+
+-->
+<robot name="fr3_kinematic_model">
+  <!-- sub-link defining detailed meshes for collision with environment -->
+  <link name="world"/>
+  <joint name="arm_to_world_fixed" type="fixed">
+    <parent link="world"/>
+    <child link="fr3_link0"/>
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="fr3_link0">
+    <visual>
+      <geometry>
+        <mesh filename="visual/link0.obj"/>
+      </geometry>
+      <material name="panda_white">
+        <color rgba="1. 1. 1. 1."/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="collision/link0.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
+  <link name="fr3_link1">
+    <visual>
+      <geometry>
+        <mesh filename="visual/link1.obj"/>
+      </geometry>
+      <material name="panda_white">
+        <color rgba="1. 1. 1. 1."/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="collision/link1.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="fr3_joint1" type="revolute">
+    <origin rpy="0 0 0" xyz="0 0 0.333"/>
+    <parent link="fr3_link0"/>
+    <child link="fr3_link1"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10.0" lower="-2.3093" upper="2.3093" velocity="2.0"/>
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.3093" soft_upper_limit="2.3093"/>
+    <dynamics D="1" K="7000" damping="0.003" friction="0.0" mu_coulomb="0" mu_viscous="16"/>
+  </joint>
+
+  <link name="fr3_link2">
+    <visual>
+      <geometry>
+        <mesh filename="visual/link2.obj"/>
+      </geometry>
+      <material name="panda_white">
+        <color rgba="1. 1. 1. 1."/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="collision/link2.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="fr3_joint2" type="revolute">
+    <origin rpy="-1.57079632679489661923132169163975 0 0" xyz="0 0 0"/>
+    <parent link="fr3_link1"/>
+    <child link="fr3_link2"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10.0" lower="-1.5133" upper="1.5133" velocity="1.0"/>
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-1.5133" soft_upper_limit="1.5133"/>
+    <dynamics D="1" K="7000" damping="0.003" friction="0.0" mu_coulomb="0" mu_viscous="16"/>
+  </joint>
+  
+  <link name="fr3_link3">
+    <visual>
+      <geometry>
+        <mesh filename="visual/link3.obj"/>
+      </geometry>
+      <material name="panda_white">
+        <color rgba="1. 1. 1. 1."/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="collision/link3.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  
+  <joint name="fr3_joint3" type="revolute">
+    <origin rpy="1.57079632679489661923132169163975 0 0" xyz="0 -0.316 0"/>
+    <parent link="fr3_link2"/>
+    <child link="fr3_link3"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10.0" lower="-2.4937" upper="2.4937" velocity="1.5"/>
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.4937" soft_upper_limit="2.4937"/>
+    <dynamics D="1" K="7000" damping="0.003" friction="0.0" mu_coulomb="0" mu_viscous="16"/>
+  </joint>
+  
+  <link name="fr3_link4">
+    <visual>
+      <geometry>
+        <mesh filename="visual/link4.obj"/>
+      </geometry>
+      <material name="panda_white">
+        <color rgba="1. 1. 1. 1."/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="collision/link4.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="fr3_joint4" type="revolute">
+    <origin rpy="1.57079632679489661923132169163975 0 0" xyz="0.0825 0 0"/>
+    <parent link="fr3_link3"/>
+    <child link="fr3_link4"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10.0" lower="-2.7478" upper="-0.4461" velocity="1.25"/>
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.7478" soft_upper_limit="-0.4461"/>
+    <dynamics D="1" K="7000" damping="0.003" friction="0.0" mu_coulomb="0" mu_viscous="16"/>
+  </joint>
+
+  <link name="fr3_link5">
+    <visual>
+      <geometry>
+        <mesh filename="visual/link5.obj"/>
+      </geometry>
+      <material name="panda_white">
+        <color rgba="1. 1. 1. 1."/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="collision/link5.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  
+  <joint name="fr3_joint5" type="revolute">
+    <origin rpy="-1.57079632679489661923132169163975 0 0" xyz="-0.0825 0.384 0"/>
+    <parent link="fr3_link4"/>
+    <child link="fr3_link5"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10.0" lower="-2.48" upper="2.48" velocity="3.0"/>
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.48" soft_upper_limit="2.48"/>
+    <dynamics D="1" K="7000" damping="0.003" friction="0.0" mu_coulomb="0" mu_viscous="16"/>
+  </joint>
+
+  <link name="fr3_link6">
+    <visual>
+      <geometry>
+        <mesh filename="visual/link6.obj"/>
+      </geometry>
+      <material name="panda_white">
+        <color rgba="1. 1. 1. 1."/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="collision/link6.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  
+  <joint name="fr3_joint6" type="revolute">
+    <origin rpy="1.57079632679489661923132169163975 0 0" xyz="0 0 0"/>
+    <parent link="fr3_link5"/>
+    <child link="fr3_link6"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10.0" lower="0.8521" upper="4.2094" velocity="1.5"/>
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="0.8521" soft_upper_limit="4.2094"/>
+    <dynamics D="1" K="7000" damping="0.003" friction="0.0" mu_coulomb="0" mu_viscous="16"/>
+  </joint>
+  
+  <link name="fr3_link7">
+    <visual>
+      <geometry>
+        <mesh filename="visual/link7.obj"/>
+      </geometry>
+      <material name="panda_white">
+        <color rgba="1. 1. 1. 1."/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="collision/link7.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  
+  <joint name="fr3_joint7" type="revolute">
+    <origin rpy="1.57079632679489661923132169163975 0 0" xyz="0.088 0 0"/>
+    <parent link="fr3_link6"/>
+    <child link="fr3_link7"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10.0" lower="-2.6895" upper="2.6895" velocity="3.0"/>
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.6895" soft_upper_limit="2.6895"/>
+    <dynamics D="1" K="7000" damping="0.003" friction="0.0" mu_coulomb="0" mu_viscous="16"/>
+  </joint>
+
+    <link name="fr3_link8">
+    <inertial>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <mass value="0"/>
+        <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  
+  <joint name="fr3_joint8" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.107"/>
+    <parent link="fr3_link7"/>
+    <child link="fr3_link8"/>
+  </joint>
+
+  <!-- Define the hand_tcp frame -->
+  <link name="fr3_link8_tcp">
+    <inertial>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <mass value="0"/>
+        <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="fr3_link8_tcp_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <parent link="fr3_link8"/>
+    <child link="fr3_link8_tcp"/>
+  </joint>
+
+</robot>
