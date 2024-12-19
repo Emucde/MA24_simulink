@@ -475,7 +475,7 @@ def initialize_shared_memory():
 
     return shm_objects, shm_data
 
-def calculate_ndof_torque_with_feedforward(u, x_k_ndof, robot_model_full, robot_data_full, n, n_indices, n_indices_fixed):
+def calculate_ndof_torque_with_feedforward(u, x_k_ndof, robot_model_full, robot_data_full, n, n_indices, kin_model):
     """
     Calculate n-DOF torque with feedforward for fixed joints:
     Example: For a 7DOF robot with joint 3 fixed, q ∈ Rn, qp ∈ Rn
@@ -494,6 +494,7 @@ g
     n_red (int): Number of reduced DOF (non-fixed joints)
     n (int): Total number of DOF of the full robot
     n_indices (list): Indices of non-fixed joints
+    kin_model (bool): True if kinematic model is used, False if dynamic model is used
 
     Returns:
     np.array: Full n-DOF torque
@@ -504,18 +505,22 @@ g
     q = x_k_ndof[:n]
     q_p = x_k_ndof[n:2*n]
 
-    tau_red = u
+    if kin_model:
+        q_pp = np.zeros(n)
+        q_pp[n_indices] = u
+    else:
+        tau_red = u
 
-    M = pinocchio.crba(robot_model_full, robot_data_full, q)
-    C_rnea = pinocchio.rnea(robot_model_full, robot_data_full, q, q_p, np.zeros(n)) # = Cq_p + g
-    # C = pinocchio.computeCoriolisMatrix(robot_model_full, robot_data_full, q, q_p)
-    M_red = M[n_indices][:, n_indices]
-    C_rnea_tilde = C_rnea[n_indices]
+        M = pinocchio.crba(robot_model_full, robot_data_full, q)
+        C_rnea = pinocchio.rnea(robot_model_full, robot_data_full, q, q_p, np.zeros(n)) # = Cq_p + g
+        # C = pinocchio.computeCoriolisMatrix(robot_model_full, robot_data_full, q, q_p)
+        M_red = M[n_indices][:, n_indices]
+        C_rnea_tilde = C_rnea[n_indices]
 
-    q_pp_red = np.linalg.solve(M_red, tau_red - C_rnea_tilde)
+        q_pp_red = np.linalg.solve(M_red, tau_red - C_rnea_tilde)
 
-    q_pp = np.zeros(n)
-    q_pp[n_indices] = q_pp_red
+        q_pp = np.zeros(n)
+        q_pp[n_indices] = q_pp_red
 
     # v1: 2x faster than v2
     tau_full = pinocchio.rnea(robot_model_full, robot_data_full, q, q_p, q_pp)
@@ -2069,6 +2074,7 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
     if(save_plot):
         autoscale_code='''
         rec_time = 100; //ms
+        prev_xrange_flag = false;
         function autoscale_function(){
             //console.log('run');
             graphDiv = document.querySelector('.plotly-graph-div');
@@ -2104,13 +2110,40 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
                         //create a array with length of the number of traces and false for each yaxis that was not in trace_numbers
                         // and true for each yaxis that is in trace numbers
                         yaxis_in_trace = Array.from({length: labels.length}, (_, i) => trace_numbers.includes(i));
+
+                        if(prev_xrange_flag)
+                        {
+                            // get xrange from local storage and convert it to array of doubles
+                            xrange = localStorage.getItem('xrange').split(',').map(Number);
+                            prev_xrange_flag=false;
+                            xaxis_change=true;
+                            console.log(xrange);
+
+                            update={};
+                            labels.forEach(function(act_label, i){
+                                if(i == 0)
+                                {
+                                    xlabel='xaxis.range';
+                                }
+                                else
+                                {
+                                    xlabel='xaxis'+(1+i)+'.range';
+                                }
+                                update[xlabel] = xrange;
+                            });
+                        }
+                        else
+                        {
+                            xrange = graphDiv.layout.xaxis.range;
+                            localStorage.setItem('xrange', xrange);
+                            console.log(xrange);
+                            update={};
+                        }
                     
-                        update={};
                         labels.forEach(function(act_label, i){
 
                             trace = graphDiv.data.filter(trace => trace.text.includes(labels[i].text));
 
-                            xrange = graphDiv.layout.xaxis.range;
                             yaxisName = i === 0 ? 'yaxis' : `yaxis${i + 1}`;
                             yrange = graphDiv.layout[yaxisName].range;
                             filteredIndices = trace[0].x.map((x, index) => x >= xrange[0] && x <= xrange[1] ? index : -1).filter(index => index !== -1);
@@ -2160,6 +2193,16 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
                     }
 
                 graphDiv.on('plotly_relayout', test);
+
+                prev_xrange = localStorage.getItem('xrange');
+                if(prev_xrange != null)
+                {
+                    prev_xrange_flag=true;
+                    var currentLayout = graphDiv.layout;
+
+                    // Trigger the relayout event without changing the layout
+                    Plotly.relayout(graphDiv, currentLayout);
+                }
             }
         }
         setTimeout(autoscale_function, rec_time);
