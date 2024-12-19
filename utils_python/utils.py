@@ -448,7 +448,7 @@ def initialize_shared_memory():
     # Shared memory configurations
     shm_configs = {
         "data_from_python":               {"size": n_dof * 8,     "dtype": np.float64},
-        "data_from_python_valid":         {"size": 8,             "dtype": np.float64},
+        "data_from_python_valid":         {"size": 1,             "dtype": np.int8},
         "data_from_simulink":             {"size": 2 * n_dof * 8, "dtype": np.float64},
         "data_from_simulink_valid":       {"size": 1,             "dtype": np.int8},
         "data_from_simulink_start":       {"size": 1,             "dtype": np.int8},

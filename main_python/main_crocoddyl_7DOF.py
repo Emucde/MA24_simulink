@@ -21,8 +21,8 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = False
-manual_traj_select = 4
+use_data_from_simulink = True
+manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
 use_gravity = False
@@ -54,6 +54,7 @@ if use_data_from_simulink:
 
 # robot_name = 'ur5e_6dof'
 robot_name = 'fr3_6dof_no_hand'
+fr3_kin_model = False
 
 if robot_name == 'ur5e_6dof':
     n_dof = 6 # (input data from simulink are 7dof states q, qp)
@@ -73,7 +74,10 @@ if robot_name == 'ur5e_6dof':
 elif robot_name == 'fr3_6dof_no_hand':
     n_dof = 7 # (input data from simulink are 7dof states q, qp)
     mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_FR3')
-    urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'fr3_no_hand_7dof.urdf')
+    if fr3_kin_model:
+        urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'fr3_no_hand_7dof_kinematic_model.urdf')
+    else:
+        urdf_model_path = os.path.join(os.path.dirname(__file__), '..', 'urdf_creation', 'fr3_no_hand_7dof.urdf')
     urdf_tcp_frame_name = 'fr3_link8_tcp'
     trajectory_data_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.mat')
     trajectory_param_mat_file = os.path.join(os.path.dirname(__file__), '..', './s_functions/fr3_no_hand_6dof/trajectory_data/param_traj.mat')
@@ -237,7 +241,7 @@ p_d_p = transient_traj['p_d_p']
 p_d_pp = transient_traj['p_d_pp']
 R_d = transient_traj['R_d']
 
-tau_full = calculate_ndof_torque_with_feedforward(us_init_guess[0], x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, n_indices_fixed)
+tau_full = calculate_ndof_torque_with_feedforward(us_init_guess[0], x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, fr3_kin_model)
 
 # jointspace controller settings for fixed joints
 K_d = np.diag([100, 200, 500, 200, 50, 50, 10])
@@ -287,13 +291,9 @@ try:
             # Read data
             if(data_from_simulink_valid[:] == 1):
                 data_from_simulink_valid[:] = 0
-                data_from_python_valid[:] = 0
                 x_k_ndof = data_from_simulink.copy()
                 x_k = x_k_ndof[n_x_indices]
                 new_data_flag = True
-
-            if data_from_python_valid[0] == 1:
-                data_from_python_valid[:] = 0
 
             # Daten von Simulink lesen
             start = start_button.debounce(data_from_simulink_start[:])
@@ -371,6 +371,8 @@ try:
             # xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
             # ddp.xs[0:-1] = ddp.xs[1::] # Problem: geht nur wenn alle werte in Ta abstand (TsMPC ist aber > Ta)
             # ddp.us[0:-1] = ddp.us[1::] # fehler da TsMPC > Ta ist.
+            xs_init_guess = ddp.xs
+            us_init_guess = ddp.us
             u_k = ddp.us[0]
 
             if use_clipping:
@@ -386,11 +388,23 @@ try:
                 if np.any(mask_upper | mask_lower):
                     print("u_k was clipped")
 
+            # use feedforward for fixed joints
             if use_feedforward:
-                tau_full = calculate_ndof_torque_with_feedforward(u_k, x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, n_indices_fixed)
+                tau_full = calculate_ndof_torque_with_feedforward(u_k, x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, fr3_kin_model)
             else:
                 tau_full = np.zeros(n_dof)
                 tau_full[n_indices] = u_k
+
+            # use pd control for fixed joints
+            q_ndof = x_k_ndof[:n_dof]
+            q_p_ndof = x_k_ndof[n_dof::]
+
+            q_fixed = q_ndof[n_indices_fixed]
+            q_p_fixed = q_p_ndof[n_indices_fixed]
+
+            tau_fixed = -K_d_fixed @ (q_fixed - q_0_ref_fixed) - D_d_fixed @ q_p_fixed
+
+            tau_full[n_indices_fixed] = tau_full[n_indices_fixed] + tau_fixed
 
             xs[i] = x_k_ndof
             us[i] = tau_full    
@@ -404,39 +418,28 @@ try:
                         tau_i_prev = np.zeros(n_dof)
 
                     delta_u = tau_full - tau_i_prev
-                    condition1 = np.logical_and(delta_u > 0, delta_u > 2)
-                    condition2 = np.logical_and(delta_u < 0, delta_u < -2)
+                    condition1 = np.logical_and(delta_u > 0, delta_u > 5)
+                    condition2 = np.logical_and(delta_u < 0, delta_u < -5)
 
                     if np.any(np.logical_or(condition1, condition2)): # aber kleiner als -0.8 ist ok
+                        print('tau_i_prev')
+                        print(tau_i_prev)
+                        print('tau_i_now')
                         print(tau_full)
                         print("Jump in torque (> 5 Nm/ms) detected, output zero torque")
                         data_from_python[:] = np.zeros(n_dof)
-                        if data_from_python_valid[0] == 1:
-                            data_from_python_valid[:] = 0
                         run_flag = False
                     else:
                         data_from_python[:] = tau_full
-                        if data_from_python_valid[0] == 0:
-                            data_from_python_valid[:] = 1
                 else:
                     data_from_python[:] = np.zeros(n_dof)
-                    data_from_python_valid[:] = 0
                     run_flag = False
                     err_state = False # damit python nicht crasht
 
+                data_from_python_valid[:] = 1
                 start_solving = False
                 tau_i_prev = tau_full
-            else:
-                q_ndof = x_k_ndof[:n_dof]
-                q_p_ndof = x_k_ndof[n_dof::]
-
-                q_fixed = q_ndof[n_indices_fixed]
-                q_p_fixed = q_p_ndof[n_indices_fixed]
-
-                tau_fixed = -K_d_fixed @ (q_fixed - q_0_ref_fixed) - D_d_fixed @ q_p_fixed
-
-                tau_full[n_indices_fixed] = tau_full[n_indices_fixed] + tau_fixed
-                
+            else:             
                 x_kp1_ndof = simulate_model(x_k_ndof, tau_full, Ts, n_dof, 2*n_dof, robot_model_full, robot_data_full, param_robot, transient_traj)
                 
                 #### testing reduced model
@@ -559,7 +562,7 @@ if err_state:
     print("Error Occured, output zero torque:", hasConverged)
     if use_data_from_simulink:
         data_from_python[:] = np.zeros(n_dof)
-        data_from_python_valid[:] = 0
+        data_from_python_valid[:] = 1
 
 
 xs[N_traj-1] = x_k_ndof
