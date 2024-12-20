@@ -1543,7 +1543,7 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
     warn_cnt, err_state = check_solver_status(0, hasConverged, ddp, 0, Ts, conv_max_limit=5)
 
     xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
-
+    print('1546?')
     xs_init_guess = ddp.xs
     us_init_guess = ddp.us
 

@@ -21,7 +21,7 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = True
+use_data_from_simulink = False
 manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
@@ -308,7 +308,7 @@ try:
 
                     # Selbst wenn die Messung zu beginn eine Jointgeschwindigkeit ausgibt, wird diese auf 0 gesetzt
                     # weil der Roboter zu beginn stillsteht und es damit nur noise ist
-                    # x_k_ndof[n_dof::] = 0
+                    x_k_ndof[n_dof::] = 0
                     init_cnt = 0
 
                     data_from_python[:] = np.zeros(n_dof)
@@ -329,6 +329,10 @@ try:
                         transient_traj, param_traj, title_text =   \
                             init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data,     \
                                             traj_init_config, param_robot, param_traj_poly, TCP_frame_id)
+                        
+                        # pin.forwardKinematics(robot_model_full, robot_data_full, x_k_ndof[:n_dof])
+                        # pin.updateFramePlacements(robot_model_full, robot_data_full)
+                        # xe0 = robot_data_full.oMf[TCP_frame_id].translation
                         
                         p_d = transient_traj['p_d']
                         p_d_p = transient_traj['p_d_p']
