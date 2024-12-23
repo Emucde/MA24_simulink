@@ -1,0 +1,32 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 1000  # Hz
+
+    gravity_compensation_example_controller:
+      type: franka_example_controllers/GravityCompensationExampleController
+      
+    franka_joint_state_subscriber:
+      type: franka_example_controllers/ModelPredictiveController
+
+    move_to_start_example_controller:
+      type: franka_example_controllers/MoveToStartExampleController
+
+move_to_start_example_controller:
+  ros__parameters:
+    arm_id: panda
+    k_gains:
+      - 600.0
+      - 600.0
+      - 600.0
+      - 600.0
+      - 250.0
+      - 150.0
+      - 50.0
+    d_gains:
+      - 30.0
+      - 30.0
+      - 30.0
+      - 30.0
+      - 10.0
+      - 10.0
+      - 5.
