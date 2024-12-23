@@ -31,8 +31,8 @@ debounce_delay = 0.1
 
 param_traj_poly = {}
 param_traj_poly['T_start'] = 0
-param_traj_poly['T_poly'] = 0.5
-param_traj_poly['T_end'] = 1
+param_traj_poly['T_poly'] = 4
+param_traj_poly['T_end'] = 5
 
 if use_data_from_simulink:
     # only available for franka research 3 robot (n_dof = 7)
@@ -187,13 +187,18 @@ traj_select 7: Sing test stretch arm in, Polynomial, joint space
 
 if use_data_from_simulink:
     if data_from_simulink_traj_switch[0] == 0:
-        curent_traj_select = 1
+        current_traj_select = 1
         data_from_simulink_traj_switch[0] = 1
     else:
-        curent_traj_select = data_from_simulink_traj_switch[0]
+        current_traj_select = data_from_simulink_traj_switch[0]
 else:
-    curent_traj_select = manual_traj_select
-traj_data, traj_init_config = process_trajectory_data(curent_traj_select-1, traj_data_all, traj_param_all)
+    current_traj_select = manual_traj_select
+
+#################################TEMP
+# current_traj_select = manual_traj_select
+# data_from_simulink_traj_switch[0] = current_traj_select
+##########################
+traj_data, traj_init_config = process_trajectory_data(current_traj_select-1, traj_data_all, traj_param_all)
 
 q_0_ref = traj_init_config['q_0']
 
@@ -316,10 +321,10 @@ try:
                     if i == N_traj-1:
                         i = 0
 
-                    if curent_traj_select != new_traj_select:
-                        curent_traj_select = new_traj_select
-                        traj_data, traj_init_config = process_trajectory_data(curent_traj_select-1, traj_data_all, traj_param_all)
-                        print(f'New Trajectory selected: {curent_traj_select}')
+                    if current_traj_select != new_traj_select:
+                        current_traj_select = new_traj_select
+                        traj_data, traj_init_config = process_trajectory_data(current_traj_select-1, traj_data_all, traj_param_all)
+                        print(f'New Trajectory selected: {current_traj_select}')
 
                     if i == 0:
                         # update mpc settings and problem
