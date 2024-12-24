@@ -27,6 +27,7 @@
 
 #include <rclcpp/duration.hpp>
 #include <rclcpp/time.hpp>
+#include "mpc_interfaces/msg/num.hpp"
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
@@ -36,7 +37,7 @@ namespace franka_example_controllers {
  * The gravity compensation controller only sends zero torques so that the robot does gravity
  * compensation
  */
-class ModelPredictiveController : public controller_interface::ControllerInterface {
+class ModelPredictiveController : public controller_interface::ControllerInterface{
  public:
   FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
   CallbackReturn on_configure(const rclcpp_lifecycle::State& previous_state) override;
@@ -76,8 +77,13 @@ class ModelPredictiveController : public controller_interface::ControllerInterfa
   int shm_start_trajectory = 0;
   int shm_torques = 0;
   int shm_torques_valid = 0;
+  rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;
+//   rclcpp::Service<custom_interfaces::Trigger>::SharedPtr service_;
   
   void open_shared_memories();
   void close_shared_memories();
+  void topic_callback(const mpc_interfaces::msg::Num & msg);
+//   void handle_service(const std::shared_ptr<custom_interfaces::Trigger::Request> request,
+//                       std::shared_ptr<custom_interfaces::Trigger::Response> response);
 };
 }  // namespace franka_example_controllers

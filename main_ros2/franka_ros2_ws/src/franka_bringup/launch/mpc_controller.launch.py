@@ -68,9 +68,16 @@ def generate_launch_description():
         ),
 
         Node(
+            package='command_publisher',
+            executable='command_publisher',
+            name='command_publisher_node',
+            output='screen',
+        ),
+
+        Node(
             package='controller_manager',
             executable='spawner',
-            arguments=['franka_joint_state_subscriber'],
+            arguments=['mpc_controller'],
             output='screen',
         ),
     ])

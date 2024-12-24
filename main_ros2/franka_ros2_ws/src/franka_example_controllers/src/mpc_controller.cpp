@@ -19,6 +19,11 @@
 #include "shared_memory.hpp"
 #include <unistd.h>
 
+#include <memory>
+#include "rclcpp/rclcpp.hpp"
+
+using std::placeholders::_1;
+
 namespace franka_example_controllers {
 
 controller_interface::InterfaceConfiguration
@@ -50,9 +55,7 @@ controller_interface::return_type ModelPredictiveController::update(
     const rclcpp::Duration& /*period*/) {
   double* torques_crocoddyl = 0;
   double read_torques[N_DOF] = {0.0};
-  double torques_zero[N_DOF] = {0.0};
   int8_t valid_flag = 0;
-  int res=0;
 
   double state[2*N_DOF];
 
@@ -82,7 +85,7 @@ controller_interface::return_type ModelPredictiveController::update(
   if(valid_flag == 1)
   {
     // Reading data from shared memory
-    res = read_shared_memory(shm_torques, &read_torques[0], N_DOF * sizeof(double), get_node()->get_logger());
+    read_shared_memory(shm_torques, &read_torques[0], N_DOF * sizeof(double), get_node()->get_logger());
     std::memcpy(torques_prev, read_torques, N_DOF * sizeof(double));
     torques_crocoddyl = &read_torques[0];
     
@@ -124,6 +127,19 @@ controller_interface::return_type ModelPredictiveController::update(
 CallbackReturn ModelPredictiveController::on_configure(
     const rclcpp_lifecycle::State& /*previous_state*/) {
   arm_id_ = get_node()->get_parameter("arm_id").as_string();
+
+  RCLCPP_INFO(get_node()->get_logger(), "Configuring MPC controller for %s arm", arm_id_.c_str());
+  
+  subscription_ = get_node()->create_subscription<mpc_interfaces::msg::Num>(
+      "topic", 10, std::bind(&ModelPredictiveController::topic_callback, this, _1));
+
+  RCLCPP_INFO(get_node()->get_logger(), "Subscribed to topic 'topic'");
+
+  // Create the service
+  // service_ = get_node()->create_service<custom_interfaces::Trigger>(
+  //   "my_service",
+  //   std::bind(&ModelPredictiveController::handle_service, this, std::placeholders::_1, std::placeholders::_2));
+
   return CallbackReturn::SUCCESS;
 }
 
@@ -199,6 +215,21 @@ void ModelPredictiveController::close_shared_memories()
     if (shm_torques != -1) close(shm_torques);
     if (shm_torques_valid != -1) close(shm_torques_valid);
 }
+
+void ModelPredictiveController::topic_callback(const mpc_interfaces::msg::Num & msg)
+{
+  RCLCPP_WARN(get_node()->get_logger(), "I heard: '%ld'", msg.num);
+}
+
+// void ModelPredictiveController::handle_service(
+//   const std::shared_ptr<custom_interfaces::Trigger::Request> request,
+//   std::shared_ptr<custom_interfaces::Trigger::Response> response)
+// {
+//   // Implement your service logic here
+//   response->success = true;
+//   response->message = "Service called successfully";
+//   RCLCPP_INFO(get_node()->get_logger(), "Service called");
+// }
 
 }  // namespace franka_example_controllers
 #include "pluginlib/class_list_macros.hpp"

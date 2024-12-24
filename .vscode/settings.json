@@ -83,7 +83,12 @@
     "unordered_set": "cpp",
     "numbers": "cpp",
     "semaphore": "cpp",
-    "stop_token": "cpp"
+    "stop_token": "cpp",
+    "csignal": "cpp",
+    "any": "cpp",
+    "codecvt": "cpp",
+    "future": "cpp",
+    "shared_mutex": "cpp"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",
@@ -153,6 +158,7 @@
       ]
     }
   },
+  "cmake.ignoreCMakeListsMissing": true,
   // better use source /opt/ros/humble/setup.bash in terminal, otherwise crocoddyl will not work
   // "terminal.integrated.env.linux": {
   //       "COLCON_PREFIX_PATH": "/opt/ros/humble",
@@ -160,10 +166,10 @@
   //       "PATH": "/opt/ros/humble/bin:${env:PATH}",
   //       "PYTHONPATH": "/opt/ros/humble/lib/python3.10/site-packages:${env:PYTHONPATH}"
   //   }
-  "terminal.integrated.env.linux": {
-        "PATH": "${env:CONDA_ROOT_PREFIX}/envs/mpc/share/rubygems/bin:${env:CONDA_ROOT_PREFIX}/envs/mpc/bin:${env:CONDA_ROOT_PREFIX}/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin",
-        "PYTHONPATH": "",
-        "CONDA_PREFIX":"${env:CONDA_ROOT_PREFIX}/envs/mpc",
-    },
-    "cmake.sourceDirectory": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/cpp_pubsub",
+  // "terminal.integrated.env.linux": {
+  //       "PATH": "${env:CONDA_ROOT_PREFIX}/envs/mpc/share/rubygems/bin:${env:CONDA_ROOT_PREFIX}/envs/mpc/bin:${env:CONDA_ROOT_PREFIX}/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin",
+  //       "PYTHONPATH": "",
+  //       "CONDA_PREFIX":"${env:CONDA_ROOT_PREFIX}/envs/mpc",
+  //   },
+  // "cmake.sourceDirectory": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/cpp_pubsub",
 }
