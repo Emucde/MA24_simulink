@@ -29,6 +29,8 @@
 #include <rclcpp/time.hpp>
 #include "mpc_interfaces/msg/num.hpp"
 #include "mpc_interfaces/srv/add_three_ints.hpp"
+#include "mpc_interfaces/srv/simple_command.hpp"
+#include "mpc_interfaces/srv/trajectory_command.hpp"
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
@@ -74,20 +76,28 @@ class ModelPredictiveController : public controller_interface::ControllerInterfa
   int invalid_counter = 0; // counter for invalid data, if exceeds MAX_INVALID_COUNT, terminate the controller
   int shm_states = 0;
   int shm_states_valid = 0;
-  int shm_selected_trajectory = 0;
-  int shm_start_trajectory = 0;
+  int shm_start_mpc = 0;
+  int shm_reset_mpc = 0;
+  int shm_stop_mpc = 0;
+  int shm_select_trajectory = 0;
   int shm_torques = 0;
   int shm_torques_valid = 0;
-  rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;
-//   rclcpp::Service<custom_interfaces::Trigger>::SharedPtr service_;
-  rclcpp::Service<mpc_interfaces::srv::AddThreeInts>::SharedPtr service_;
+  // rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;
+  rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
+  rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr reset_mpc_service_;
+  rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr stop_mpc_service_;
+  rclcpp::Service<mpc_interfaces::srv::TrajectoryCommand>::SharedPtr traj_switch_service_;
   
   void open_shared_memories();
   void close_shared_memories();
-  void topic_callback(const mpc_interfaces::msg::Num & msg);
-//   void handle_service(const std::shared_ptr<custom_interfaces::Trigger::Request> request,
-//                       std::shared_ptr<custom_interfaces::Trigger::Response> response);
-  void add(const std::shared_ptr<mpc_interfaces::srv::AddThreeInts::Request> request,
-          std::shared_ptr<mpc_interfaces::srv::AddThreeInts::Response>       response);
+  // void topic_callback(const mpc_interfaces::msg::Num & msg);
+  void start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+          std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response);
+  void reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+          std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response);
+  void stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+          std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response);
+  void traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
+          std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response>       response);
 };
 }  // namespace franka_example_controllers

@@ -67,12 +67,12 @@ def generate_launch_description():
                               }.items(),
         ),
 
-        Node(
-            package='command_publisher',
-            executable='command_publisher',
-            name='command_publisher_node',
-            output='screen',
-        ),
+        # Node(
+        #     package='command_publisher',
+        #     executable='command_publisher',
+        #     name='command_publisher_node',
+        #     output='screen',
+        # ),
 
         Node(
             package='controller_manager',

@@ -130,19 +130,29 @@ CallbackReturn ModelPredictiveController::on_configure(
 
   RCLCPP_INFO(get_node()->get_logger(), "Configuring MPC controller for %s arm", arm_id_.c_str());
   
-  subscription_ = get_node()->create_subscription<mpc_interfaces::msg::Num>(
-      "topic", 10, std::bind(&ModelPredictiveController::topic_callback, this, _1));
+  // subscription_ = get_node()->create_subscription<mpc_interfaces::msg::Num>(
+  //     "topic", 10, std::bind(&ModelPredictiveController::topic_callback, this, _1));
 
-  RCLCPP_INFO(get_node()->get_logger(), "Subscribed to topic 'topic'");
+  // RCLCPP_INFO(get_node()->get_logger(), "Subscribed to topic 'topic'");
 
-  // Create the service
-  // service_ = get_node()->create_service<custom_interfaces::Trigger>(
-  //   "my_service",
-  //   std::bind(&ModelPredictiveController::handle_service, this, std::placeholders::_1, std::placeholders::_2));
+  start_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
+      "start_mpc_service",
+      std::bind(&ModelPredictiveController::start_mpc, this, std::placeholders::_1, std::placeholders::_2)
+  );
 
-  service_ = get_node()->create_service<mpc_interfaces::srv::AddThreeInts>(
-      "add_three_ints",
-      std::bind(&ModelPredictiveController::add, this, std::placeholders::_1, std::placeholders::_2)
+  reset_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
+      "reset_mpc_service",
+      std::bind(&ModelPredictiveController::reset_mpc, this, std::placeholders::_1, std::placeholders::_2)
+  );
+
+  stop_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
+      "stop_mpc_service",
+      std::bind(&ModelPredictiveController::stop_mpc, this, std::placeholders::_1, std::placeholders::_2)
+  );
+
+  traj_switch_service_ = get_node()->create_service<mpc_interfaces::srv::TrajectoryCommand>(
+      "traj_switch_service",
+      std::bind(&ModelPredictiveController::traj_switch, this, std::placeholders::_1, std::placeholders::_2)
   );
 
   RCLCPP_INFO(get_node()->get_logger(), "Service 'add_three_ints' created");
@@ -172,12 +182,6 @@ CallbackReturn ModelPredictiveController::on_init() {
     return CallbackReturn::ERROR;
   }
 
-  // Write start flag to shared memory
-  //int8_t traj_select = 1;
-  //write_to_shared_memory(shm_selected_trajectory, &traj_select, sizeof(int8_t), get_node()->get_logger());
-  int8_t start_flag = 1;
-  write_to_shared_memory(shm_start_trajectory, &start_flag, sizeof(int8_t), get_node()->get_logger());
-
   return CallbackReturn::SUCCESS;
 }
 
@@ -204,8 +208,10 @@ void ModelPredictiveController::open_shared_memories()
     // Open shared memory for writing states to crocddyl
     shm_states = open_write_shm("data_from_simulink", 2*N_DOF*sizeof(double), get_node()->get_logger());
     shm_states_valid = open_write_shm("data_from_simulink_valid", sizeof(int8_t), get_node()->get_logger());
-    shm_selected_trajectory = open_write_shm("data_from_simulink_traj_switch", sizeof(int8_t), get_node()->get_logger());
-    shm_start_trajectory = open_write_shm("data_from_simulink_start", sizeof(int8_t), get_node()->get_logger());
+    shm_start_mpc = open_write_shm("data_from_simulink_start", sizeof(int8_t), get_node()->get_logger());
+    shm_reset_mpc = open_write_shm("data_from_simulink_reset", sizeof(int8_t), get_node()->get_logger());
+    shm_stop_mpc = open_write_shm("data_from_simulink_stop", sizeof(int8_t), get_node()->get_logger());
+    shm_select_trajectory = open_write_shm("data_from_simulink_traj_switch", sizeof(int8_t), get_node()->get_logger());
     
     // Open shared memory for reading torques from crocddyl
     shm_torques = open_read_shm("data_from_python", get_node()->get_logger());
@@ -217,34 +223,67 @@ void ModelPredictiveController::close_shared_memories()
 {
     if (shm_states != -1) close(shm_states);
     if (shm_states_valid != -1) close(shm_states_valid);
-    if (shm_selected_trajectory != -1) close(shm_selected_trajectory);
-    if (shm_start_trajectory != -1) close(shm_start_trajectory);
+    if (shm_start_mpc != -1) close(shm_start_mpc);
+    if (shm_reset_mpc != -1) close(shm_reset_mpc);
+    if (shm_stop_mpc != -1) close(shm_stop_mpc);
+    if (shm_select_trajectory != -1) close(shm_select_trajectory);
     if (shm_torques != -1) close(shm_torques);
     if (shm_torques_valid != -1) close(shm_torques_valid);
 }
 
-void ModelPredictiveController::topic_callback(const mpc_interfaces::msg::Num & msg)
-{
-  RCLCPP_WARN(get_node()->get_logger(), "I heard: '%ld'", msg.num);
-}
-
-// void ModelPredictiveController::handle_service(
-//   const std::shared_ptr<custom_interfaces::Trigger::Request> request,
-//   std::shared_ptr<custom_interfaces::Trigger::Response> response)
+// void ModelPredictiveController::topic_callback(const mpc_interfaces::msg::Num & msg)
 // {
-//   // Implement your service logic here
-//   response->success = true;
-//   response->message = "Service called successfully";
-//   RCLCPP_INFO(get_node()->get_logger(), "Service called");
+//   RCLCPP_WARN(get_node()->get_logger(), "I heard: '%ld'", msg.num);
 // }
 
-void ModelPredictiveController::add(const std::shared_ptr<mpc_interfaces::srv::AddThreeInts::Request> request,
-          std::shared_ptr<mpc_interfaces::srv::AddThreeInts::Response>       response)
+void ModelPredictiveController::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+          std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response)
 {
-  response->sum = request->a + request->b + request->c;                               
-  // RCLCPP_INFO(get_node()->get_logger(), "Incoming request\na: %ld" " b: %ld" " c: %ld",
-  //               request->a, request->b, request->c);                                     
-  // RCLCPP_INFO(get_node()->get_logger(), "sending back response: [%ld]", (long int)response->sum);
+  int8_t flag = 1;
+  write_to_shared_memory(shm_start_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  flag = 0;
+  write_to_shared_memory(shm_reset_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  flag = 0;
+  write_to_shared_memory(shm_stop_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  response->status = "start flag set";
+}
+
+void ModelPredictiveController::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+          std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response)
+{
+  int8_t flag = 0;
+  write_to_shared_memory(shm_start_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  flag = 1;
+  write_to_shared_memory(shm_reset_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  flag = 0;
+  write_to_shared_memory(shm_stop_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  response->status = "reset flag set";
+}
+
+void ModelPredictiveController::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+          std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response)
+{
+  int8_t flag = 0;
+  write_to_shared_memory(shm_start_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  flag = 0;
+  write_to_shared_memory(shm_reset_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  flag = 1;
+  write_to_shared_memory(shm_stop_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  response->status = "stop flag set";
+}
+
+void ModelPredictiveController::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
+          std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response>       response)
+{
+  int8_t traj_select = request->traj_select;
+  write_to_shared_memory(shm_select_trajectory, &traj_select, sizeof(int8_t), get_node()->get_logger());
+  int8_t flag = 0;
+  write_to_shared_memory(shm_start_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  flag = 1;
+  write_to_shared_memory(shm_reset_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  flag = 0;
+  write_to_shared_memory(shm_stop_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  response->status = "trajectory " + std::to_string(traj_select) + " selected";
 }
 
 }  // namespace franka_example_controllers

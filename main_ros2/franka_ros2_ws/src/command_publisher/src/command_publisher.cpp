@@ -31,7 +31,7 @@ class MinimalPublisher : public rclcpp::Node
     {
       auto message = mpc_interfaces::msg::Num();
       message.num = this->count_++;
-      RCLCPP_INFO(this->get_logger(), "Publishing: '%d'", message.num);
+      RCLCPP_INFO(this->get_logger(), "Publishing: '%ld'", message.num);
       publisher_->publish(message);
     }
     rclcpp::TimerBase::SharedPtr timer_;
