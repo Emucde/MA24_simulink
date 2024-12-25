@@ -140,6 +140,13 @@ CallbackReturn ModelPredictiveController::on_configure(
   //   "my_service",
   //   std::bind(&ModelPredictiveController::handle_service, this, std::placeholders::_1, std::placeholders::_2));
 
+  service_ = get_node()->create_service<mpc_interfaces::srv::AddThreeInts>(
+      "add_three_ints",
+      std::bind(&ModelPredictiveController::add, this, std::placeholders::_1, std::placeholders::_2)
+  );
+
+  RCLCPP_INFO(get_node()->get_logger(), "Service 'add_three_ints' created");
+
   return CallbackReturn::SUCCESS;
 }
 
@@ -230,6 +237,15 @@ void ModelPredictiveController::topic_callback(const mpc_interfaces::msg::Num & 
 //   response->message = "Service called successfully";
 //   RCLCPP_INFO(get_node()->get_logger(), "Service called");
 // }
+
+void ModelPredictiveController::add(const std::shared_ptr<mpc_interfaces::srv::AddThreeInts::Request> request,
+          std::shared_ptr<mpc_interfaces::srv::AddThreeInts::Response>       response)
+{
+  response->sum = request->a + request->b + request->c;                               
+  // RCLCPP_INFO(get_node()->get_logger(), "Incoming request\na: %ld" " b: %ld" " c: %ld",
+  //               request->a, request->b, request->c);                                     
+  // RCLCPP_INFO(get_node()->get_logger(), "sending back response: [%ld]", (long int)response->sum);
+}
 
 }  // namespace franka_example_controllers
 #include "pluginlib/class_list_macros.hpp"
