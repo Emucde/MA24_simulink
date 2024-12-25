@@ -1267,46 +1267,50 @@ def create_ocp_problem_v3_bounds_yN_ref(x_k, y_d_ref, state, TCP_frame_id, param
 ##############
 
 def next_init_guess_mpc_v1(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj):
-    N_MPC = mpc_settings['N_MPC']
-    int_time = param_traj['int_time']
-    dt = mpc_settings['Ts']
+    # N_MPC = mpc_settings['N_MPC']
+    # int_time = param_traj['int_time']
+    # dt = mpc_settings['Ts']
 
-    # method 1: accurate next state simulation
-    # xx_next = np.zeros((N_MPC-1, nx))
-    # for j in range(0, N_MPC-1):
-    #     xk = ddp.xs[j]
-    #     uk = ddp.us[j]
+    # # method 1: accurate next state simulation
+    # # xx_next = np.zeros((N_MPC-1, nx))
+    # # for j in range(0, N_MPC-1):
+    # #     xk = ddp.xs[j]
+    # #     uk = ddp.us[j]
 
-    #     # Modell Simulation
-    #     tau_k = uk
-    #     q = xk[:nq]
-    #     q_p = xk[nq:nx]
+    # #     # Modell Simulation
+    # #     tau_k = uk
+    # #     q = xk[:nq]
+    # #     q_p = xk[nq:nx]
 
-    #     q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
-    #     xx_next[j] = np.hstack([q_next, q_p_next])
+    # #     q_next, q_p_next = sim_model(robot_model, robot_data, q, q_p, tau_k, dt)
+    # #     xx_next[j] = np.hstack([q_next, q_p_next])
     
-    # # method 2: approximate dynamics
-    # d_xx_next = np.diff(ddp.xs, axis=0) / int_time[:N_MPC-1, np.newaxis]
-    # xx_next = ddp.xs[:-1] + dt * d_xx_next
+    # # # method 2: approximate dynamics
+    # # d_xx_next = np.diff(ddp.xs, axis=0) / int_time[:N_MPC-1, np.newaxis]
+    # # xx_next = ddp.xs[:-1] + dt * d_xx_next
 
-    # # Vectorized calculation for uu_next
-    dtau = np.diff(ddp.us, axis=0) / int_time[:N_MPC-2, np.newaxis]
-    uu_next = ddp.us[:-1] + dt * dtau
+    # # # Vectorized calculation for uu_next
+    # dtau = np.diff(ddp.us, axis=0) / int_time[:N_MPC-2, np.newaxis]
+    # uu_next = ddp.us[:-1] + dt * dtau
 
-    ddp.us[0:-1] = uu_next # approximativ bestimmt
+    # ddp.us[0:-1] = uu_next # approximativ bestimmt
 
-    # method 3: calculate only first two steps because this are the not equidistant steps in distance of Ts and TsMPC-Ts
-    # all other values are in distance of Ts_MPC and therefore they can be shiftet
-    q_next1, q_p_next1 = sim_model(robot_model, robot_data, ddp.xs[0][:nq], ddp.xs[0][nq:nx], ddp.us[0], dt)
-    q_next2, q_p_next2 = sim_model(robot_model, robot_data, ddp.xs[1][:nq], ddp.xs[1][nq:nx], ddp.us[1], dt)
-    ddp.xs[0] = np.hstack([q_next1, q_p_next1])
-    ddp.xs[1] = np.hstack([q_next2, q_p_next2])
-    ddp.xs[2:-1] = ddp.xs[3::]
+    # # method 3: calculate only first two steps because this are the not equidistant steps in distance of Ts and TsMPC-Ts
+    # # all other values are in distance of Ts_MPC and therefore they can be shiftet
+    # q_next1, q_p_next1 = sim_model(robot_model, robot_data, ddp.xs[0][:nq], ddp.xs[0][nq:nx], ddp.us[0], dt)
+    # q_next2, q_p_next2 = sim_model(robot_model, robot_data, ddp.xs[1][:nq], ddp.xs[1][nq:nx], ddp.us[1], dt)
+    # ddp.xs[0] = np.hstack([q_next1, q_p_next1])
+    # ddp.xs[1] = np.hstack([q_next2, q_p_next2])
+    # ddp.xs[2:-1] = ddp.xs[3::]
 
-    # Problem: geht nur wenn alle werte in Ta abstand (TsMPC ist aber > Ta)
-    # ddp.xs[0:-1] = ddp.xs[1::] # macht aber eig kaum einen unterschied ob man method 3 oder das verwendet...
-    # ddp.us[0:-1] = ddp.xs[1::] # das macht einen großen unterschied und der fehler wird fast doppelt so groß
+    # # Problem: geht nur wenn alle werte in Ta abstand (TsMPC ist aber > Ta)
+    # # ddp.xs[0:-1] = ddp.xs[1::] # macht aber eig kaum einen unterschied ob man method 3 oder das verwendet...
+    # # ddp.us[0:-1] = ddp.xs[1::] # das macht einen großen unterschied und der fehler wird fast doppelt so groß
    
+    # Die obige Variante hat große Nachteile da sie insbesonders dann, wenn die Prädiktion sehr falsch ist
+    # die MPC dazu verleitet viel zu stark von der momentanen Lösung abzuweichen.
+
+    # simply use the last value as initial guess
     xs_init_guess = ddp.xs
     us_init_guess = ddp.us
 
@@ -1543,9 +1547,6 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
     warn_cnt, err_state = check_solver_status(0, hasConverged, ddp, 0, Ts, conv_max_limit=5)
 
     xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
-    print('1546?')
-    xs_init_guess = ddp.xs
-    us_init_guess = ddp.us
 
     return ddp, xs, us, xs_init_guess, us_init_guess, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, transient_traj, param_traj, title_text
 

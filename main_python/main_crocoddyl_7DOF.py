@@ -282,9 +282,15 @@ measureSimu = TicToc()
 measureTotal = TicToc()
 measureTotal.tic()
 i = 0
+tau_i_prev = np.zeros(n_dof)
 init_cnt = 0
 init_cnt_max = 100
-folderpath = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+
+folderpath1 = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+folderpath2 = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+paths = [folderpath1, folderpath2]
+folderpath = next((path for path in paths if os.path.exists(path)), None)
+
 outputname = 'test.html'
 output_file_path = os.path.join(folderpath, outputname)
 
@@ -310,6 +316,8 @@ try:
                 if start == 1 and reset == 0 and stop == 0 and new_data_flag:
                     new_traj_select = data_from_simulink_traj_switch[0]
                     data_from_simulink_start[:] = 0
+
+                    tau_i_prev = np.zeros(n_dof)
 
                     # Selbst wenn die Messung zu beginn eine Jointgeschwindigkeit ausgibt, wird diese auf 0 gesetzt
                     # weil der Roboter zu beginn stillsteht und es damit nur noise ist
@@ -358,6 +366,8 @@ try:
                 elif new_data_flag:
                     start_solving = True
                     new_data_flag = False
+                if start == 1:
+                    data_from_simulink_start[:] = 0 # already started, ignore start signal
 
             if reset == 1:
                 print("MPC reset by Simulink")
@@ -377,11 +387,8 @@ try:
 
             warn_cnt, err_state = check_solver_status(warn_cnt, hasConverged, ddp, i, Ts, conv_max_limit=5)
             
-            # xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
-            # ddp.xs[0:-1] = ddp.xs[1::] # Problem: geht nur wenn alle werte in Ta abstand (TsMPC ist aber > Ta)
-            # ddp.us[0:-1] = ddp.us[1::] # fehler da TsMPC > Ta ist.
-            xs_init_guess = ddp.xs
-            us_init_guess = ddp.us
+            xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
+
             u_k = ddp.us[0]
 
             if use_clipping:
@@ -420,17 +427,12 @@ try:
 
             if use_data_from_simulink:
                 if not err_state:
-                    # Daten von Python an Simulink schreiben
-
-                    if i == 0:
-                        # tau_i_prev = tau_full
-                        tau_i_prev = np.zeros(n_dof)
-
+                    # check for jumps in torque
                     delta_u = tau_full - tau_i_prev
                     condition1 = np.logical_and(delta_u > 0, delta_u > 5)
                     condition2 = np.logical_and(delta_u < 0, delta_u < -5)
 
-                    if np.any(np.logical_or(condition1, condition2)): # aber kleiner als -0.8 ist ok
+                    if np.any(np.logical_or(condition1, condition2)):
                         print('tau_i_prev')
                         print(tau_i_prev)
                         print('tau_i_now')
@@ -439,6 +441,7 @@ try:
                         data_from_python[:] = np.zeros(n_dof)
                         run_flag = False
                     else:
+                        # Daten von Python an Simulink schreiben
                         data_from_python[:] = tau_full
                 else:
                     data_from_python[:] = np.zeros(n_dof)
@@ -633,12 +636,6 @@ else:
     # with open("daten_mpc_N_in_1ms_erhoehen_other_weight.csv", "a", newline="\n") as datei:
     #     csv_writer = csv.writer(datei)
     #     csv_writer.writerow([title_text, sol_time, tot_time, sum_err_x, sum_err_y, sum_err_z, sum_quat_err_x, sum_quat_err_y, sum_quat_err_z])
-
-
-folderpath1 = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-folderpath2 = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
-paths = [folderpath1, folderpath2]
-folderpath = next((path for path in paths if os.path.exists(path)), None)
 
 outputname = 'test.html'
 output_file_path = os.path.join(folderpath, outputname)
