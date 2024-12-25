@@ -166,10 +166,10 @@
   //       "PATH": "/opt/ros/humble/bin:${env:PATH}",
   //       "PYTHONPATH": "/opt/ros/humble/lib/python3.10/site-packages:${env:PYTHONPATH}"
   //   }
-  // "terminal.integrated.env.linux": {
-  //       "PATH": "${env:CONDA_ROOT_PREFIX}/envs/mpc/share/rubygems/bin:${env:CONDA_ROOT_PREFIX}/envs/mpc/bin:${env:CONDA_ROOT_PREFIX}/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin",
-  //       "PYTHONPATH": "",
-  //       "CONDA_PREFIX":"${env:CONDA_ROOT_PREFIX}/envs/mpc",
-  //   },
+  "terminal.integrated.env.linux": {
+        // "PATH": "${env:CONDA_ROOT_PREFIX}/envs/mpc/share/rubygems/bin:${env:CONDA_ROOT_PREFIX}/envs/mpc/bin:${env:CONDA_ROOT_PREFIX}/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin",
+        "PYTHONPATH": "",
+        // "CONDA_PREFIX":"${env:CONDA_ROOT_PREFIX}/envs/mpc",
+    },
   // "cmake.sourceDirectory": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/cpp_pubsub",
 }

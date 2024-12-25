@@ -55,60 +55,95 @@ controller_interface::return_type ModelPredictiveController::update(
     const rclcpp::Duration& /*period*/) {
   double* torques_crocoddyl = 0;
   double read_torques[N_DOF] = {0.0};
+  double zero_torques[N_DOF] = {0.0};
   int8_t valid_flag = 0;
 
   double state[2*N_DOF];
 
-  for (int i = 0; i < 2*N_DOF; ++i) {
-    state[i] = state_interfaces_[i].get_value();
-  }
+  /*
+  * start flag sended: mpc_started = true, first_torque_read = false
+  * 1. Read states from joint state interface
+  * 2. Write combined state (q, q_p) to shared memory (send data to crocoddyl)
+  * 3. Write validity flag for state data to shared memory
+  * ... Parallel process in Python:
+  *     3.1 Python waits until the state_valid flag is set to 1
+  *     3.2 Python reads the state data from shared memory
+  *     3.3 Python initializes the MPC controller and initial trajectory
+  *     3.4 Python solves the MPC problem and writes the torques to shared memory
+  *     3.5 Python sets the torques_valid flag to 1  
+  * 4. Read torque_valid_flag
+  * 5. If first_torque_read is false, waiting as long as torque_valid_flag is 1
+  * 6. ... (3.1 to 3.5)
+  * 7. If torque_valid_flag is 1, then first_torque_read is set to true.
+  * 8. Reading torque data from shared memory until end of the control loop
+  */
 
-  // Write combined state (q, q_p) to shared memory (send data to crocoddyl)
-  write_to_shared_memory(shm_states, state, sizeof(state), get_node()->get_logger());
-
-  // Write validity flag for state data to shared memory
-  valid_flag = 1;
-  write_to_shared_memory(shm_states_valid, &valid_flag, sizeof(int8_t), get_node()->get_logger());
-
-  // Logging joint states
-  RCLCPP_INFO(get_node()->get_logger(), "q (rad): [%f, %f, %f, %f, %f, %f, %f]",
-            state[0], state[1], state[2],
-            state[3], state[4], state[5], state[6]);
-
-  RCLCPP_INFO(get_node()->get_logger(), "q_p (rad/s): [%f, %f, %f, %f, %f, %f, %f]",
-            state[N_DOF+0], state[N_DOF+1], state[N_DOF+2],
-            state[N_DOF+3], state[N_DOF+4], state[N_DOF+5], state[N_DOF+6]);
-
-  // Read validity flag for torque data from shared memory
-  read_shared_memory_flag(shm_torques_valid, &valid_flag, sizeof(int8_t), get_node()->get_logger());
-  
-  if(valid_flag == 1)
+  if(mpc_started)
   {
-    // Reading data from shared memory
-    read_shared_memory(shm_torques, &read_torques[0], N_DOF * sizeof(double), get_node()->get_logger());
-    std::memcpy(torques_prev, read_torques, N_DOF * sizeof(double));
-    torques_crocoddyl = &read_torques[0];
-    
-    invalid_counter = 0;
-    valid_flag = 0;
+    // Read states from joint state interface
+    for (int i = 0; i < 2*N_DOF; ++i) {
+      state[i] = state_interfaces_[i].get_value();
+    }
+
+    // Write combined state (q, q_p) to shared memory (send data to crocoddyl)
+    write_to_shared_memory(shm_states, state, sizeof(state), get_node()->get_logger());
+
+    // Write validity flag for state data to shared memory
+    valid_flag = 1;
     write_to_shared_memory(shm_states_valid, &valid_flag, sizeof(int8_t), get_node()->get_logger());
-  }
-  else if(valid_flag == 0)
-  {
-    if(invalid_counter < MAX_INVALID_COUNT)
+
+    // Logging joint states
+    RCLCPP_INFO(get_node()->get_logger(), "q (rad): [%f, %f, %f, %f, %f, %f, %f]",
+              state[0], state[1], state[2],
+              state[3], state[4], state[5], state[6]);
+
+    RCLCPP_INFO(get_node()->get_logger(), "q_p (rad/s): [%f, %f, %f, %f, %f, %f, %f]",
+              state[N_DOF+0], state[N_DOF+1], state[N_DOF+2],
+              state[N_DOF+3], state[N_DOF+4], state[N_DOF+5], state[N_DOF+6]);
+
+    // Read validity flag for torque data from shared memory
+    valid_flag = 0;
+    read_shared_memory_flag(shm_torques_valid, &valid_flag, sizeof(int8_t), get_node()->get_logger());
+    
+    if(valid_flag == 0 && !first_torque_read)
     {
-      torques_crocoddyl = &torques_prev[0];
-      invalid_counter++;
-      RCLCPP_WARN(get_node()->get_logger(), "No valid data received from Python. Using previous torques.");
+      RCLCPP_INFO(get_node()->get_logger(), "No valid Python data received yet. Using zero torques.");
+      torques_crocoddyl = &zero_torques[0];
+    }
+    else if(valid_flag == 1)
+    {
+      first_torque_read = true;
+
+      // Reading data from shared memory
+      read_shared_memory(shm_torques, &read_torques[0], N_DOF * sizeof(double), get_node()->get_logger());
+      std::memcpy(torques_prev, read_torques, N_DOF * sizeof(double));
+      torques_crocoddyl = &read_torques[0];
+      
+      invalid_counter = 0;
+      valid_flag = 0;
+      write_to_shared_memory(shm_torques_valid, &valid_flag, sizeof(int8_t), get_node()->get_logger());
     }
     else
     {
-      for (int i = 0; i < N_DOF; ++i) {
-        command_interfaces_[i].set_value(0);
+      // wenn die Echtzeitbedingung nicht erfüllt ist, wird der vorherige Torque-Wert verwendet
+      if(invalid_counter < MAX_INVALID_COUNT)
+      {
+        torques_crocoddyl = &torques_prev[0];
+        invalid_counter++;
+        RCLCPP_WARN(get_node()->get_logger(), "No valid Python data (%d/%d). Using previous torques.", invalid_counter, MAX_INVALID_COUNT);
       }
-      RCLCPP_ERROR(get_node()->get_logger(), "No valid data received from Python. Terminating the controller.");
-      return controller_interface::return_type::ERROR;
+      else
+      {
+        RCLCPP_ERROR(get_node()->get_logger(), "No valid data received from Python %d times. Stopping the controller.", MAX_INVALID_COUNT);
+        torques_crocoddyl = &zero_torques[0];
+        invalid_counter = 0;
+        mpc_started = false;
+      }
     }
+  }
+  else
+  {
+    torques_crocoddyl = &zero_torques[0];
   }
 
   // Write torques to shared memory (send data to robot)
@@ -121,6 +156,7 @@ controller_interface::return_type ModelPredictiveController::update(
             torques_crocoddyl[0], torques_crocoddyl[1], torques_crocoddyl[2],
             torques_crocoddyl[3], torques_crocoddyl[4], torques_crocoddyl[5], torques_crocoddyl[6]);
 
+  sem_post(shm_changed_semaphore);
   return controller_interface::return_type::OK;
 }
 
@@ -212,10 +248,12 @@ void ModelPredictiveController::open_shared_memories()
     shm_reset_mpc = open_write_shm("data_from_simulink_reset", sizeof(int8_t), get_node()->get_logger());
     shm_stop_mpc = open_write_shm("data_from_simulink_stop", sizeof(int8_t), get_node()->get_logger());
     shm_select_trajectory = open_write_shm("data_from_simulink_traj_switch", sizeof(int8_t), get_node()->get_logger());
+
+    shm_changed_semaphore = open_write_sem("shm_changed_semaphore", get_node()->get_logger());
     
     // Open shared memory for reading torques from crocddyl
     shm_torques = open_read_shm("data_from_python", get_node()->get_logger());
-    shm_torques_valid = open_read_shm("data_from_python_valid", get_node()->get_logger());
+    shm_torques_valid = open_write_shm("data_from_python_valid", sizeof(int8_t), get_node()->get_logger());
     RCLCPP_INFO(get_node()->get_logger(), "Shared memory opened successfully.");
 }
 
@@ -239,37 +277,62 @@ void ModelPredictiveController::close_shared_memories()
 void ModelPredictiveController::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
           std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response)
 {
-  int8_t flag = 1;
-  write_to_shared_memory(shm_start_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
-  flag = 0;
-  write_to_shared_memory(shm_reset_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
-  flag = 0;
-  write_to_shared_memory(shm_stop_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  shm_flags flags = {
+      .start = 1,
+      .reset = 0,
+      .stop = 0,
+      .torques_valid = 0
+  };
+
+  write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
+  write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
+  write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
+  write_to_shared_memory(shm_torques_valid, &flags.torques_valid, sizeof(int8_t), get_node()->get_logger());
+
   response->status = "start flag set";
+  mpc_started = true;
+  first_torque_read = false;
+  sem_post(shm_changed_semaphore);
 }
 
 void ModelPredictiveController::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
           std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response)
 {
-  int8_t flag = 0;
-  write_to_shared_memory(shm_start_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
-  flag = 1;
-  write_to_shared_memory(shm_reset_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
-  flag = 0;
-  write_to_shared_memory(shm_stop_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  shm_flags flags = {
+      .start = 0,
+      .reset = 1,
+      .stop = 0,
+      .torques_valid = 0
+  };
+
+  write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
+  write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
+  write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
+  write_to_shared_memory(shm_torques_valid, &flags.torques_valid, sizeof(int8_t), get_node()->get_logger());
+
   response->status = "reset flag set";
+  mpc_started = false;
+  sem_post(shm_changed_semaphore);
 }
 
 void ModelPredictiveController::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
           std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response)
 {
-  int8_t flag = 0;
-  write_to_shared_memory(shm_start_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
-  flag = 0;
-  write_to_shared_memory(shm_reset_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
-  flag = 1;
-  write_to_shared_memory(shm_stop_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+  shm_flags flags = {
+      .start = 0,
+      .reset = 0,
+      .stop = 1,
+      .torques_valid = 0
+  };
+  
+  write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
+  write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
+  write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
+  write_to_shared_memory(shm_torques_valid, &flags.torques_valid, sizeof(int8_t), get_node()->get_logger());
+
   response->status = "stop flag set";
+  mpc_started = false;
+  sem_post(shm_changed_semaphore);
 }
 
 void ModelPredictiveController::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
@@ -284,6 +347,8 @@ void ModelPredictiveController::traj_switch(const std::shared_ptr<mpc_interfaces
   flag = 0;
   write_to_shared_memory(shm_stop_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
   response->status = "trajectory " + std::to_string(traj_select) + " selected";
+  mpc_started = false;
+  sem_post(shm_changed_semaphore);
 }
 
 }  // namespace franka_example_controllers

@@ -275,6 +275,16 @@ class TicToc:
         self.start_time = None
         self.elapsed_total_time = 0
 
+def format_freq(frequency, precision):
+    if frequency == 0:
+        return "0 Hz"
+    elif frequency < 1e3:
+        return f"{frequency:.{precision}f} Hz"
+    elif frequency < 1e6:
+        return f"{frequency/1e3:.{precision}f} kHz"
+    else:
+        return f"{frequency/1e6:.{precision}f} MHz"
+
 def format_time(elapsed_time, precision=2):
     """Formats the elapsed time based on its magnitude."""
     if elapsed_time == 0:
@@ -1971,14 +1981,19 @@ def start_server():
             return False
 
 async def send_message(message, port=8765):
-    
+    try:
         async with websockets.connect(f"ws://localhost:{port}") as websocket:
-            try:
-                await websocket.send(message)
-                print(f"Nachricht gesendet: {message}")
-            except websockets.exceptions.ConnectionClosedError:
-                print("Server not running.")
-                return False
+            await websocket.send(message)
+            print(f"Nachricht gesendet: {message}")
+            return True
+    except websockets.exceptions.ConnectionClosedError:
+        print("Server not running.")
+    except ConnectionRefusedError as e:
+        print(f"Connection refused: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    
+    return False
 
 def get_reload_tab_script():
     return '''

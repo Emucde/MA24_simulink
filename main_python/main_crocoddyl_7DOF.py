@@ -10,6 +10,7 @@ from scipy.spatial.transform import Rotation
 from scipy.optimize import minimize
 import scipy.io as sio
 from multiprocessing import shared_memory
+import posix_ipc
 sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
 from utils_python.utils import *
 
@@ -46,6 +47,7 @@ if use_data_from_simulink:
     data_from_simulink_reset = shm_data['data_from_simulink_reset']
     data_from_simulink_stop = shm_data['data_from_simulink_stop']
     data_from_simulink_traj_switch = shm_data['data_from_simulink_traj_switch']
+    shm_changed_semaphore = posix_ipc.Semaphore("/shm_changed_semaphore", posix_ipc.O_CREAT, initial_value=0)
 
     # create objects for debouncing the simulink buttons:
     start_button = DebouncedButton(debounce_delay)
@@ -261,8 +263,8 @@ if use_data_from_simulink:
     run_flag = False
     start_solving = False
 
-    data_from_python[:] = tau_full
-    data_from_python_valid[:] = 1
+    data_from_python[:] = 0
+    data_from_python_valid[:] = 0 # normally, only ROS2 set it to zero
 else:
     start_solving = True
     run_flag = True
@@ -300,7 +302,8 @@ try:
     while run_loop and err_state == False:
         if use_data_from_simulink:
             # Read data
-            if(data_from_simulink_valid[:] == 1):
+            shm_changed_semaphore.acquire()
+            if(data_from_simulink_valid[0] == 1):
                 data_from_simulink_valid[:] = 0
                 x_k_ndof = data_from_simulink.copy()
                 x_k = x_k_ndof[n_x_indices]
@@ -317,7 +320,14 @@ try:
                     new_traj_select = data_from_simulink_traj_switch[0]
                     data_from_simulink_start[:] = 0
 
+                    # set initial values
                     tau_i_prev = np.zeros(n_dof)
+
+                    # reset time measurement
+                    measureSolver.reset()
+                    measureSimu.reset()
+                    measureTotal.reset()
+                    measureTotal.tic()
 
                     # Selbst wenn die Messung zu beginn eine Jointgeschwindigkeit ausgibt, wird diese auf 0 gesetzt
                     # weil der Roboter zu beginn stillsteht und es damit nur noise ist
@@ -332,6 +342,7 @@ try:
                     if current_traj_select != new_traj_select:
                         current_traj_select = new_traj_select
                         traj_data, traj_init_config = process_trajectory_data(current_traj_select-1, traj_data_all, traj_param_all)
+                        print()
                         print(f'New Trajectory selected: {current_traj_select}')
 
                     if i == 0:
@@ -354,10 +365,12 @@ try:
 
 
                     run_flag = True
+                    print()
                     print("MPC started by Simulink")
 
             if run_flag == True:
                 if stop == 1:
+                    print()
                     print("MPC stopped by Simulink")
                     data_from_python[:] = np.zeros(n_dof)
                     data_from_simulink_stop[:] = 0
@@ -370,6 +383,7 @@ try:
                     data_from_simulink_start[:] = 0 # already started, ignore start signal
 
             if reset == 1:
+                print()
                 print("MPC reset by Simulink")
                 data_from_python[:] = np.zeros(n_dof)
                 data_from_simulink_reset[:] = 0
@@ -433,6 +447,7 @@ try:
                     condition2 = np.logical_and(delta_u < 0, delta_u < -5)
 
                     if np.any(np.logical_or(condition1, condition2)):
+                        print()
                         print('tau_i_prev')
                         print(tau_i_prev)
                         print('tau_i_now')
@@ -473,9 +488,6 @@ try:
 
                 x_k_ndof = x_kp1_ndof
                 x_k = x_k_ndof[n_x_indices]
-
-            if (i+1) % update_interval == 0:
-                print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()}    ", end='\r')
 
             if i < N_traj-1 and run_flag == True:
                 i += 1 # last value of i is N_traj-1
@@ -567,6 +579,9 @@ try:
             
             elapsed_time = measureSimu.toc()
             freq_per_Ta_step[i] = 1/elapsed_time
+
+            if (i+1) % update_interval == 0:
+                print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()} | {format_freq(freq_per_Ta_step[i], 2)}     ", end='\r')
 except KeyboardInterrupt:
     print("\nFinish Solving!")
 
@@ -574,7 +589,6 @@ if err_state:
     print("Error Occured, output zero torque:", hasConverged)
     if use_data_from_simulink:
         data_from_python[:] = np.zeros(n_dof)
-        data_from_python_valid[:] = 1
 
 
 xs[N_traj-1] = x_k_ndof
@@ -666,7 +680,8 @@ if use_data_from_simulink:
             # Create shared memory object
             shm_objects[name].close()
             shm_objects[name].unlink()
-            
+        shm_changed_semaphore.unlink()
+        shm_changed_semaphore.close()
         print("Shared Memory freigegeben.")
     else:
         print("Shared Memory nicht freigegeben.")

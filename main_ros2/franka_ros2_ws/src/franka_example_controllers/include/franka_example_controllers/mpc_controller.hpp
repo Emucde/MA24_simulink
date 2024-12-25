@@ -31,6 +31,7 @@
 #include "mpc_interfaces/srv/add_three_ints.hpp"
 #include "mpc_interfaces/srv/simple_command.hpp"
 #include "mpc_interfaces/srv/trajectory_command.hpp"
+#include <semaphore.h>
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
@@ -76,12 +77,15 @@ class ModelPredictiveController : public controller_interface::ControllerInterfa
   int invalid_counter = 0; // counter for invalid data, if exceeds MAX_INVALID_COUNT, terminate the controller
   int shm_states = 0;
   int shm_states_valid = 0;
+  sem_t* shm_changed_semaphore = 0;
   int shm_start_mpc = 0;
   int shm_reset_mpc = 0;
   int shm_stop_mpc = 0;
   int shm_select_trajectory = 0;
   int shm_torques = 0;
   int shm_torques_valid = 0;
+  bool mpc_started = false;
+  bool first_torque_read = false;
   // rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;
   rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
   rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr reset_mpc_service_;

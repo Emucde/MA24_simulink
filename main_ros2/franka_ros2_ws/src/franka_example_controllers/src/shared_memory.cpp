@@ -5,8 +5,21 @@
 #include <unistd.h>
 #include <cstring>
 #include <errno.h> // Include errno for error handling
+#include <semaphore.h>
 
 #include "shared_memory.hpp"
+
+sem_t* open_write_sem(const char *name, rclcpp::Logger logger)
+{
+    sem_t *sem = sem_open(name, O_CREAT, 0666, 0);
+    if (sem == SEM_FAILED)
+    {
+        RCLCPP_ERROR(logger, "write: open: Error opening semaphore: %s", strerror(errno));
+        throw std::runtime_error("Error allocating semaphore");
+        return nullptr;
+    }
+    return sem;
+}
 
 int open_read_shm(const char *name, rclcpp::Logger logger)
 {
