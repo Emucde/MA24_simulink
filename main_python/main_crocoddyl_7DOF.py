@@ -11,6 +11,7 @@ from scipy.optimize import minimize
 import scipy.io as sio
 from multiprocessing import shared_memory
 import posix_ipc
+import multiprocessing
 sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
 from utils_python.utils import *
 
@@ -27,7 +28,8 @@ manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
 use_gravity = False
-visualize = False
+visualize_sol = True
+plot_sol=True
 debounce_delay = 0.1
 
 param_traj_poly = {}
@@ -288,13 +290,17 @@ tau_i_prev = np.zeros(n_dof)
 init_cnt = 0
 init_cnt_max = 100
 
-folderpath1 = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-folderpath2 = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
-paths = [folderpath1, folderpath2]
-folderpath = next((path for path in paths if os.path.exists(path)), None)
+# folderpath1 = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
+# folderpath2 = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
+# paths = [folderpath1, folderpath2]
+# folderpath = next((path for path in paths if os.path.exists(path)), None)
+folderpath="./main_ros2/nodejs_ros2_gui/public"
 
-outputname = 'test.html'
-output_file_path = os.path.join(folderpath, outputname)
+plot_name = 'robot_plots.html'
+plot_file_path = os.path.join(folderpath, plot_name)
+
+visualize_name = 'robot_visualization.html'
+visualize_file_path = os.path.join(folderpath, visualize_name)
 
 new_data_flag = False
 run_loop = True
@@ -389,8 +395,24 @@ try:
                 data_from_simulink_reset[:] = 0
                 run_flag = False
                 start_solving = False
-                subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
-                plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
+
+                if plot_sol:
+                    def plot_sol_act():
+                        subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
+                        plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
+                    process = multiprocessing.Process(target=plot_sol_act)
+                    process.start()
+
+                if visualize_sol:
+                    def vis_sol_act():
+                        q_sol = xs[:, :n_dof]
+                        visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
+                                        q_sol, transient_traj, Ts,
+                                        frame_skip=1, create_html = True, html_name = visualize_file_path)
+                    process = multiprocessing.Process(target=vis_sol_act)
+                    process.start()
+                
+                freq_per_Ta_step = np.zeros(N_traj)
                 i = 0
         if start_solving:
             measureSimu.tic()
@@ -606,72 +628,30 @@ if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
     us = us[:, 3::]
     xs = xs[:, 6::]
 
-plot_full_model = True
+if visualize_sol is True:
+    def vis_sol_fin():
+        q_sol = xs[:, :n_dof]
+        visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
+                        q_sol, transient_traj, Ts,
+                        frame_skip=1, create_html = True, html_name = visualize_file_path)
+    process = multiprocessing.Process(target=vis_sol_fin)
+    process.start()
 
-if plot_full_model:
-    # robot_data_full = robot_model_full.createData()
-
-    # n_full = len(q_0_ref)
-    # x_indiced = np.hstack([n_indices, n_indices+n_full])
-    # us_full = np.zeros((N_traj,   n_full))
-    # xs_full = np.zeros((N_traj, 2*n_full))
-    # x_i = np.hstack([q_0_ref, np.zeros(n_full)])
-    # for i in range(N_traj):
-    #     q = x_i[:n_full]
-    #     q_p = x_i[n_full::]
-
-    #     x_i[x_indiced] = xs[i]
-
-    #     q_red = xs[i][:nq]
-    #     q_p_red = xs[i][nq::]
-    #     u_red = us[i]
-
-    #     q_pp_red = pin.aba(robot_model, robot_data, q_red, q_p_red, u_red)
-    #     q_pp = np.zeros(n_full)
-    #     q_pp[n_indices] = q_pp_red
-
-    #     us_full[i] = pin.rnea(robot_model_full, robot_data_full, q, q_p, q_pp)
-
-    #     # us_full[i, n_indices] = us[i]
-    #     xs_full[i] = x_i
-    
-    # subplot_data = calc_7dof_data(us_full, xs_full, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step)
-    subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
-else:
-    subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, transient_traj, freq_per_Ta_step, param_robot)
-
-    # sum_err_x = np.mean(np.abs(subplot_data[4]['sig_ydata']))
-    # sum_err_y = np.mean(np.abs(subplot_data[8]['sig_ydata']))
-    # sum_err_z = np.mean(np.abs(subplot_data[12]['sig_ydata']))
-    # sum_quat_err_x = np.mean(np.abs(subplot_data[20]['sig_ydata'][0]))
-    # sum_quat_err_y = np.mean(np.abs(subplot_data[20]['sig_ydata'][1]))
-    # sum_quat_err_z = np.mean(np.abs(subplot_data[20]['sig_ydata'][2]))
-
-    # with open("daten_mpc_N_in_1ms_erhoehen_other_weight.csv", "a", newline="\n") as datei:
-    #     csv_writer = csv.writer(datei)
-    #     csv_writer.writerow([title_text, sol_time, tot_time, sum_err_x, sum_err_y, sum_err_z, sum_quat_err_x, sum_quat_err_y, sum_quat_err_z])
-
-outputname = 'test.html'
-output_file_path = os.path.join(folderpath, outputname)
-
-if visualize is True:
-    q_sol = xs[:, :n_dof]
-    visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
-                    q_sol, transient_traj, Ts,
-                    frame_skip=1, create_html = True, html_name = 'robot_visualization.html')
-
-plot_sol=True
 if plot_sol == True:# and err_state == False:
-    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=output_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
+    def plot_sol_fin():
+        subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
+        plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
+    process = multiprocessing.Process(target=plot_sol_fin)
+    process.start()
 
 # print('Max error:       y - y_d = {:.2e}'.format(np.max(np.abs(e))), 'm')
 # print('Max error:   y_p - y_d_p = {:.2e}'.format(np.max(np.abs(e_p))), 'm/s')
 # print('Max error: y_pp - y_d_pp = {:.2e}'.format(np.max(np.abs(e_pp))), 'm/s^2')
 #print("\nTotal cost:", ddp.cost)
 
-# visualize=False
-# if visualize==True:
-#     visualize_robot(robot, q, transient_traj, Ts, 3, 1)
+# visualize_sol=False
+# if visualize_sol==True:
+#     visualize_sol_robot(robot, q, transient_traj, Ts, 3, 1)
 
 if use_data_from_simulink:
     user_input = input("Do you want to clear the shared memory? (y/n): ").lower()

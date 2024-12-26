@@ -2568,8 +2568,19 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
             vis[link_name].set_property('color', color_map[color_name])
             vis[link_name].set_property('visible', False)
 
-    robot_display.setCameraPose(np.eye(4))
-    robot_display.setCameraPosition([0,0,1])
+    transform_matrix = np.array([
+        [0, 1, 0, 0],  # X-axis points down-right
+        [0, 0, 1, 0],  # Y-axis points up
+        [-1, 0, 0, 0], # Z-axis points forward (upward)
+        [0, 0, 0, 1]   # Homogeneous coordinate
+    ])
+
+    camera_position = np.array([0.8, 0.8, 1.3])  # Example position
+    camera_target = np.array([1.0, 1.0, 1.0])    # Looking at this point
+
+    # Set the camera position and target
+    vis.set_cam_pos(camera_position)
+    vis.set_cam_target(camera_target)
 
     # Iterate through trajectory data
     for i in range(0, len(q_sol), frame_skip):
@@ -2595,6 +2606,9 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
         for stl_file in link_to_meshes[obj['name']]:
             link_name = stl_file[:-4] # without .stl
             vis[link_name].set_property('visible', True)
+
+    vis.set_cam_pos(camera_position)
+    vis.set_cam_target(camera_target)
 
     if create_html:
         html_out = vis.static_html()

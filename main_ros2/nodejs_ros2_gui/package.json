@@ -1,0 +1,21 @@
+{
+  "name": "nodejs_ros2_gui",
+  "version": "1.0.0",
+  "description": "A gui for a ros2 controller to control the mpc control",
+  "main": "app.js",
+  "scripts": {
+    "start": "sourcempc && node src/app.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "rclnodejs": "^0.27.5",
+    "ws": "^8.13.0"
+  },
+  "keywords": [
+    "ros2",
+    "mpc",
+    "gui"
+  ],
+  "author": "Emanuel Huber",
+  "license": "ISC"
+}

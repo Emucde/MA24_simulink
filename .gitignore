@@ -30,5 +30,6 @@ main_ros2/cpp_pubsub/install
 main_ros2/franka_ros2_ws/log
 main_ros2/franka_ros2_ws/build
 main_ros2/franka_ros2_ws/install
+main_ros2/nodejs_ros2_gui/node_modules
 build
 *.html
