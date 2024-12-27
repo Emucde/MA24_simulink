@@ -87,7 +87,7 @@ document.getElementById('stop').addEventListener('click', () => {
 
 function send_trajectory(current_element) {
     var traj_num = parseInt(current_element.value, 10);
-    var traj_text = current_element.options[traj_num].text;
+    var traj_text = current_element.options[traj_num-1].text;
     ws.send(JSON.stringify({ command: 'trajectory_selection', traj_select: traj_num }));
     var a_iframe_plot = document.querySelector('a[_target=iframe_plot1]')
     a_iframe_plot.textContent = traj_text;
