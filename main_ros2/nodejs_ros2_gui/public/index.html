@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROS 2 Web Controller</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <h1>ROS 2 Controller</h1>
+    <table><td class="connectedcolor" id="conncon"> </td><td><span id="connected">Nodejs disconnected</span><span id="timeconn"></span></td>
+    <td class="connectedcolor" id="labconncon"> </td><td><span id="labcon">ros2 disconnected</span></td></table>
+    <br>
+    <div class="float_left">
+    <button id="start">Start</button>
+    <button id="reset">Reset</button>
+    <button id="stop">Stop</button>
+    <p id="response" class="response"></p>
+    </div>
+    <br><br>
+    <select id="trajectory" onchange="send_trajectory(this)">
+        <option value="1">traj1</option>
+        <option value="2">traj2</option>
+    </select>
+    <br>
+    <hr>
+    <div value="1">
+        <li>
+            <a class = "plots_a" _href="robot_plots.html" _target="iframe_plot1" href="javascript:void(0)" is_loaded="0" onclick="click_fun(this, 0)" target="">Traj 1</a>
+            <a class = "visualize_a" _href="robot_visualization.html" _target="iframe_vis1" href="javascript:void(0)" is_loaded="0" onclick="click_fun(this, 1)" target="">Visualize</a>
+            <button class="hide_plot_button" onclick="hide_iframe(this, 0);" style="display: initial; position: absolute; left: 674px;">Show Plot</button>
+            <button class="hide_settings_button" onclick="hide_settings(this);" style="display: initial; position: absolute; left: 769px;">Show Settings</button>
+            <button class="hide_video_button" onclick="hide_iframe(this, 1);" style="display: initial; position: absolute; left: 889px;">Show Visualize</button>
+        </li>
+        <pre class="prettyprint lang-matlab prettyprinted" is_shown="0" style="width: 80%;margin-left:22px;display:none;"><code><span class="ident">MPC</span><span class="pun">=</span><span class="str">'MPC8'</span><span class="pun">;</span><span class="pln">
+        </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">name</span><span class="pln">    </span><span class="pun">=</span><span class="pln"> </span><span class="ident">MPC</span><span class="pun">;</span><span class="pln">
+        </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">variant</span><span class="pln"> </span><span class="pun">=</span><span class="pln"> </span><span class="str">'nlpsol'</span><span class="pun">;</span><span class="pln">
+        </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">solver</span><span class="pln">  </span><span class="pun">=</span><span class="pln"> </span><span class="str">'qrqp'</span><span class="pun">;</span><span class="pln"> </span><span class="com">% (qrqp (sqp) | qpoases | ipopt)</span><span class="pln">
+        </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="fun">version</span><span class="pln">  </span><span class="pun">=</span><span class="pln"> </span><span class="str">'v4_kin_int'</span><span class="pun">;</span><span class="pln"> </span><span class="com">% (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )</span><span class="pln">
+        </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">Ts</span><span class="pln">      </span><span class="pun">=</span><span class="pln"> </span><span class="lit">10e-3</span><span class="pun">;</span><span class="pln">
+        </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">rk_iter</span><span class="pln"> </span><span class="pun">=</span><span class="pln"> </span><span class="lit">1</span><span class="pun">;</span><span class="pln">
+        </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">N_MPC</span><span class="pln">   </span><span class="pun">=</span><span class="pln"> </span><span class="lit">5</span><span class="pun">;</span><span class="pln">
+        </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">compile_mode</span><span class="pln"> </span><span class="pun">=</span><span class="pln"> </span><span class="lit">2</span><span class="pun">;</span><span class="pln"> </span><span class="com">%1: nlpsol-sfun, 2: opti-sfun</span><span class="pln">
+        </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">fixed_parameter</span><span class="pln"> </span><span class="pun">=</span><span class="pln"> </span><span class="const">false</span><span class="pun">;</span><span class="pln"> </span><span class="com">% Weights and limits (true: fixed, false: as parameter inputs)</span><span class="pln">
+        </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">int_method</span><span class="pln"> </span><span class="pun">=</span><span class="pln"> </span><span class="str">'Euler'</span><span class="pun">;</span><span class="pln"> </span><span class="com">% (RK4 | SSPRK3 | Euler)</span><span class="pln">
+        
+        </span><span class="ident">MPC</span><span class="pun">=</span><span class="str">'MPC8'</span><span class="pun">;</span><span class="pln">
+        </span><span class="ident">param_weight</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">Q_y</span><span class="pln">      </span><span class="pun">=</span><span class="pln"> </span><span class="lit">1e2</span><span class="pun">*</span><span class="fun">diag</span><span class="tag">([</span><span class="lit">1</span><span class="pun">*</span><span class="fun">ones</span><span class="tag">(</span><span class="lit">3</span><span class="pun">,</span><span class="lit">1</span><span class="tag">)</span><span class="pun">;</span><span class="pln"> </span><span class="lit">1</span><span class="pun">*</span><span class="fun">ones</span><span class="tag">(</span><span class="lit">3</span><span class="pun">,</span><span class="lit">1</span><span class="tag">)])</span><span class="pun">;</span><span class="pln">  </span><span class="com">% d_kpn</span><span class="pln">
+        </span><span class="ident">param_weight</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">Q_ykp1</span><span class="pln">   </span><span class="pun">=</span><span class="pln"> </span><span class="lit">1e2</span><span class="pun">*</span><span class="fun">diag</span><span class="tag">([</span><span class="lit">1</span><span class="pun">*</span><span class="fun">ones</span><span class="tag">(</span><span class="lit">3</span><span class="pun">,</span><span class="lit">1</span><span class="tag">)</span><span class="pun">;</span><span class="pln"> </span><span class="lit">1</span><span class="pun">*</span><span class="fun">ones</span><span class="tag">(</span><span class="lit">3</span><span class="pun">,</span><span class="lit">1</span><span class="tag">)])</span><span class="pun">;</span><span class="pln">  </span><span class="com">% d_kpn</span><span class="pln">
+        </span><span class="ident">param_weight</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">Q_yN</span><span class="pln">     </span><span class="pun">=</span><span class="pln"> </span><span class="lit">1e5</span><span class="pun">*</span><span class="fun">diag</span><span class="tag">([</span><span class="lit">1</span><span class="pun">*</span><span class="fun">ones</span><span class="tag">(</span><span class="lit">3</span><span class="pun">,</span><span class="lit">1</span><span class="tag">)</span><span class="pun">;</span><span class="pln"> </span><span class="lit">1</span><span class="pun">*</span><span class="fun">ones</span><span class="tag">(</span><span class="lit">3</span><span class="pun">,</span><span class="lit">1</span><span class="tag">)])</span><span class="pun">;</span><span class="pln">  </span><span class="com">% D_N</span><span class="pln">
+        </span><span class="ident">param_weight</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">R_q_pp</span><span class="pln">   </span><span class="pun">=</span><span class="pln"> </span><span class="lit">1e-2</span><span class="pun">*</span><span class="fun">diag</span><span class="tag">(</span><span class="fun">ones</span><span class="tag">(</span><span class="ident">n</span><span class="pun">,</span><span class="lit">1</span><span class="tag">))</span><span class="pun">;</span><span class="pln">
+        </span><span class="ident">param_weight</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">R_x</span><span class="pln">      </span><span class="pun">=</span><span class="pln"> </span><span class="lit">1e-2</span><span class="pun">*</span><span class="fun">diag</span><span class="tag">(</span><span class="fun">ones</span><span class="tag">(</span><span class="lit">2</span><span class="pun">*</span><span class="ident">n</span><span class="pun">,</span><span class="lit">1</span><span class="tag">))</span><span class="pun">;</span><span class="pln">
+        
+        </span><span class="ident">param_weight</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">x_min</span><span class="pln">    </span><span class="pun">=</span><span class="pln"> </span><span class="ident">x_min</span><span class="pun">;</span><span class="pln"> 
+        </span><span class="ident">param_weight</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">x_max</span><span class="pln">    </span><span class="pun">=</span><span class="pln"> </span><span class="ident">x_max</span><span class="pun">;</span><span class="pln"> 
+        </span><span class="ident">param_weight</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">u_min</span><span class="pln">    </span><span class="pun">=</span><span class="pln"> </span><span class="ident">param_robot.q_pp_limit_lower</span><span class="pun">;</span><span class="pln"> 
+        </span><span class="ident">param_weight</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">u_max</span><span class="pln">    </span><span class="pun">=</span><span class="pln"> </span><span class="ident">param_robot.q_pp_limit_upper</span><span class="pun">;</span></code></pre>
+
+        <iframe is_shown="0" name="iframe_plot1" src="about:blank" style="display:none;" title="description"></iframe>
+        <iframe is_shown="0" name="iframe_vis1" src="about:blank" style="display:none;height:800px;" title="description"></iframe>
+    </div>
+    <br>
+    <script src="client.js"></script>
+</body>
+</html>
