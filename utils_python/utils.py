@@ -22,7 +22,7 @@ from bs4 import BeautifulSoup
 from multiprocessing import shared_memory, resource_tracker
 import asyncio
 import websockets
-import subprocess
+import psutil
 import fcntl
 
 class DebouncedButton:
@@ -945,6 +945,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     xref = param_mpc_weight['xref']
     xprev_ref = param_mpc_weight['xprev_ref']
     uref = param_mpc_weight['uref']
+    qpp_ref = param_mpc_weight['qpp_ref']
 
     xmean = (xmin + xmax)/2
 
@@ -998,9 +999,9 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
 
         # create classic residual cost models
         R_q_p_weight_vec = np.hstack([np.zeros(state.nq), R_q_p])
-        R_q_pp_weight_vec = np.hstack([np.zeros(state.nq), R_q_pp])
+        R_q_pp_weight_vec = R_q_pp
         q_pCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_q_p_weight_vec), crocoddyl.ResidualModelState(state, np.zeros(state.nx)))
-        q_ppCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_q_pp_weight_vec), crocoddyl.ResidualModelState(state, xref))
+        q_ppCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_q_pp_weight_vec), crocoddyl.ResidualModelJointAcceleration(state, qpp_ref))
         xprevRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_xprev), crocoddyl.ResidualModelState(state, xprev_ref))
         uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state, uref))
         uprevCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state, uref))
@@ -1020,7 +1021,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
             if q_p_common_weight not in [0, None]:
                 runningCostModel.addCost("q_pReg", q_pCost,        weight = scale * q_p_common_weight) # Q q_p
             if q_pp_common_weight not in [0, None]:
-                runningCostModel.addCost("q_ppReg", q_ppCost,      weight = scale * q_pp_common_weight/dt) # approx Q qpp = Q (q_p - q_p_prev)/dt
+                runningCostModel.addCost("q_ppReg", q_ppCost,      weight = scale * q_pp_common_weight) # approx Q qpp = Q (q_p - q_p_prev)/dt
             if q_xprev_common_weight not in [0, None]:
                 runningCostModel.addCost("xprevReg", xprevRegCost, weight = scale * q_xprev_common_weight) # Q xprev = Q (x-x_prev)
             if q_ureg_cost not in [0, None]:
@@ -1536,6 +1537,7 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
 
     param_mpc_weight['xref'] = np.hstack((param_robot['x_mean'][:nq], np.zeros(nq)))
     param_mpc_weight['xprev_ref'] = x_k_red[:nx]
+    param_mpc_weight['qpp_ref'] = np.zeros(nq)
 
     if param_robot['use_gravity']:
         g_k = pinocchio.computeGeneralizedGravity(robot_model, robot_data, x_k[:nq])
@@ -1933,8 +1935,6 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
 ###########################################################################
 ###########################################################################
 ###########################################################################
-
-import psutil
 
 def start_server():
     LOCK_FILE = '/tmp/my_server.lock'

@@ -24,7 +24,7 @@
       "q_p_common_weight": 1e-1,
       "R_q_p": [1, 1, 1, 1, 1, 1],
       "q_pp_common_weight": 0,
-      "R_q_pp": [0, 0, 0, 0, 0, 0],
+      "R_q_pp": [1, 1, 1, 1, 1, 1],
       "q_xprev_common_weight": 0,
       "R_xprev": [1, 1, 1, 1, 1, 1,  0, 0, 0, 0, 0, 0],
       "q_ureg_cost": 1e-3,
@@ -42,7 +42,8 @@
       "xmax": [],
       "xref": [],
       "xprev_ref": [],
-      "uref": []
+      "uref": [],
+      "qpp_ref": []
     },
     "traj2_kin": "hier:",
     "mpc_settings_tra2kin": {

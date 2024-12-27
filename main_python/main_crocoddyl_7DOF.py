@@ -23,7 +23,7 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = True
+use_data_from_simulink = False
 manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
@@ -297,10 +297,10 @@ init_cnt_max = 100
 folderpath="./main_ros2/nodejs_ros2_gui/public"
 
 plot_name = 'robot_plots.html'
-plot_file_path = os.path.join(folderpath, plot_name)
+plot_file_path = os.path.abspath(os.path.join(folderpath, plot_name))
 
 visualize_name = 'robot_visualization.html'
-visualize_file_path = os.path.join(folderpath, visualize_name)
+visualize_file_path = os.path.abspath(os.path.join(folderpath, visualize_name))
 
 new_data_flag = False
 run_loop = True
@@ -570,8 +570,8 @@ try:
                     if(nq >= 6):
                         ddp.problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
                 
-                if(param_mpc_weight['q_pp_common_weight'] > 0):
-                    ddp.problem.runningModels[j].differential.costs.costs["q_ppReg"].cost.residual.reference = xs_init_guess_prev[j] # because qpp is calculated approximated
+                # if(param_mpc_weight['q_pp_common_weight'] > 0):
+                #     ddp.problem.runningModels[j].differential.costs.costs["q_ppReg"].cost.residual.reference = np.zeros(nq) # because qpp is calculated approximated
                 if(param_mpc_weight['q_xprev_common_weight'] > 0):
                     ddp.problem.runningModels[j].differential.costs.costs["xprevReg"].cost.residual.reference = xs_init_guess_prev[j]
                 # ddp.problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
@@ -583,8 +583,8 @@ try:
             ddp.problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
             if(nq >= 6):
                 ddp.problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
-            if(param_mpc_weight['q_pp_common_weight'] > 0):
-                ddp.problem.terminalModel.differential.costs.costs["q_ppReg"].cost.residual.reference = xs_init_guess_prev[j+1] # because qpp is calculated approximated
+            # if(param_mpc_weight['q_pp_common_weight'] > 0):
+            #     ddp.problem.terminalModel.differential.costs.costs["q_ppReg"].cost.residual.reference = np.zeros(nq) # because qpp is calculated approximated
             if(param_mpc_weight['q_xprev_common_weight'] > 0):
                 ddp.problem.terminalModel.differential.costs.costs["xprevReg"].cost.residual.reference = xs_init_guess_prev[j+1]
             # ddp.problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation

@@ -107,12 +107,14 @@ function click_fun(element, number) {
     if(number == 0)
     {
         button_tag = main_div.querySelector('.hide_plot_button');
+        text_hide = 'Hide Plot';
     }
     else
     {
         button_tag = main_div.querySelector('.hide_video_button');
+        text_hide = 'Hide Visualize';
     }
-    button_tag.textContent = 'Hide Plot';
+    button_tag.textContent = text_hide;
     plot_iframe.setAttribute('is_shown', 1);
   }
   
