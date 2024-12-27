@@ -27,6 +27,14 @@ body {
     height: 0vh;
 }
 
+.margin_left {
+    margin-left: 10px;
+}
+
+.delay_input {
+    width: 30px;
+}
+
 .visualize_a{
     margin-left: 10px;
 }

@@ -85,6 +85,11 @@ document.getElementById('stop').addEventListener('click', () => {
     ws.send(JSON.stringify({ command: 'stop' }));
 });
 
+document.getElementById('home').addEventListener('click', () => {
+    var home_delay = document.querySelector('#home_delay').value;
+    ws.send(JSON.stringify({ command: 'home', delay: home_delay }));
+});
+
 function send_trajectory(current_element) {
     var traj_num = parseInt(current_element.value, 10);
     var traj_text = current_element.options[traj_num-1].text;
