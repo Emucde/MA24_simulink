@@ -27,6 +27,7 @@ find_package(generate_parameter_library)
 find_package(moveit_core REQUIRED)
 find_package(moveit_msgs REQUIRED)
 find_package(mpc_interfaces REQUIRED)
+find_package(HDF5 COMPONENTS CXX HL REQUIRED)
 
 add_library(
         ${PROJECT_NAME}
@@ -42,6 +43,7 @@ target_include_directories(
         PUBLIC
         include
         ${EIGEN3_INCLUDE_DIRS}
+        ${HDF5_INCLUDE_DIRS}
 )
 ament_target_dependencies(
         ${PROJECT_NAME}
@@ -58,7 +60,7 @@ ament_target_dependencies(
 
 generate_parameter_library(franka_example_controllers_parameters src/model_example_controller_parameters.yaml)
 
-target_link_libraries(${PROJECT_NAME} franka_example_controllers_parameters)
+target_link_libraries(${PROJECT_NAME} franka_example_controllers_parameters ${HDF5_LIBRARIES})
 
 pluginlib_export_plugin_description_file(
         controller_interface franka_example_controllers.xml)

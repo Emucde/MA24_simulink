@@ -34,3 +34,8 @@ main_ros2/nodejs_ros2_gui/node_modules
 build
 robot_plots.html
 robot_visualization.html
+*.so
+MPC10.c
+MPC10.h
+MPC8.c
+MPC8.h

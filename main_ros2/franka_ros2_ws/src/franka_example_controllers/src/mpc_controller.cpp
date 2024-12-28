@@ -21,10 +21,40 @@
 
 #include <memory>
 #include "rclcpp/rclcpp.hpp"
+// #include "/media/daten/Anwendungen/MATLAB/R2022b/extern/include/mat.h"
+#include <H5Cpp.h>
+#define TEST 1
 
+using namespace H5;
 using std::placeholders::_1;
 
 namespace franka_example_controllers {
+
+void readMatFile(const std::string& filename) {
+    // Open the file
+    H5File file(filename, H5F_ACC_RDONLY);
+    
+    // Assuming you know the dataset name
+    DataSet dataset = file.openDataSet("your_dataset_name");
+    
+    // Get the dataspace
+    DataSpace dataspace = dataset.getSpace();
+    
+    // Determine the dimensions of the dataspace
+    hsize_t dims[2]; // assume a 2D dataset
+    dataspace.getSimpleExtentDims(dims, NULL);
+    
+    // Create a buffer to hold the data
+    double* data = new double[dims[0] * dims[1]];
+    
+    // Read the data
+    dataset.read(data, PredType::NATIVE_DOUBLE);
+    
+    // Clean up
+    delete[] data;
+    dataset.close();
+    file.close();
+}
 
 controller_interface::InterfaceConfiguration
 ModelPredictiveController::command_interface_configuration() const {

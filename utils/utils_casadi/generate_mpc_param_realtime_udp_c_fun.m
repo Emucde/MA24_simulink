@@ -16,10 +16,18 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, func_nam
     fprintf(fid, '#define Inf INFINITY\n');
     fprintf(fid, '#endif\n\n');
 
+    fprintf(fid, '#ifndef casadi_real\n');
+    fprintf(fid, '#define casadi_real double\n');
+    fprintf(fid, '#endif\n\n');
+
+    fprintf(fid, '#ifndef casadi_int\n');
+    fprintf(fid, '#define casadi_int long long int\n');
+    fprintf(fid, '#endif\n\n');
+
     % Add path to init_guess and trajectory
-    param_MPC_traj_data_bin_file = ['.', s_fun_path, '/trajectory_data/param_traj_data.bin'];
-    param_MPC_init_guess_bin_file = ['.', s_fun_path, '/initial_guess/param_', func_name,'_init_guess.bin'];
-    param_MPC_x0_init_bin_file = ['.', s_fun_path, '/trajectory_data/param_x0_init.bin'];
+    param_MPC_traj_data_bin_file = fullfile(pwd, [s_fun_path, '/trajectory_data/param_traj_data.bin']);
+    param_MPC_init_guess_bin_file = fullfile(pwd, [s_fun_path, '/initial_guess/param_', func_name,'_init_guess.bin']);
+    param_MPC_x0_init_bin_file = fullfile(pwd, [s_fun_path, '/trajectory_data/param_x0_init.bin']);
 
     fprintf(fid, '#ifndef TRAJ_DATA_PATH\n');
     fprintf(fid, '#define TRAJ_DATA_PATH "%s"\n', param_MPC_traj_data_bin_file);
@@ -53,7 +61,11 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, func_nam
                     error(['First index not 0: field_data could be corrupted: ', num2str(field_data)]);
                 end
             end
-            fprintf(fid, 'static const uint32_t %s_%s[] = {', func_name, field);
+            if strcmp(field, 'int_times')
+                fprintf(fid, 'static const casadi_real %s_%s[] = {', func_name, field);
+            else
+                fprintf(fid, 'static const uint32_t %s_%s[] = {', func_name, field);
+            end
             fprintf(fid, '%d,', field_data(1:end-1));
             fprintf(fid, '%d};\n', field_data(end));
         else
