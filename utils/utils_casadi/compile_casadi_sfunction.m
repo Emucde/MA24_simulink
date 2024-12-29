@@ -87,6 +87,8 @@ end
         opts = struct('main', true, ...
             'mex', true);
         casadi_fun.generate(casadi_fun_name, opts); %TODO: wird das nicht ohnehin von cg.generate() ueberschrieben?
+        % Ja es wird vom unteren cg.generate() überschrieben, es ist aber spannend sich diese files anzusehen,
+        % da hier das main vorhanden ist, vgl. "calc_upd_cfun_addresses.m2
 
         cg_options = struct;
         cg_options.casadi_real = 'real_T';

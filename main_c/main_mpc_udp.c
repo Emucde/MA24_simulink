@@ -129,7 +129,7 @@ void *update_data(void *arg) {
         for (int j=0; j<MPC8_OUT_U_OPT_ADDR; ++j) printf("%2.4g ", *r++);
         printf("\n\n");
         printf("ALL OUTPUT:\n");
-        for (int j=MPC8_OUT_U_OPT_ADDR; j<MPC8_W_END_ADDRESS; ++j) printf("%2.4g ", *r++);
+        for (int j=MPC8_OUT_U_OPT_ADDR; j<MPC8_W_END_ADDR; ++j) printf("%2.4g ", *r++);
         printf("\n\n");
         #endif
 
@@ -184,7 +184,7 @@ void *send_data(void *arg) {
         send_data[0] = *shared.send_cnt;
         memcpy(&send_data[1], shared.w+MPC8_U_OUT_ADDR, MPC8_U_OUT_LEN*sizeof(casadi_real));
 
-        // Send data to simulink. Info: shared.buffers shows at adress of u_opt
+        // Send data to simulink. Info: shared.buffers shows at address of u_opt
         sendto(shared.sockfd, send_data, sizeof(send_data), 0,
             (const struct sockaddr *) &shared.udp_c_send_addr,
             shared.udp_c_send_addrlen);
@@ -455,5 +455,5 @@ int main()
     {
         res[i] = w+MPC8_RES[i];
     }
-    return main_MPC(arg, res, iw, w, w+MPC8_W_END_ADDRESS, 0, &MPC8);
+    return main_MPC(arg, res, iw, w, w+MPC8_W_END_ADDR, 0, &MPC8);
 }

@@ -86,7 +86,7 @@ int load_initial_guess(const std::string& init_guess_path, casadi_real* init_gue
     std::cout << "init_guess dimensions: " << init_guess_rows << " x " << init_guess_cols << std::endl;
 
     // Calculate the start byte for reading data
-    std::streampos init_guess_startbyte = init_guess_file.tellg() + init_guess_rows * (TRAJ_SELECT - 1) * sizeof(casadi_real);
+    std::streampos init_guess_startbyte = init_guess_file.tellg() + static_cast<std::streamoff>(init_guess_rows * (TRAJ_SELECT - 1) * sizeof(casadi_real));
 
     // Read the file data into the provided array
     read_file(init_guess_file, init_guess_startbyte, init_guess_data, init_guess_rows);
@@ -94,9 +94,9 @@ int load_initial_guess(const std::string& init_guess_path, casadi_real* init_gue
     return 0; // Return success
 }
 
-unsigned int get_traj_dims(uint32_t& rows, uint32_t& cols, uint32_t& traj_amount, const std::string& traj_file) {
+std::streamoff get_traj_dims(uint32_t& rows, uint32_t& cols, uint32_t& traj_amount, const std::string& traj_file) {
     std::ifstream file(traj_file, std::ios::binary);
-    unsigned int traj_data_startbyte = 0;
+    std::streamoff traj_data_startbyte = 0;
     
     if (!file) {
         std::cerr << "Error opening file: " << traj_file << std::endl;
@@ -110,7 +110,7 @@ unsigned int get_traj_dims(uint32_t& rows, uint32_t& cols, uint32_t& traj_amount
 
     std::cout << "Rows: " << rows << ", Cols: " << cols << ", Trajectory Amount: " << traj_amount << std::endl;
 
-    traj_data_startbyte = file.tellg() + rows*cols*(TRAJ_SELECT-1) * sizeof(casadi_real);
+    traj_data_startbyte = file.tellg() + static_cast<std::streamoff>(rows*cols*(TRAJ_SELECT-1) * sizeof(casadi_real));
 
 
     // Close the file
@@ -188,7 +188,8 @@ void readInitialConditionData(const std::string& q0_init_file) {
 }
 
 int main() {
-    uint32_t rows = 0, cols = 0, traj_amount = 0, traj_data_startbyte = 0;
+    uint32_t rows = 0, cols = 0, traj_amount = 0;
+    std::streamoff traj_data_startbyte = 0;
     uint32_t traj_indices[5] = {0};
 
     casadi_real x0_init[MPC8_X_K_LEN] = {0};
@@ -228,13 +229,26 @@ int main() {
     casadi_real* res[MPC8_RES_LEN];
     casadi_int iw[MPC8_IW_LEN];
     casadi_real w[MPC8_W_LEN];
-
     casadi_real u_opt[MPC8_U_OPT_LEN] = {0};
 
     memcpy(w+MPC8_X_K_ADDR, x0_init, sizeof(x0_init)); // init x0
     memcpy(w+MPC8_Y_D_ADDR, yd_init, sizeof(yd_init));
     memcpy(w+MPC8_IN_INIT_GUESS_ADDR, init_guess_data, sizeof(init_guess_data));
     memcpy(w+MPC8_IN_PARAM_WEIGHT_ADDR, MPC8_param_weight, sizeof(MPC8_param_weight));
+
+    // X0_INIT_PATH
+    // MPC8_INIT_GUESS_PATH
+    // TRAJ_DATA_PATH
+
+    // MPC8_traj_data_per_horizon
+    // MPC8_Y_D_LEN
+    // MPC8_INIT_GUESS_LEN
+
+    // MPC8_X_K_ADDR
+    // MPC8_Y_D_ADDR
+    // MPC8_IN_INIT_GUESS_ADDR
+    // MPC8_IN_PARAM_WEIGHT_ADDR
+    // MPC8_param_weight
 
     CasadiMPC MPC8_obj = CasadiMPC(&MPC8,
               arg,
@@ -244,10 +258,10 @@ int main() {
               MPC8_ARG,
               MPC8_RES,
               u_opt,
-              sizeof(MPC8_ARG)/sizeof(uint32_t),
-              sizeof(MPC8_RES)/sizeof(uint32_t),
+              MPC8_ARG_IN_LEN,
+              MPC8_RES_OUT_LEN,
               MPC8_U_OPT_LEN,
-              MPC8_W_END_ADDRESS,
+              MPC8_W_END_ADDR,
               MPC8_U_OPT_ADDR);
 
     int flag = MPC8_obj.solve();
