@@ -3,21 +3,18 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: gcc build active file",
-            "command": "/usr/bin/gcc",
+            "label": "C/C++: g++-11 build active file",
+            "command": "/usr/bin/g++-11",
             "args": [
-                "-I${casadi_path}/include",
-                "-I${workspaceFolder}/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles",
-                "-L${casadi_path}",
-                "-lcasadi",
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
-                "-o",
-                "${fileDirname}/${fileBasenameNoExtension}.o",
-                "-lm",
+                "-Wl,-rpath=${workspaceFolder}/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles",
+                "${workspaceFolder}/main_ros2/read_bin_data/*.cpp",
+                "-I", "${workspaceFolder}/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles",
+                "-L", "${workspaceFolder}/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles",
                 "-lMPC8",
-                "-pthread"
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}"
             ],
             "options": {
                 "cwd": "${fileDirname}"

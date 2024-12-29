@@ -7,9 +7,7 @@
 
 #include "MPC8.h" // Include for MPC8
 #include "MPC8_param.h" // Include for MPC8
-
 #include "MPC8_addressdef.h"  // Include for MPC8
-#include "MPC10_addressdef.h" // Include for MPC9
 
 #define TRAJ_SELECT 1
 
@@ -263,6 +261,7 @@ int main() {
     for (size_t i = 0; i < MPC8_U_OPT_LEN; ++i) {
         std::cout << u_opt[i] << " ";
     }
+    std::cout << std::endl;
 
     return 0;
 }
