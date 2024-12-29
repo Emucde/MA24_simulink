@@ -9,7 +9,9 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, func_nam
 
     % Include necessary headers
     fprintf(fid, '#include <stdint.h>\n');
-    fprintf(fid, '#include <math.h>\n\n');
+    fprintf(fid, '#include <math.h>\n');
+    fprintf(fid, '#include "mpc_config.h"\n');
+    fprintf(fid, ['#include "', func_name, '_addressdef.h"\n\n']);
 
     % Add Inf define
     fprintf(fid, '#ifndef Inf\n');
@@ -181,6 +183,38 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, func_nam
     end
     
     % Close the array
+    fprintf(fid, '};\n');
+
+    % create the mpc_config_t struct
+    %{
+        mpc_config_t MPC8Config = {
+        .x0_init_path = X0_INIT_PATH,
+        .init_guess_path = MPC8_INIT_GUESS_PATH,
+        .traj_data_path = TRAJ_DATA_PATH,
+        .traj_data_per_horizon = MPC8_traj_data_per_horizon,
+        .y_d_len = MPC8_Y_D_LEN,
+        .init_guess_len = MPC8_INIT_GUESS_LEN,
+        .x_k_addr = MPC8_X_K_ADDR,
+        .y_d_addr = MPC8_Y_D_ADDR,
+        .in_init_guess_addr = MPC8_IN_INIT_GUESS_ADDR,
+        .in_param_weight_addr = MPC8_IN_PARAM_WEIGHT_ADDR,
+        .param_weight = MPC8_param_weight
+    };
+    %}
+
+    fprintf(fid, '\n\n// Create the mpc_config_t struct\n');
+    fprintf(fid, ['mpc_config_t ', func_name, 'Config = {\n']);
+    fprintf(fid, '    .x0_init_path = X0_INIT_PATH,\n');
+    fprintf(fid, '    .init_guess_path = %s_INIT_GUESS_PATH,\n', func_name);
+    fprintf(fid, '    .traj_data_path = TRAJ_DATA_PATH,\n');
+    fprintf(fid, '    .traj_data_per_horizon = %s_traj_data_per_horizon,\n', func_name);
+    fprintf(fid, '    .y_d_len = %s_Y_D_LEN,\n', func_name);
+    fprintf(fid, '    .init_guess_len = %s_INIT_GUESS_LEN,\n', func_name);
+    fprintf(fid, '    .x_k_addr = %s_X_K_ADDR,\n', func_name);
+    fprintf(fid, '    .y_d_addr = %s_Y_D_ADDR,\n', func_name);
+    fprintf(fid, '    .in_init_guess_addr = %s_IN_INIT_GUESS_ADDR,\n', func_name);
+    fprintf(fid, '    .in_param_weight_addr = %s_IN_PARAM_WEIGHT_ADDR,\n', func_name);
+    fprintf(fid, '    .param_weight = %s_param_weight\n', func_name);
     fprintf(fid, '};\n');
 
     fprintf(fid, '\n\n#endif');
