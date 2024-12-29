@@ -9,53 +9,26 @@
             "env": {
               "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"
           }
-          },
-        
-//         {
-//             "name": "Python Debugger: Current File",
-//             "type": "debugpy",
-//             "request": "launch",
-//             "program": "${workspaceFolder}/main_python/main_crocoddyl_7DOF.py",
-//             "console": "integratedTerminal",
-//             "env": {
-//                 "PATH": "${env:OLD_PATH}${env:PATH}",
-//                 "PYTHONPATH": ""
-//             }
-//         },
-//         {
-//             "name": "(gdb) Launch",
-//             "type": "cppdbg",
-//             "request": "launch",
-//             "program": "enter program name, for example ${workspaceFolder}/a.out",
-//             "args": [],
-//             "stopAtEntry": false,
-//             "cwd": "${fileDirname}",
-//             "environment": [],
-//             "externalConsole": false,
-//             "MIMode": "gdb",
-//             "setupCommands": [
-//                 {
-//                     "description": "Enable pretty-printing for gdb",
-//                     "text": "-enable-pretty-printing",
-//                     "ignoreFailures": true
-//                 },
-//                 {
-//                     "description": "Set Disassembly Flavor to Intel",
-//                     "text": "-gdb-set disassembly-flavor intel",
-//                     "ignoreFailures": true
-//                 }
-//             ]
-//         },
-//         {
-//             "name": "Python: Regler Node",
-//             "type": "debugpy",
-//             "request": "launch",
-//             "program": "${workspaceFolder}/main_ros2/test_proj1/src/regler/regler/regler_node.py",
-//             "console": "integratedTerminal",
-//             "env": {
-//                 "ROS_DISTRO": "humble",
-//                 "PYTHONPATH": "/opt/ros/humble/lib/python3.10/site-packages:${env:PYTHONPATH}"
-//             }
-//         }
-    ]
+        },
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerArgs": "-q -ex quit; wait() { fg >/dev/null; }; /bin/gdb -q --interpreter=mi",
+            "preLaunchTask": "C/C++: g++-11 build active file",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+            ]
+        },
 }

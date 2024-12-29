@@ -1,19 +1,43 @@
-cmake_minimum_required(VERSION 3.10)  # Specify the CMake version
-project(BinaryFileReader)              # Specify the project name
+cmake_minimum_required(VERSION 3.10)
+project(MPCLibraries)
 
-# Create a shared library from MPC8.c
-add_library(MPC8 SHARED MPC8.c)
+# Set output directory for libraries
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# Add the source file for CasadiMPC
-add_library(CasadiMPC STATIC CasadiMPC.cpp) # Add CasadiMPC library
+# Define the path to the MPC source files
+set(MPC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles)
 
-set(CMAKE_CXX_STANDARD 11)             # Set the C++ standard
+# Find all MPC*.c files
+file(GLOB MPC_SOURCES "${MPC_SOURCE_DIR}/MPC*.c")
 
-# Add the executable target
-add_executable(${PROJECT_NAME} main.cpp)
+add_compile_options(-O3)    # Adds optimization level 3
 
-# Link the shared library to the main executable
-target_link_libraries(${PROJECT_NAME} MPC8 CasadiMPC)
+# Set up compile time measurement
+set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
 
-# Include directory for the headers
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+# Create a shared library for each MPC*.c file
+foreach(SOURCE_FILE ${MPC_SOURCES})
+    get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)  # Get the filename without extension
+
+    # Create the shared library
+    add_library(${FILE_NAME} SHARED ${SOURCE_FILE})
+
+    # Set the output library name to 'lib<NAME>.so'
+    set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}")
+
+    # Include directories
+    target_include_directories(${FILE_NAME} PRIVATE ${MPC_SOURCE_DIR})
+
+    # Collect the libraries for installation
+    list(APPEND MPC_LIBRARIES ${FILE_NAME})
+endforeach()
+
+# Install libraries
+install(TARGETS ${MPC_LIBRARIES}
+    LIBRARY DESTINATION ${MPC_SOURCE_DIR}
+)
+
+# Final message to the user
+add_custom_target(display_message ALL
+    COMMAND ${CMAKE_COMMAND} -E echo "Use 'make install' to copy the files to ${MPC_SOURCE_DIR}"
+)

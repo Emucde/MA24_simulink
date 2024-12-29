@@ -1,1 +1,0 @@
-gcc -shared -o libMPC8.so -fPIC MPC8.c
