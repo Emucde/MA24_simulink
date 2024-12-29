@@ -90,7 +90,12 @@
     "future": "cpp",
     "shared_mutex": "cpp",
     "hash_map": "cpp",
-    "hash_set": "cpp"
+    "hash_set": "cpp",
+    "mpc8_param.h": "c",
+    "math.h": "c",
+    "mpc_config.h": "c",
+    "regex": "cpp",
+    "casadi_types.h": "c"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",

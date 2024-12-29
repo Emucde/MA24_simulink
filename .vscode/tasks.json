@@ -9,7 +9,7 @@
                 "-fdiagnostics-color=always",
                 "-g",
                 "-Wl,-rpath=${workspaceFolder}/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles",
-                "${fileDirname}/*.cpp",
+                "${fileDirname}/*.cpp", "${workspaceFolder}/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/MPC*_param.c",
                 "-I", "${casadi_path}/include",
                 "-I", "${workspaceFolder}/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles",
                 "-L", "${casadi_path}",

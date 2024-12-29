@@ -148,7 +148,7 @@ void read_trajectory_block(const std::string& traj_file, unsigned int traj_data_
     file.close();
 }
 
-void readInitialConditionData(const std::string& q0_init_file) {
+void read_x0_init(const std::string& q0_init_file, casadi_real* x0_arr) {
     std::ifstream file(q0_init_file, std::ios::binary);
     
     if (!file) {
@@ -165,10 +165,9 @@ void readInitialConditionData(const std::string& q0_init_file) {
 
     // Calculate total number of elements
     size_t total_elements = rows * cols;
-    std::vector<double> x0_arr(total_elements);
 
     // Read initial condition data
-    file.read(reinterpret_cast<char*>(x0_arr.data()), total_elements * sizeof(double));
+    file.read(reinterpret_cast<char*>(x0_arr), total_elements * sizeof(double));
 
     // Check for read errors
     if (!file) {
@@ -176,11 +175,6 @@ void readInitialConditionData(const std::string& q0_init_file) {
         return;
     }
 
-    // Process x0_arr as needed
-    // For demonstration, print first few values
-    for (size_t i = 0; i < std::min(total_elements, size_t(rows)); ++i) {
-        std::cout << x0_arr[i] << " ";
-    }
     std::cout << std::endl;
 
     // Close the file
@@ -200,7 +194,7 @@ int main() {
     traj_data_startbyte = get_traj_dims(rows, cols, traj_amount, TRAJ_DATA_PATH);
         
     readTrajectoryData(TRAJ_DATA_PATH);
-    readInitialConditionData(X0_INIT_PATH);
+    read_x0_init(X0_INIT_PATH, x0_init);
 
     int result = load_initial_guess(MPC8_INIT_GUESS_PATH, init_guess_data);
     if (result) {
@@ -214,7 +208,7 @@ int main() {
         std::cout << init_guess_data[i] << " ";
     }
     
-    read_trajectory_block(TRAJ_DATA_PATH, traj_data_startbyte, rows, MPC8_traj_data_per_horizon, yd_init, MPC8_traj_indices);
+    read_trajectory_block(TRAJ_DATA_PATH, traj_data_startbyte, rows, MPC8_TRAJ_DATA_PER_HORIZON, yd_init, MPC8_TRAJ_INDICES);
 
     // print yd_init
     std::cout << "yd_init: \n";
@@ -231,51 +225,52 @@ int main() {
     casadi_real w[MPC8_W_LEN];
     casadi_real u_opt[MPC8_U_OPT_LEN] = {0};
 
-    memcpy(w+MPC8_X_K_ADDR, x0_init, sizeof(x0_init)); // init x0
-    memcpy(w+MPC8_Y_D_ADDR, yd_init, sizeof(yd_init));
-    memcpy(w+MPC8_IN_INIT_GUESS_ADDR, init_guess_data, sizeof(init_guess_data));
-    memcpy(w+MPC8_IN_PARAM_WEIGHT_ADDR, MPC8_param_weight, sizeof(MPC8_param_weight));
+    // memcpy(w+MPC8_X_K_ADDR, x0_init, sizeof(x0_init)); // init x0
+    // memcpy(w+MPC8_Y_D_ADDR, yd_init, sizeof(yd_init));
+    // memcpy(w+MPC8_IN_INIT_GUESS_ADDR, init_guess_data, sizeof(init_guess_data));
+    // memcpy(w+MPC8_IN_PARAM_WEIGHT_ADDR, MPC8_param_weight, sizeof(MPC8_param_weight));
 
-    // X0_INIT_PATH
-    // MPC8_INIT_GUESS_PATH
-    // TRAJ_DATA_PATH
+    // // X0_INIT_PATH
+    // // MPC8_INIT_GUESS_PATH
+    // // TRAJ_DATA_PATH
 
-    // MPC8_traj_data_per_horizon
-    // MPC8_Y_D_LEN
-    // MPC8_INIT_GUESS_LEN
+    // // MPC8_traj_data_per_horizon
+    // // MPC8_Y_D_LEN
+    // // MPC8_INIT_GUESS_LEN
 
-    // MPC8_X_K_ADDR
-    // MPC8_Y_D_ADDR
-    // MPC8_IN_INIT_GUESS_ADDR
-    // MPC8_IN_PARAM_WEIGHT_ADDR
-    // MPC8_param_weight
+    // // MPC8_X_K_ADDR
+    // // MPC8_Y_D_ADDR
+    // // MPC8_IN_INIT_GUESS_ADDR
+    // // MPC8_IN_PARAM_WEIGHT_ADDR
+    // // MPC8_param_weight
+    CasadiMPC MPC8_obj = CasadiMPC("MPC8");
 
-    CasadiMPC MPC8_obj = CasadiMPC(&MPC8,
-              arg,
-              res,
-              iw,
-              w,
-              MPC8_ARG,
-              MPC8_RES,
-              u_opt,
-              MPC8_ARG_IN_LEN,
-              MPC8_RES_OUT_LEN,
-              MPC8_U_OPT_LEN,
-              MPC8_W_END_ADDR,
-              MPC8_U_OPT_ADDR);
+    // CasadiMPC MPC8_obj = CasadiMPC(&MPC8,
+    //           arg,
+    //           res,
+    //           iw,
+    //           w,
+    //           MPC8_ARG,
+    //           MPC8_RES,
+    //           u_opt,
+    //           MPC8_ARG_IN_LEN,
+    //           MPC8_RES_OUT_LEN,
+    //           MPC8_U_OPT_LEN,
+    //           MPC8_W_END_ADDR,
+    //           MPC8_U_OPT_ADDR);
 
     int flag = MPC8_obj.solve();
-    if (flag) return flag;
+    // if (flag) return flag;
 
-    // print flag
-    std::cout << "flag: " << flag << std::endl;
+    // // print flag
+    // std::cout << "flag: " << flag << std::endl;
 
-    // print u_opt
-    std::cout << "u_opt: \n";
-    for (size_t i = 0; i < MPC8_U_OPT_LEN; ++i) {
-        std::cout << u_opt[i] << " ";
-    }
-    std::cout << std::endl;
+    // // print u_opt
+    // std::cout << "u_opt: \n";
+    // for (size_t i = 0; i < MPC8_U_OPT_LEN; ++i) {
+    //     std::cout << u_opt[i] << " ";
+    // }
+    // std::cout << std::endl;
 
     return 0;
 }
