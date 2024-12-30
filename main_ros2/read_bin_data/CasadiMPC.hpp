@@ -24,7 +24,8 @@ public:
     ~CasadiMPC();
 
 private:
-    std::unique_ptr<mpc_config_t> mpc_config;
+    // std::unique_ptr<mpc_config_t> mpc_config;
+    mpc_config_t mpc_config;
     CasadiFunPtr_t casadi_fun;          // Function pointer
     const casadi_real **arg;            // Pointer to arguments
     casadi_real **res;                  // Pointer to results
@@ -41,14 +42,16 @@ private:
     uint32_t traj_data_total_len;       // Total length of trajectory data
     uint32_t traj_data_real_len;        // Real length of trajectory data
     uint32_t traj_amount;               // Trajectory amount
-    int traj_count;                     // Trajectory count
-    int traj_select;                    // Trajectory selection
-    int mem;                            // Memory
+    const uint32_t *mpc_traj_indices;         // MPC stepwidth indices for sampling trajectory data
+    const uint32_t horizon_len;               // Needed trajectory samples in a prediction horizon.
+    int traj_count;  // Trajectory count
+    int traj_select; // Trajectory selection
+    int mem;         // Memory
 
     void read_file(std::ifstream &file, std::streampos data_start, casadi_real *data, int data_len);
     int load_initial_guess(const std::string &init_guess_path, casadi_real *init_guess_data);
     std::streamoff get_traj_dims(uint32_t &rows, uint32_t &cols, uint32_t &traj_amount, const std::string &traj_file);
-    void read_trajectory_block(const std::string &traj_file, unsigned int traj_data_startbyte, uint32_t rows, uint32_t cols, double *data, const uint32_t *indices);
+    void read_trajectory_block(const std::string &traj_file, unsigned int traj_data_startbyte, uint32_t rows, uint32_t cols, double *data);
     void read_x0_init(const std::string &q0_init_file, casadi_real *x0_arr);
 };
 

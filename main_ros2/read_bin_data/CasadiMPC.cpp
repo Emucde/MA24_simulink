@@ -9,76 +9,112 @@
 #include "MPC8.h"
 #include "MPC8_addressdef.h"
 
+mpc_config_t invalid_config() {
+    return {
+            nullptr,  // x0_init_path
+            nullptr,  // init_guess_path
+            nullptr,  // traj_data_path
+            0,        // traj_data_per_horizon
+            0,        // traj_data_real_len
+            nullptr,  // traj_indices
+            0,        // y_d_len
+            0,        // init_guess_len
+            0,  // x_k_addr
+            0,  // y_d_addr
+            0,  // in_init_guess_addr
+            0,  // in_param_weight_addr
+            nullptr,  // param_weight
+            0,        // param_weight_len
+            nullptr,  // casadi_fun
+            nullptr,  // arg
+            nullptr,  // res
+            nullptr,  // iw
+            nullptr,  // w
+            nullptr,  // u_opt
+            nullptr,  // arg_indices
+            nullptr,  // res_indices
+            0,        // arg_in_len
+            0,        // res_out_len
+            0,        // u_opt_len
+            0,  // w_end_addr
+            0,  // u_opt_addr
+            0   // mem
+        };
+}
+
 // Constructor implementation
-CasadiMPC::CasadiMPC(const std::string &mpc_name) : traj_select(1), traj_count(0)
+CasadiMPC::CasadiMPC(const std::string &mpc_name) : 
+    mpc_config(mpc_name == "MPC8" ? get_MPC8_config() : invalid_config()),
+    mpc_traj_indices(mpc_config.traj_indices), horizon_len(mpc_config.traj_data_per_horizon), traj_select(1), traj_count(0)
 {
-    if (mpc_name == "MPC8")
-    {
-        mpc_config = std::make_unique<mpc_config_t>(get_MPC8_config());
-    }
-    else
+    // Check if the configuration is valid
+    if (mpc_config.casadi_fun == nullptr)
     {
         throw std::runtime_error(mpc_name + "is not a valid MPC name. Implemented: MPC8");
     }
 
     // Set the pointers
-    w = mpc_config->w;
-    arg = mpc_config->arg;
-    res = mpc_config->res;
-    iw = mpc_config->iw;
-    u_opt = mpc_config->u_opt;
-    mem = mpc_config->mem;
-    casadi_fun = mpc_config->casadi_fun;
-
+    w = mpc_config.w;
+    arg = mpc_config.arg;
+    res = mpc_config.res;
+    iw = mpc_config.iw;
+    u_opt = mpc_config.u_opt;
+    mem = mpc_config.mem;
+    casadi_fun = mpc_config.casadi_fun;
+    
     // Initialize arg with pointers based on provided indices
-    for (int i = 0; i < mpc_config->arg_in_len; i++)
+    for (int i = 0; i < mpc_config.arg_in_len; i++)
     {
-        arg[i] = w + mpc_config->arg_indices[i]; // Use each index from arg_indices
+        arg[i] = w + mpc_config.arg_indices[i]; // Use each index from arg_indices
     }
 
     // Initialize res with pointers based on provided indices
-    for (int i = 0; i < mpc_config->res_out_len; i++)
+    for (int i = 0; i < mpc_config.res_out_len; i++)
     {
-        res[i] = w + mpc_config->res_indices[i]; // Use each index from res_indices
+        res[i] = w + mpc_config.res_indices[i]; // Use each index from res_indices
     }
 
-    u_opt = w + mpc_config->u_opt_addr; // Set u_opt to the address at u_opt_addr_len
-    w_end = w + mpc_config->w_end_addr; // Set w_end to the address at w_end_addr_len
+    u_opt = w + mpc_config.u_opt_addr; // Set u_opt to the address at u_opt_addr_len
+    w_end = w + mpc_config.w_end_addr; // Set w_end to the address at w_end_addr_len
 
     // Set the addresses of initial guess, x_k, y_d, and parameter weights
-    init_guess = w + mpc_config->in_init_guess_addr;
-    x_k = w + mpc_config->x_k_addr;
-    y_d = w + mpc_config->y_d_addr;
-    param_weight = w + mpc_config->in_param_weight_addr;
+    init_guess = w + mpc_config.in_init_guess_addr;
+    x_k = w + mpc_config.x_k_addr;
+    y_d = w + mpc_config.y_d_addr;
+    param_weight = w + mpc_config.in_param_weight_addr;
 
     // Set real trajectory length
-    traj_data_real_len = mpc_config->traj_data_real_len;
+    traj_data_real_len = mpc_config.traj_data_real_len;
 
     // read first initial guess from file
-    load_initial_guess(mpc_config->init_guess_path, init_guess);
+    load_initial_guess(mpc_config.init_guess_path, init_guess);
 
     // read first x0 from file
-    read_x0_init(mpc_config->x0_init_path, x_k);
+    read_x0_init(mpc_config.x0_init_path, x_k);
 
     // read first trajectory data from file
-    traj_data_startbyte = get_traj_dims(traj_rows, traj_data_total_len, traj_amount, mpc_config->traj_data_path);
-    read_trajectory_block(mpc_config->traj_data_path, traj_data_startbyte, traj_rows, mpc_config->traj_data_per_horizon, y_d, mpc_config->traj_indices);
+    traj_data_startbyte = get_traj_dims(traj_rows, traj_data_total_len, traj_amount, mpc_config.traj_data_path);
+    read_trajectory_block(mpc_config.traj_data_path, traj_data_startbyte, traj_rows, mpc_config.traj_data_per_horizon, y_d);
 
     // check trajectory lengths
-    if(traj_data_real_len + 0 > traj_data_total_len) // Todo: traj indices[-1] here!
+    if(traj_data_real_len + mpc_traj_indices[mpc_config.traj_data_per_horizon-1] > traj_data_total_len)
     {
-        throw std::runtime_error("Trajectory data length exceeds total length.");
+        throw std::runtime_error("Trajectory data length + mpc_traj_indices[end] = " + 
+                     std::to_string(traj_data_real_len + mpc_traj_indices[mpc_config.traj_data_per_horizon-1]) + 
+                     " exceeds total length = " + 
+                     std::to_string(traj_data_total_len) + 
+                     ". Please generate new.");
     }
 
     // Copy the parameter weights
-    memcpy(param_weight, mpc_config->param_weight, mpc_config->param_weight_len * sizeof(casadi_real));
+    memcpy(param_weight, mpc_config.param_weight, mpc_config.param_weight_len * sizeof(casadi_real));
 }
 
 // Method to output the optimal control
 void CasadiMPC::get_optimal_control(casadi_real *&u_opt_out, int &u_opt_len)
 {
     u_opt_out = u_opt;
-    u_opt_len = mpc_config->u_opt_len;
+    u_opt_len = mpc_config.u_opt_len;
 }
 
 // Method to run the MPC
@@ -164,7 +200,7 @@ std::streamoff CasadiMPC::get_traj_dims(uint32_t &rows, uint32_t &cols, uint32_t
     return traj_data_startbyte;
 }
 
-void CasadiMPC::read_trajectory_block(const std::string &traj_file, unsigned int traj_data_startbyte, uint32_t rows, uint32_t cols, double *data, const uint32_t *indices)
+void CasadiMPC::read_trajectory_block(const std::string &traj_file, unsigned int traj_data_startbyte, uint32_t rows, uint32_t cols, double *data)
 {
     std::ifstream file(traj_file, std::ios::binary);
 
@@ -179,8 +215,8 @@ void CasadiMPC::read_trajectory_block(const std::string &traj_file, unsigned int
 
     for (uint32_t j = 0; j < cols; j++)
     {
-        // Move the read position according to indices[j]
-        file.seekg((traj_count + indices[j]) * rows * sizeof(double), std::ios::cur);
+        // Move the read position according to mpc_traj_indices[j]
+        file.seekg((traj_count + mpc_traj_indices[j]) * rows * sizeof(double), std::ios::cur);
 
         // Read data into the provided array
         file.read(reinterpret_cast<char *>(&data[j * rows]), rows * sizeof(double));
