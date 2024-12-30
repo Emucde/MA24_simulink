@@ -48,7 +48,13 @@ function start() {
     }
 
     ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        var data;
+        try{
+           data = JSON.parse(event.data);
+        }
+        catch(e){
+          data = event.data;
+        }
         const responseElement = document.getElementById('response');
         if (data.status === 'success') {
             result = data.result;
@@ -75,11 +81,23 @@ function start() {
             else{
                 responseElement.textContent = `${result.name}: ${result.status}`;
                 if(result.name == "ros_service"){
-                    if(result.status.includes("timeout")){
-                      document.getElementById("conncon").style.backgroundColor = "red";
+                    var ros_connected_col_el = document.getElementById("labconncon");
+                    var ros_connected_text_el = document.getElementById("labcon");
+                    if(result.status.includes("timed out")){
+                      ros_connected_col_el.style.backgroundColor = "red";
+                      ros_connected_text_el.textContent = "ROS2 disconnected";
                     }
                     else {
-                      document.getElementById("conncon").style.backgroundColor = "green";
+                      ros_connected_col_el.style.backgroundColor = "green";
+                      ros_connected_text_el.textContent = "ROS2 connected";
+                    }
+                    if(result.status.includes("homing in progress"))
+                    {
+                        document.getElementById("home_main").classList.remove("hide");
+                    }
+                    if(result.status.includes("homing done"))
+                    {
+                        document.getElementById("home_main").classList.add("hide");
                     }
                 }
             }

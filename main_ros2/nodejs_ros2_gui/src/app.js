@@ -33,7 +33,7 @@ wss.on('connection', (ws) => {
     ws.on('message', async (message) => {
         // ws.send(JSON.stringify({ status: 'success', result: "test" }));
         const data = JSON.parse(message);
-        var status = 'none', name = 'ros_service';
+        var status = 'Service request timed out', name = 'ros_service';
         try {
             let result;
             switch (data.command) {

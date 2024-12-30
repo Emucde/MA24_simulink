@@ -25,7 +25,7 @@
         </div>
         <div class="status-item">
             <div class="status-indicator" id="labconncon"></div>
-            <span id="labcon">ros2 disconnected</span>
+            <span id="labcon">ROS2 disconnected</span>
         </div>
     </div>
     <br>
@@ -35,6 +35,10 @@
         <button id="reset">Reset</button>
         <button id="stop">Stop</button>
         <button id="home">Home</button>
+        <div id="home_main" class="status-item hide">
+            <div class="status-indicator" id="homingdiv" style="animation: spin 1s infinite;"></div>
+            <span id="homing">Homing...</span>
+        </div>
         <p id="homedelay_p" class="margin_left">Home Delay (ms):</p>
         <input class="margin_left delay_input" type="text" id="home_delay" value="5000">
         <p class="margin_left" id="response" class="response"></p>
