@@ -8,14 +8,15 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <semaphore.h>
 
 // compile in matlab with mex shm_writer_sfun.c -lrt
 
 #define SHM_DATA_SIZE 14
 #define SHM_DATA_SIZE_BYTES (SHM_DATA_SIZE * sizeof(double))
 
-#define SHM_VALID_FLAG_SIZE 1
-#define SHM_VALID_FLAG_SIZE_BYTES (SHM_VALID_FLAG_SIZE * sizeof(char))
+#define SHM_STATE_VALID_FLAG_SIZE 1
+#define SHM_STATE_VALID_FLAG_SIZE_BYTES (SHM_STATE_VALID_FLAG_SIZE * sizeof(char))
 
 #define SHM_START_FLAG_SIZE 1
 #define SHM_START_FLAG_SIZE_BYTES (SHM_START_FLAG_SIZE * sizeof(char))
@@ -29,14 +30,17 @@
 #define SHM_TRAJ_SWITCH_SIZE 1
 #define SHM_TRAJ_SWITCH_SIZE_BYTES (SHM_TRAJ_SWITCH_SIZE * sizeof(char))
 
-#define INPUT_NUM 6
+#define SHM_TORQUE_VALID_FLAG_SIZE 1
+#define SHM_TORQUE_VALID_FLAG_SIZE_BYTES (SHM_TORQUE_VALID_FLAG_SIZE * sizeof(char))
 
-int shm_size[INPUT_NUM] = {SHM_DATA_SIZE, SHM_VALID_FLAG_SIZE, SHM_START_FLAG_SIZE, SHM_RESET_FLAG_SIZE, SHM_STOP_FLAG_SIZE, SHM_TRAJ_SWITCH_SIZE};
-int shm_size_bytes[INPUT_NUM] = {SHM_DATA_SIZE_BYTES, SHM_VALID_FLAG_SIZE_BYTES, SHM_START_FLAG_SIZE_BYTES, SHM_RESET_FLAG_SIZE_BYTES, SHM_STOP_FLAG_SIZE_BYTES, SHM_TRAJ_SWITCH_SIZE_BYTES};
+#define INPUT_NUM 7
+
+int shm_size[INPUT_NUM] = {SHM_DATA_SIZE, SHM_STATE_VALID_FLAG_SIZE, SHM_START_FLAG_SIZE, SHM_RESET_FLAG_SIZE, SHM_STOP_FLAG_SIZE, SHM_TRAJ_SWITCH_SIZE, SHM_TORQUE_VALID_FLAG_SIZE};
+int shm_size_bytes[INPUT_NUM] = {SHM_DATA_SIZE_BYTES, SHM_STATE_VALID_FLAG_SIZE_BYTES, SHM_START_FLAG_SIZE_BYTES, SHM_RESET_FLAG_SIZE_BYTES, SHM_STOP_FLAG_SIZE_BYTES, SHM_TRAJ_SWITCH_SIZE_BYTES, SHM_TORQUE_VALID_FLAG_SIZE_BYTES};
 
 static void mdlInitializeSizes(SimStruct *S)
 {
-    ssSetNumSFcnParams(S, INPUT_NUM); // Two parameters: first: shared memory name of data, second: shared memory name of valid flag
+    ssSetNumSFcnParams(S, INPUT_NUM+1); // Two parameters: first: shared memory name of data, second: shared memory name of valid flag
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) {
         return;
     }
@@ -77,6 +81,7 @@ static void mdlInitializeSampleTimes(SimStruct *S)
 #define MDL_START
 static void mdlStart(SimStruct *S)
 {
+    // Create shared memory
     for (int i = 0; i < INPUT_NUM; i++) {
         char_T shm_name[256];
         mxGetString(ssGetSFcnParam(S, i), shm_name, sizeof(shm_name));
@@ -128,6 +133,18 @@ static void mdlStart(SimStruct *S)
         }
         ssSetPWorkValue(S, i*2+1, (void*)(intptr_t)fd);
     }
+
+    // Create semaphore (last input parameter)
+    char_T sem_name[256];
+    mxGetString(ssGetSFcnParam(S, INPUT_NUM), sem_name, sizeof(sem_name));
+    sem_t *sem = sem_open(sem_name, O_CREAT, 0666, 0);
+    if (sem == SEM_FAILED) {
+        ssPrintf("Failed to open semaphore: %s\n", strerror(errno));
+        ssSetErrorStatus(S, "Failed to open semaphore");
+        return;
+    }
+    ssPrintf("Semaphore created successfully\n");
+    ssSetPWorkValue(S, (INPUT_NUM)*2, sem);
 }
 
 static void mdlOutputs(SimStruct *S, int_T tid)
@@ -181,6 +198,10 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     }
     
     //ssPrintf("Shared memory values: %f, %f, %f\n", shared_data[0], shared_data[1], shared_data[2]);
+
+    // Signal that shared memory has changed
+    sem_t *sem = (sem_t*)ssGetPWorkValue(S, (INPUT_NUM)*2);
+    sem_post(sem);
 }
 
 static void mdlTerminate(SimStruct *S)
@@ -211,6 +232,10 @@ static void mdlTerminate(SimStruct *S)
             }
         }
     }
+
+    // Close semaphore
+    sem_t *sem = (sem_t*)ssGetPWorkValue(S, (INPUT_NUM)*2);
+    sem_close(sem);
 }
 
 #ifdef  MATLAB_MEX_FILE    
