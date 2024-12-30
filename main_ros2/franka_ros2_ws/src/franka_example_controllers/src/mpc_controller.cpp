@@ -257,6 +257,12 @@ CallbackReturn ModelPredictiveController::on_deactivate(const rclcpp_lifecycle::
     return controller_interface::CallbackReturn::SUCCESS;
 }
 
+CallbackReturn ModelPredictiveController::on_activate(const rclcpp_lifecycle::State &previous_state)
+{
+    open_shared_memories();
+    return controller_interface::CallbackReturn::SUCCESS;
+}
+
 CallbackReturn ModelPredictiveController::on_cleanup(const rclcpp_lifecycle::State &previous_state)
 {
     close_shared_memories();
