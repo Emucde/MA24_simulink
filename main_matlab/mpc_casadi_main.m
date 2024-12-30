@@ -422,7 +422,7 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         generate_casadi_types([mpc_c_sourcefile_path, 'casadi_types.h']);
         generate_mpc_config_typedef([mpc_c_sourcefile_path, 'mpc_config.h'], 'mpc_config');
         calc_udp_cfun_addresses(f_opt, f_opt_input_cell, f_opt_output_cell, mpc_c_sourcefile_path);
-        generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC_settings, casadi_func_name, mpc_c_sourcefile_path, s_fun_path)
+        generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC_settings, traj_settings, casadi_func_name, mpc_c_sourcefile_path, s_fun_path)
 
         fprintf('--------------------------------------------------------------------\n\n');
     end

@@ -38,6 +38,7 @@ function generate_mpc_config_typedef(filename, structName)
     fprintf(fid, '    const char* init_guess_path;\n');
     fprintf(fid, '    const char* traj_data_path;\n');
     fprintf(fid, '    const uint32_t traj_data_per_horizon;\n');
+    fprintf(fid, '    const uint32_t traj_data_real_len;\n');
     fprintf(fid, '    const uint32_t* traj_indices;\n');
     fprintf(fid, '    uint32_t y_d_len;\n');
     fprintf(fid, '    uint32_t init_guess_len;\n');
@@ -46,6 +47,7 @@ function generate_mpc_config_typedef(filename, structName)
     fprintf(fid, '    uint32_t in_init_guess_addr;\n');
     fprintf(fid, '    uint32_t in_param_weight_addr;\n');
     fprintf(fid, '    const casadi_real* param_weight;\n');
+    fprintf(fid, '    uint32_t param_weight_len;\n');
     fprintf(fid, '    CasadiFunPtr_t casadi_fun;\n');
     fprintf(fid, '    const casadi_real** arg;\n');
     fprintf(fid, '    casadi_real** res;\n');
@@ -57,8 +59,8 @@ function generate_mpc_config_typedef(filename, structName)
     fprintf(fid, '    uint32_t arg_in_len;\n');
     fprintf(fid, '    uint32_t res_out_len;\n');
     fprintf(fid, '    uint32_t u_opt_len;\n');
-    fprintf(fid, '    uint32_t w_end_addr_len;\n');
-    fprintf(fid, '    uint32_t u_opt_addr_len;\n');
+    fprintf(fid, '    uint32_t w_end_addr;\n');
+    fprintf(fid, '    uint32_t u_opt_addr;\n');
     fprintf(fid, '    int mem;\n');
     fprintf(fid, '} %s_t;\n\n', structName);
 

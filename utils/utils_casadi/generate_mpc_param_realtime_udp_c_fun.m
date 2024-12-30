@@ -1,4 +1,4 @@
-function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, func_name, output_dir, s_fun_path)
+function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_settings, func_name, output_dir, s_fun_path)
     % Open the header file for writing
     param_weight_header_name = [func_name, '_param.h'];
 
@@ -75,6 +75,9 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, func_nam
         end
     end
 
+    % define real length of trajectory
+    fprintf(fid, '#define %s_TRAJ_DATA_REAL_LEN %d\n', func_name, traj_settings.N_data_real);
+
     fprintf(fid, '\n');
 
     % Declare the function to get the MPC config
@@ -115,11 +118,11 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, func_nam
     fprintf(fid, 'mpc_config_t get_%s_config()\n', func_name);
     fprintf(fid, '{\n');
     fprintf(fid, '    // Allocate memory at compile time\n');
-    fprintf(fid, '    const casadi_real* arg[%s_ARG_LEN];\n', func_name);
-    fprintf(fid, '    casadi_real* res[%s_RES_LEN];\n', func_name);
-    fprintf(fid, '    casadi_int iw[%s_IW_LEN];\n', func_name);
-    fprintf(fid, '    casadi_real w[%s_W_LEN];\n', func_name);
-    fprintf(fid, '    casadi_real u_opt[%s_U_OPT_LEN] = {0};\n\n', func_name);
+    fprintf(fid, '    static const casadi_real* arg[%s_ARG_LEN];\n', func_name);
+    fprintf(fid, '    static casadi_real* res[%s_RES_LEN];\n', func_name);
+    fprintf(fid, '    static casadi_int iw[%s_IW_LEN];\n', func_name);
+    fprintf(fid, '    static casadi_real w[%s_W_LEN];\n', func_name);
+    fprintf(fid, '    static casadi_real u_opt[%s_U_OPT_LEN] = {0};\n\n', func_name);
     fprintf(fid, '    // default parameter values, taken from ./utils/matlab_init_general/init_MPC_weights.m\n'); 
     % generate default parameter values
         % Get field names
@@ -134,7 +137,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, func_nam
         
         % Start writing the array
         % using ..param_weight[MPC8_PARAM_WEIGHT_LEN]
-        fprintf(fid, '    casadi_real %s_param_weight[%s_PARAM_WEIGHT_LEN] =\n', func_name, func_name);
+        fprintf(fid, '    static casadi_real %s_param_weight[%s_PARAM_WEIGHT_LEN] =\n', func_name, func_name);
         fprintf(fid, '    {\n');
             
             % Write the data for each field
@@ -172,11 +175,12 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, func_nam
         fprintf(fid, '    };\n');
     fprintf(fid, '\n');
     fprintf(fid, '    // Set the MPC config\n');
-    fprintf(fid, ['   mpc_config_t ', func_name, 'Config = {\n']);
+    fprintf(fid, ['   static mpc_config_t ', func_name, 'Config = {\n']);
     fprintf(fid, '       .x0_init_path = X0_INIT_PATH,\n');
     fprintf(fid, '       .init_guess_path = %s_INIT_GUESS_PATH,\n', func_name);
     fprintf(fid, '       .traj_data_path = TRAJ_DATA_PATH,\n');
     fprintf(fid, '       .traj_data_per_horizon = %s_TRAJ_DATA_PER_HORIZON,\n', func_name);
+    fprintf(fid, '       .traj_data_real_len = %s_TRAJ_DATA_REAL_LEN,\n', func_name);
     fprintf(fid, '       .traj_indices = %s_TRAJ_INDICES,\n', func_name);
     fprintf(fid, '       .y_d_len = %s_Y_D_LEN,\n', func_name);
     fprintf(fid, '       .init_guess_len = %s_INIT_GUESS_LEN,\n', func_name);
@@ -185,6 +189,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, func_nam
     fprintf(fid, '       .in_init_guess_addr = %s_IN_INIT_GUESS_ADDR,\n', func_name);
     fprintf(fid, '       .in_param_weight_addr = %s_IN_PARAM_WEIGHT_ADDR,\n', func_name);
     fprintf(fid, '       .param_weight = %s_param_weight,\n', func_name);
+    fprintf(fid, '       .param_weight_len = %s_PARAM_WEIGHT_LEN,\n', func_name);
     fprintf(fid, '       .casadi_fun = &%s,\n', func_name);
     fprintf(fid, '       .arg = arg,\n');
     fprintf(fid, '       .res = res,\n');
@@ -196,8 +201,8 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, func_nam
     fprintf(fid, '       .arg_in_len = %s_ARG_IN_LEN,\n', func_name);
     fprintf(fid, '       .res_out_len = %s_RES_OUT_LEN,\n', func_name);
     fprintf(fid, '       .u_opt_len = %s_U_OPT_LEN,\n', func_name);
-    fprintf(fid, '       .w_end_addr_len = %s_W_END_ADDR,\n', func_name);
-    fprintf(fid, '       .u_opt_addr_len = %s_U_OPT_ADDR,\n', func_name);
+    fprintf(fid, '       .w_end_addr = %s_W_END_ADDR,\n', func_name);
+    fprintf(fid, '       .u_opt_addr = %s_U_OPT_ADDR,\n', func_name);
     fprintf(fid, '       .mem = 0\n');
     fprintf(fid, '   };\n');
     fprintf(fid, '   return %sConfig;\n', func_name);

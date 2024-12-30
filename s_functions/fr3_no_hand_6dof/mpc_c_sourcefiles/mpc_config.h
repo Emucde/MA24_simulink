@@ -17,6 +17,7 @@ typedef struct {
     const char* init_guess_path;
     const char* traj_data_path;
     const uint32_t traj_data_per_horizon;
+    const uint32_t traj_data_real_len;
     const uint32_t* traj_indices;
     uint32_t y_d_len;
     uint32_t init_guess_len;
@@ -25,6 +26,7 @@ typedef struct {
     uint32_t in_init_guess_addr;
     uint32_t in_param_weight_addr;
     const casadi_real* param_weight;
+    uint32_t param_weight_len;
     CasadiFunPtr_t casadi_fun;
     const casadi_real** arg;
     casadi_real** res;
@@ -36,8 +38,8 @@ typedef struct {
     uint32_t arg_in_len;
     uint32_t res_out_len;
     uint32_t u_opt_len;
-    uint32_t w_end_addr_len;
-    uint32_t u_opt_addr_len;
+    uint32_t w_end_addr;
+    uint32_t u_opt_addr;
     int mem;
 } mpc_config_t;
 
