@@ -1,7 +1,68 @@
+/* Body and Theme */
 body {
     font-family: Arial, sans-serif;
-    background-color: #1e1e1e;
+    background-color: #1e1e1e; /* Default dark background */
     color: white;
+    transition: background-color 0.3s, color 0.3s; /* Smooth color changes */
+}
+
+.light-theme {
+    background-color: #f4f4f4; /* Light background */
+    color: black; /* Light text */
+}
+
+/* Toggle Container */
+.toggle-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+/* Toggle Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Active Toggle Color */
+input:checked + .slider {
+    background-color: #2196F3; /* Active toggle color */
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
 }
 
 #srdy,
@@ -12,11 +73,6 @@ body {
 }
 
 #drdy {
-    background-color: red;
-    width: 18px;
-}
-
-.connectedcolor {
     background-color: red;
     width: 18px;
 }
@@ -40,9 +96,20 @@ body {
 }
 
 
-h1,
-h2 {
-    color: white;
+/* General Styles */
+/* General styles for headings in both themes */
+h1, h2 {
+    margin-bottom: 15px;
+}
+
+/* Dark Theme Styles */
+h1, h2 {
+    color: white; /* Default dark theme heading color */
+}
+
+/* Light Theme Styles */
+.light-theme h1, .light-theme h2 {
+    color: black; /* Heading color in light theme */
 }
 
 p {
@@ -79,11 +146,104 @@ iframe {
     width: 100%;
 }
 
+/* Button Styles */
 button {
-    margin-left: 10px;
+    background-color: #4CAF50; /* Green */
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+button:hover {
+    background-color: #45a049; /* Darker green */
+    transform: translateY(-2px);
+}
+
+/* Input Field Styles */
+input[type="text"] {
+    font-size: 16px;
+    width: 80px;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    transition: border-color 0.3s;
+}
+
+input[type="text"]:focus {
+    border-color: #2196F3; /* Blue border on focus */
+    outline: none; /* Remove outline */
+}
+
+.status-container {
+    display: flex; /* Use flexbox for layout */
+    flex-direction: column; /* Stack items vertically */
+    gap: 15px; /* Space between items */
+    margin-top: 20px; /* Space above the container */
+}
+
+.status-item {
+    display: flex; /* Use flexbox for each item */
+    align-items: center; /* Align items vertically center */
+}
+
+.status-indicator {
+    width: 20px; /* Fixed width for status indicators */
+    height: 20px; /* Fixed height for status indicators */
+    border-radius: 50%; /* Make them round */
+    background-color: red; /* Default color (disconnected) */
+    margin-right: 10px; /* Space between indicator and text */
+}
+
+/* Status Text Styling */
+#connected, #labcon {
+    font-weight: bold; /* Make the status text bold */
+    color: white; /* White text for visibility */
+}
+
+/* Light Theme Styles */
+.light-theme #connected, .light-theme #labcon, .light-theme #homedelay_p {
+    color: black; /* Heading color in light theme */
+}
+
+/* Select Styles */
+select {
+    font-size: 16px;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    background-color: white;
+    color: black;
+    transition: border-color 0.3s;
+}
+
+select:focus {
+    border-color: #2196F3; /* Blue border on focus */
+    outline: none; /* Remove outline */
 }
 
 .response{
     color: white;
     margin-left: 10px;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2196F3;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #1e88e5;
 }

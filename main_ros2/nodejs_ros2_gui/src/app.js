@@ -9,6 +9,7 @@ const { searchTrajectoryNames } = require('./search_m_file');
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
+const clients = new Set();
 
 var traj_path = path.join(__dirname, '..', '..', '..', 'utils', 'matlab_init_general', 'param_traj_fr3_no_hand_6dof.m');
 
@@ -23,30 +24,41 @@ load_and_configure_controller('move_to_start_example_controller');
 wss.on('connection', (ws) => {
     console.log('WebSocket connection established');
 
+    clients.add(ws);
+  
+    ws.on('close', () => {
+      clients.delete(ws);
+    });
+
     ws.on('message', async (message) => {
         // ws.send(JSON.stringify({ status: 'success', result: "test" }));
         const data = JSON.parse(message);
+        var status = 'none', name = 'ros_service';
         try {
             let result;
             switch (data.command) {
                 case 'start':
                     result = await startService();
+                    status = result.status;
                     console.log("end2");
                     break;
                 case 'reset':
                     result = await resetService();
+                    status = result.status;
                     break;
                 case 'stop':
                     result = await stopService();
+                    status = result.status;
                     break;
                 case 'trajectory_selection':
                     result = await switchTrajectory(data.traj_select);
+                    status = result.status;
                     break;
                 case 'home':
                     try{
                         result = await switch_to_home_control();
                         console.log(result);
-                        result.status='homing in progress';
+                        status='homing in progress';
                         if(result.ok)
                         {
                             setTimeout(async function(){
@@ -58,7 +70,7 @@ wss.on('connection', (ws) => {
                         }
                         else
                         {
-                            result.status='Error: move_to_start_example_controller was not loaded. restarting.';
+                            status='Error: move_to_start_example_controller was not loaded. restarting.';
                             throw new Error('It seems that move_to_start_example_controller was not loaded')
                         }
                     } catch (error) {
@@ -66,13 +78,24 @@ wss.on('connection', (ws) => {
                         load_and_configure_controller('move_to_start_example_controller');
                     }
                     break;
+                case 'open_brakes':
+                    broadcast('open_brakes');
+                    status = 'open_brakes';
+                    name = 'brakes_service';
+                    break;
+                case 'close_brakes':
+                    broadcast('close_brakes');
+                    status = 'close_brakes';
+                    name = 'brakes_service';
+                    break;
                 default:
-                    result = 'Unknown command';
+                    status = 'Unknown command';
+                    name = 'error';
             }
 
-            console.log(result);
+            console.log(status);
 
-            ws.send(JSON.stringify({ status: 'success', result: { name: 'ros_service', status: result.status } }));
+            ws.send(JSON.stringify({ status: 'success', result: { name: name, status: status } }));
         } catch (error) {
             console.log(error);
             ws.send(JSON.stringify({ status: 'error', error: error.message }));
@@ -89,6 +112,14 @@ wss.on('connection', (ws) => {
         console.error(err);
     }); 
 });
+
+function broadcast(message) {
+    clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  }
 
 const terminator = (signal) => {
   console.log(`Received ${signal} - terminating app`);

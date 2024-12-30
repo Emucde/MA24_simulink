@@ -1,24 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ROS 2 Web Controller</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
+
 <body>
-    <h1>ROS 2 Controller</h1>
-    <table><td class="connectedcolor" id="conncon"> </td><td><span id="connected">Nodejs disconnected</span><span id="timeconn"></span></td>
-    <td class="connectedcolor" id="labconncon"> </td><td><span id="labcon">ros2 disconnected</span></td></table>
+    <h1 class="toggle-container"> ROS 2 Controller</h1>
+    <div class="toggle-container">
+        <label class="switch">
+            <input type="checkbox" id="toggle">
+            <span class="slider round"></span>
+        </label>
+        <span>Toggle Light/Dark Mode</span>
+    </div>
+    <div class="status-container">
+        <div class="status-item">
+            <div class="status-indicator" id="conncon"></div>
+            <span id="connected">Nodejs disconnected</span>
+            <span id="timeconn"></span>
+        </div>
+        <div class="status-item">
+            <div class="status-indicator" id="labconncon"></div>
+            <span id="labcon">ros2 disconnected</span>
+        </div>
+    </div>
+    <br>
     <br>
     <div class="float_left">
-    <button id="start">Start</button>
-    <button id="reset">Reset</button>
-    <button id="stop">Stop</button>
-    <button id="home">Home</button>
-    <p class="margin_left">Home Delay (ms):</p>
-    <input class="margin_left delay_input" type="text" id="home_delay" value="5000">
-    <p class="margin_left" id="response" class="response"></p>
+        <button id="start">Start</button>
+        <button id="reset">Reset</button>
+        <button id="stop">Stop</button>
+        <button id="home">Home</button>
+        <p id="homedelay_p" class="margin_left">Home Delay (ms):</p>
+        <input class="margin_left delay_input" type="text" id="home_delay" value="5000">
+        <p class="margin_left" id="response" class="response"></p>
     </div>
     <br><br>
     <select id="trajectory" onchange="send_trajectory(this)">
@@ -26,16 +45,26 @@
         <option value="2">traj2</option>
     </select>
     <br>
+    <br>
+    <button id="open_brakes">Open Brakes</button>
+    <button id="close_brakes">Close Brakes</button>
+    <br>
     <hr>
     <div value="1">
         <li>
-            <a class = "plots_a" _href="robot_plots.html" _target="iframe_plot1" href="javascript:void(0)" is_loaded="0" onclick="click_fun(this, 0)" target="">Traj 1</a>
-            <a class = "visualize_a" _href="robot_visualization.html" _target="iframe_vis1" href="javascript:void(0)" is_loaded="0" onclick="click_fun(this, 1)" target="">Visualize</a>
-            <button class="hide_plot_button" onclick="hide_iframe(this, 0);" style="display: initial; position: absolute; left: 674px;">Show Plot</button>
-            <button class="hide_settings_button" onclick="hide_settings(this);" style="display: initial; position: absolute; left: 769px;">Show Settings</button>
-            <button class="hide_video_button" onclick="hide_iframe(this, 1);" style="display: initial; position: absolute; left: 889px;">Show Visualize</button>
+            <a class="plots_a" _href="robot_plots.html" _target="iframe_plot1" href="javascript:void(0)" is_loaded="0"
+                onclick="click_fun(this, 0)" target="">Traj 1</a>
+            <a class="visualize_a" _href="robot_visualization.html" _target="iframe_vis1" href="javascript:void(0)"
+                is_loaded="0" onclick="click_fun(this, 1)" target="">Visualize</a>
+            <button class="hide_plot_button" onclick="hide_iframe(this, 0);"
+                style="display: initial; left: 674px;">Show Plot</button>
+            <button class="hide_settings_button" onclick="hide_settings(this);"
+                style="display: initial; left: 769px;">Show Settings</button>
+            <button class="hide_video_button" onclick="hide_iframe(this, 1);"
+                style="display: initial; left: 889px;">Show Visualize</button>
         </li>
-        <pre class="prettyprint lang-matlab prettyprinted" is_shown="0" style="width: 80%;margin-left:22px;display:none;"><code><span class="ident">MPC</span><span class="pun">=</span><span class="str">'MPC8'</span><span class="pun">;</span><span class="pln">
+        <pre class="prettyprint lang-matlab prettyprinted" is_shown="0"
+            style="width: 80%;margin-left:22px;display:none;"><code><span class="ident">MPC</span><span class="pun">=</span><span class="str">'MPC8'</span><span class="pun">;</span><span class="pln">
         </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">name</span><span class="pln">    </span><span class="pun">=</span><span class="pln"> </span><span class="ident">MPC</span><span class="pun">;</span><span class="pln">
         </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">variant</span><span class="pln"> </span><span class="pun">=</span><span class="pln"> </span><span class="str">'nlpsol'</span><span class="pun">;</span><span class="pln">
         </span><span class="ident">param_casadi_fun_name</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">solver</span><span class="pln">  </span><span class="pun">=</span><span class="pln"> </span><span class="str">'qrqp'</span><span class="pun">;</span><span class="pln"> </span><span class="com">% (qrqp (sqp) | qpoases | ipopt)</span><span class="pln">
@@ -60,9 +89,11 @@
         </span><span class="ident">param_weight</span><span class="pun">.</span><span class="tag">(</span><span class="ident">MPC</span><span class="tag">)</span><span class="pun">.</span><span class="ident">u_max</span><span class="pln">    </span><span class="pun">=</span><span class="pln"> </span><span class="ident">param_robot.q_pp_limit_upper</span><span class="pun">;</span></code></pre>
 
         <iframe is_shown="0" name="iframe_plot1" src="about:blank" style="display:none;" title="description"></iframe>
-        <iframe is_shown="0" name="iframe_vis1" src="about:blank" style="display:none;height:800px;" title="description"></iframe>
+        <iframe is_shown="0" name="iframe_vis1" src="about:blank" style="display:none;height:800px;"
+            title="description"></iframe>
     </div>
     <br>
     <script src="client.js"></script>
 </body>
+
 </html>

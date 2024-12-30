@@ -15,12 +15,20 @@ function start() {
 
 
     ws.onopen = function(e){
-        console.log("NodeJs connected");
-        document.getElementById("connected").innerHTML="NodeJs connected @ ";
-        document.getElementById("timeconn").innerHTML=new Date();
-        document.getElementById("conncon").style.backgroundColor="green";
-        datarunning = 0;//falls repetetive messung laeuft.
-
+      console.log("NodeJs connected");
+      document.getElementById("connected").innerHTML = "NodeJs connected @ ";
+      // Format the date nicely
+      const formattedDate = new Date().toLocaleString('en-US', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          second: '2-digit'
+      });
+      document.getElementById("timeconn").innerHTML = formattedDate; // Display the formatted date
+      document.getElementById("conncon").style.backgroundColor = "green";
     }
 
     ws.onclose = function(){
@@ -44,10 +52,7 @@ function start() {
         const responseElement = document.getElementById('response');
         if (data.status === 'success') {
             result = data.result;
-            if(result.name == "ros_service") {
-                responseElement.textContent = `ros_service: ${result.status}`;
-            }
-            else if (result.name == "traj_names") {
+            if (result.name == "traj_names") {
                 /*
                 add trajectories to the dropdown menu
                 <select id="trajectory">
@@ -66,6 +71,17 @@ function start() {
                 var a_iframe_plot = document.querySelector('a[_target=iframe_plot1]')
                 a_iframe_plot.textContent = result.trajectories[0];
                 change_button_positions();
+            }
+            else{
+                responseElement.textContent = `${result.name}: ${result.status}`;
+                if(result.name == "ros_service"){
+                    if(result.status.includes("timeout")){
+                      document.getElementById("conncon").style.backgroundColor = "red";
+                    }
+                    else {
+                      document.getElementById("conncon").style.backgroundColor = "green";
+                    }
+                }
             }
         } else {
             responseElement.textContent = `Error: ${data.error}`;
@@ -88,6 +104,38 @@ document.getElementById('stop').addEventListener('click', () => {
 document.getElementById('home').addEventListener('click', () => {
     var home_delay = document.querySelector('#home_delay').value;
     ws.send(JSON.stringify({ command: 'home', delay: home_delay }));
+});
+
+document.getElementById('open_brakes').addEventListener('click', () => {
+  ws.send(JSON.stringify({ command: 'open_brakes' }));
+});
+
+document.getElementById('close_brakes').addEventListener('click', () => {
+  ws.send(JSON.stringify({ command: 'close_brakes' }));
+});
+
+const toggle = document.getElementById('toggle');
+const body = document.body;
+
+toggle.addEventListener('change', () => {
+    if (toggle.checked) {
+        body.classList.add('light-theme');
+        body.classList.remove('dark-theme');
+    } else {
+        body.classList.remove('light-theme');
+        body.classList.add('dark-theme');
+    }
+});
+
+if (localStorage.getItem('theme') === 'light') {
+    toggle.checked = true;
+    body.classList.add('light-theme');
+} else {
+    body.classList.remove('light-theme');
+}
+
+toggle.addEventListener('change', () => {
+    localStorage.setItem('theme', toggle.checked ? 'light' : 'dark');
 });
 
 function send_trajectory(current_element) {
