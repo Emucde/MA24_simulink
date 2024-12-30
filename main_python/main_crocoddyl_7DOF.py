@@ -15,6 +15,9 @@ import multiprocessing
 sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
 from utils_python.utils import *
 
+# set nice priority to highest value
+# os.nice(10)
+
 autostart_fr3 = False
 
 if autostart_fr3:
@@ -23,7 +26,7 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = False
+use_data_from_simulink = True
 manual_traj_select = 1
 use_feedforward = True
 use_clipping = False

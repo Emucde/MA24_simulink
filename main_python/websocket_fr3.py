@@ -23,9 +23,14 @@ async def broadcast(message):
         )
 
 async def websocket_server():
-    port = 8765
-    server = await websockets.serve(handler, "localhost", port)
-    await broadcast('reload')
-    await server.wait_closed()
+    try:
+        port = 8765
+        server = await websockets.serve(handler, "localhost", port)
+    finally:
+        await broadcast('reload')
+        await server.wait_closed()
 
-asyncio.run(websocket_server())
+try:
+    asyncio.run(websocket_server())
+except KeyboardInterrupt:
+    print("Server interrupted. Exiting...")

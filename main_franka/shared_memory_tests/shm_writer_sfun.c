@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <semaphore.h>
 
 #define SHM_DATA_SIZE 100
 #define SHM_DATA_SIZE_BYTES (SHM_DATA_SIZE * sizeof(double))

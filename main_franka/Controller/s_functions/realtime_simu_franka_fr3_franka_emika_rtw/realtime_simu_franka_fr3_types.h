@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.430
+ * Model version              : 8.652
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Tue Oct 29 11:44:01 2024
+ * C++ source code generated on : Mon Dec 30 18:11:40 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -52,6 +52,35 @@ struct robot_model
 
 #endif
 
+#ifndef DEFINED_TYPEDEF_FOR_traj_data_bus_
+#define DEFINED_TYPEDEF_FOR_traj_data_bus_
+
+struct traj_data_bus
+{
+  real_T N;
+  real_T t[12001];
+  real_T p_d[180015];
+  real_T p_d_p[180015];
+  real_T p_d_pp[180015];
+  real_T Phi_d[180015];
+  real_T Phi_d_p[180015];
+  real_T Phi_d_pp[180015];
+  real_T R_d[540045];
+  real_T q_d[240020];
+  real_T q_d_p[240020];
+  real_T q_d_pp[240020];
+  real_T omega_d[180015];
+  real_T omega_d_p[180015];
+  real_T alpha_d[60005];
+  real_T alpha_d_p[60005];
+  real_T alpha_d_pp[60005];
+  real_T rot_ax_d[180015];
+  real_T alpha_d_offset[60005];
+  real_T q_d_rel[240020];
+};
+
+#endif
+
 #ifndef DEFINED_TYPEDEF_FOR_x_d_
 #define DEFINED_TYPEDEF_FOR_x_d_
 
@@ -79,59 +108,18 @@ struct x_d
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_OnOf2gXFGCeQ1kokKguxcC_
-#define DEFINED_TYPEDEF_FOR_struct_OnOf2gXFGCeQ1kokKguxcC_
+#ifndef DEFINED_TYPEDEF_FOR_collinearity_bus_
+#define DEFINED_TYPEDEF_FOR_collinearity_bus_
 
-struct struct_OnOf2gXFGCeQ1kokKguxcC
+struct collinearity_bus
 {
-  real_T Kd1[36];
-  real_T Kp1[36];
-  real_T q_n[7];
-  real_T K_n[49];
-  real_T D_n[49];
-  real_T k_n_nl[49];
-  real_T nl_spring_threshold[7];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_jfblZltmyovPlsjcFJPP5C_
-#define DEFINED_TYPEDEF_FOR_struct_jfblZltmyovPlsjcFJPP5C_
-
-struct struct_jfblZltmyovPlsjcFJPP5C
-{
-  real_T D_d[36];
-  real_T K_d[36];
-  real_T D_d_jointspace[49];
-  real_T K_d_jointspace[49];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_Fkz9JfHurrLZtu6guaEzCB_
-#define DEFINED_TYPEDEF_FOR_struct_Fkz9JfHurrLZtu6guaEzCB_
-
-struct struct_Fkz9JfHurrLZtu6guaEzCB
-{
-  real_T mode;
-  real_T k;
-  real_T W_bar_N[7];
-  real_T W_E[36];
-  real_T eps;
-  real_T eps_collinear;
-  real_T lambda_min;
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_RCS9FomuFmdbboJvGAYmbB_
-#define DEFINED_TYPEDEF_FOR_struct_RCS9FomuFmdbboJvGAYmbB_
-
-struct struct_RCS9FomuFmdbboJvGAYmbB
-{
-  struct_OnOf2gXFGCeQ1kokKguxcC ct;
-  struct_jfblZltmyovPlsjcFJPP5C pd;
-  struct_Fkz9JfHurrLZtu6guaEzCB regularization;
+  real_T JJ_Y12_B13_R14[3];
+  real_T JJ_Y15_B16_R17[3];
+  real_T JJ_Y23_B24_R25[3];
+  real_T JJ_Y26_B27_R34[3];
+  real_T JJ_Y35_B36_R37[3];
+  real_T JJ_Y45_B46_R47[3];
+  real_T JJ_Y56_B57_R67[3];
 };
 
 #endif
@@ -293,73 +281,29 @@ struct struct_H7i42zUioeRMpvVnQG9wRE
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_Yw0vgIQ6yZpeProSkAAsrC_
-#define DEFINED_TYPEDEF_FOR_struct_Yw0vgIQ6yZpeProSkAAsrC_
+#ifndef DEFINED_TYPEDEF_FOR_struct_8XmNMPeT2ODBNqIYbYAfuC_
+#define DEFINED_TYPEDEF_FOR_struct_8XmNMPeT2ODBNqIYbYAfuC_
 
-struct struct_Yw0vgIQ6yZpeProSkAAsrC
+struct struct_8XmNMPeT2ODBNqIYbYAfuC
 {
-  real_T MPC01[359];
-  real_T MPC6[201];
-  real_T MPC7[201];
-  real_T MPC8[395];
-  real_T MPC9[233];
-  real_T MPC10[163];
-  real_T MPC11[166];
-  real_T MPC12[163];
-  real_T MPC13[163];
-  real_T MPC14[199];
+  real_T bT[301];
+  real_T N;
+  real_T bT_n[5000];
+  real_T N_n;
 };
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_pTqgiuQ9aastqzUJlDD6LB_
-#define DEFINED_TYPEDEF_FOR_struct_pTqgiuQ9aastqzUJlDD6LB_
+#ifndef DEFINED_TYPEDEF_FOR_struct_jikfGbe3vLmTmDWeSKjknC_
+#define DEFINED_TYPEDEF_FOR_struct_jikfGbe3vLmTmDWeSKjknC_
 
-struct struct_pTqgiuQ9aastqzUJlDD6LB
+struct struct_jikfGbe3vLmTmDWeSKjknC
 {
-  real_T init_guess[1656];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_lOlpGMuvtzNs9yGwrRP6iH_
-#define DEFINED_TYPEDEF_FOR_struct_lOlpGMuvtzNs9yGwrRP6iH_
-
-struct struct_lOlpGMuvtzNs9yGwrRP6iH
-{
-  real_T init_guess[612];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_rjuXRGOVq7GzHhD0eIV4hH_
-#define DEFINED_TYPEDEF_FOR_struct_rjuXRGOVq7GzHhD0eIV4hH_
-
-struct struct_rjuXRGOVq7GzHhD0eIV4hH
-{
-  real_T init_guess[1824];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_HynqmHhvVrqpd52uaZuCED_
-#define DEFINED_TYPEDEF_FOR_struct_HynqmHhvVrqpd52uaZuCED_
-
-struct struct_HynqmHhvVrqpd52uaZuCED
-{
-  real_T K_D_q[49];
-  real_T K_P_q[49];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_MIVHhJW7aTMZId5MkCQfpG_
-#define DEFINED_TYPEDEF_FOR_struct_MIVHhJW7aTMZId5MkCQfpG_
-
-struct struct_MIVHhJW7aTMZId5MkCQfpG
-{
-  struct_HynqmHhvVrqpd52uaZuCED MPC12;
-  struct_HynqmHhvVrqpd52uaZuCED MPC13;
+  real_T Rk[196];
+  real_T Rk_FR3[196];
+  real_T Qk[196];
+  real_T Qk_FR3[196];
+  real_T P0[196];
 };
 
 #endif
@@ -444,96 +388,27 @@ struct struct_Zz654ZwXwtjsnsQgQLM11G
 
 #endif
 
-#ifndef DEFINED_TYPEDEF_FOR_struct_7GwfAYRjAWGpyfrsv1fnuH_
-#define DEFINED_TYPEDEF_FOR_struct_7GwfAYRjAWGpyfrsv1fnuH_
+#ifndef DEFINED_TYPEDEF_FOR_struct_rCK7CLa94c9gGZ6JXxjgCF_
+#define DEFINED_TYPEDEF_FOR_struct_rCK7CLa94c9gGZ6JXxjgCF_
 
-struct struct_7GwfAYRjAWGpyfrsv1fnuH
+struct struct_rCK7CLa94c9gGZ6JXxjgCF
 {
-  real_T start_index[6];
-  real_T stop_index[6];
-  real_T q_0[42];
-  real_T q_0_p[42];
-  real_T q_0_pp[42];
-  real_T joint_points[126];
-  real_T pose[126];
-  real_T rotation[162];
-  real_T rot_ax[54];
-  real_T alpha[18];
-  real_T time[18];
-  real_T traj_type[6];
-  struct_xtY3FIkba7D2gFmP0VadqC diff_filter[6];
-  struct_7a8eCPA4nMdHfiggL8ApbC diff_filter_jointspace[6];
-  struct_Zz654ZwXwtjsnsQgQLM11G sin_poly[6];
+  real_T start_index[5];
+  real_T stop_index[5];
+  real_T q_0[35];
+  real_T q_0_p[35];
+  real_T q_0_pp[35];
+  real_T joint_points[147];
+  real_T pose[147];
+  real_T rotation[189];
+  real_T rot_ax[63];
+  real_T alpha[21];
+  real_T time[21];
+  real_T traj_type[5];
+  struct_xtY3FIkba7D2gFmP0VadqC diff_filter[5];
+  struct_7a8eCPA4nMdHfiggL8ApbC diff_filter_jointspace[5];
+  struct_Zz654ZwXwtjsnsQgQLM11G sin_poly[5];
   real_T N_traj;
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_UTKj6g4OE4s5W5XrfIfmeC_
-#define DEFINED_TYPEDEF_FOR_struct_UTKj6g4OE4s5W5XrfIfmeC_
-
-struct struct_UTKj6g4OE4s5W5XrfIfmeC
-{
-  real_T init_guess[828];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_bcPt0aHL69a1tR981KEnNF_
-#define DEFINED_TYPEDEF_FOR_struct_bcPt0aHL69a1tR981KEnNF_
-
-struct struct_bcPt0aHL69a1tR981KEnNF
-{
-  real_T init_guess[3504];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_YWK0hFAystlJ6w2OoB1SbE_
-#define DEFINED_TYPEDEF_FOR_struct_YWK0hFAystlJ6w2OoB1SbE_
-
-struct struct_YWK0hFAystlJ6w2OoB1SbE
-{
-  real_T init_guess[3396];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_bPechv2nEb7kpkpzAAxUdD_
-#define DEFINED_TYPEDEF_FOR_struct_bPechv2nEb7kpkpzAAxUdD_
-
-struct struct_bPechv2nEb7kpkpzAAxUdD
-{
-  real_T init_guess[2304];
-};
-
-#endif
-
-#ifndef DEFINED_TYPEDEF_FOR_struct_7B1rouuk1M1XUcyjL6LM4D_
-#define DEFINED_TYPEDEF_FOR_struct_7B1rouuk1M1XUcyjL6LM4D_
-
-struct struct_7B1rouuk1M1XUcyjL6LM4D
-{
-  real_T N;
-  real_T t[11001];
-  real_T p_d[198018];
-  real_T p_d_p[198018];
-  real_T p_d_pp[198018];
-  real_T Phi_d[198018];
-  real_T Phi_d_p[198018];
-  real_T Phi_d_pp[198018];
-  real_T R_d[594054];
-  real_T q_d[264024];
-  real_T q_d_p[264024];
-  real_T q_d_pp[264024];
-  real_T omega_d[198018];
-  real_T omega_d_p[198018];
-  real_T alpha_d[66006];
-  real_T alpha_d_p[66006];
-  real_T alpha_d_pp[66006];
-  real_T rot_ax_d[198018];
-  real_T alpha_d_offset[66006];
-  real_T q_d_rel[264024];
 };
 
 #endif
@@ -550,12 +425,25 @@ struct struct_KEa48IyRUxLtKgH405LUqB
 
 #endif
 
+/* Custom Type definition for MATLAB Function: '<S13>/MATLAB Function' */
+#include "coder_posix_time.h"
+#ifndef struct_sdAmwXbnJnEmimT0NaJRtAD_realt_T
+#define struct_sdAmwXbnJnEmimT0NaJRtAD_realt_T
+
+struct sdAmwXbnJnEmimT0NaJRtAD_realt_T
+{
+  real_T tv_sec;
+  real_T tv_nsec;
+};
+
+#endif                              /* struct_sdAmwXbnJnEmimT0NaJRtAD_realt_T */
+
 #ifndef SS_UINT64
-#define SS_UINT64                      44
+#define SS_UINT64                      35
 #endif
 
 #ifndef SS_INT64
-#define SS_INT64                       45
+#define SS_INT64                       36
 #endif
 
 /* Parameters (default storage) */

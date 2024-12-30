@@ -7,9 +7,9 @@
  *
  * Code generation for model "realtime_simu_franka_fr3".
  *
- * Model version              : 8.430
+ * Model version              : 8.652
  * Simulink Coder version : 9.8 (R2022b) 13-May-2022
- * C++ source code generated on : Tue Oct 29 11:44:01 2024
+ * C++ source code generated on : Mon Dec 30 18:11:40 2024
  *
  * Target selection: franka_emika_panda.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -43,17 +43,14 @@
 #define rtmSetTPtr(rtm, val)           ((rtm)->Timing.t = (val))
 #endif
 
-extern real_T rt_hypotd_snf(real_T u0, real_T u1);
-extern int32_T div_nde_s32_floor(int32_T numerator, int32_T denominator);
+extern "C" void s_function_opti_ekf_fun(SimStruct *rts);
+extern "C" void s_function_opti_robot_model_bus_fun(SimStruct *rts);
 extern "C" void shm_reader_sfun(SimStruct *rts);
 extern "C" void shm_writer_sfun(SimStruct *rts);
-extern "C" void s_function_opti_sys_fun_qpp_aba(SimStruct *rts);
-extern "C" void s_function_opti_robot_model_bus_fun(SimStruct *rts);
-extern void realtime_simu_franka_f_CTRegler(B_CTRegler_realtime_simu_fran_T
-  *localB);
-extern void realtime_simu_franka_CTRegler_m(B_CTRegler_realtime_simu_fr_p_T
-  *localB);
-extern void realtime_simu_franka_CTRegler_p(B_CTRegler_realtime_simu_fr_f_T
-  *localB);
+extern void realtime_simu_fra_Robotmodelbus(const real_T rtu_q[7], const real_T
+  rtu_q_p[7], const real_T rtu_q_pp[7], const real_T rtu_H[16], const real_T
+  rtu_J[42], const real_T rtu_J_p[42], const real_T rtu_M[49], const real_T
+  rtu_C_rnea[7], const real_T rtu_C[49], const real_T rtu_g[7],
+  B_Robotmodelbus_realtime_simu_T *localB);
 
 #endif                      /* RTW_HEADER_realtime_simu_franka_fr3_private_h_ */

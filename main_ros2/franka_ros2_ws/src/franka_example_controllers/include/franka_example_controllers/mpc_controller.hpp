@@ -53,6 +53,9 @@ class ModelPredictiveController : public controller_interface::ControllerInterfa
   CallbackReturn on_deactivate(const rclcpp_lifecycle::State &previous_state) override;
 
   FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
+  CallbackReturn on_activate(const rclcpp_lifecycle::State &previous_state) override;
+
+  FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
   CallbackReturn on_cleanup(const rclcpp_lifecycle::State &previous_state) override;
 
   FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
