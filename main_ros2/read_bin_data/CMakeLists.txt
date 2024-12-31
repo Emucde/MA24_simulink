@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 project(MPCLibraries)
 
+# Specify the build type; use 'Release' for optimization without debugging info
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)  # Default to Release
+endif()
+
 # Set output directory for libraries
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
@@ -10,7 +15,9 @@ set(MPC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../s_functions/fr3_no_hand_6do
 # Find all MPC*.c files
 file(GLOB MPC_SOURCES "${MPC_SOURCE_DIR}/MPC*.c")
 
+# Add optimization flags
 add_compile_options(-O3)    # Adds optimization level 3
+# Note: You generally don't need to specify -g or -G flags if you want no debugging information.
 
 # Set up compile time measurement
 set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")

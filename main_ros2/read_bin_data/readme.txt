@@ -20,7 +20,7 @@ Build MPC Shared Libraries
 # Way3: Use cmake and make
 
 cd ./main_ros2/read_bin_data/build
-cmake ..
+cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 make install # files are copied to # Files are created at ./s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles
 

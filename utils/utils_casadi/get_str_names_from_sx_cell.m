@@ -106,23 +106,15 @@ function str_cell = sxcell2str(current_input_cell)
     for i=1:nn_len
         sym_name = str(current_input_cell{1,i}(1));
         sym_len  = size(current_input_cell{i});
-        sym_str_split = strsplit(sym_name, '_');
-        if(length(sym_str_split) < 2)
-            error(['symbol name have not sym_ structure: ', sym_name]);
+        last_underline_pos = find(sym_name == '_', 1, 'last');
+        if(isempty(last_underline_pos) || isnan(str2double(sym_name(last_underline_pos+1:end))))
+            sym_str_split = sym_name;
+        else
+            sym_str_split = sym_name(1:last_underline_pos-1);
         end
-        str_cell{i} = struct('name', skip_lastcell(sym_str_split), ...
+        str_cell{i} = struct('name', sym_str_split, ...
             'dim_str', ['(', num2str(sym_len(1)),'x', num2str(sym_len(2)), ')'], ...
             'dim', [sym_len(1), sym_len(2)]);
-    end
-end
-
-function str_out = skip_lastcell(cellin)
-    n_cell = length(cellin);
-    str_out = cellin{1};
-    for i=2:n_cell
-        if(i < n_cell)
-            str_out = [str_out, '_', cellin{i}];
-        end
     end
 end
 

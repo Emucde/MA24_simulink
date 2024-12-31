@@ -25,6 +25,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '#include <math.h>\n');
     fprintf(fid, '#include "casadi_types.h"\n');
     fprintf(fid, '#include "mpc_config.h"\n\n');
+    fprintf(fid, '#include "param_robot.h"\n\n');
 
     % Add path to init_guess and trajectory
     param_MPC_traj_data_bin_file = fullfile(pwd, [s_fun_path, '/trajectory_data/param_traj_data.bin']);
@@ -110,8 +111,8 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, ['#include "', param_weight_header_name, '"\n']);
     fprintf(fid, '#include "mpc_config.h"\n');
     fprintf(fid, ['#include "', func_name, '_addressdef.h"\n']);
-
-    fprintf(fid, '#include "%s.h"\n\n', func_name);
+    fprintf(fid, '#include "%s.h"\n', func_name);
+    fprintf(fid, '#include "param_robot.h"\n\n');
 
     % create function that returns a mpc_config_t struct
     fprintf(fid, '// Function to get the MPC config\n');
@@ -176,17 +177,30 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '\n');
     fprintf(fid, '    // Set the MPC config\n');
     fprintf(fid, ['   static mpc_config_t ', func_name, 'Config = {\n']);
+    fprintf(fid, '       .n_dof = PARAM_ROBOT_N_DOF,\n');
+    fprintf(fid, '       .n_red = PARAM_ROBOT_N_RED,\n');
+    fprintf(fid, '       .n_indices = PARAM_ROBOT_N_INDICES,\n');
+    fprintf(fid, '       .n_indices_fixed = PARAM_ROBOT_N_INDICES_FIXED,\n');
     fprintf(fid, '       .x0_init_path = X0_INIT_PATH,\n');
     fprintf(fid, '       .init_guess_path = %s_INIT_GUESS_PATH,\n', func_name);
     fprintf(fid, '       .traj_data_path = TRAJ_DATA_PATH,\n');
     fprintf(fid, '       .traj_data_per_horizon = %s_TRAJ_DATA_PER_HORIZON,\n', func_name);
     fprintf(fid, '       .traj_data_real_len = %s_TRAJ_DATA_REAL_LEN,\n', func_name);
     fprintf(fid, '       .traj_indices = %s_TRAJ_INDICES,\n', func_name);
-    fprintf(fid, '       .y_d_len = %s_Y_D_LEN,\n', func_name);
+    if(strcmp(param_MPC.version, 'v6_kin_int_path_following') || strcmp(param_MPC.version, 'v6_kin_dev_path_following'))
+        fprintf(fid, '       .y_d_len = %s_T_K_LEN,\n', func_name);
+    else
+        fprintf(fid, '       .y_d_len = %s_Y_D_LEN,\n', func_name);
+    end
     fprintf(fid, '       .init_guess_len = %s_INIT_GUESS_LEN,\n', func_name);
     fprintf(fid, '       .x_k_addr = %s_X_K_ADDR,\n', func_name);
-    fprintf(fid, '       .y_d_addr = %s_Y_D_ADDR,\n', func_name);
+    if(strcmp(param_MPC.version, 'v6_kin_int_path_following') || strcmp(param_MPC.version, 'v6_kin_dev_path_following'))
+        fprintf(fid, '       .y_d_addr = %s_T_K_ADDR,\n', func_name);
+    else
+        fprintf(fid, '       .y_d_addr = %s_Y_D_ADDR,\n', func_name);
+    end
     fprintf(fid, '       .in_init_guess_addr = %s_IN_INIT_GUESS_ADDR,\n', func_name);
+    fprintf(fid, '       .out_init_guess_addr = %s_OUT_INIT_GUESS_OUT_ADDR,\n', func_name);
     fprintf(fid, '       .in_param_weight_addr = %s_IN_PARAM_WEIGHT_ADDR,\n', func_name);
     fprintf(fid, '       .param_weight = %s_param_weight,\n', func_name);
     fprintf(fid, '       .param_weight_len = %s_PARAM_WEIGHT_LEN,\n', func_name);

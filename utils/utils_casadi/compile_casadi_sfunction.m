@@ -28,6 +28,8 @@ function compile_casadi_sfunction(casadi_fun, s_fun_path, output_dir, MPC_solver
 % [1] https://web.casadi.org/blog/mpc-simulink2/
 % [2] https://web.casadi.org/blog/s-function/
 % [3] https://github.com/casadi/casadi/discussions/3337
+%
+% Warning: Method 2 does not support ipopt solver, only Method 1 (nlpsol)
 arguments
     casadi_fun casadi.Function
     s_fun_path char

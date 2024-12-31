@@ -500,7 +500,7 @@ J_x  = Q_norm_square(x_err(:, 1 + (1:N_MPC)), pp.R_x(n_x_indices, n_x_indices));
 J_z  = Q_norm_square(z-z_prev, pp.R_z(n_z_indices, n_z_indices));
 J_alpha = Q_norm_square(alpha-alpha_prev, pp.R_alpha(n_y_indices, n_y_indices));
 
-cost_vars_names = '{J_yt, Jt_yy_ref, J_yr, Jr_yy_ref, J_u, J_x , J_z, J_alpha, J_u0, J_x0}';
+cost_vars_names = '{J_yt, Jt_yy_ref, J_yr, Jr_yy_ref, J_u, J_x, J_z, J_alpha, J_u0, J_x0}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 

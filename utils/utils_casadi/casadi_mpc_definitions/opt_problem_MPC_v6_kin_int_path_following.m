@@ -18,7 +18,7 @@ q_red = SX.sym( 'q',     n_red, 1 );
 x_red = SX.sym( 'x',   2*n_red, 1 );
 u_red = SX.sym( 'u',     n_red, 1 );
 theta = SX.sym('theta', 1); % path parameter
-lambda_theta = SX.sym('lambda_theta', 1);
+lambda_theta_ew = SX.sym('lambda_theta_ew', 1);
 v = SX.sym('v', 1);
 
 q_subs            = SX(q_0);
@@ -43,19 +43,19 @@ opt.allow_free = true;
 
 % integrator for x
 f_red = Function('f_red', {x_red, u_red}, {[x_red(n_red+1:2*n_red); u_red]});
-h = Function('h', {theta, v}, {-lambda_theta*theta + v}, opt);
+h = Function('h', {theta, v}, {-lambda_theta_ew*theta + v}, opt);
 
 F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
 H_int = integrate_casadi(h, DT, M, int_method); % runs with Ts_MPC
-H = Function('H', {theta, v, lambda_theta}, {H_int(theta, v)});
+H = Function('H', {theta, v, lambda_theta_ew}, {H_int(theta, v)});
 
 F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
 H_kp1_int = integrate_casadi(h, DT_ctl, M, int_method); % runs with Ta from sensors
-H_kp1 = Function('H', {theta, v, lambda_theta}, {H_kp1_int(theta, v)});
+H_kp1 = Function('H', {theta, v, lambda_theta_ew}, {H_kp1_int(theta, v)});
 
 F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 H2_int = integrate_casadi(h, DT2, M, int_method); % runs with Ts_MPC-2*Ta
-H2 = Function('H', {theta, v, lambda_theta}, {H2_int(theta, v)});
+H2 = Function('H', {theta, v, lambda_theta_ew}, {H2_int(theta, v)});
 
 %% set up path function: TODO: input for path selection
 

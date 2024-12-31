@@ -34,6 +34,10 @@ function generate_mpc_config_typedef(filename, structName)
 
     % Write the struct definition with typedef
     fprintf(fid, 'typedef struct {\n');
+    fprintf(fid, '    const uint32_t n_dof;\n');
+    fprintf(fid, '    const uint32_t n_red;\n');
+    fprintf(fid, '    const uint32_t* n_indices;\n');
+    fprintf(fid, '    const uint32_t* n_indices_fixed;\n');
     fprintf(fid, '    const char* x0_init_path;\n');
     fprintf(fid, '    const char* init_guess_path;\n');
     fprintf(fid, '    const char* traj_data_path;\n');
@@ -45,6 +49,7 @@ function generate_mpc_config_typedef(filename, structName)
     fprintf(fid, '    uint32_t x_k_addr;\n');
     fprintf(fid, '    uint32_t y_d_addr;\n');
     fprintf(fid, '    uint32_t in_init_guess_addr;\n');
+    fprintf(fid, '    uint32_t out_init_guess_addr;\n');
     fprintf(fid, '    uint32_t in_param_weight_addr;\n');
     fprintf(fid, '    const casadi_real* param_weight;\n');
     fprintf(fid, '    uint32_t param_weight_len;\n');

@@ -301,7 +301,6 @@ else
         );
 end
 
-
 %z_d_init_guess_0; % vs z_full?
 %disp(solver.stats())
 

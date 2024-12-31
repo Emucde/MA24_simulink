@@ -13,6 +13,10 @@ extern "C" {
 #include "casadi_types.h"
 
 typedef struct {
+    const uint32_t n_dof;
+    const uint32_t n_red;
+    const uint32_t* n_indices;
+    const uint32_t* n_indices_fixed;
     const char* x0_init_path;
     const char* init_guess_path;
     const char* traj_data_path;
@@ -24,6 +28,7 @@ typedef struct {
     uint32_t x_k_addr;
     uint32_t y_d_addr;
     uint32_t in_init_guess_addr;
+    uint32_t out_init_guess_addr;
     uint32_t in_param_weight_addr;
     const casadi_real* param_weight;
     uint32_t param_weight_len;
