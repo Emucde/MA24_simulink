@@ -97,7 +97,9 @@
     "regex": "cpp",
     "casadi_types.h": "c",
     "semaphore.h": "c",
-    "mpc11_addressdef.h": "c"
+    "mpc11_addressdef.h": "c",
+    "core": "cpp",
+    "*.txx": "cpp"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",

@@ -11,16 +11,6 @@
           }
         },
         {
-            "name": "Run Without Debugging",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${fileDirname}/${fileBasenameNoExtension}",
-            "args": [],
-            "cwd": "${fileDirname}",
-            "preLaunchTask": "Run Build (No Debug Info)",
-            "externalConsole": true
-        },
-        {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
@@ -39,6 +29,19 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "Build and Run C++ Program",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}/main",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "preLaunchTask": "Run Program"
         }
     ]
 }

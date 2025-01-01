@@ -3,6 +3,11 @@
 #include <vector>
 #include <cstring> // for memcpy
 
+#include <pinocchio/parsers/urdf.hpp>
+
+#include <pinocchio/algorithm/joint-configuration.hpp>
+#include <pinocchio/algorithm/kinematics.hpp>
+
 #include "CasadiMPC.hpp"
 
 // includes for time measurement
@@ -10,12 +15,20 @@
 
 #define TRAJ_SELECT 1
 
-int main() {
-    casadi_real* u_opt_out = nullptr;
-    int u_opt_len = 0, i=0;
+int main()
+{
+    casadi_real *u_opt_out = nullptr;
+    int u_opt_len = 0, i = 0;
 
     int flag = 0;
     uint32_t traj_data_real_len;
+
+    const std::string urdf_filename = "../../urdf_creation/fr3_no_hand_7dof.urdf";
+
+    pinocchio::Model model;
+    pinocchio::urdf::buildModel(urdf_filename, model);
+    // pinocchio::urdf::buildModel(urdf_filename, pinocchio::JointModelFreeFlyer(), model);
+    std::cout << "model name: " << model.name << std::endl;
 
     CasadiMPC MPC8_obj = CasadiMPC("MPC8");
 
@@ -25,7 +38,8 @@ int main() {
     // measure time
     auto start = std::chrono::high_resolution_clock::now();
 
-    for(i=0; i<1; i++) {
+    for (i = 0; i < 1; i++)
+    {
         flag = MPC8_obj.solve();
         // // Get the optimal control
         // MPC8_obj.get_optimal_control(u_opt_out, u_opt_len);
@@ -42,7 +56,7 @@ int main() {
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     std::cout << "Time taken by function: "
-         << (double) duration.count()/1000000 << " s" << std::endl;
+              << (double)duration.count() / 1000000 << " s" << std::endl;
 
     return 0;
 }
