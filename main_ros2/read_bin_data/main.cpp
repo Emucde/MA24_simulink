@@ -25,10 +25,31 @@ int main()
 
     const std::string urdf_filename = "../../urdf_creation/fr3_no_hand_7dof.urdf";
 
-    pinocchio::Model model;
-    pinocchio::urdf::buildModel(urdf_filename, model);
-    // pinocchio::urdf::buildModel(urdf_filename, pinocchio::JointModelFreeFlyer(), model);
-    std::cout << "model name: " << model.name << std::endl;
+    pinocchio::Model robot_model;
+
+    // Load the URDF model
+    pinocchio::urdf::buildModel(urdf_filename, robot_model);
+
+    // Create data structure for robot_model
+    pinocchio::Data robot_data(robot_model); // Create data structure for robot_model
+    
+    // Number of joint positions, states, inputs
+    int nq = robot_model.nq;
+    int nx = 2 * nq;
+    int nu = nq; // fully actuated
+    
+    std::cout << "robot_model name: " << robot_model.name << std::endl;
+
+    bool use_gravity = true;
+
+    if (use_gravity) {
+        // Set linear motion as gravity (0, 0, -9.81) and angular as (0, 0, 0)
+        robot_model.gravity.linear() << 0.0, 0.0, -9.81; // Linear part
+    } else {
+        robot_model.gravity.linear() << 0.0, 0.0, 0.0; // Linear part should be zero
+    }
+
+    std::cout << robot_model.gravity.linear();
 
     CasadiMPC MPC8_obj = CasadiMPC("MPC8");
 

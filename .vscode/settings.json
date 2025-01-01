@@ -99,7 +99,8 @@
     "semaphore.h": "c",
     "mpc11_addressdef.h": "c",
     "core": "cpp",
-    "*.txx": "cpp"
+    "*.txx": "cpp",
+    "specialfunctions": "cpp"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",

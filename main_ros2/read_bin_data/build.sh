@@ -3,8 +3,17 @@
 # Default to debug build
 BUILD_TYPE="debug"
 
+BUILD_CURRENT_FILE=true
+if [[ $# -eq 2 ]]; then
+    if [ $2 == "$masterdir/main_ros2/read_bin_data" ]; then
+        BUILD_CURRENT_FILE=false # use makefile to build
+    else
+        BUILD_CURRENT_FILE=true
+    fi
+fi
+
 # Parse command line arguments
-while [[ $# -gt 0 ]]; do
+if [[ $# -gt 0 ]]; then
     key="$1"
     case $key in
         -r|--release)
@@ -20,7 +29,9 @@ while [[ $# -gt 0 ]]; do
         exit 1
         ;;
     esac
-done
+fi
+
+if [[ $BUILD_CURRENT_FILE == true ]]; then
 
 # Set optimization and debug flags based on build type
 if [ "$BUILD_TYPE" = "release" ]; then
@@ -31,9 +42,6 @@ else
     OPT_FLAGS="-O0"
     DEBUG_FLAGS="-g"
 fi
-
-# Set master directory
-masterdir="/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink"
 
 # Construct the command
 CMD="/usr/bin/g++-11 -fdiagnostics-color=always $OPT_FLAGS $DEBUG_FLAGS
@@ -57,13 +65,19 @@ echo "Executing: $CMD"
 echo -e "\n"
 BUILD_STATUS=$?    # Capture the exit status of the build command
 
+else
+    # Use makefile to build
+    make BUILD_TYPE=$BUILD_TYPE -j8
+    BUILD_STATUS=$?
+fi
+
 # Check if the build was successful
 if [ $BUILD_STATUS -eq 0 ]; then
     echo -e "Build complete\n"
     # If the build was successful and it's a release build, run the executable
     if [ "$BUILD_TYPE" = "release" ]; then
         echo -e "Running the executable...\n----------------------------------\n"
-        $masterdir/main_ros2/read_bin_data/main
+        $masterdir/main_ros2/read_bin_data/bin/$BUILD_TYPE/main
         echo -e "\n----------------------------------\n"
     fi
 else
