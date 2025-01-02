@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+
 #ifndef Inf
 #define Inf INFINITY
 #endif
@@ -19,6 +21,11 @@ extern "C" {
 #ifndef casadi_int
 #define casadi_int long long int
 #endif
+
+#ifndef casadi_uint
+#define casadi_uint uint32_t
+#endif
+
 
 typedef int (*CasadiFunPtr_t)(const casadi_real **arg, casadi_real **res, casadi_int *iw, casadi_real *w, int mem);
 

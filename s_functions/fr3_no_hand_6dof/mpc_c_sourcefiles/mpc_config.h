@@ -8,43 +8,42 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
-
 #include "casadi_types.h"
 
 typedef struct {
-    const uint32_t n_dof;
-    const uint32_t n_red;
-    const uint32_t* n_indices;
-    const uint32_t* n_indices_fixed;
+    const casadi_uint n_dof;
+    const casadi_uint n_red;
+    const casadi_uint* n_indices;
+    const casadi_uint* n_x_indices;
+    const casadi_uint* n_indices_fixed;
+    const casadi_uint* n_x_indices_fixed;
     const char* x0_init_path;
     const char* init_guess_path;
     const char* traj_data_path;
-    const uint32_t traj_data_per_horizon;
-    const uint32_t traj_data_real_len;
-    const uint32_t* traj_indices;
-    uint32_t y_d_len;
-    uint32_t init_guess_len;
-    uint32_t x_k_addr;
-    uint32_t y_d_addr;
-    uint32_t in_init_guess_addr;
-    uint32_t out_init_guess_addr;
-    uint32_t in_param_weight_addr;
+    const casadi_uint traj_data_per_horizon;
+    const casadi_uint traj_data_real_len;
+    const casadi_uint* traj_indices;
+    casadi_uint y_d_len;
+    casadi_uint init_guess_len;
+    casadi_uint x_k_addr;
+    casadi_uint y_d_addr;
+    casadi_uint in_init_guess_addr;
+    casadi_uint out_init_guess_addr;
+    casadi_uint in_param_weight_addr;
     const casadi_real* param_weight;
-    uint32_t param_weight_len;
+    casadi_uint param_weight_len;
     CasadiFunPtr_t casadi_fun;
     const casadi_real** arg;
     casadi_real** res;
     casadi_int* iw;
     casadi_real* w;
-    casadi_real* u_opt;
-    const uint32_t* arg_indices;
-    const uint32_t* res_indices;
-    uint32_t arg_in_len;
-    uint32_t res_out_len;
-    uint32_t u_opt_len;
-    uint32_t w_end_addr;
-    uint32_t u_opt_addr;
+    const casadi_uint* arg_indices;
+    const casadi_uint* res_indices;
+    casadi_uint arg_in_len;
+    casadi_uint res_out_len;
+    casadi_uint u_opt_len;
+    casadi_uint w_end_addr;
+    casadi_uint u_opt_addr;
     int mem;
 } mpc_config_t;
 

@@ -7,14 +7,14 @@
             "request": "launch",
             "program": "${file}",
             "env": {
-              "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"
-          }
+                "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"
+            }
         },
         {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/bin/debug/${fileBasenameNoExtension}",
+            "program": "${fileDirname}/build/bin/${fileBasenameNoExtension}",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",

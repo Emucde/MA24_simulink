@@ -29,43 +29,43 @@ function generate_mpc_config_typedef(filename, structName)
     fprintf(fid, '#endif\n\n');
 
     % Write necessary includes
-    fprintf(fid, '#include <stdint.h>\n\n');
     fprintf(fid, '#include "casadi_types.h"\n\n');
 
     % Write the struct definition with typedef
     fprintf(fid, 'typedef struct {\n');
-    fprintf(fid, '    const uint32_t n_dof;\n');
-    fprintf(fid, '    const uint32_t n_red;\n');
-    fprintf(fid, '    const uint32_t* n_indices;\n');
-    fprintf(fid, '    const uint32_t* n_indices_fixed;\n');
+    fprintf(fid, '    const casadi_uint n_dof;\n');
+    fprintf(fid, '    const casadi_uint n_red;\n');
+    fprintf(fid, '    const casadi_uint* n_indices;\n');
+    fprintf(fid, '    const casadi_uint* n_x_indices;\n');
+    fprintf(fid, '    const casadi_uint* n_indices_fixed;\n');
+    fprintf(fid, '    const casadi_uint* n_x_indices_fixed;\n');
     fprintf(fid, '    const char* x0_init_path;\n');
     fprintf(fid, '    const char* init_guess_path;\n');
     fprintf(fid, '    const char* traj_data_path;\n');
-    fprintf(fid, '    const uint32_t traj_data_per_horizon;\n');
-    fprintf(fid, '    const uint32_t traj_data_real_len;\n');
-    fprintf(fid, '    const uint32_t* traj_indices;\n');
-    fprintf(fid, '    uint32_t y_d_len;\n');
-    fprintf(fid, '    uint32_t init_guess_len;\n');
-    fprintf(fid, '    uint32_t x_k_addr;\n');
-    fprintf(fid, '    uint32_t y_d_addr;\n');
-    fprintf(fid, '    uint32_t in_init_guess_addr;\n');
-    fprintf(fid, '    uint32_t out_init_guess_addr;\n');
-    fprintf(fid, '    uint32_t in_param_weight_addr;\n');
+    fprintf(fid, '    const casadi_uint traj_data_per_horizon;\n');
+    fprintf(fid, '    const casadi_uint traj_data_real_len;\n');
+    fprintf(fid, '    const casadi_uint* traj_indices;\n');
+    fprintf(fid, '    casadi_uint y_d_len;\n');
+    fprintf(fid, '    casadi_uint init_guess_len;\n');
+    fprintf(fid, '    casadi_uint x_k_addr;\n');
+    fprintf(fid, '    casadi_uint y_d_addr;\n');
+    fprintf(fid, '    casadi_uint in_init_guess_addr;\n');
+    fprintf(fid, '    casadi_uint out_init_guess_addr;\n');
+    fprintf(fid, '    casadi_uint in_param_weight_addr;\n');
     fprintf(fid, '    const casadi_real* param_weight;\n');
-    fprintf(fid, '    uint32_t param_weight_len;\n');
+    fprintf(fid, '    casadi_uint param_weight_len;\n');
     fprintf(fid, '    CasadiFunPtr_t casadi_fun;\n');
     fprintf(fid, '    const casadi_real** arg;\n');
     fprintf(fid, '    casadi_real** res;\n');
     fprintf(fid, '    casadi_int* iw;\n');
     fprintf(fid, '    casadi_real* w;\n');
-    fprintf(fid, '    casadi_real* u_opt;\n');
-    fprintf(fid, '    const uint32_t* arg_indices;\n');
-    fprintf(fid, '    const uint32_t* res_indices;\n');
-    fprintf(fid, '    uint32_t arg_in_len;\n');
-    fprintf(fid, '    uint32_t res_out_len;\n');
-    fprintf(fid, '    uint32_t u_opt_len;\n');
-    fprintf(fid, '    uint32_t w_end_addr;\n');
-    fprintf(fid, '    uint32_t u_opt_addr;\n');
+    fprintf(fid, '    const casadi_uint* arg_indices;\n');
+    fprintf(fid, '    const casadi_uint* res_indices;\n');
+    fprintf(fid, '    casadi_uint arg_in_len;\n');
+    fprintf(fid, '    casadi_uint res_out_len;\n');
+    fprintf(fid, '    casadi_uint u_opt_len;\n');
+    fprintf(fid, '    casadi_uint w_end_addr;\n');
+    fprintf(fid, '    casadi_uint u_opt_addr;\n');
     fprintf(fid, '    int mem;\n');
     fprintf(fid, '} %s_t;\n\n', structName);
 

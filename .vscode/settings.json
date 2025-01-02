@@ -100,7 +100,11 @@
     "mpc11_addressdef.h": "c",
     "core": "cpp",
     "*.txx": "cpp",
-    "specialfunctions": "cpp"
+    "specialfunctions": "cpp",
+    "*.ipp": "cpp",
+    "param_robot.h": "c",
+    "dense": "cpp",
+    "eigenvalues": "cpp"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",
@@ -162,18 +166,21 @@
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "terminal.integrated.inheritEnv": true,
   "debug.runConfiguration": "Run Without Debugging",
-  "terminal.integrated.profiles.linux": {
-    "bash": {
-      "path": "/bin/bash",
-      "icon": "terminal-bash",
-      "args": [
-        "-l"
-      ]
-    }
-  },
+  // "terminal.integrated.profiles.linux": {
+  //   "bash": {
+  //     "path": "/bin/bash",
+  //     "icon": "terminal-bash",
+  //     "args": [
+  //       "-l"
+  //     ]
+  //   }
+  // },
   "cmake.ignoreCMakeListsMissing": true,
-  "terminal.integrated.env.linux": {
-    "PYTHONPATH": ""
+  // "terminal.integrated.env.linux": {
+  //   "PYTHONPATH": ""
+  // },
+  "cmake.environment": {
+    "CLICOLOR_FORCE": "1"
   },
-  "python.terminal.activateEnvironment": false
+  "python.terminal.activateEnvironment": false,
 }

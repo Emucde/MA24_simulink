@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Default to debug build
+export CLICOLOR_FORCE=1
+export CMAKE_COLOR_DIAGNOSTICS=ON
 BUILD_TYPE="debug"
 
 BUILD_CURRENT_FILE=true
@@ -44,11 +46,10 @@ if [[ $BUILD_CURRENT_FILE == true ]]; then
         DEBUG_FLAGS="-g"
     fi
 
-    # Construct the command
+    # Construct the command (slow... use cmake or standalone Makefile instead)
     CMD="/usr/bin/g++-11 -fdiagnostics-color=always $OPT_FLAGS $DEBUG_FLAGS
-        -Wl,-rpath=$masterdir/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles
-        $masterdir/main_ros2/read_bin_data/*.cpp
-        $masterdir/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/MPC*_param.c
+        -Wl,-rpath,$masterdir/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles
+        $masterdir/main_ros2/read_bin_data/*.cpp $masterdir/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/*_param.c $masterdir/main_ros2/read_bin_data/src/*.cpp
         -I $_colcon_cd_root/include
         -I $eigen_path
         -I $casadi_path/include
@@ -56,6 +57,7 @@ if [[ $BUILD_CURRENT_FILE == true ]]; then
         -L $casadi_path
         -L $masterdir/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles
         $(pkg-config --cflags --libs pinocchio)
+        -I $masterdir/main_ros2/read_bin_data/include
         -lMPC01 -lMPC6 -lMPC7 -lMPC8 -lMPC9 -lMPC10 -lMPC11 -lMPC12 -lMPC13 -lMPC14 -lcasadi
         -o $masterdir/main_ros2/read_bin_data/main"
 
@@ -68,7 +70,8 @@ if [[ $BUILD_CURRENT_FILE == true ]]; then
 else
     # Use makefile to build
     echo "Building using makefile..."
-    make BUILD_TYPE=$BUILD_TYPE -j8
+    # make BUILD_TYPE=$BUILD_TYPE -j8
+    cmake --build ./build -j8
     BUILD_STATUS=$?
 fi
 
@@ -78,7 +81,8 @@ if [ $BUILD_STATUS -eq 0 ]; then
     # If the build was successful and it's a release build, run the executable
     if [ "$BUILD_TYPE" = "release" ]; then
         echo -e "Running the executable...\n----------------------------------\n"
-        $masterdir/main_ros2/read_bin_data/bin/$BUILD_TYPE/main
+        # $masterdir/main_ros2/read_bin_data/bin/$BUILD_TYPE/main
+        $masterdir/main_ros2/read_bin_data/build/bin/main
         echo -e "\n----------------------------------\n"
     fi
 else

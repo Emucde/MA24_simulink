@@ -29,7 +29,11 @@ elseif(strcmp(robot_name, 'fr3_6dof') || strcmp(robot_name, 'fr3_no_hand_6dof'))
         fr3.param.n_indices_fixed = 3; % joint 3 fixed to zero
     end
 
-    fr3.param.n_indices = setdiff(1:n, fr3.param.n_indices_fixed); % joint 3 fixed to zero
+    fr3.param.n_x_indices_fixed = [fr3.param.n_indices_fixed, fr3.param.n_indices_fixed + n];
+    
+    fr3.param.n_indices   = setdiff(fr3.param.n_indices,   fr3.param.n_indices_fixed); % joint 3 fixed to zero
+    fr3.param.n_x_indices = setdiff(fr3.param.n_x_indices, fr3.param.n_x_indices_fixed );
+    
     
     n_red = length(fr3.param.n_indices);
     fr3.param.n_red = n_red;
@@ -51,7 +55,9 @@ else
 end
 
 n_indices = param_robot.n_indices;
+n_x_indices = param_robot.n_x_indices;
 n_indices_fixed = setdiff(1:n, n_indices);
+n_x_indices_fixed = setdiff(1:2*n, n_x_indices);
 
 if(max(n_indices_fixed) > n)
     error('Fixed joint index exceeds number of joints!');

@@ -3,22 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <memory>         // for std::make_unique
-#include "casadi_types.h" // Include for casadi types
-#include "MPC8.h"
-#include "MPC8_addressdef.h"
-#include "param_robot.h"
-
-#include "MPC01_param.h" // version: 'v1'
-#include "MPC6_param.h"  // version: 'v3_quat'
-#include "MPC7_param.h"  // version: 'v3_rpy'
-#include "MPC8_param.h"  // version: 'v4_kin_int'
-#include "MPC9_param.h"  // version: 'v4_kin_int_refsys'
-#include "MPC10_param.h" // version: 'v5_kin_dev'
-#include "MPC11_param.h" // version: 'v6_kin_int_path_following'
-#include "MPC12_param.h" // version: 'v7_kin_int_planner'
-#include "MPC13_param.h" // version: 'v8_kin_dev_planner'
-#include "MPC14_param.h" // version: 'v6_kin_dev_path_following'
+#include <memory> // for std::make_unique
 
 mpc_config_t invalid_config()
 {
@@ -26,7 +11,9 @@ mpc_config_t invalid_config()
         0,       // n_dof
         0,       // n_red
         nullptr, // n_indices
+        nullptr, // n_x_indices
         nullptr, // n_indices_fixed
+        nullptr, // n_x_indices_fixed
         nullptr, // x0_init_path
         nullptr, // init_guess_path
         nullptr, // traj_data_path
@@ -47,7 +34,6 @@ mpc_config_t invalid_config()
         nullptr, // res
         nullptr, // iw
         nullptr, // w
-        nullptr, // u_opt
         nullptr, // arg_indices
         nullptr, // res_indices
         0,       // arg_in_len
@@ -71,76 +57,59 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name) : mpc_name(mpc_name),
                                                                                                       : mpc_name == "MPC13"  ? get_MPC13_config()
                                                                                                       : mpc_name == "MPC14"  ? get_MPC14_config()
                                                                                                                              : invalid_config()),
+                                                    nq(mpc_config.n_dof), nx(2*mpc_config.n_dof),nq_red(mpc_config.n_red), nx_red(2*mpc_config.n_red),
+                                                    casadi_fun(mpc_config.casadi_fun),
+                                                    arg(mpc_config.arg), res(mpc_config.res), iw(mpc_config.iw), w(mpc_config.w),
+                                                    u_opt(w + mpc_config.u_opt_addr), w_end(w + mpc_config.w_end_addr),
+                                                    in_init_guess(w + mpc_config.in_init_guess_addr),
+                                                    out_init_guess(w + mpc_config.out_init_guess_addr),
+                                                    x_k(w + mpc_config.x_k_addr),
+                                                    y_d(w + mpc_config.y_d_addr),
+                                                    param_weight(w + mpc_config.in_param_weight_addr),
+                                                    traj_data_real_len(mpc_config.traj_data_real_len),
                                                     mpc_traj_indices(mpc_config.traj_indices),
                                                     horizon_len(mpc_config.traj_data_per_horizon),
+                                                    init_guess_len(mpc_config.init_guess_len),
                                                     traj_file(mpc_config.traj_data_path),
                                                     traj_data_per_horizon(mpc_config.traj_data_per_horizon),
-                                                    init_guess_len(mpc_config.init_guess_len),
-                                                    n_dof(mpc_config.n_dof), n_red(mpc_config.n_red),
-                                                    traj_select(1), traj_count(0)
+                                                    n_indices(mpc_config.n_indices),
+                                                    n_x_indices(mpc_config.n_x_indices),
+                                                    n_indices_fixed(mpc_config.n_indices_fixed),
+                                                    n_x_indices_fixed(mpc_config.n_x_indices_fixed),
+                                                    traj_count(0), traj_select(1), mem(mpc_config.mem)
 {
     // Check if the configuration is valid
     if (mpc_config.casadi_fun == nullptr)
     {
-        throw std::runtime_error(mpc_name + "is not a valid MPC name. Implemented: MPC8");
+        throw std::runtime_error(mpc_name + "is not a valid MPC name. Use one of the following: MPC01, MPC6, MPC7, MPC8, MPC9, MPC10, MPC11, MPC12, MPC13, MPC14");
     }
 
-    // Set the pointers
-    w = mpc_config.w;
-    arg = mpc_config.arg;
-    res = mpc_config.res;
-    iw = mpc_config.iw;
-    u_opt = mpc_config.u_opt;
-    mem = mpc_config.mem;
-    casadi_fun = mpc_config.casadi_fun;
-
     // Initialize arg with pointers based on provided indices
-    for (int i = 0; i < mpc_config.arg_in_len; i++)
+    for (casadi_uint i = 0; i < mpc_config.arg_in_len; i++)
     {
         arg[i] = w + mpc_config.arg_indices[i]; // Use each index from arg_indices
     }
 
     // Initialize res with pointers based on provided indices
-    for (int i = 0; i < mpc_config.res_out_len; i++)
+    for (casadi_uint i = 0; i < mpc_config.res_out_len; i++)
     {
         res[i] = w + mpc_config.res_indices[i]; // Use each index from res_indices
     }
-
-    u_opt = w + mpc_config.u_opt_addr; // Set u_opt to the address at u_opt_addr_len
-    w_end = w + mpc_config.w_end_addr; // Set w_end to the address at w_end_addr_len
-
-    // Set the addresses of initial guess, x_k, y_d, and parameter weights
-    in_init_guess = w + mpc_config.in_init_guess_addr;
-    out_init_guess = w + mpc_config.out_init_guess_addr;
-    x_k = w + mpc_config.x_k_addr;
-    y_d = w + mpc_config.y_d_addr;
-    param_weight = w + mpc_config.in_param_weight_addr;
-
-    // Set real trajectory length
-    traj_data_real_len = mpc_config.traj_data_real_len;
 
     // read first initial guess from file
     load_initial_guess(mpc_config.init_guess_path, in_init_guess);
 
     // read first x0 from file
-    double x_k_ndof[n_dof] = {0};
-    read_x0_init(mpc_config.x0_init_path, x_k_ndof);
+    x_ref_nq.resize(nx);
+    read_x0_init(mpc_config.x0_init_path, x_ref_nq.data());
 
     // Copy the initial state
-
-    uint32_t n_x_indices[2 * n_red] = {0};
-    for (int i = 0; i < n_red; i++)
-    {
-        n_x_indices[i] = mpc_config.n_indices[i];
-        n_x_indices[i + mpc_config.n_red] = n_dof + mpc_config.n_indices[i];
-    }
-
     int cnt = 0;
-    for (int i = 0; i < n_dof; i++)
+    for (casadi_uint i = 0; i < nx; i++)
     {
-        if (i == mpc_config.n_indices[cnt])
+        if (i == mpc_config.n_x_indices[cnt])
         {
-            x_k[cnt] = x_k_ndof[i];
+            x_k[cnt] = x_ref_nq[i];
             cnt++;
         }
     }
@@ -188,15 +157,30 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name) : mpc_name(mpc_name),
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 
-// Method to output the optimal control
-void CasadiMPC::get_optimal_control(casadi_real *&u_opt_out, int &u_opt_len)
+// Method to run the MPC
+int CasadiMPC::solve(casadi_real *x_k_in)
 {
-    u_opt_out = u_opt;
-    u_opt_len = mpc_config.u_opt_len;
+    // Copy the initial state
+    memcpy(x_k, x_k_in, nx_red * sizeof(casadi_real));
+
+    // Call the Casadi function
+    int flag = casadi_fun(arg, res, iw, w_end, mem);
+
+    // Read the next trajectory block
+    if (!flag)
+    {
+        read_trajectory_block();
+        memcpy(in_init_guess, out_init_guess, init_guess_len * sizeof(casadi_real));
+    }
+    else
+    {
+        std::cerr << "Error in Casadi function call." << std::endl;
+    }
+
+    return flag;
 }
 
-// Method to run the MPC
-int CasadiMPC::solve()
+int CasadiMPC::solve() // only for testing
 {
     // Call the Casadi function
     int flag = casadi_fun(arg, res, iw, w_end, mem);
@@ -207,8 +191,20 @@ int CasadiMPC::solve()
         read_trajectory_block();
         memcpy(in_init_guess, out_init_guess, init_guess_len * sizeof(casadi_real));
 
-        // simulation: use x_k+1 as x_k for next iteration
-        memcpy(x_k, u_opt + n_red, n_red * sizeof(casadi_real));
+        // mpc planner: use x_k+1 as x_k for next iteration - not the measurement!
+        memcpy(x_k, u_opt + nq_red, nx_red * sizeof(casadi_real));
+#ifdef DEBUG
+        if (traj_count % 100 == 0)
+        {
+            std::cout << "x_k: " << x_k[0] << " " << x_k[1] << " " << x_k[2] << " " << x_k[3] << " " << x_k[4] << " " << x_k[5] << " " << x_k[6] << std::endl;
+
+            for (int i = 0; i < 24; i++)
+            {
+                std::cout << u_opt[i] << " ";
+            }
+            std::cout << std::endl;
+        }
+#endif
     }
     else
     {
@@ -218,10 +214,68 @@ int CasadiMPC::solve()
     return flag;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////// GETTER METHODS ////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+
+// Method to output the optimal control
+casadi_real *CasadiMPC::get_optimal_control()
+{
+    return u_opt;
+}
+
+casadi_real *CasadiMPC::get_x0()
+{
+    return x_k;
+}
+
 // Method to get the length of the trajectory data
-uint32_t CasadiMPC::get_traj_data_len()
+casadi_uint CasadiMPC::get_traj_data_len()
 {
     return traj_data_real_len;
+}
+
+// Method to get n_indices
+const casadi_uint *CasadiMPC::get_n_indices()
+{
+    return n_indices;
+}
+
+// Method to get n_x_indices
+const casadi_uint *CasadiMPC::get_n_x_indices()
+{
+    return n_x_indices;
+}
+
+// Method to get n_indices_fixed
+const casadi_uint *CasadiMPC::get_n_indices_fixed()
+{
+    return n_indices_fixed;
+}
+
+// Method to get n_x_indices_fixed
+const casadi_uint *CasadiMPC::get_n_x_indices_fixed()
+{
+    return n_x_indices_fixed;
+}
+
+// Method to get x_ref_nq
+const std::vector<casadi_real> &CasadiMPC::get_x_ref_nq()
+{
+    return x_ref_nq;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////// SETTER METHODS ////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+
+void CasadiMPC::set_x0(casadi_real *x0_in)
+{
+    memcpy(x_k, x0_in, nx_red * sizeof(casadi_real));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -328,7 +382,7 @@ void CasadiMPC::read_trajectory_block()
     // Set the file pointer to the starting position
     file.seekg(traj_data_startbyte);
 
-    for (uint32_t j = 0; j < traj_data_per_horizon; j++)
+    for (casadi_uint j = 0; j < traj_data_per_horizon; j++)
     {
         // Move the read position according to mpc_traj_indices[j]
         file.seekg((traj_count + mpc_traj_indices[j]) * traj_rows * sizeof(double), std::ios::cur);
@@ -350,6 +404,14 @@ void CasadiMPC::read_trajectory_block()
     {
         traj_count++;
     }
+#ifdef DEBUG
+    for (int i = 0; i < traj_data_per_horizon * traj_rows; i++)
+    {
+        std::cout << y_d[i] << " ";
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
+#endif
     file.close();
 }
 
@@ -364,7 +426,7 @@ void CasadiMPC::read_x0_init(const std::string &x0_init_file, casadi_real *x0_ar
     }
 
     // Read dimensions
-    uint32_t rows, cols;
+    casadi_uint rows, cols;
     file.read(reinterpret_cast<char *>(&rows), sizeof(rows));
     file.read(reinterpret_cast<char *>(&cols), sizeof(cols));
 

@@ -1,34 +1,81 @@
 #ifndef CASADIMPC_HPP
 #define CASADIMPC_HPP
 
-#include <vector>
 #include <iostream>
 #include "mpc_config.h"
-#include <memory>
+#include "casadi_types.h" // Include for casadi types
+#include <vector>
+#include "MPC8.h"
+#include "MPC8_addressdef.h"
+#include "param_robot.h"
+#include "MPC01_param.h" // version: 'v1'
+#include "MPC6_param.h"  // version: 'v3_quat'
+#include "MPC7_param.h"  // version: 'v3_rpy'
+#include "MPC8_param.h"  // version: 'v4_kin_int'
+#include "MPC9_param.h"  // version: 'v4_kin_int_refsys'
+#include "MPC10_param.h" // version: 'v5_kin_dev'
+#include "MPC11_param.h" // version: 'v6_kin_int_path_following'
+#include "MPC12_param.h" // version: 'v7_kin_int_planner'
+#include "MPC13_param.h" // version: 'v8_kin_dev_planner'
+#include "MPC14_param.h" // version: 'v6_kin_dev_path_following'
 
 // #define DEBUG 1
 
 class CasadiMPC
 {
+private:
+    const std::string mpc_name; // MPC name
+    mpc_config_t mpc_config;
+
 public:
+    const uint32_t nq;                    // Number of degrees of freedom
+    const uint32_t nx;                    // Number of reduced degrees of freedom
+    const uint32_t nq_red;                // Number of reduced degrees of freedom
+    const uint32_t nx_red;                // Number of reduced degrees of freedom
+
     // Constructor that accepts parameters for configuration
     CasadiMPC(const std::string &mpc_name);
 
     // // Method to initialize and run the MPC
-    int solve();
+    int solve(casadi_real *x_k_in); // closed loop mpc
+
+    int solve(); // mpc planner: open loop mpc
+
+    ///////////////////////// GETTER METHODS /////////////////////////
 
     // Method to output the optimal control
-    void get_optimal_control(casadi_real *&u_opt_out, int &u_opt_len);
+    casadi_real *get_optimal_control();
+
+    // Method to output the initial state
+    casadi_real * get_x0();
 
     // Method to get the length of the trajectory data
     uint32_t get_traj_data_len();
 
-    // Destructor
+    // Method to get n_indices
+    const uint32_t *get_n_indices();
+
+    // Method to get n_x_indices
+    const uint32_t *get_n_x_indices();
+
+    // Method to get n_indices_fixed
+    const uint32_t *get_n_indices_fixed();
+
+    // Method to get n_x_indices_fixed
+    const uint32_t *get_n_x_indices_fixed();
+
+    // Method to get x_ref_nq
+    const std::vector<casadi_real> &get_x_ref_nq();
+
+    ///////////////////////// SETTER METHODS /////////////////////////
+
+    // Method to set the initial state
+    void set_x0(casadi_real *x0_in);
+
+    ///////////////////////// DESTRUCTOR /////////////////////////
     ~CasadiMPC();
 
 private:
-    const std::string mpc_name; // MPC name
-    mpc_config_t mpc_config;
     CasadiFunPtr_t casadi_fun;            // MPC Function pointer
     const casadi_real **arg;              // Pointer to arguments
     casadi_real **res;                    // Pointer to results
@@ -51,11 +98,14 @@ private:
     const uint32_t init_guess_len;        // Needed trajectory samples in a prediction horizon.
     const std::string traj_file;          // Path to trajectory data file
     const uint32_t traj_data_per_horizon; // Trajectory data per horizon
-    const uint32_t n_dof;                 // Number of degrees of freedom
-    const uint32_t n_red;                 // Number of reduced degrees of freedom
+    const uint32_t *n_indices;            // Indices of reduced degrees of freedom for q
+    const uint32_t *n_x_indices;          // Indices of reduced degrees of freedom for x
+    const uint32_t *n_indices_fixed;      // Indices of fixed degrees of freedom for q
+    const uint32_t *n_x_indices_fixed;    // Indices of fixed degrees of freedom for x
     int traj_count;                       // Trajectory count
     int traj_select;                      // Trajectory selection
     int mem;                              // Memory
+    std::vector<casadi_real> x_ref_nq;         // Reference state
 
     void read_file(std::ifstream &file, std::streampos data_start, casadi_real *data, int data_len);
     int load_initial_guess(const std::string &init_guess_path, casadi_real *init_guess_data);

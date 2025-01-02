@@ -8,7 +8,6 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
 #include "casadi_types.h"
 
 #define PARAM_ROBOT_N_DOF 7
@@ -154,10 +153,12 @@ static const casadi_real PARAM_ROBOT_R_0[] = {1,0,0,0,1,0,0,0,1};
 #define PARAM_ROBOT_I_FINGER_YZ 0
 #define PARAM_ROBOT_I_FINGER_ZZ 7.5e-07
 static const casadi_real PARAM_ROBOT_SUGIHARA_LIMB_VECTOR[] = {1.108890e-01,9.985600e-02,6.806250e-03,1.474560e-01,7.744000e-03,1.144900e-02,1.069156e-02};
-static const uint32_t PARAM_ROBOT_YT_INDICES[] = {0,1,2};
-static const uint32_t PARAM_ROBOT_YR_INDICES[] = {0,1,2};
-static const uint32_t PARAM_ROBOT_N_INDICES_FIXED[] = {2};
-static const uint32_t PARAM_ROBOT_N_INDICES[] = {0,1,3,4,5,6};
+static const casadi_uint PARAM_ROBOT_YT_INDICES[] = {0,1,2};
+static const casadi_uint PARAM_ROBOT_YR_INDICES[] = {0,1,2};
+static const casadi_uint PARAM_ROBOT_N_INDICES_FIXED[] = {2};
+static const casadi_uint PARAM_ROBOT_N_X_INDICES_FIXED[] = {2,9};
+static const casadi_uint PARAM_ROBOT_N_INDICES[] = {0,1,3,4,5,6};
+static const casadi_uint PARAM_ROBOT_N_X_INDICES[] = {0,1,3,4,5,6,7,8,10,11,12,13};
 #define PARAM_ROBOT_N_RED 6
 
 #ifdef __cplusplus

@@ -170,6 +170,8 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
     fprintf(fid, 'extern "C" {\n');
     fprintf(fid, '#endif\n\n');
 
+    fprintf(fid, '#include "casadi_types.h"\n\n');
+
     % Write the #define statements
     for i = 1:length(data2save)
         mpc_define_name = [casadi_fun_name, '_', define_names{i}];
@@ -177,7 +179,7 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
             fprintf(fid, '#define %s %d\n', mpc_define_name, data2save{i});
         else
             % For arrays (arg and res)
-            fprintf(fid, 'static const uint32_t %s[] = {', mpc_define_name);
+            fprintf(fid, 'static const casadi_uint %s[] = {', mpc_define_name);
             fprintf(fid, '%d,', data2save{i}(1:end-1));
             fprintf(fid, '%d};\n', data2save{i}(end));
         end

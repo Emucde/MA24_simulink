@@ -22,6 +22,8 @@ function generate_casadi_types(filename)
     fprintf(fid, 'extern "C" {\n');
     fprintf(fid, '#endif\n\n');
 
+    fprintf(fid, '#include <stdint.h>\n\n');
+
     % Write the content to the header file
     fprintf(fid, '#ifndef Inf\n');
     fprintf(fid, '#define Inf INFINITY\n');
@@ -33,7 +35,11 @@ function generate_casadi_types(filename)
 
     fprintf(fid, '#ifndef casadi_int\n');
     fprintf(fid, '#define casadi_int long long int\n');
-    fprintf(fid, '#endif\n');
+    fprintf(fid, '#endif\n\n');
+
+    fprintf(fid, '#ifndef casadi_uint\n');
+    fprintf(fid, '#define casadi_uint uint32_t\n');
+    fprintf(fid, '#endif\n\n');
 
     % create function pointer
     % typedef int (*CasadiFunPtr_t)(const casadi_real **arg, casadi_real **res, casadi_int *iw, casadi_real *w, int mem);

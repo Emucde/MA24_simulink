@@ -1,6 +1,6 @@
 #include "pinocchio_utils.hpp" // Assuming this is in the same directory
 
-using namespace pinocchio_utils;
+namespace pinocchio_utils {
 
 // Function to calculate n-DOF torque with feedforward
 Eigen::VectorXd calculateNdofTorqueWithFeedforward(const Eigen::VectorXd &u, 
@@ -8,7 +8,7 @@ Eigen::VectorXd calculateNdofTorqueWithFeedforward(const Eigen::VectorXd &u,
     const pinocchio::Model &robot_model_full, 
     pinocchio::Data &robot_data_full, 
     int n, 
-    const std::vector<int> &n_indices, 
+    const Eigen::Map<Eigen::VectorXi> &n_indices, 
     bool kin_model) {
     
     Eigen::VectorXd q = x_k_ndof.head(n);
@@ -48,4 +48,20 @@ Eigen::VectorXd applyPDControl(const Eigen::VectorXd &q_fixed,
     return -K_d_fixed * (q_fixed - q_0_ref_fixed) - D_d_fixed * q_p_fixed;
 }
 
-std::pair<pinocchio::Model, pinocchio::Data> initRobot(const std::string &urdf_filename);
+void initRobot(const std::string &urdf_filename, pinocchio::Model &robot_model, pinocchio::Data &robot_data, bool use_gravity)
+{
+    // Load the URDF file into the robot model
+    pinocchio::urdf::buildModel(urdf_filename, robot_model);
+
+    // Initialize the corresponding data structure
+    robot_data = pinocchio::Data(robot_model);
+
+    if (use_gravity) {
+        robot_model.gravity.linear() << 0.0, 0.0, -9.81;
+    } else {
+        robot_model.gravity.linear() << 0.0, 0.0, 0.0;
+    }
+
+}
+
+} // namespace pinocchio_utils

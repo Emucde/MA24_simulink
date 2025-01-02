@@ -35,6 +35,9 @@ cmake -j4 ..
 # optional: change optimization flag:
 add_compile_options(-O3)    # Adds optimization level 3
 
+# Way 3.2 Faster: use
+cmake --build . -j8
+
 ----------------------------------------------------------------
 # Way4: Use cmake and ninja
 

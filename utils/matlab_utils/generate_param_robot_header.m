@@ -18,7 +18,6 @@ function generate_param_robot_header(filepath, param_robot)
     fprintf(fid, '#endif\n\n');
 
     % Include necessary headers
-    fprintf(fid, '#include <stdint.h>\n');
     fprintf(fid, '#include "casadi_types.h"\n\n');
 
     field_names = fieldnames(param_robot);
@@ -27,7 +26,7 @@ function generate_param_robot_header(filepath, param_robot)
         field_data = param_robot.(field);
         if isscalar(field_data) && (isnumeric(field_data) || islogical(field_data))
             if(contains(field, 'indices'))
-                fprintf(fid, 'static const uint32_t %s_%s[] = {%d};\n', func_name, upper(field), field_data-1); % matlab starts from 1, C from 0
+                fprintf(fid, 'static const casadi_uint %s_%s[] = {%d};\n', func_name, upper(field), field_data-1); % matlab starts from 1, C from 0
             else
                 fprintf(fid, '#define %s_%s %g\n', func_name, upper(field), field_data);
             end
@@ -36,7 +35,7 @@ function generate_param_robot_header(filepath, param_robot)
         elseif ismatrix(field_data)
             if contains(field, 'indices')
                 field_data = field_data - 1; % matlab starts from 1, C from 0
-                fprintf(fid, 'static const uint32_t %s_%s[] = {', func_name, upper(field));
+                fprintf(fid, 'static const casadi_uint %s_%s[] = {', func_name, upper(field));
             else
                 fprintf(fid, 'static const casadi_real %s_%s[] = {', func_name, upper(field));
             end

@@ -21,7 +21,6 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '#endif\n\n');
 
     % Include necessary headers
-    fprintf(fid, '#include <stdint.h>\n');
     fprintf(fid, '#include <math.h>\n');
     fprintf(fid, '#include "casadi_types.h"\n');
     fprintf(fid, '#include "mpc_config.h"\n\n');
@@ -67,7 +66,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
             if strcmp(field, 'int_times')
                 fprintf(fid, 'static const casadi_real %s_%s[] = {', func_name, upper(field));
             else
-                fprintf(fid, 'static const uint32_t %s_%s[] = {', func_name, upper(field));
+                fprintf(fid, 'static const casadi_uint %s_%s[] = {', func_name, upper(field));
             end
             fprintf(fid, '%d,', field_data(1:end-1));
             fprintf(fid, '%d};\n', field_data(end));
@@ -112,6 +111,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '#include "mpc_config.h"\n');
     fprintf(fid, ['#include "', func_name, '_addressdef.h"\n']);
     fprintf(fid, '#include "%s.h"\n', func_name);
+    fprintf(fid, '#include "casadi_types.h"\n');
     fprintf(fid, '#include "param_robot.h"\n\n');
 
     % create function that returns a mpc_config_t struct
@@ -123,7 +123,6 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '    static casadi_real* res[%s_RES_LEN];\n', func_name);
     fprintf(fid, '    static casadi_int iw[%s_IW_LEN];\n', func_name);
     fprintf(fid, '    static casadi_real w[%s_W_LEN];\n', func_name);
-    fprintf(fid, '    static casadi_real u_opt[%s_U_OPT_LEN] = {0};\n\n', func_name);
     fprintf(fid, '    // default parameter values, taken from ./utils/matlab_init_general/init_MPC_weights.m\n'); 
     % generate default parameter values
         % Get field names
@@ -180,7 +179,9 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '       .n_dof = PARAM_ROBOT_N_DOF,\n');
     fprintf(fid, '       .n_red = PARAM_ROBOT_N_RED,\n');
     fprintf(fid, '       .n_indices = PARAM_ROBOT_N_INDICES,\n');
+    fprintf(fid, '       .n_x_indices = PARAM_ROBOT_N_X_INDICES,\n');
     fprintf(fid, '       .n_indices_fixed = PARAM_ROBOT_N_INDICES_FIXED,\n');
+    fprintf(fid, '       .n_x_indices_fixed = PARAM_ROBOT_N_X_INDICES_FIXED,\n');
     fprintf(fid, '       .x0_init_path = X0_INIT_PATH,\n');
     fprintf(fid, '       .init_guess_path = %s_INIT_GUESS_PATH,\n', func_name);
     fprintf(fid, '       .traj_data_path = TRAJ_DATA_PATH,\n');
@@ -209,7 +210,6 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '       .res = res,\n');
     fprintf(fid, '       .iw = iw,\n');
     fprintf(fid, '       .w = w,\n');
-    fprintf(fid, '       .u_opt = u_opt,\n');
     fprintf(fid, '       .arg_indices = %s_ARG,\n', func_name);
     fprintf(fid, '       .res_indices = %s_RES,\n', func_name);
     fprintf(fid, '       .arg_in_len = %s_ARG_IN_LEN,\n', func_name);

@@ -530,4 +530,6 @@ fr3.param.yr_indices = [1 2 3]; % [1 2 3] use x, y, z error of quaternion
 
 % Default: use all available joints
 fr3.param.n_indices_fixed = [];
+fr3.param.n_x_indices_fixed = [];
 fr3.param.n_indices = 1:n;
+fr3.param.n_x_indices = 1:2*n;
