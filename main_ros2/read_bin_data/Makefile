@@ -36,14 +36,19 @@ CXXFLAGS += $(OPT_FLAGS) $(DEBUG_FLAGS) $(INCLUDES)
 SRC_CPP = $(wildcard $(MASTERDIR)/main_ros2/read_bin_data/*.cpp)
 SRC_C = $(wildcard $(MASTERDIR)/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/MPC*_param.c)
 
+# Automatically convert source files to object files
+OBJ_CPP = $(SRC_CPP:.cpp=.o)
+OBJ_C = $(SRC_C:.c=.o)
+
 # Output binary
 TARGET = $(OUT_DIR)/main
 
 # Default target
-release: $(TARGET)
-debug: $(TARGET)
+.PHONY: all clean
 
-$(TARGET): $(SRC_CPP) $(SRC_C)
+all: $(TARGET)
+
+$(TARGET): $(OBJ_CPP) $(OBJ_C)
 	@echo "Building in $(BUILD_TYPE) mode..."
 	@mkdir -p $(OUT_DIR)  # Ensure output directory exists
 	@if /usr/bin/time -f "\nBuild Statistics:\n\
@@ -52,35 +57,23 @@ $(TARGET): $(SRC_CPP) $(SRC_C)
 	Elapsed time: %e seconds\n\
 	CPU usage: %P\n\
 	Max memory usage: %M KB" \
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ $(LIBS) -o $@; then \
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS); then \
 		echo "\033[32mBuild completed successfully!\033[0m"; \
 	else \
 		echo "\033[31mBuild failed.\033[0m"; \
 		exit 1; \
 	fi
 
+# Rules for building object files
+$(OUT_DIR)/%.o: $(MASTERDIR)/main_ros2/read_bin_data/%.cpp
+	@mkdir -p $(OUT_DIR)  # Ensure output directory exists
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -c $< -o $@
+
+$(OUT_DIR)/%.o: $(MASTERDIR)/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/%.c
+	@mkdir -p $(OUT_DIR)  # Ensure output directory exists
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -c $< -o $@
+
 # Clean up build artifacts
 clean:
 	@echo "Cleaning up..."
 	@rm -rf $(RELEASE_DIR) $(DEBUG_DIR)
-
-# # Run the target if build type is release
-# run: $(TARGET)
-# 	@if [ "$(BUILD_TYPE)" = "release" ]; then \
-# 		echo "Running the executable..."; \
-# 		echo "----------------------------------"; \
-# 		$(TARGET); \
-# 		echo "----------------------------------"; \
-# 	fi
-
-# # Parse command line arguments for build type
-# parse_args:
-# 	@for arg in $(MAKECMDGOALS); do \
-# 		if [ "$$arg" = "-r" ] || [ "$$arg" = "--release" ]; then \
-# 			$(eval BUILD_TYPE := release) \
-# 		elif [ "$$arg" = "-d" ] || [ "$$arg" = "--debug" ]; then \
-# 			$(eval BUILD_TYPE := debug) \
-# 		fi; \
-# 	done
-
-.PHONY: all clean run parse_args

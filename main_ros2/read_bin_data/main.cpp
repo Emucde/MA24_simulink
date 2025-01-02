@@ -3,11 +3,7 @@
 #include <vector>
 #include <cstring> // for memcpy
 
-#include <pinocchio/parsers/urdf.hpp>
-
-#include <pinocchio/algorithm/joint-configuration.hpp>
-#include <pinocchio/algorithm/kinematics.hpp>
-
+// #include "include/pinocchio_utils.hpp" // Assuming this is in the same directory
 #include "CasadiMPC.hpp"
 
 // includes for time measurement
@@ -25,31 +21,7 @@ int main()
 
     const std::string urdf_filename = "../../urdf_creation/fr3_no_hand_7dof.urdf";
 
-    pinocchio::Model robot_model;
-
-    // Load the URDF model
-    pinocchio::urdf::buildModel(urdf_filename, robot_model);
-
-    // Create data structure for robot_model
-    pinocchio::Data robot_data(robot_model); // Create data structure for robot_model
-    
-    // Number of joint positions, states, inputs
-    int nq = robot_model.nq;
-    int nx = 2 * nq;
-    int nu = nq; // fully actuated
-    
-    std::cout << "robot_model name: " << robot_model.name << std::endl;
-
-    bool use_gravity = true;
-
-    if (use_gravity) {
-        // Set linear motion as gravity (0, 0, -9.81) and angular as (0, 0, 0)
-        robot_model.gravity.linear() << 0.0, 0.0, -9.81; // Linear part
-    } else {
-        robot_model.gravity.linear() << 0.0, 0.0, 0.0; // Linear part should be zero
-    }
-
-    std::cout << robot_model.gravity.linear();
+    // auto [robot_model, robot_data] = initRobot(urdf_filename);
 
     CasadiMPC MPC8_obj = CasadiMPC("MPC8");
 
@@ -59,18 +31,34 @@ int main()
     // measure time
     auto start = std::chrono::high_resolution_clock::now();
 
+    // tau_full = calculateNdofTorqueWithFeedforward(u_k, x_k_ndof, robot_model_full, robot_data_full, n_dof, n_indices, fr3_kin_model);
+
+    // // Use PD control for fixed joints
+    // Eigen::VectorXd q_ndof = x_k_ndof.head(n_dof);
+    // Eigen::VectorXd q_p_ndof = x_k_ndof.tail(n_dof);
+
+    // Eigen::VectorXd q_fixed = q_ndof(n_indices_fixed);
+    // Eigen::VectorXd q_p_fixed = q_p_ndof(n_indices_fixed);
+
+    // Eigen::VectorXd tau_fixed = applyPDControl(q_fixed, q_p_fixed, q_0_ref_fixed, K_d_fixed, D_d_fixed);
+
+    // tau_full(n_indices_fixed) += tau_fixed;
+
+    // xs[i] = x_k_ndof;
+    // us[i] = tau_full;
+
     for (i = 0; i < 1; i++)
     {
         flag = MPC8_obj.solve();
-        // // Get the optimal control
-        // MPC8_obj.get_optimal_control(u_opt_out, u_opt_len);
+        // Get the optimal control
+        MPC8_obj.get_optimal_control(u_opt_out, u_opt_len);
 
-        // // Print the optimal control
-        // std::cout << "Optimal control: ";
-        // for (int i = 0; i < u_opt_len; ++i) {
-        //     std::cout << u_opt_out[i] << " ";
-        // }
-        // std::cout << std::endl;
+        // Print the optimal control
+        std::cout << "Optimal control: ";
+        for (int i = 0; i < u_opt_len; ++i) {
+            std::cout << u_opt_out[i] << " ";
+        }
+        std::cout << std::endl;
     }
 
     // measure time
