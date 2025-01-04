@@ -32,8 +32,11 @@ const casadi_uint PARAM_ROBOT_N_X_INDICES[2*PARAM_ROBOT_N_RED] = {0,1,3,4,5,6,7,
 robot_config_t get_robot_config()
 {
    static robot_config_t Config = {
-       .n_dof = PARAM_ROBOT_N_DOF,
-       .n_red = PARAM_ROBOT_N_RED,
+       .nq = PARAM_ROBOT_N_DOF,
+       .nx = 2*PARAM_ROBOT_N_DOF,
+       .nq_red = PARAM_ROBOT_N_RED,
+       .nx_red = 2*PARAM_ROBOT_N_RED,
+       .nq_fixed = PARAM_ROBOT_N_FIXED,
        .n_indices = PARAM_ROBOT_N_INDICES,
        .n_x_indices = PARAM_ROBOT_N_X_INDICES,
        .n_indices_fixed = PARAM_ROBOT_N_INDICES_FIXED,

@@ -71,8 +71,11 @@ function generate_param_robot_header(filepath, param_robot, func_name)
     % define param_robot struct:
     structName = ['robot_config'];
     fprintf(fid_h, 'typedef struct {\n');
-    fprintf(fid_h, '    const casadi_uint n_dof;\n');
-    fprintf(fid_h, '    const casadi_uint n_red;\n');
+    fprintf(fid_h, '    const casadi_uint nq;\n');
+    fprintf(fid_h, '    const casadi_uint nx;\n');
+    fprintf(fid_h, '    const casadi_uint nq_red;\n');
+    fprintf(fid_h, '    const casadi_uint nx_red;\n');
+    fprintf(fid_h, '    const casadi_uint nq_fixed;\n');
     fprintf(fid_h, '    const casadi_uint* n_indices;\n');
     fprintf(fid_h, '    const casadi_uint* n_x_indices;\n');
     fprintf(fid_h, '    const casadi_uint* n_indices_fixed;\n');
@@ -103,8 +106,11 @@ function generate_param_robot_header(filepath, param_robot, func_name)
     fprintf(fid_c, 'robot_config_t get_%s()\n', structName);
     fprintf(fid_c, '{\n');
     fprintf(fid_c, '   static %s_t Config = {\n', structName);
-    fprintf(fid_c, '       .n_dof = %s_N_DOF,\n', func_name_upper);
-    fprintf(fid_c, '       .n_red = %s_N_RED,\n', func_name_upper);
+    fprintf(fid_c, '       .nq = %s_N_DOF,\n', func_name_upper);
+    fprintf(fid_c, '       .nx = 2*%s_N_DOF,\n', func_name_upper);
+    fprintf(fid_c, '       .nq_red = %s_N_RED,\n', func_name_upper);
+    fprintf(fid_c, '       .nx_red = 2*%s_N_RED,\n', func_name_upper);
+    fprintf(fid_c, '       .nq_fixed = %s_N_FIXED,\n', func_name_upper);
     fprintf(fid_c, '       .n_indices = %s_N_INDICES,\n', func_name_upper);
     fprintf(fid_c, '       .n_x_indices = %s_N_X_INDICES,\n', func_name_upper);
     fprintf(fid_c, '       .n_indices_fixed = %s_N_INDICES_FIXED,\n', func_name_upper);

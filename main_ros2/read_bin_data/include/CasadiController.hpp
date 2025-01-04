@@ -8,36 +8,60 @@
 #include <chrono>
 #include <Eigen/Dense>
 #include "casadi_types.h"
-#include "pinocchio_utils.hpp"
+#include "param_robot.h"
 #include "FullSystemTorqueMapper.hpp"
 #include "CasadiMPC.hpp"
 
-class CasadiController {
+enum class MPCType
+{
+    MPC01,
+    MPC6,
+    MPC7,
+    MPC8,
+    MPC9,
+    MPC10,
+    MPC11,
+    MPC12,
+    MPC13,
+    MPC14,
+    INVALID, // Consider using INVALID for out-of-bounds
+    COUNT    // This can denote the number of valid enum values
+};
+
+class CasadiController
+{
+private:
+    const std::string &urdf_path;       // URDF file path
+    robot_config_t robot_config;        // Robot configuration
+    std::vector<CasadiMPC> casadi_mpcs; // MPC objects
+    MPCType selected_mpc_type;          // Active MPC type
+    CasadiMPC *active_mpc;              // Active MPC object
+
 public:
-    // Constructor with URDF file path and options for gravity and kinematic model
-    CasadiController(const std::string& urdfFilePath, bool useGravity);
+    const casadi_uint nq;     // Number of degrees of freedom
+    const casadi_uint nx;     // Number of reduced degrees of freedom
+    const casadi_uint nq_red; // Number of reduced degrees of freedom
+    const casadi_uint nx_red; // Number of reduced degrees of freedom
+
 
 private:
-    // // Methods for initialization and processing
-    // void setupIndicesAndMaps();
-    // void writeDataToFiles(std::ofstream& x_k_ndof_file, std::ofstream& tau_full_file);
-    // void printCurrentState();
+    const casadi_uint *n_x_indices;
+    FullSystemTorqueMapper torque_mapper; // Torque mapper
+    casadi_real *x_k_ptr;
+    casadi_real *u_k_ptr;
 
-    // // Member variables
-    // bool useGravity;
-    // bool fr3KinematicModel;
-    // std::unordered_map<std::string, CasadiMPC> mpcObjects; // Store all MPC instances
-    // FullSystemTorqueMapper torqueMapper; // Torque mapper object
-    
-    // casadi_real* u_opt; // Optimal control output pointer
-    // casadi_real* x_k; // Current state pointer
-    // unsigned int trajDataLength; // Length of trajectory data
-    // Eigen::VectorXd tau_full; // Output torque vector
-    // Eigen::VectorXd x_k_ndof; // Updated state vector
-    // Eigen::VectorXd x_ref_nq_map; // Reference state vector
-    // Eigen::VectorXd x_k_map; // Current state map
-    // Eigen::Map<Eigen::VectorXi> n_x_indices; // Indices of x_k
-    // std::vector<casadi_real*> x_k_ndof_ptr; // Pointers to elements of x_k_ndof
+public:
+    // Constructor
+    CasadiController(const std::string &urdf_path, bool use_gravity);
+
+    // solve the MPC
+    Eigen::VectorXd solveMPC(casadi_real *x_k_ndof);
+
+    // Getters and setters
+    void setActiveMPC(MPCType mpc);
+private:
+    // Private methods
+    std::string mpcToString(MPCType mpc);
 };
 
 #endif // CASADICONTROLLER_HPP

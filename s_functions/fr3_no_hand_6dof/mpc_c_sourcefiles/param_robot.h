@@ -163,8 +163,11 @@ extern const casadi_uint PARAM_ROBOT_N_INDICES[PARAM_ROBOT_N_RED];
 extern const casadi_uint PARAM_ROBOT_N_X_INDICES[2*PARAM_ROBOT_N_RED];
 
 typedef struct {
-    const casadi_uint n_dof;
-    const casadi_uint n_red;
+    const casadi_uint nq;
+    const casadi_uint nx;
+    const casadi_uint nq_red;
+    const casadi_uint nx_red;
+    const casadi_uint nq_fixed;
     const casadi_uint* n_indices;
     const casadi_uint* n_x_indices;
     const casadi_uint* n_indices_fixed;

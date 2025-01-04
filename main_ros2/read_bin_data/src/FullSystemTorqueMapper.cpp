@@ -1,29 +1,25 @@
 #include "FullSystemTorqueMapper.hpp"
+#include "eigen_templates.hpp"
 
 FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
-                                               CasadiMPC &mpc_obj, bool use_gravity)
+                                               robot_config_t &robot_config,
+                                               bool use_gravity,
+                                               bool is_kinematic_mpc)
     : urdf_filename(urdf_filename),
-      mpc_obj(mpc_obj),
-      nq(mpc_obj.nq),
-      nx(mpc_obj.nx),
-      nq_red(mpc_obj.nq_red),
-      nx_red(mpc_obj.nx_red),
-      nq_fixed(mpc_obj.nq - mpc_obj.nq_red),
-      n_indices(nq_red),
-      n_indices_fixed(nq_fixed)
+      robot_config(robot_config),
+      is_kinematic_mpc(is_kinematic_mpc),
+      nq(robot_config.nq),
+      nx(robot_config.nx),
+      nq_red(robot_config.nq_red),
+      nx_red(robot_config.nx_red),
+      nq_fixed(robot_config.nq_fixed),
+      n_indices(ConstIntVectorMap(robot_config.n_indices, nq_red)),
+      n_indices_fixed(ConstIntVectorMap(robot_config.n_indices_fixed, nq_fixed)),
+      q_ref_nq(ConstDoubleVectorMap(robot_config.q_0_ref, nq)),
+      q_ref_fixed(n_indices_fixed.size())
 {
     // Initialize the robot model and data using the URDF
     initRobot(urdf_filename, robot_model_full, robot_data_full, use_gravity);
-
-    // Set configurations from the MPC object
-    n_indices = Eigen::Map<Eigen::VectorXi>(reinterpret_cast<int *>(const_cast<casadi_uint *>(mpc_obj.get_n_indices())), nq_red);
-    n_indices_fixed = Eigen::Map<Eigen::VectorXi>(reinterpret_cast<int *>(const_cast<casadi_uint *>(mpc_obj.get_n_indices_fixed())), nq_fixed);
-
-    const std::vector<casadi_real> x_ref_nq_vec = mpc_obj.get_x_ref_nq();
-    Eigen::Map<Eigen::VectorXd> x_ref_nq(const_cast<double *>(x_ref_nq_vec.data()), x_ref_nq_vec.size());
-
-    q_ref_nq = x_ref_nq.head(nq);
-    q_ref_fixed = q_ref_nq(n_indices_fixed);
 
     // Initialize member matrices, biases, etc.
     K_d = Eigen::MatrixXd::Zero(nq, nq);
@@ -43,8 +39,10 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
     K_d_fixed = Eigen::MatrixXd::Zero(nq_fixed, nq_fixed);
     D_d_fixed = Eigen::MatrixXd::Zero(nq_fixed, nq_fixed);
 
-    for (int i = 0; i < n_indices_fixed.size(); ++i) {
-        for (int j = 0; j < n_indices_fixed.size(); ++j) {
+    for (int i = 0; i < n_indices_fixed.size(); ++i)
+    {
+        for (int j = 0; j < n_indices_fixed.size(); ++j)
+        {
             K_d_fixed(i, j) = K_d(n_indices_fixed(i), n_indices_fixed(j));
             D_d_fixed(i, j) = D_d(n_indices_fixed(i), n_indices_fixed(j));
         }
@@ -66,30 +64,35 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 
-Eigen::VectorXd FullSystemTorqueMapper::calculateNdofTorqueWithFeedforward(const Eigen::VectorXd &u,
-                                                                           const Eigen::VectorXd &q,
-                                                                           const Eigen::VectorXd &q_p,
-                                                                           int n, bool kin_model)
+Eigen::VectorXd FullSystemTorqueMapper::calculateNdofTorqueWithFeedforward(
+    const Eigen::VectorXd &u,
+    const Eigen::VectorXd &q,
+    const Eigen::VectorXd &q_p)
 {
-    if (kin_model)
+    if (is_kinematic_mpc)
     {
-        q_pp(n_indices) = u; // Assuming n_indices is a vector of valid indices.
+        // For kinematic MPC, just assign directly based on input
+        q_pp(n_indices) = u;
     }
     else
     {
+        // Define a reduced input vector corresponding to the identified indices
         Eigen::VectorXd tau_red = u;
 
+        // Get the full inertia matrix and Coriolis forces
         Eigen::MatrixXd M = pinocchio::crba(robot_model_full, robot_data_full, q);
-        Eigen::VectorXd C_rnea = pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, Eigen::VectorXd::Zero(n));
+        Eigen::VectorXd C_rnea = pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, Eigen::VectorXd::Zero(nq));
 
+        // Slice the inertia matrix and Coriolis forces to our reduced indices
         Eigen::MatrixXd M_red = M(n_indices, n_indices);
         Eigen::VectorXd C_rnea_tilde = C_rnea(n_indices);
 
-        q_pp.segment(n_indices[0], n_indices.size()) = M_red.ldlt().solve(tau_red - C_rnea_tilde);
-
-        q_pp(n_indices) = q_pp.segment(n_indices[0], n_indices.size());
+        // Compute the acceleration for the reduced system
+        Eigen::VectorXd q_pp_red = M_red.ldlt().solve(tau_red - C_rnea_tilde);
+        q_pp(n_indices) = q_pp_red;
     }
 
+    // Use updated q_pp to calculate the resulting full torques
     tau_full = pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, q_pp);
 
     return tau_full;
@@ -110,11 +113,11 @@ Eigen::VectorXd FullSystemTorqueMapper::enforceTorqueLimits(const Eigen::VectorX
         .cwiseMax(Eigen::VectorXd::Constant(tau.size(), -config.torque_limit));
 }
 
-Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &u, const Eigen::VectorXd &x_k_ndof, int n, bool kin_model)
+Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &u, const Eigen::VectorXd &x_k_ndof)
 {
-    Eigen::VectorXd q = x_k_ndof.head(n);
-    Eigen::VectorXd q_p = x_k_ndof.segment(n, n);
-    tau_full = calculateNdofTorqueWithFeedforward(u, q, q_p, n, kin_model);
+    Eigen::VectorXd q = x_k_ndof.head(nq);
+    Eigen::VectorXd q_p = x_k_ndof.segment(nq, nq);
+    tau_full = calculateNdofTorqueWithFeedforward(u, q, q_p);
     tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed), q_ref_fixed, K_d_fixed, D_d_fixed);
 
     // tau_full = enforceTorqueLimits(tau_full); // Apply torque limits

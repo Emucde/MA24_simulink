@@ -25,7 +25,8 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
                                                                                                        : mpc_name == "MPC14"  ? get_MPC14_config()
                                                                                                                               : invalid_config(mpc_name)),
                                                      robot_config(robot_config),
-                                                     nq(robot_config.n_dof), nx(2 * robot_config.n_dof), nq_red(robot_config.n_red), nx_red(2 * robot_config.n_red),
+                                                     is_kinematic_mpc(mpc_config.kinematic_mpc == 1),
+                                                     nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
                                                      casadi_fun(mpc_config.casadi_fun),
                                                      arg(mpc_config.arg), res(mpc_config.res), iw(mpc_config.iw), w(mpc_config.w),
                                                      u_opt(w + mpc_config.u_opt_addr), w_end(w + mpc_config.w_end_addr),
@@ -126,11 +127,8 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
 ///////////////////////////////////////////////////////////////////////////////////////
 
 // Method to run the MPC
-int CasadiMPC::solve(casadi_real *x_k_in)
+int CasadiMPC::solve()
 {
-    // Copy the initial state
-    memcpy(x_k, x_k_in, nx_red * sizeof(casadi_real));
-
     // Call the Casadi function
     int flag = casadi_fun(arg, res, iw, w_end, mem);
 
@@ -148,7 +146,15 @@ int CasadiMPC::solve(casadi_real *x_k_in)
     return flag;
 }
 
-int CasadiMPC::solve() // only for testing
+int CasadiMPC::solve(casadi_real *x_k_in)
+{
+    // Copy the initial state
+    memcpy(x_k, x_k_in, nx_red * sizeof(casadi_real));
+
+    return CasadiMPC::solve();
+}
+
+int CasadiMPC::solve_planner()
 {
     // Call the Casadi function
     int flag = casadi_fun(arg, res, iw, w_end, mem);

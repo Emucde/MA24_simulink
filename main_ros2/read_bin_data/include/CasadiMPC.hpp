@@ -29,18 +29,20 @@ private:
     robot_config_t &robot_config;
 
 public:
-    const casadi_uint nq;     // Number of degrees of freedom
-    const casadi_uint nx;     // Number of reduced degrees of freedom
-    const casadi_uint nq_red; // Number of reduced degrees of freedom
-    const casadi_uint nx_red; // Number of reduced degrees of freedom
+    const bool is_kinematic_mpc; // Kinematic MPC flag
+    const casadi_uint nq;        // Number of degrees of freedom
+    const casadi_uint nx;        // Number of reduced degrees of freedom
+    const casadi_uint nq_red;    // Number of reduced degrees of freedom
+    const casadi_uint nx_red;    // Number of reduced degrees of freedom
 
     // Constructor that accepts parameters for configuration
     CasadiMPC(const std::string &mpc_name, robot_config_t &robot_config);
 
-    // // Method to initialize and run the MPC
-    int solve(casadi_real *x_k_in); // closed loop mpc
+    // // Method to run the MPC
+    int solve();                    // closed loop mpc without copying
+    int solve(casadi_real *x_k_in); // closed loop mpc with copying x_k_in to x_k
 
-    int solve(); // mpc planner: open loop mpc
+    int solve_planner(); // mpc planner: open loop mpc
 
     ///////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////
@@ -54,7 +56,7 @@ public:
         return u_opt;
     }
 
-    casadi_real *get_x0()
+    casadi_real *get_x_k()
     {
         return x_k;
     }

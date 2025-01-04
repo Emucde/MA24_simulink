@@ -7,19 +7,34 @@
 #include "include/pinocchio_utils.hpp"
 #include "include/FullSystemTorqueMapper.hpp"
 #include "include/CasadiMPC.hpp"
+#include "include/CasadiController.hpp"
 #include "param_robot.h"
 #include "casadi_types.h"
 #include <Eigen/Dense>
 
 #define TRAJ_SELECT 1
 // #define PLOT_DATA
-
+void set_x_k_ndof(casadi_real *x_k_ndof_ptr, casadi_real *x_k, Eigen::VectorXd &x_ref_nq_vec, casadi_uint nx, const casadi_uint *n_x_indices)
+{
+    int cnt = 0;
+    for (casadi_uint i = 0; i < nx; ++i)
+    {
+        if (i == n_x_indices[cnt])
+        {
+            x_k_ndof_ptr[cnt] = x_k[cnt];
+            cnt++;
+        }
+        else
+        {
+            x_k_ndof_ptr[cnt] = x_ref_nq_vec[i];
+        }
+    }
+}
 
 int main()
 {
     // Configuration flags
     bool use_gravity = false;
-    bool fr3_kin_model = true;
 
     // Initialize robot configuration
     robot_config_t robot_config = get_robot_config();
@@ -35,13 +50,16 @@ int main()
     const casadi_uint *n_x_indices_ptr = MPC_obj.get_n_x_indices();
     const casadi_uint traj_data_real_len = MPC_obj.get_traj_data_len();
     casadi_real *u_opt = MPC_obj.get_optimal_control();
-    casadi_real *x_k = MPC_obj.get_x0();
+    casadi_real *x_k = MPC_obj.get_x_k();
 
     // URDF file path
     const std::string urdf_filename = "../../urdf_creation/fr3_no_hand_7dof.urdf";
 
+    CasadiController controller(urdf_filename, use_gravity);
+    controller.setActiveMPC(MPCType::MPC8);
+
     // Initialize torque mapper and robot model
-    FullSystemTorqueMapper torque_mapper(urdf_filename, MPC_obj, use_gravity);
+    FullSystemTorqueMapper torque_mapper(urdf_filename, robot_config, use_gravity, MPC_obj.is_kinematic_mpc);
     pinocchio::Model robot_model;
     pinocchio::Data robot_data;
     pinocchio_utils::initRobot(urdf_filename, robot_model, robot_data, use_gravity);
@@ -49,32 +67,17 @@ int main()
     // Eigen vectors for state and torque
     Eigen::VectorXd x_k_ndof_vec = Eigen::VectorXd::Zero(nx);
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
+    Eigen::VectorXd tau_full2 = Eigen::VectorXd::Zero(nq);
 
     // Map indices and state vectors
     Eigen::Map<Eigen::VectorXi> n_x_indices(reinterpret_cast<int *>(const_cast<uint32_t *>(n_x_indices_ptr)), nx_red);
     const std::vector<casadi_real> x_ref_nq_vec = MPC_obj.get_x_ref_nq();
-    // Eigen::Map<Eigen::VectorXd> x_k_ndof(const_cast<double *>(x_ref_nq_vec.data()), x_ref_nq_vec.size());
-    Eigen::Map<const Eigen::VectorXd> x_ref_nq_map(x_ref_nq_vec.data(), x_ref_nq_vec.size());
-    Eigen::Map<Eigen::VectorXd> x_k_map(x_k, nx_red); // Map the pointer x_k which is nx_red-dimensional
 
-    Eigen::VectorXd x_k_ndof = x_ref_nq_map;
-    std::vector<casadi_real *> x_k_ndof_ptr;
+    casadi_real x_k_ndof[nx];
+    set_x_k_ndof(x_k_ndof, x_k, x_k_ndof_vec, nx, n_x_indices_ptr);
 
-    // Populate the vector with pointers
-    int cnt = 0;
-    for (casadi_uint i = 0; i < nx; ++i)
-    {
-        if (i == n_x_indices[cnt])
-        {
-            x_k_ndof_ptr.push_back(&x_k[cnt]);
-            cnt++;
-        }
-        else
-        {
-            x_k_ndof_ptr.push_back(const_cast<double *>(&x_ref_nq_vec[i]));
-        }
-    }
-    Eigen::Map<Eigen::VectorXd> u_k(u_opt, nq_red); // persistent map to u_opt
+    Eigen::Map<Eigen::VectorXd> u_k(u_opt, nq_red);
+    Eigen::Map<Eigen::VectorXd> x_k_ndof_vector(x_k_ndof, nx);
 
 // Open files to save data
 #ifdef PLOT_DATA
@@ -97,7 +100,8 @@ int main()
 
         // Update state and calculate full torque
         memcpy(x_k, u_opt + nq_red, nx_red * sizeof(casadi_real));
-        tau_full = torque_mapper.calc_full_torque(u_k, x_k_ndof, nq, fr3_kin_model);
+        tau_full = torque_mapper.calc_full_torque(u_k, x_k_ndof_vector);
+        // tau_full2 = controller.solveMPC(x_k_ndof);
 
 // Save data to files
 #ifdef PLOT_DATA
@@ -114,16 +118,18 @@ int main()
 
         if (i % 100 == 0)
         {
-            // std::cout << "Full torque: " << tau_full.transpose() << std::endl;
+            std::cout << "Full torque: " << tau_full.transpose() << std::endl;
+            // std::cout << "Full torque2: " << tau_full2.transpose() << std::endl;
             // std::cout << "x_k: " << x_k_map.transpose() << std::endl;
-            for (size_t i = 0; i < x_k_ndof_ptr.size(); ++i)
-            {
-                std::cout << *x_k_ndof_ptr[i];
-                if (i < x_k_ndof_ptr.size() - 1)
-                    std::cout << " ";
-            }
-            std::cout << std::endl;
+            // for (size_t i = 0; i < x_k_ndof_ptr.size(); ++i)
+            // {
+            //     std::cout << *x_k_ndof_ptr[i];
+            //     if (i < x_k_ndof_ptr.size() - 1)
+            //         std::cout << " ";
+            // }
+            // std::cout << std::endl;
         }
+        set_x_k_ndof(x_k_ndof, x_k, x_k_ndof_vec, nx, n_x_indices_ptr);
     }
 
 // Close files
