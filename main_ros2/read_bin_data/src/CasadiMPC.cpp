@@ -57,7 +57,8 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name) : mpc_name(mpc_name),
                                                                                                       : mpc_name == "MPC13"  ? get_MPC13_config()
                                                                                                       : mpc_name == "MPC14"  ? get_MPC14_config()
                                                                                                                              : invalid_config()),
-                                                    nq(mpc_config.n_dof), nx(2*mpc_config.n_dof),nq_red(mpc_config.n_red), nx_red(2*mpc_config.n_red),
+                                                    robot_config(get_robot_config()),
+                                                    nq(robot_config.n_dof), nx(2 * robot_config.n_dof), nq_red(robot_config.n_red), nx_red(2 * robot_config.n_red),
                                                     casadi_fun(mpc_config.casadi_fun),
                                                     arg(mpc_config.arg), res(mpc_config.res), iw(mpc_config.iw), w(mpc_config.w),
                                                     u_opt(w + mpc_config.u_opt_addr), w_end(w + mpc_config.w_end_addr),
@@ -72,10 +73,10 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name) : mpc_name(mpc_name),
                                                     init_guess_len(mpc_config.init_guess_len),
                                                     traj_file(mpc_config.traj_data_path),
                                                     traj_data_per_horizon(mpc_config.traj_data_per_horizon),
-                                                    n_indices(mpc_config.n_indices),
-                                                    n_x_indices(mpc_config.n_x_indices),
-                                                    n_indices_fixed(mpc_config.n_indices_fixed),
-                                                    n_x_indices_fixed(mpc_config.n_x_indices_fixed),
+                                                    n_indices(robot_config.n_indices),
+                                                    n_x_indices(robot_config.n_x_indices),
+                                                    n_indices_fixed(robot_config.n_indices_fixed),
+                                                    n_x_indices_fixed(robot_config.n_x_indices_fixed),
                                                     traj_count(0), traj_select(1), mem(mpc_config.mem)
 {
     // Check if the configuration is valid
@@ -212,59 +213,6 @@ int CasadiMPC::solve() // only for testing
     }
 
     return flag;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////// GETTER METHODS ////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////
-
-// Method to output the optimal control
-casadi_real *CasadiMPC::get_optimal_control()
-{
-    return u_opt;
-}
-
-casadi_real *CasadiMPC::get_x0()
-{
-    return x_k;
-}
-
-// Method to get the length of the trajectory data
-casadi_uint CasadiMPC::get_traj_data_len()
-{
-    return traj_data_real_len;
-}
-
-// Method to get n_indices
-const casadi_uint *CasadiMPC::get_n_indices()
-{
-    return n_indices;
-}
-
-// Method to get n_x_indices
-const casadi_uint *CasadiMPC::get_n_x_indices()
-{
-    return n_x_indices;
-}
-
-// Method to get n_indices_fixed
-const casadi_uint *CasadiMPC::get_n_indices_fixed()
-{
-    return n_indices_fixed;
-}
-
-// Method to get n_x_indices_fixed
-const casadi_uint *CasadiMPC::get_n_x_indices_fixed()
-{
-    return n_x_indices_fixed;
-}
-
-// Method to get x_ref_nq
-const std::vector<casadi_real> &CasadiMPC::get_x_ref_nq()
-{
-    return x_ref_nq;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////

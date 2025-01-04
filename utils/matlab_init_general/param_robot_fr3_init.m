@@ -338,18 +338,20 @@ q_dot_min = -q_dot_max;
 fr3.param = struct;
 
 fr3.param.n_DOF = n; % DOF of the robot
+fr3.param.n_red = n; % reduced DOF of the robot
+fr3.param.n_fixed = 0; % number of fixed joints
+
+fr3.param.m_t   = 3; % Translational task space
+fr3.param.m_r   = 3; % Rotational task space
+fr3.param.m     = 6;
 
 % fr3.param.q_0_ref = [0; 0; pi/4; -pi/2; 0; pi/2; 0]; % only q3=pi/4 is fixed
 fr3.param.q_0_ref = [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]; % only q3=pi/4 is fixed
 fr3.param.q_0_p_ref = zeros(7, 1);
 fr3.param.q_0_pp_ref = zeros(7, 1);
 
-fr3.param.m_t   = 3; % Translational task space
-fr3.param.m_r   = 3; % Rotational task space
-fr3.param.m     = 6;
-
 fr3.param.g = [0;0;9.81]; %m/s
-% Update: Vermutlich wegen der Kräpfte Konvention in Maple darf
+% Update: Vermutlich wegen der Kräpfte Konvention in Marple darf
 % scheinbar nicht g = [0,0,-9.81] gewählt werden (warum auch immer). Es lässt sich schnell zeigen, da der Roboter bei
 % tau=0 sonst nach oben gezogen wird, als würde er nach unten hängen.
 fr3.param.g_x = fr3.param.g(1);

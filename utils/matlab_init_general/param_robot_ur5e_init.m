@@ -184,7 +184,13 @@ tau_min = -tau_max;
 ur5e.param = struct;
 
 ur5e.param.n_DOF = n; % Jointspace DOF of the robot
+ur5e.param.n_red = n; % reduced DOF of the robot
+ur5e.param.n_fixed = 0; % number of fixed joints
 ur5e.param.m = m; % Workspace Dimension of the robot
+
+ur5e.param.q_0_ref = zeros(n, 1);
+ur5e.param.q_0_p_ref = zeros(n, 1);
+ur5e.param.q_0_pp_ref = zeros(n, 1);
 
 ur5e.param.g_vis = [0; 0; -9.81]; % m/s^2
 

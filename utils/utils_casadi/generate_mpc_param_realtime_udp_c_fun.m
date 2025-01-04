@@ -188,14 +188,14 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '       .traj_data_per_horizon = %s_TRAJ_DATA_PER_HORIZON,\n', func_name);
     fprintf(fid, '       .traj_data_real_len = %s_TRAJ_DATA_REAL_LEN,\n', func_name);
     fprintf(fid, '       .traj_indices = %s_TRAJ_INDICES,\n', func_name);
-    if(strcmp(param_MPC.version, 'v6_kin_int_path_following') || strcmp(param_MPC.version, 'v6_kin_dev_path_following'))
+    if(strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_int_path_following') || strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_dev_path_following'))
         fprintf(fid, '       .y_d_len = %s_T_K_LEN,\n', func_name);
     else
         fprintf(fid, '       .y_d_len = %s_Y_D_LEN,\n', func_name);
     end
     fprintf(fid, '       .init_guess_len = %s_INIT_GUESS_LEN,\n', func_name);
     fprintf(fid, '       .x_k_addr = %s_X_K_ADDR,\n', func_name);
-    if(strcmp(param_MPC.version, 'v6_kin_int_path_following') || strcmp(param_MPC.version, 'v6_kin_dev_path_following'))
+    if(strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_int_path_following') || strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_dev_path_following'))
         fprintf(fid, '       .y_d_addr = %s_T_K_ADDR,\n', func_name);
     else
         fprintf(fid, '       .y_d_addr = %s_Y_D_ADDR,\n', func_name);

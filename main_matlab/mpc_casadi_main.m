@@ -39,7 +39,7 @@ MPC='MPC01';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version = 'v1'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
+param_casadi_fun_name.(MPC).version = 'opt_problem_y_u_MPC_v1'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -51,7 +51,7 @@ MPC='MPC6';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version = 'v3_quat'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
+param_casadi_fun_name.(MPC).version = 'opt_problem_ineq_feasible_traj_MPC_v3_quat'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -63,7 +63,7 @@ MPC='MPC7';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v3_rpy'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
+param_casadi_fun_name.(MPC).version  = 'opt_problem_ineq_feasible_traj_MPC_v3_rpy'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -75,7 +75,7 @@ MPC='MPC8';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v4_kin_int'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
+param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v4_kin_int'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -87,7 +87,7 @@ MPC='MPC9';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v4_kin_int_refsys'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
+param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v4_kin_int_refsys'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -99,7 +99,7 @@ MPC='MPC10'; % TODO: qp wird nicht geprüft, ob limits eingehalten werden
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v5_kin_dev'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v4_kin_ref_dev )
+param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v5_kin_dev'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -111,7 +111,7 @@ MPC='MPC11';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v6_kin_int_path_following'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v6_kin_int_path_following )
+param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v6_kin_int_path_following'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -123,7 +123,7 @@ MPC='MPC12';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v7_kin_int_planner'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v6_kin_int_path_following )
+param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v7_kin_int_planner'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -135,7 +135,7 @@ MPC='MPC13';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v8_kin_dev_planner'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v6_kin_int_path_following )
+param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v8_kin_dev_planner'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 10e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -147,7 +147,7 @@ MPC='MPC14';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'v6_kin_dev_path_following'; % (v1 | v3_rpy | v3_quat | v4_kin_int | v4_kin_int_refsys | v5_kin_dev | v6_kin_int_path_following )
+param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v6_kin_dev_path_following'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -418,8 +418,14 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     %% Create c and header file for external usage of mpcs in c
     if(generate_realtime_udp_c_fun)
         mpc_c_sourcefile_path = [s_fun_path, '/mpc_c_sourcefiles/'];
+        casadi_opt_problem_paths = ['./utils/utils_casadi/casadi_mpc_definitions/'];
+        current_mpc_mfile = [casadi_opt_problem_paths, MPC_version, '.m'];
+
+        % they are only generated if a file in casadi_opt_problem_paths changed
+        generate_mpc_sourefiles(f_opt, casadi_opt_problem_paths, current_mpc_mfile, mpc_c_sourcefile_path);
+        
         fprintf(['mpc_casadi_main.m: Creating headers for C: \n\nOutput folder for headers: ', mpc_c_sourcefile_path, '\n\n']);
-        generate_param_robot_header([mpc_c_sourcefile_path, 'param_robot.h'], param_robot);
+        generate_param_robot_header(mpc_c_sourcefile_path, param_robot, 'param_robot');
         generate_casadi_types([mpc_c_sourcefile_path, 'casadi_types.h']);
         generate_mpc_config_typedef([mpc_c_sourcefile_path, 'mpc_config.h'], 'mpc_config');
         calc_udp_cfun_addresses(f_opt, f_opt_input_cell, f_opt_output_cell, mpc_c_sourcefile_path);
@@ -440,3 +446,4 @@ end
 
 fprintf('\nExecution of ''mpc_casadi_main.m'' finished\n');
 fprintf('--------------------------------------------------------------------\n');
+

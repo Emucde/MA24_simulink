@@ -183,4 +183,7 @@
     "CLICOLOR_FORCE": "1"
   },
   "python.terminal.activateEnvironment": false,
+  "search.exclude": {
+    "**/node_modules/**": true
+  },
 }

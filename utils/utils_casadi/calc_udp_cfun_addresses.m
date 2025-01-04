@@ -69,22 +69,6 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
 
     casadi_fun_name = casadi_fun.name;
 
-    % Generate C code (compare "compile_casadi_sfunction.m")
-    % Disable Mex Compile and create only .h and .c files for including in main.c with udp communication (gcc)
-    cg_options = struct;
-    cg_options.with_header = true;
-    cg = casadi.CodeGenerator(casadi_fun_name, cg_options);
-    cg.add(casadi_fun);
-    cg.generate();
-
-    casadi_fun_c_header_name = [casadi_fun_name, '.c'];
-    casadi_fun_h_header_name = [casadi_fun_name, '.h'];
-
-    movefile(casadi_fun_c_header_name, output_dir);
-    movefile(casadi_fun_h_header_name, output_dir);
-
-    fprintf(['Header and source files ', casadi_fun_h_header_name, ' and ', casadi_fun_c_header_name, ' created.\n']);
-
     % Display dimensions
     %disp(casadi_fun.str);
     %fprintf('\n');

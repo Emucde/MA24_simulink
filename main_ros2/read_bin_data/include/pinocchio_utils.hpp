@@ -8,7 +8,6 @@
 #include <pinocchio/parsers/urdf.hpp>
 #include <Eigen/Dense>
 #include <vector>
-#include <utility> // For std::pair
 
 namespace pinocchio_utils
 {

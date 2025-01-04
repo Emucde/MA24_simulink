@@ -264,7 +264,7 @@ tau_dim = size(uu_indices);
 qq_dim = size(qq_indices_arr);
 qqp_dim = size(qqp_indices_arr);
 
-if(strcmp(MPC_version, 'v3_quat') || strcmp(MPC_version, 'v3_rpy'))
+if(strcmp(MPC_version, 'opt_problem_ineq_feasible_traj_MPC_v3_quat') || strcmp(MPC_version, 'opt_problem_ineq_feasible_traj_MPC_v3_rpy'))
     
     z_indices = reshape(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z), size(z));
     alpha_indices = reshape(1+numel(u)+numel(x)+numel(z):numel(u)+numel(x)+numel(z)+numel(alpha), size(alpha));

@@ -36,7 +36,9 @@ elseif(strcmp(robot_name, 'fr3_6dof') || strcmp(robot_name, 'fr3_no_hand_6dof'))
     
     
     n_red = length(fr3.param.n_indices);
+    n_fixed = length(fr3.param.n_indices_fixed);
     fr3.param.n_red = n_red;
+    fr3.param.n_fixed = n_fixed;
 
     param_robot = fr3.param;
     disp('Hint: All model calculations are done with the 7dof model, the 6dof mode is ensured due to a jointspace controller fixing joint 3 to zero.');
@@ -48,6 +50,7 @@ elseif(strcmp(robot_name, 'ur5e_6dof'))
 
     n_red = 6;
     ur5e.param.n_red = n_red;
+    ur5e.param.n_fixed = n - n_red;
 
     param_robot = ur5e.param;
 else

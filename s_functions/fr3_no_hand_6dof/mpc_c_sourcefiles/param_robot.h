@@ -11,28 +11,30 @@ extern "C" {
 #include "casadi_types.h"
 
 #define PARAM_ROBOT_N_DOF 7
-static const casadi_real PARAM_ROBOT_Q_0_REF[] = {0,-7.853982e-01,0,-2.356194e+00,0,1.570796e+00,7.853982e-01};
-static const casadi_real PARAM_ROBOT_Q_0_P_REF[] = {0,0,0,0,0,0,0};
-static const casadi_real PARAM_ROBOT_Q_0_PP_REF[] = {0,0,0,0,0,0,0};
+#define PARAM_ROBOT_N_RED 6
+#define PARAM_ROBOT_N_FIXED 1
 #define PARAM_ROBOT_M_T 3
 #define PARAM_ROBOT_M_R 3
 #define PARAM_ROBOT_M 6
-static const casadi_real PARAM_ROBOT_G[] = {0,0,9.810000e+00};
+extern const casadi_real PARAM_ROBOT_Q_0_REF[PARAM_ROBOT_N_DOF];
+extern const casadi_real PARAM_ROBOT_Q_0_P_REF[PARAM_ROBOT_N_DOF];
+extern const casadi_real PARAM_ROBOT_Q_0_PP_REF[PARAM_ROBOT_N_DOF];
+extern const casadi_real PARAM_ROBOT_G[3];
 #define PARAM_ROBOT_G_X 0
 #define PARAM_ROBOT_G_Y 0
 #define PARAM_ROBOT_G_Z 9.81
-static const casadi_real PARAM_ROBOT_G_VIS[] = {0,0,-9.810000e+00};
-static const casadi_real PARAM_ROBOT_Q_LIMIT_UPPER[] = {2.309300e+00,1.513300e+00,2.493700e+00,-4.461000e-01,2.480000e+00,4.209400e+00,2.689500e+00};
-static const casadi_real PARAM_ROBOT_Q_LIMIT_LOWER[] = {-2.309300e+00,-1.513300e+00,-2.493700e+00,-2.747800e+00,-2.480000e+00,8.521000e-01,-2.689500e+00};
-static const casadi_real PARAM_ROBOT_Q_P_LIMIT_UPPER[] = {2,1,1.500000e+00,1.250000e+00,3,1.500000e+00,3};
-static const casadi_real PARAM_ROBOT_Q_P_LIMIT_LOWER[] = {-2,-1,-1.500000e+00,-1.250000e+00,-3,-1.500000e+00,-3};
-static const casadi_real PARAM_ROBOT_Q_PP_LIMIT_UPPER[] = {10,10,10,10,10,10,10};
-static const casadi_real PARAM_ROBOT_Q_PP_LIMIT_LOWER[] = {-10,-10,-10,-10,-10,-10,-10};
-static const casadi_real PARAM_ROBOT_Q_N[] = {0,0,0,-1.596950e+00,0,2.530750e+00,0};
-static const casadi_real PARAM_ROBOT_TORQUE_LIMIT_UPPER[] = {87,87,87,87,12,12,12};
-static const casadi_real PARAM_ROBOT_TORQUE_LIMIT_LOWER[] = {-87,-87,-87,-87,-12,-12,-12};
-static const casadi_real PARAM_ROBOT_P_0[] = {0,0,0};
-static const casadi_real PARAM_ROBOT_R_0[] = {1,0,0,0,1,0,0,0,1};
+extern const casadi_real PARAM_ROBOT_G_VIS[3];
+extern const casadi_real PARAM_ROBOT_Q_LIMIT_UPPER[PARAM_ROBOT_N_DOF];
+extern const casadi_real PARAM_ROBOT_Q_LIMIT_LOWER[PARAM_ROBOT_N_DOF];
+extern const casadi_real PARAM_ROBOT_Q_P_LIMIT_UPPER[PARAM_ROBOT_N_DOF];
+extern const casadi_real PARAM_ROBOT_Q_P_LIMIT_LOWER[PARAM_ROBOT_N_DOF];
+extern const casadi_real PARAM_ROBOT_Q_PP_LIMIT_UPPER[PARAM_ROBOT_N_DOF];
+extern const casadi_real PARAM_ROBOT_Q_PP_LIMIT_LOWER[PARAM_ROBOT_N_DOF];
+extern const casadi_real PARAM_ROBOT_Q_N[PARAM_ROBOT_N_DOF];
+extern const casadi_real PARAM_ROBOT_TORQUE_LIMIT_UPPER[PARAM_ROBOT_N_DOF];
+extern const casadi_real PARAM_ROBOT_TORQUE_LIMIT_LOWER[PARAM_ROBOT_N_DOF];
+extern const casadi_real PARAM_ROBOT_P_0[3];
+extern const casadi_real PARAM_ROBOT_R_0[9];
 #define PARAM_ROBOT_SP0_X -0.041018
 #define PARAM_ROBOT_SP0_Y -0.00014
 #define PARAM_ROBOT_SP0_Z 0.049974
@@ -152,14 +154,40 @@ static const casadi_real PARAM_ROBOT_R_0[] = {1,0,0,0,1,0,0,0,1};
 #define PARAM_ROBOT_I_FINGER_YY 2.375e-06
 #define PARAM_ROBOT_I_FINGER_YZ 0
 #define PARAM_ROBOT_I_FINGER_ZZ 7.5e-07
-static const casadi_real PARAM_ROBOT_SUGIHARA_LIMB_VECTOR[] = {1.108890e-01,9.985600e-02,6.806250e-03,1.474560e-01,7.744000e-03,1.144900e-02,1.069156e-02};
-static const casadi_uint PARAM_ROBOT_YT_INDICES[] = {0,1,2};
-static const casadi_uint PARAM_ROBOT_YR_INDICES[] = {0,1,2};
-static const casadi_uint PARAM_ROBOT_N_INDICES_FIXED[] = {2};
-static const casadi_uint PARAM_ROBOT_N_X_INDICES_FIXED[] = {2,9};
-static const casadi_uint PARAM_ROBOT_N_INDICES[] = {0,1,3,4,5,6};
-static const casadi_uint PARAM_ROBOT_N_X_INDICES[] = {0,1,3,4,5,6,7,8,10,11,12,13};
-#define PARAM_ROBOT_N_RED 6
+extern const casadi_real PARAM_ROBOT_SUGIHARA_LIMB_VECTOR[PARAM_ROBOT_N_DOF];
+extern const casadi_uint PARAM_ROBOT_YT_INDICES[3];
+extern const casadi_uint PARAM_ROBOT_YR_INDICES[3];
+extern const casadi_uint PARAM_ROBOT_N_INDICES_FIXED[PARAM_ROBOT_N_FIXED];
+extern const casadi_uint PARAM_ROBOT_N_X_INDICES_FIXED[2*PARAM_ROBOT_N_FIXED];
+extern const casadi_uint PARAM_ROBOT_N_INDICES[PARAM_ROBOT_N_RED];
+extern const casadi_uint PARAM_ROBOT_N_X_INDICES[2*PARAM_ROBOT_N_RED];
+
+typedef struct {
+    const casadi_uint n_dof;
+    const casadi_uint n_red;
+    const casadi_uint* n_indices;
+    const casadi_uint* n_x_indices;
+    const casadi_uint* n_indices_fixed;
+    const casadi_uint* n_x_indices_fixed;
+    const casadi_uint* yt_indices;
+    const casadi_uint* yr_indices;
+    const casadi_real* q_0_ref;
+    const casadi_real* q_0_p_ref;
+    const casadi_real* q_0_pp_ref;
+    const casadi_real* q_limit_upper;
+    const casadi_real* q_limit_lower;
+    const casadi_real* q_p_limit_upper;
+    const casadi_real* q_p_limit_lower;
+    const casadi_real* q_pp_limit_upper;
+    const casadi_real* q_pp_limit_lower;
+    const casadi_real* q_n;
+    const casadi_real* torque_limit_upper;
+    const casadi_real* torque_limit_lower;
+    const casadi_real* sugihara_limb_vector;
+} robot_config_t;
+
+robot_config_t get_robot_config();
+
 
 #ifdef __cplusplus
 }

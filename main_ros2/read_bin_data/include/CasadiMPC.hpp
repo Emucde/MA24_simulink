@@ -26,12 +26,13 @@ class CasadiMPC
 private:
     const std::string mpc_name; // MPC name
     mpc_config_t mpc_config;
+    robot_config_t robot_config;
 
 public:
-    const uint32_t nq;                    // Number of degrees of freedom
-    const uint32_t nx;                    // Number of reduced degrees of freedom
-    const uint32_t nq_red;                // Number of reduced degrees of freedom
-    const uint32_t nx_red;                // Number of reduced degrees of freedom
+    const casadi_uint nq;     // Number of degrees of freedom
+    const casadi_uint nx;     // Number of reduced degrees of freedom
+    const casadi_uint nq_red; // Number of reduced degrees of freedom
+    const casadi_uint nx_red; // Number of reduced degrees of freedom
 
     // Constructor that accepts parameters for configuration
     CasadiMPC(const std::string &mpc_name);
@@ -41,71 +42,101 @@ public:
 
     int solve(); // mpc planner: open loop mpc
 
-    ///////////////////////// GETTER METHODS /////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////// GETTER METHODS ////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////
 
     // Method to output the optimal control
-    casadi_real *get_optimal_control();
+    casadi_real *get_optimal_control()
+    {
+        return u_opt;
+    }
 
-    // Method to output the initial state
-    casadi_real * get_x0();
+    casadi_real *get_x0()
+    {
+        return x_k;
+    }
 
     // Method to get the length of the trajectory data
-    uint32_t get_traj_data_len();
+    casadi_uint get_traj_data_len()
+    {
+        return traj_data_real_len;
+    }
 
     // Method to get n_indices
-    const uint32_t *get_n_indices();
+    const casadi_uint *get_n_indices()
+    {
+        return n_indices;
+    }
 
     // Method to get n_x_indices
-    const uint32_t *get_n_x_indices();
+    const casadi_uint *get_n_x_indices()
+    {
+        return n_x_indices;
+    }
 
     // Method to get n_indices_fixed
-    const uint32_t *get_n_indices_fixed();
+    const casadi_uint *get_n_indices_fixed()
+    {
+        return n_indices_fixed;
+    }
 
     // Method to get n_x_indices_fixed
-    const uint32_t *get_n_x_indices_fixed();
+    const casadi_uint *get_n_x_indices_fixed()
+    {
+        return n_x_indices_fixed;
+    }
 
     // Method to get x_ref_nq
-    const std::vector<casadi_real> &get_x_ref_nq();
+    const std::vector<casadi_real> &get_x_ref_nq()
+    {
+        return x_ref_nq;
+    }
 
-    ///////////////////////// SETTER METHODS /////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////// SETTER METHODS ////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////
 
-    // Method to set the initial state
     void set_x0(casadi_real *x0_in);
 
     ///////////////////////// DESTRUCTOR /////////////////////////
     ~CasadiMPC();
 
 private:
-    CasadiFunPtr_t casadi_fun;            // MPC Function pointer
-    const casadi_real **arg;              // Pointer to arguments
-    casadi_real **res;                    // Pointer to results
-    casadi_int *iw;                       // Workspace integer
-    casadi_real *w;                       // Workspace real
-    casadi_real *u_opt;                   // Optimal control result
-    casadi_real *w_end;                   // End address for w
-    casadi_real *in_init_guess;           // Initial guess in
-    casadi_real *out_init_guess;          // Initial guess out
-    casadi_real *x_k;                     // Initial state
-    casadi_real *y_d;                     // Desired trajectory
-    casadi_real *param_weight;            // Parameter weights
-    std::streamoff traj_data_startbyte;   // Trajectory data start byte
-    uint32_t traj_rows;                   // Trajectory rows (normally 7, xyzquat)
-    uint32_t traj_data_total_len;         // Total length of trajectory data
-    uint32_t traj_data_real_len;          // Real length of trajectory data
-    uint32_t traj_amount;                 // Trajectory amount
-    const uint32_t *mpc_traj_indices;     // MPC stepwidth indices for sampling trajectory data
-    const uint32_t horizon_len;           // Needed trajectory samples in a prediction horizon.
-    const uint32_t init_guess_len;        // Needed trajectory samples in a prediction horizon.
-    const std::string traj_file;          // Path to trajectory data file
-    const uint32_t traj_data_per_horizon; // Trajectory data per horizon
-    const uint32_t *n_indices;            // Indices of reduced degrees of freedom for q
-    const uint32_t *n_x_indices;          // Indices of reduced degrees of freedom for x
-    const uint32_t *n_indices_fixed;      // Indices of fixed degrees of freedom for q
-    const uint32_t *n_x_indices_fixed;    // Indices of fixed degrees of freedom for x
-    int traj_count;                       // Trajectory count
-    int traj_select;                      // Trajectory selection
-    int mem;                              // Memory
-    std::vector<casadi_real> x_ref_nq;         // Reference state
+    CasadiFunPtr_t casadi_fun;               // MPC Function pointer
+    const casadi_real **arg;                 // Pointer to arguments
+    casadi_real **res;                       // Pointer to results
+    casadi_int *iw;                          // Workspace integer
+    casadi_real *w;                          // Workspace real
+    casadi_real *u_opt;                      // Optimal control result
+    casadi_real *w_end;                      // End address for w
+    casadi_real *in_init_guess;              // Initial guess in
+    casadi_real *out_init_guess;             // Initial guess out
+    casadi_real *x_k;                        // Initial state
+    casadi_real *y_d;                        // Desired trajectory
+    casadi_real *param_weight;               // Parameter weights
+    std::streamoff traj_data_startbyte;      // Trajectory data start byte
+    casadi_uint traj_rows;                   // Trajectory rows (normally 7, xyzquat)
+    casadi_uint traj_data_total_len;         // Total length of trajectory data
+    casadi_uint traj_data_real_len;          // Real length of trajectory data
+    casadi_uint traj_amount;                 // Trajectory amount
+    const casadi_uint *mpc_traj_indices;     // MPC stepwidth indices for sampling trajectory data
+    const casadi_uint horizon_len;           // Needed trajectory samples in a prediction horizon.
+    const casadi_uint init_guess_len;        // Needed trajectory samples in a prediction horizon.
+    const std::string traj_file;             // Path to trajectory data file
+    const casadi_uint traj_data_per_horizon; // Trajectory data per horizon
+    const casadi_uint *n_indices;            // Indices of reduced degrees of freedom for q
+    const casadi_uint *n_x_indices;          // Indices of reduced degrees of freedom for x
+    const casadi_uint *n_indices_fixed;      // Indices of fixed degrees of freedom for q
+    const casadi_uint *n_x_indices_fixed;    // Indices of fixed degrees of freedom for x
+    casadi_uint traj_count;                          // Trajectory count
+    int traj_select;                         // Trajectory selection
+    int mem;                                 // Memory
+    std::vector<casadi_real> x_ref_nq;       // Reference state
 
     void read_file(std::ifstream &file, std::streampos data_start, casadi_real *data, int data_len);
     int load_initial_guess(const std::string &init_guess_path, casadi_real *init_guess_data);
