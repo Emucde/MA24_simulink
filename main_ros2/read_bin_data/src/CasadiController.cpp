@@ -1,4 +1,9 @@
-// #include "CasadiController.hpp"
+#include "CasadiController.hpp"
+
+CasadiController::CasadiController(const std::string& urdfFilePath, bool useGravity)
+{
+    
+}
 
 // CasadiController::CasadiController(const std::string& urdfFilePath, bool useGravity, bool fr3KinematicModel)
 //     : useGravity(useGravity), 

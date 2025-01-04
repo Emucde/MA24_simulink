@@ -5,79 +5,46 @@
 #include <vector>
 #include <memory> // for std::make_unique
 
-mpc_config_t invalid_config()
+mpc_config_t invalid_config(const std::string &mpc_name)
 {
-    return {
-        0,       // n_dof
-        0,       // n_red
-        nullptr, // n_indices
-        nullptr, // n_x_indices
-        nullptr, // n_indices_fixed
-        nullptr, // n_x_indices_fixed
-        nullptr, // x0_init_path
-        nullptr, // init_guess_path
-        nullptr, // traj_data_path
-        0,       // traj_data_per_horizon
-        0,       // traj_data_real_len
-        nullptr, // traj_indices
-        0,       // y_d_len
-        0,       // init_guess_len
-        0,       // x_k_addr
-        0,       // y_d_addr
-        0,       // in_init_guess_addr
-        0,       // in_param_weight_addr
-        0,       // out_param_weight_addr
-        nullptr, // param_weight
-        0,       // param_weight_len
-        nullptr, // casadi_fun
-        nullptr, // arg
-        nullptr, // res
-        nullptr, // iw
-        nullptr, // w
-        nullptr, // arg_indices
-        nullptr, // res_indices
-        0,       // arg_in_len
-        0,       // res_out_len
-        0,       // u_opt_len
-        0,       // w_end_addr
-        0,       // u_opt_addr
-        0        // mem
-    };
+    throw std::runtime_error("\"" + mpc_name + "\" is not a valid MPC name. Use one of the following: MPC01, MPC6, MPC7, MPC8, MPC9, MPC10, MPC11, MPC12, MPC13, MPC14");
+    return {};
 }
 
 // Constructor implementation
-CasadiMPC::CasadiMPC(const std::string &mpc_name) : mpc_name(mpc_name),
-                                                    mpc_config(mpc_name == "MPC01" ? get_MPC01_config() : mpc_name == "MPC6" ? get_MPC6_config()
-                                                                                                      : mpc_name == "MPC7"   ? get_MPC7_config()
-                                                                                                      : mpc_name == "MPC8"   ? get_MPC8_config()
-                                                                                                      : mpc_name == "MPC9"   ? get_MPC9_config()
-                                                                                                      : mpc_name == "MPC10"  ? get_MPC10_config()
-                                                                                                      : mpc_name == "MPC11"  ? get_MPC11_config()
-                                                                                                      : mpc_name == "MPC12"  ? get_MPC12_config()
-                                                                                                      : mpc_name == "MPC13"  ? get_MPC13_config()
-                                                                                                      : mpc_name == "MPC14"  ? get_MPC14_config()
-                                                                                                                             : invalid_config()),
-                                                    robot_config(get_robot_config()),
-                                                    nq(robot_config.n_dof), nx(2 * robot_config.n_dof), nq_red(robot_config.n_red), nx_red(2 * robot_config.n_red),
-                                                    casadi_fun(mpc_config.casadi_fun),
-                                                    arg(mpc_config.arg), res(mpc_config.res), iw(mpc_config.iw), w(mpc_config.w),
-                                                    u_opt(w + mpc_config.u_opt_addr), w_end(w + mpc_config.w_end_addr),
-                                                    in_init_guess(w + mpc_config.in_init_guess_addr),
-                                                    out_init_guess(w + mpc_config.out_init_guess_addr),
-                                                    x_k(w + mpc_config.x_k_addr),
-                                                    y_d(w + mpc_config.y_d_addr),
-                                                    param_weight(w + mpc_config.in_param_weight_addr),
-                                                    traj_data_real_len(mpc_config.traj_data_real_len),
-                                                    mpc_traj_indices(mpc_config.traj_indices),
-                                                    horizon_len(mpc_config.traj_data_per_horizon),
-                                                    init_guess_len(mpc_config.init_guess_len),
-                                                    traj_file(mpc_config.traj_data_path),
-                                                    traj_data_per_horizon(mpc_config.traj_data_per_horizon),
-                                                    n_indices(robot_config.n_indices),
-                                                    n_x_indices(robot_config.n_x_indices),
-                                                    n_indices_fixed(robot_config.n_indices_fixed),
-                                                    n_x_indices_fixed(robot_config.n_x_indices_fixed),
-                                                    traj_count(0), traj_select(1), mem(mpc_config.mem)
+CasadiMPC::CasadiMPC(const std::string &mpc_name,
+                     robot_config_t &robot_config) : mpc_name(mpc_name),
+                                                     mpc_config(mpc_name == "MPC01" ? get_MPC01_config() : mpc_name == "MPC6" ? get_MPC6_config()
+                                                                                                       : mpc_name == "MPC7"   ? get_MPC7_config()
+                                                                                                       : mpc_name == "MPC8"   ? get_MPC8_config()
+                                                                                                       : mpc_name == "MPC9"   ? get_MPC9_config()
+                                                                                                       : mpc_name == "MPC10"  ? get_MPC10_config()
+                                                                                                       : mpc_name == "MPC11"  ? get_MPC11_config()
+                                                                                                       : mpc_name == "MPC12"  ? get_MPC12_config()
+                                                                                                       : mpc_name == "MPC13"  ? get_MPC13_config()
+                                                                                                       : mpc_name == "MPC14"  ? get_MPC14_config()
+                                                                                                                              : invalid_config(mpc_name)),
+                                                     robot_config(robot_config),
+                                                     nq(robot_config.n_dof), nx(2 * robot_config.n_dof), nq_red(robot_config.n_red), nx_red(2 * robot_config.n_red),
+                                                     casadi_fun(mpc_config.casadi_fun),
+                                                     arg(mpc_config.arg), res(mpc_config.res), iw(mpc_config.iw), w(mpc_config.w),
+                                                     u_opt(w + mpc_config.u_opt_addr), w_end(w + mpc_config.w_end_addr),
+                                                     in_init_guess(w + mpc_config.in_init_guess_addr),
+                                                     out_init_guess(w + mpc_config.out_init_guess_addr),
+                                                     x_k(w + mpc_config.x_k_addr),
+                                                     y_d(w + mpc_config.y_d_addr),
+                                                     param_weight(w + mpc_config.in_param_weight_addr),
+                                                     traj_data_real_len(mpc_config.traj_data_real_len),
+                                                     mpc_traj_indices(mpc_config.traj_indices),
+                                                     horizon_len(mpc_config.traj_data_per_horizon),
+                                                     init_guess_len(mpc_config.init_guess_len),
+                                                     traj_file(mpc_config.traj_data_path),
+                                                     traj_data_per_horizon(mpc_config.traj_data_per_horizon),
+                                                     n_indices(robot_config.n_indices),
+                                                     n_x_indices(robot_config.n_x_indices),
+                                                     n_indices_fixed(robot_config.n_indices_fixed),
+                                                     n_x_indices_fixed(robot_config.n_x_indices_fixed),
+                                                     traj_count(0), traj_select(1), mem(mpc_config.mem)
 {
     // Check if the configuration is valid
     if (mpc_config.casadi_fun == nullptr)
@@ -108,7 +75,7 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name) : mpc_name(mpc_name),
     int cnt = 0;
     for (casadi_uint i = 0; i < nx; i++)
     {
-        if (i == mpc_config.n_x_indices[cnt])
+        if (i == n_x_indices[cnt])
         {
             x_k[cnt] = x_ref_nq[i];
             cnt++;

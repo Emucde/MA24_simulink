@@ -176,12 +176,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '\n');
     fprintf(fid, '    // Set the MPC config\n');
     fprintf(fid, ['   static mpc_config_t ', func_name, 'Config = {\n']);
-    fprintf(fid, '       .n_dof = PARAM_ROBOT_N_DOF,\n');
-    fprintf(fid, '       .n_red = PARAM_ROBOT_N_RED,\n');
-    fprintf(fid, '       .n_indices = PARAM_ROBOT_N_INDICES,\n');
-    fprintf(fid, '       .n_x_indices = PARAM_ROBOT_N_X_INDICES,\n');
-    fprintf(fid, '       .n_indices_fixed = PARAM_ROBOT_N_INDICES_FIXED,\n');
-    fprintf(fid, '       .n_x_indices_fixed = PARAM_ROBOT_N_X_INDICES_FIXED,\n');
+    fprintf(fid, '       .kinematic_mpc = %s_KINEMATIC_MPC,\n', func_name);
     fprintf(fid, '       .x0_init_path = X0_INIT_PATH,\n');
     fprintf(fid, '       .init_guess_path = %s_INIT_GUESS_PATH,\n', func_name);
     fprintf(fid, '       .traj_data_path = TRAJ_DATA_PATH,\n');

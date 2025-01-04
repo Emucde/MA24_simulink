@@ -11,12 +11,7 @@ extern "C" {
 #include "casadi_types.h"
 
 typedef struct {
-    const casadi_uint n_dof;
-    const casadi_uint n_red;
-    const casadi_uint* n_indices;
-    const casadi_uint* n_x_indices;
-    const casadi_uint* n_indices_fixed;
-    const casadi_uint* n_x_indices_fixed;
+    const casadi_uint kinematic_mpc;
     const char* x0_init_path;
     const char* init_guess_path;
     const char* traj_data_path;

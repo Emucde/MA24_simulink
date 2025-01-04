@@ -26,7 +26,7 @@ class CasadiMPC
 private:
     const std::string mpc_name; // MPC name
     mpc_config_t mpc_config;
-    robot_config_t robot_config;
+    robot_config_t &robot_config;
 
 public:
     const casadi_uint nq;     // Number of degrees of freedom
@@ -35,7 +35,7 @@ public:
     const casadi_uint nx_red; // Number of reduced degrees of freedom
 
     // Constructor that accepts parameters for configuration
-    CasadiMPC(const std::string &mpc_name);
+    CasadiMPC(const std::string &mpc_name, robot_config_t &robot_config);
 
     // // Method to initialize and run the MPC
     int solve(casadi_real *x_k_in); // closed loop mpc
@@ -133,7 +133,7 @@ private:
     const casadi_uint *n_x_indices;          // Indices of reduced degrees of freedom for x
     const casadi_uint *n_indices_fixed;      // Indices of fixed degrees of freedom for q
     const casadi_uint *n_x_indices_fixed;    // Indices of fixed degrees of freedom for x
-    casadi_uint traj_count;                          // Trajectory count
+    casadi_uint traj_count;                  // Trajectory count
     int traj_select;                         // Trajectory selection
     int mem;                                 // Memory
     std::vector<casadi_real> x_ref_nq;       // Reference state

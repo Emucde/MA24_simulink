@@ -7,11 +7,13 @@
 #include "include/pinocchio_utils.hpp"
 #include "include/FullSystemTorqueMapper.hpp"
 #include "include/CasadiMPC.hpp"
+#include "param_robot.h"
 #include "casadi_types.h"
 #include <Eigen/Dense>
 
 #define TRAJ_SELECT 1
 // #define PLOT_DATA
+
 
 int main()
 {
@@ -19,8 +21,11 @@ int main()
     bool use_gravity = false;
     bool fr3_kin_model = true;
 
+    // Initialize robot configuration
+    robot_config_t robot_config = get_robot_config();
+
     // Initialize MPC object
-    CasadiMPC MPC_obj("MPC8");
+    CasadiMPC MPC_obj("MPC8", robot_config);
 
     // Retrieve necessary parameters from MPC object
     const casadi_uint nq = MPC_obj.nq;
