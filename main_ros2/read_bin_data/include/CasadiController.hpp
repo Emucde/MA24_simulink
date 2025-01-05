@@ -64,6 +64,12 @@ public:
         return robot_config.n_indices;
     }
 
+    // Method to switch the trajectory
+    void switch_traj(casadi_uint traj_sel)
+    {
+        active_mpc->switch_traj(traj_sel);
+    }
+
     // Method to get n_x_indices
     const casadi_uint *get_n_x_indices()
     {

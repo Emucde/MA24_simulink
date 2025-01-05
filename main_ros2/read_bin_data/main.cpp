@@ -40,6 +40,7 @@ int main()
 
     CasadiController controller(urdf_filename, use_gravity);
     controller.setActiveMPC(MPCType::MPC8);
+    controller.switch_traj(TRAJ_SELECT);
 
     const casadi_uint nq = controller.nq;
     const casadi_uint nx = controller.nx;
@@ -65,15 +66,15 @@ int main()
 #endif
 
     // Main loop for trajectory processing
-    for (casadi_uint i = 0; i < 10000; i++)
+    for (casadi_uint i = 0; i < traj_data_real_len; i++)
     {
         tau_full = controller.solveMPC(x_k_ndof);
         x_k_ndof_eig = Eigen::Map<Eigen::VectorXd>(x_k_ndof, nq);
 
         if (i % 100 == 0)
         {
-            // std::cout << "q_k: " << x_k_ndof_eig.transpose() << std::endl;
-            std::cout << "Full torque: " << tau_full.transpose() << std::endl;
+            std::cout << "q_k: " << x_k_ndof_eig.transpose() << std::endl;
+            // std::cout << "Full torque: " << tau_full.transpose() << std::endl;
         }
 
 #ifdef PLOT_DATA

@@ -188,6 +188,32 @@ int CasadiMPC::solve_planner()
     return flag;
 }
 
+// Method for switching the trajectory
+void CasadiMPC::switch_traj(casadi_uint traj_sel)
+{
+    if(traj_sel > traj_amount || traj_sel < 1)
+    {
+        throw std::runtime_error("Trajectory selection \"" + std::to_string(traj_sel) + "\" is out of bounds. Please select a value between 1 and " + std::to_string(traj_amount));
+    }
+    traj_select = traj_sel;
+    traj_count = 0;
+    read_x0_init(mpc_config.x0_init_path, x_ref_nq.data());
+
+    // Copy the initial state
+    int cnt = 0;
+    for (casadi_uint i = 0; i < nx; i++)
+    {
+        if (i == n_x_indices[cnt])
+        {
+            x_k[cnt] = x_ref_nq[i];
+            cnt++;
+        }
+    }
+
+    // read first trajectory data from file
+    read_trajectory_block();
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////// SETTER METHODS ////////////////////////////////////
