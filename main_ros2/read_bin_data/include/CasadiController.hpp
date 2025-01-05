@@ -59,6 +59,53 @@ public:
 
     // Getters and setters
     void setActiveMPC(MPCType mpc);
+        const casadi_uint *get_n_indices()
+    {
+        return robot_config.n_indices;
+    }
+
+    // Method to get n_x_indices
+    const casadi_uint *get_n_x_indices()
+    {
+        return robot_config.n_x_indices;
+    }
+
+    // Method to get n_indices_fixed
+    const casadi_uint *get_n_indices_fixed()
+    {
+        return robot_config.n_indices_fixed;
+    }
+
+    // Method to get n_x_indices_fixed
+    const casadi_uint *get_n_x_indices_fixed()
+    {
+        return robot_config.n_x_indices_fixed;
+    }
+
+    // Method to output the optimal control
+    casadi_real *get_optimal_control()
+    {
+        return active_mpc->get_optimal_control();
+    }
+    
+    // Method to get x_k
+    casadi_real *get_x_k()
+    {
+        return active_mpc->get_x_k();
+    }
+
+    // Method to get the length of the trajectory data
+    casadi_uint get_traj_data_len()
+    {
+        return active_mpc->get_traj_data_len();
+    }
+
+    // Method to get x_ref_nq
+    const std::vector<casadi_real> &get_x_ref_nq()
+    {
+        return active_mpc->get_x_ref_nq();
+    }
+
 private:
     // Private methods
     std::string mpcToString(MPCType mpc);

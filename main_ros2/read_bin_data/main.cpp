@@ -13,24 +13,78 @@
 #include <Eigen/Dense>
 
 #define TRAJ_SELECT 1
+#define TESTING1
 // #define PLOT_DATA
-void set_x_k_ndof(casadi_real *x_k_ndof_ptr, casadi_real *x_k, Eigen::VectorXd &x_ref_nq_vec, casadi_uint nx, const casadi_uint *n_x_indices)
+void set_x_k_ndof(casadi_real *x_k_ndof_ptr, casadi_real *x_k, const std::vector<casadi_real> &x_ref_nq_vec, casadi_uint nx, const casadi_uint *n_x_indices)
 {
     int cnt = 0;
     for (casadi_uint i = 0; i < nx; ++i)
     {
         if (i == n_x_indices[cnt])
         {
-            x_k_ndof_ptr[cnt] = x_k[cnt];
+            x_k_ndof_ptr[i] = x_k[cnt];
             cnt++;
         }
         else
         {
-            x_k_ndof_ptr[cnt] = x_ref_nq_vec[i];
+            x_k_ndof_ptr[i] = x_ref_nq_vec[i];
         }
     }
 }
 
+#ifdef TESTING2
+int main()
+{
+    // Configuration flags
+    bool use_gravity = false;
+    const std::string urdf_filename = "../../urdf_creation/fr3_no_hand_7dof.urdf";
+
+    CasadiController controller(urdf_filename, use_gravity);
+    controller.setActiveMPC(MPCType::MPC8);
+
+    const casadi_uint nq = controller.nq;
+    const casadi_uint nx = controller.nx;
+    const casadi_uint nq_red = controller.nq_red;
+    const casadi_uint nx_red = controller.nx_red;
+    const casadi_uint *n_x_indices_ptr = controller.get_n_x_indices();
+    const casadi_uint traj_data_real_len = controller.get_traj_data_len();
+    const std::vector<casadi_real> x_ref_nq_vec = controller.get_x_ref_nq();
+    casadi_real *u_opt = controller.get_optimal_control();
+    casadi_real *x_k = controller.get_x_k();
+    casadi_real x_k_ndof[nx];
+    Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
+    Eigen::VectorXd x_k_ndof_eig;
+
+    // Measure execution time
+    auto start = std::chrono::high_resolution_clock::now();
+
+    set_x_k_ndof(x_k_ndof, x_k, x_ref_nq_vec, nx, n_x_indices_ptr);
+
+    // Main loop for trajectory processing
+    for (casadi_uint i = 0; i < 10000; i++)
+    {
+        tau_full = controller.solveMPC(x_k_ndof);
+
+        if (i % 100 == 0)
+        {
+            x_k_ndof_eig = Eigen::Map<Eigen::VectorXd>(x_k_ndof, nq);
+            // std::cout << "q_k: " << x_k_ndof_eig.transpose() << std::endl;
+            std::cout << "Full torque: " << tau_full.transpose() << std::endl;
+        }
+        memcpy(x_k, u_opt + nq_red, nx_red * sizeof(casadi_real));
+        set_x_k_ndof(x_k_ndof, x_k, x_ref_nq_vec, nx, n_x_indices_ptr);
+    }
+    // Measure and print execution time
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    std::cout << "Time taken by function: " << (double)duration.count() / 1000000 << " s" << std::endl;
+
+    return 0;
+}
+
+#endif
+
+#ifdef TESTING1
 int main()
 {
     // Configuration flags
@@ -65,16 +119,15 @@ int main()
     pinocchio_utils::initRobot(urdf_filename, robot_model, robot_data, use_gravity);
 
     // Eigen vectors for state and torque
-    Eigen::VectorXd x_k_ndof_vec = Eigen::VectorXd::Zero(nx);
+    const std::vector<casadi_real> x_ref_nq_vec = controller.get_x_ref_nq();
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
     Eigen::VectorXd tau_full2 = Eigen::VectorXd::Zero(nq);
 
     // Map indices and state vectors
     Eigen::Map<Eigen::VectorXi> n_x_indices(reinterpret_cast<int *>(const_cast<uint32_t *>(n_x_indices_ptr)), nx_red);
-    const std::vector<casadi_real> x_ref_nq_vec = MPC_obj.get_x_ref_nq();
 
     casadi_real x_k_ndof[nx];
-    set_x_k_ndof(x_k_ndof, x_k, x_k_ndof_vec, nx, n_x_indices_ptr);
+    set_x_k_ndof(x_k_ndof, x_k, x_ref_nq_vec, nx, n_x_indices_ptr);
 
     Eigen::Map<Eigen::VectorXd> u_k(u_opt, nq_red);
     Eigen::Map<Eigen::VectorXd> x_k_ndof_vector(x_k_ndof, nx);
@@ -129,7 +182,7 @@ int main()
             // }
             // std::cout << std::endl;
         }
-        set_x_k_ndof(x_k_ndof, x_k, x_k_ndof_vec, nx, n_x_indices_ptr);
+        set_x_k_ndof(x_k_ndof, x_k, x_ref_nq_vec, nx, n_x_indices_ptr);
     }
 
 // Close files
@@ -145,6 +198,7 @@ int main()
 
     return 0;
 }
+#endif
 
 /*
 % Read the torque data
