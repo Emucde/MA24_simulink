@@ -112,6 +112,12 @@ foreach(SOURCE_FILE ${SRC_FILES})
     list(APPEND UTILS_LIBRARIES ${FILE_NAME})
 endforeach()
 
+if(NOT DEFINED UTILS_LIBRARIES OR UTILS_LIBRARIES STREQUAL "")
+    message(WARNING "UTILS_LIBRARIES on path \"${CMAKE_CURRENT_SOURCE_DIR}\" is empty or not defined")
+else()
+    message(STATUS "UTILS libraries: ${UTILS_LIBRARIES}")
+endif()
+
 # Install libraries
 install(TARGETS ${UTILS_LIBRARIES} ${MPC_ALL_LIBRARIES}
     LIBRARY DESTINATION ${MPC_SOURCE_DIR}

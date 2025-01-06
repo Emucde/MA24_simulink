@@ -3,11 +3,13 @@
 # Default to debug build
 export CLICOLOR_FORCE=1
 export CMAKE_COLOR_DIAGNOSTICS=ON
+export TERM=dumb
 BUILD_TYPE="debug"
+STANDALONE_MAKEFILE=false
 
 BUILD_CURRENT_FILE=true
 if [[ $# -eq 2 ]]; then
-    if [ $2 == "$masterdir/main_ros2/read_bin_data" ]; then
+    if [ $2 == "$masterdir/main_ros2/casadi_mpc/cpp_class_files" ]; then
         BUILD_CURRENT_FILE=false # use makefile to build
     else
         BUILD_CURRENT_FILE=true
@@ -49,7 +51,7 @@ if [[ $BUILD_CURRENT_FILE == true ]]; then
     # Construct the command (slow... use cmake or standalone Makefile instead)
     CMD="/usr/bin/g++-11 -fdiagnostics-color=always $OPT_FLAGS $DEBUG_FLAGS
         -Wl,-rpath,$masterdir/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles
-        $masterdir/main_ros2/read_bin_data/*.cpp $masterdir/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/*_param.c $masterdir/main_ros2/read_bin_data/src/*.cpp
+        $masterdir/main_ros2/casadi_mpc/cpp_class_files/*.cpp $masterdir/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/*_param.c $masterdir/main_ros2/casadi_mpc/cpp_class_files/src/*.cpp
         -I $_colcon_cd_root/include
         -I $eigen_path
         -I $casadi_path/include
@@ -57,9 +59,9 @@ if [[ $BUILD_CURRENT_FILE == true ]]; then
         -L $casadi_path
         -L $masterdir/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles
         $(pkg-config --cflags --libs pinocchio)
-        -I $masterdir/main_ros2/read_bin_data/include
+        -I $masterdir/main_ros2/casadi_mpc/cpp_class_files/include
         -lMPC01 -lMPC6 -lMPC7 -lMPC8 -lMPC9 -lMPC10 -lMPC11 -lMPC12 -lMPC13 -lMPC14 -lcasadi
-        -o $masterdir/main_ros2/read_bin_data/main"
+        -o $masterdir/main_ros2/casadi_mpc/cpp_class_files/main"
 
     # Execute the command and measure time
     echo "Executing: $CMD"
@@ -70,8 +72,14 @@ if [[ $BUILD_CURRENT_FILE == true ]]; then
 else
     # Use makefile to build
     echo "Building using makefile..."
-    # make BUILD_TYPE=$BUILD_TYPE -j8
-    cmake --build ./cpp_class_files/build -j8
+    if [ $STANDALONE_MAKEFILE == true ]; then
+        cd "cpp_class_files"
+        make BUILD_TYPE=$BUILD_TYPE -j8
+        cd ..
+    else
+        cmake --build ./cpp_class_files/build -j8
+    fi
+    
     BUILD_STATUS=$?
 fi
 
@@ -81,8 +89,11 @@ if [ $BUILD_STATUS -eq 0 ]; then
     # If the build was successful and it's a release build, run the executable
     if [ "$BUILD_TYPE" = "release" ]; then
         echo -e "Running the executable...\n----------------------------------\n"
-        # $masterdir/main_ros2/read_bin_data/bin/$BUILD_TYPE/main
-        $masterdir/main_ros2/casadi_mpc/cpp_class_files/build/bin/main
+        if [ $STANDALONE_MAKEFILE == true ]; then
+            $masterdir/main_ros2/casadi_mpc/cpp_class_files/bin/$BUILD_TYPE/main
+        else
+            $masterdir/main_ros2/casadi_mpc/cpp_class_files/build/bin/main
+        fi
         echo -e "\n----------------------------------\n"
     fi
 else

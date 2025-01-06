@@ -7,7 +7,7 @@
             "command": "./build.sh",
             "args" : ["-d", "${fileDirname}"],
             "options": {
-                "cwd": "${workspaceFolder}/main_ros2/read_bin_data"
+                "cwd": "${workspaceFolder}/main_ros2/casadi_mpc"
             },
             "problemMatcher": [
                 "$gcc"
@@ -24,7 +24,7 @@
             "command": "./build.sh",
             "args": ["-r", "${fileDirname}"],
             "options": {
-                "cwd": "${fileDirname}"
+                "cwd": "${workspaceFolder}/main_ros2/casadi_mpc"
             },
             "problemMatcher": ["$gcc"],
             "group": {
