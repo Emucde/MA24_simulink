@@ -27,13 +27,13 @@ find_package(generate_parameter_library)
 find_package(moveit_core REQUIRED)
 find_package(moveit_msgs REQUIRED)
 find_package(mpc_interfaces REQUIRED)
-find_package(HDF5 COMPONENTS CXX HL REQUIRED)
 
 add_library(
         ${PROJECT_NAME}
         SHARED
         src/gravity_compensation_example_controller.cpp
-        src/mpc_controller.cpp
+        src/mpc_pinocchio_controller.cpp
+        src/mpc_casadi_controller.cpp
         src/shared_memory.cpp
         src/move_to_start_example_controller.cpp
         src/motion_generator.cpp

@@ -77,7 +77,7 @@ def generate_launch_description():
         Node(
             package='controller_manager',
             executable='spawner',
-            arguments=['mpc_controller'],
+            arguments=['mpc_casadi_controller'],
             output='screen',
         ),
     ])

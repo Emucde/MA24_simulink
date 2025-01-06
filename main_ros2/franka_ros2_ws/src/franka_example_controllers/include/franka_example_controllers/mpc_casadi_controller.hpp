@@ -41,7 +41,7 @@ namespace franka_example_controllers {
  * The gravity compensation controller only sends zero torques so that the robot does gravity
  * compensation
  */
-class ModelPredictiveController : public controller_interface::ControllerInterface{
+class ModelPredictiveControllerCasadi : public controller_interface::ControllerInterface{
  public:
   FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
   CallbackReturn on_configure(const rclcpp_lifecycle::State& previous_state) override;

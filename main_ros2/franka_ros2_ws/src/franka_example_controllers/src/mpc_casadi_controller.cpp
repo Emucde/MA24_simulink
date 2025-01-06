@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <franka_example_controllers/mpc_controller.hpp>
+#include <franka_example_controllers/mpc_casadi_controller.hpp>
 
 #include <exception>
 #include <string>
@@ -21,43 +21,13 @@
 
 #include <memory>
 #include "rclcpp/rclcpp.hpp"
-// #include "/media/daten/Anwendungen/MATLAB/R2022b/extern/include/mat.h"
-#include <H5Cpp.h>
-#define TEST 1
 
-using namespace H5;
 using std::placeholders::_1;
 
 namespace franka_example_controllers {
 
-void readMatFile(const std::string& filename) {
-    // Open the file
-    H5File file(filename, H5F_ACC_RDONLY);
-    
-    // Assuming you know the dataset name
-    DataSet dataset = file.openDataSet("your_dataset_name");
-    
-    // Get the dataspace
-    DataSpace dataspace = dataset.getSpace();
-    
-    // Determine the dimensions of the dataspace
-    hsize_t dims[2]; // assume a 2D dataset
-    dataspace.getSimpleExtentDims(dims, NULL);
-    
-    // Create a buffer to hold the data
-    double* data = new double[dims[0] * dims[1]];
-    
-    // Read the data
-    dataset.read(data, PredType::NATIVE_DOUBLE);
-    
-    // Clean up
-    delete[] data;
-    dataset.close();
-    file.close();
-}
-
 controller_interface::InterfaceConfiguration
-ModelPredictiveController::command_interface_configuration() const {
+ModelPredictiveControllerCasadi::command_interface_configuration() const {
   controller_interface::InterfaceConfiguration config;
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
@@ -68,7 +38,7 @@ ModelPredictiveController::command_interface_configuration() const {
 }
 
 controller_interface::InterfaceConfiguration
-ModelPredictiveController::state_interface_configuration() const {
+ModelPredictiveControllerCasadi::state_interface_configuration() const {
   controller_interface::InterfaceConfiguration state_interfaces_config;
   state_interfaces_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   for (int i = 1; i <= N_DOF; ++i) {
@@ -80,7 +50,7 @@ ModelPredictiveController::state_interface_configuration() const {
   return state_interfaces_config;
 }
 
-controller_interface::return_type ModelPredictiveController::update(
+controller_interface::return_type ModelPredictiveControllerCasadi::update(
     const rclcpp::Time& /*time*/,
     const rclcpp::Duration& /*period*/) {
   double* torques_crocoddyl = 0;
@@ -190,35 +160,35 @@ controller_interface::return_type ModelPredictiveController::update(
   return controller_interface::return_type::OK;
 }
 
-CallbackReturn ModelPredictiveController::on_configure(
+CallbackReturn ModelPredictiveControllerCasadi::on_configure(
     const rclcpp_lifecycle::State& /*previous_state*/) {
   arm_id_ = get_node()->get_parameter("arm_id").as_string();
 
   RCLCPP_INFO(get_node()->get_logger(), "Configuring MPC controller for %s arm", arm_id_.c_str());
   
   // subscription_ = get_node()->create_subscription<mpc_interfaces::msg::Num>(
-  //     "topic", 10, std::bind(&ModelPredictiveController::topic_callback, this, _1));
+  //     "topic", 10, std::bind(&ModelPredictiveControllerCasadi::topic_callback, this, _1));
 
   // RCLCPP_INFO(get_node()->get_logger(), "Subscribed to topic 'topic'");
 
   start_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
       "start_mpc_service",
-      std::bind(&ModelPredictiveController::start_mpc, this, std::placeholders::_1, std::placeholders::_2)
+      std::bind(&ModelPredictiveControllerCasadi::start_mpc, this, std::placeholders::_1, std::placeholders::_2)
   );
 
   reset_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
       "reset_mpc_service",
-      std::bind(&ModelPredictiveController::reset_mpc, this, std::placeholders::_1, std::placeholders::_2)
+      std::bind(&ModelPredictiveControllerCasadi::reset_mpc, this, std::placeholders::_1, std::placeholders::_2)
   );
 
   stop_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
       "stop_mpc_service",
-      std::bind(&ModelPredictiveController::stop_mpc, this, std::placeholders::_1, std::placeholders::_2)
+      std::bind(&ModelPredictiveControllerCasadi::stop_mpc, this, std::placeholders::_1, std::placeholders::_2)
   );
 
   traj_switch_service_ = get_node()->create_service<mpc_interfaces::srv::TrajectoryCommand>(
       "traj_switch_service",
-      std::bind(&ModelPredictiveController::traj_switch, this, std::placeholders::_1, std::placeholders::_2)
+      std::bind(&ModelPredictiveControllerCasadi::traj_switch, this, std::placeholders::_1, std::placeholders::_2)
   );
 
   RCLCPP_INFO(get_node()->get_logger(), "Service 'add_three_ints' created");
@@ -226,7 +196,7 @@ CallbackReturn ModelPredictiveController::on_configure(
   return CallbackReturn::SUCCESS;
 }
 
-CallbackReturn ModelPredictiveController::on_init() {
+CallbackReturn ModelPredictiveControllerCasadi::on_init() {
   rcutils_ret_t ret = rcutils_logging_set_logger_level(
     get_node()->get_logger().get_name(), MY_LOG_LEVEL);
   if (ret != RCUTILS_RET_OK)
@@ -251,31 +221,31 @@ CallbackReturn ModelPredictiveController::on_init() {
   return CallbackReturn::SUCCESS;
 }
 
-CallbackReturn ModelPredictiveController::on_deactivate(const rclcpp_lifecycle::State &previous_state)
+CallbackReturn ModelPredictiveControllerCasadi::on_deactivate(const rclcpp_lifecycle::State &previous_state)
 {
     close_shared_memories();
     return controller_interface::CallbackReturn::SUCCESS;
 }
 
-CallbackReturn ModelPredictiveController::on_activate(const rclcpp_lifecycle::State &previous_state)
+CallbackReturn ModelPredictiveControllerCasadi::on_activate(const rclcpp_lifecycle::State &previous_state)
 {
     open_shared_memories();
     return controller_interface::CallbackReturn::SUCCESS;
 }
 
-CallbackReturn ModelPredictiveController::on_cleanup(const rclcpp_lifecycle::State &previous_state)
+CallbackReturn ModelPredictiveControllerCasadi::on_cleanup(const rclcpp_lifecycle::State &previous_state)
 {
     close_shared_memories();
     return controller_interface::CallbackReturn::SUCCESS;
 }
 
-CallbackReturn ModelPredictiveController::on_shutdown(const rclcpp_lifecycle::State &previous_state)
+CallbackReturn ModelPredictiveControllerCasadi::on_shutdown(const rclcpp_lifecycle::State &previous_state)
 {
     close_shared_memories();
     return controller_interface::CallbackReturn::SUCCESS;
 }
 
-void ModelPredictiveController::open_shared_memories()
+void ModelPredictiveControllerCasadi::open_shared_memories()
 {
     // Open shared memory for writing states to crocddyl
     shm_states = open_write_shm("data_from_simulink", 2*N_DOF*sizeof(double), get_node()->get_logger());
@@ -293,7 +263,7 @@ void ModelPredictiveController::open_shared_memories()
     RCLCPP_INFO(get_node()->get_logger(), "Shared memory opened successfully.");
 }
 
-void ModelPredictiveController::close_shared_memories()
+void ModelPredictiveControllerCasadi::close_shared_memories()
 {
     if (shm_states != -1) close(shm_states);
     if (shm_states_valid != -1) close(shm_states_valid);
@@ -305,12 +275,12 @@ void ModelPredictiveController::close_shared_memories()
     if (shm_torques_valid != -1) close(shm_torques_valid);
 }
 
-// void ModelPredictiveController::topic_callback(const mpc_interfaces::msg::Num & msg)
+// void ModelPredictiveControllerCasadi::topic_callback(const mpc_interfaces::msg::Num & msg)
 // {
 //   RCLCPP_WARN(get_node()->get_logger(), "I heard: '%ld'", msg.num);
 // }
 
-void ModelPredictiveController::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+void ModelPredictiveControllerCasadi::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
           std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response)
 {
   shm_flags flags = {
@@ -331,7 +301,7 @@ void ModelPredictiveController::start_mpc(const std::shared_ptr<mpc_interfaces::
   sem_post(shm_changed_semaphore);
 }
 
-void ModelPredictiveController::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+void ModelPredictiveControllerCasadi::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
           std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response)
 {
   shm_flags flags = {
@@ -351,7 +321,7 @@ void ModelPredictiveController::reset_mpc(const std::shared_ptr<mpc_interfaces::
   sem_post(shm_changed_semaphore);
 }
 
-void ModelPredictiveController::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+void ModelPredictiveControllerCasadi::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
           std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response)
 {
   shm_flags flags = {
@@ -371,7 +341,7 @@ void ModelPredictiveController::stop_mpc(const std::shared_ptr<mpc_interfaces::s
   sem_post(shm_changed_semaphore);
 }
 
-void ModelPredictiveController::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
+void ModelPredictiveControllerCasadi::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
           std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response>       response)
 {
   int8_t traj_select = request->traj_select;
@@ -390,5 +360,5 @@ void ModelPredictiveController::traj_switch(const std::shared_ptr<mpc_interfaces
 }  // namespace franka_example_controllers
 #include "pluginlib/class_list_macros.hpp"
 // NOLINTNEXTLINE
-PLUGINLIB_EXPORT_CLASS(franka_example_controllers::ModelPredictiveController,
+PLUGINLIB_EXPORT_CLASS(franka_example_controllers::ModelPredictiveControllerCasadi,
                        controller_interface::ControllerInterface)
