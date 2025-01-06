@@ -26,7 +26,7 @@ set(CMAKE_CXX_STANDARD 11)  # Change to 14/17/20 as necessary
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Define the path to the MPC source files
-set(MPC_SOURCE_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles)
+set(MPC_SOURCE_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles)
 cmake_path(SET MPC_SOURCE_DIR NORMALIZE "${MPC_SOURCE_DIR_REL}")
 message(STATUS "MPC source directory: ${MPC_SOURCE_DIR}")
 

@@ -26,7 +26,7 @@ set(CMAKE_CXX_STANDARD 11)  # Change to 14/17/20 as necessary
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Define the path to the MPC source files
-set(MPC_SOURCE_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles)
+set(MPC_SOURCE_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles)
 cmake_path(SET MPC_SOURCE_DIR NORMALIZE "${MPC_SOURCE_DIR_REL}")
 message(STATUS "MPC source directory: ${MPC_SOURCE_DIR}")
 
@@ -43,6 +43,17 @@ set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
 foreach(SOURCE_FILE ${MPC_SOURCES})
     get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)  # Get the filename without extension
 
+    # Create the shared library
+    add_library(${FILE_NAME} SHARED ${SOURCE_FILE})
+
+    # Set the output library name to 'lib<NAME>.so'
+    set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}")
+
+    # Include directories
+    target_include_directories(${FILE_NAME} PRIVATE ${MPC_SOURCE_DIR})
+
+    target_compile_options(${FILE_NAME} PRIVATE -fdiagnostics-color=always -O3) # it makes sense to optimize the MPC library also in debug mode
+
     # Collect the libraries for installation
     list(APPEND MPC_ALL_LIBRARIES ${FILE_NAME})
 
@@ -54,7 +65,11 @@ foreach(SOURCE_FILE ${MPC_SOURCES})
     endif()
 endforeach()
 
-message(STATUS "MPC libraries: ${MPC_ALL_LIBRARIES}")
+if(NOT DEFINED MPC_ALL_LIBRARIES OR MPC_ALL_LIBRARIES STREQUAL "")
+  message(WARNING "MPC_ALL_LIBRARIES on path \"${MPC_SOURCE_DIR}\" is empty or not defined")
+else()
+  message(STATUS "MPC libraries: ${MPC_ALL_LIBRARIES}")
+endif()
 
 list(APPEND CMAKE_PREFIX_PATH "/opt/ros/humble")
 list(APPEND CMAKE_PREFIX_PATH "${MPC_SOURCE_DIR}")
@@ -98,7 +113,7 @@ foreach(SOURCE_FILE ${SRC_FILES})
 endforeach()
 
 # Install libraries
-install(TARGETS ${UTILS_LIBRARIES}
+install(TARGETS ${UTILS_LIBRARIES} ${MPC_ALL_LIBRARIES}
     LIBRARY DESTINATION ${MPC_SOURCE_DIR}
 )
 

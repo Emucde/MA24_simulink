@@ -8,9 +8,8 @@ COLCON_LIB = $(_colcon_cd_root)/lib
 EIGEN_PATH = $(eigen_path)
 CASADI_PATH = $(casadi_path)
 MPC_INCLUDE = $(MASTERDIR)/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles
-UTILS_INCLUDE = $(MASTERDIR)/main_ros2/read_bin_data/include/
+UTILS_INCLUDE = $(MASTERDIR)/main_ros2/casadi_mpc/cpp_class_files/include/
 MPC_LIBS = $(MASTERDIR)/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles
-MPC_LIBS_ALT = /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/read_bin_data/build/lib
 
 # Define directories
 RELEASE_DIR = bin/release
@@ -38,7 +37,7 @@ endif
 CXXFLAGS += $(OPT_FLAGS) $(DEBUG_FLAGS) $(INCLUDES)
 
 # Source files
-SRC_CPP = $(wildcard $(MASTERDIR)/main_ros2/read_bin_data/*.cpp)
+SRC_CPP = $(wildcard $(MASTERDIR)/main_ros2/casadi_mpc/cpp_class_files/*.cpp)
 SRC_C = $(wildcard $(MASTERDIR)/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/MPC*_param.c)
 
 # Automatically convert source files to object files
@@ -71,7 +70,7 @@ $(TARGET): $(OBJ_CPP)
 	fi
 
 # Rules for building object files
-$(OUT_DIR)/%.o: $(MASTERDIR)/main_ros2/read_bin_data/%.cpp
+$(OUT_DIR)/%.o: $(MASTERDIR)/main_ros2/casadi_mpc/cpp_class_files/%.cpp
 	@mkdir -p $(OUT_DIR)  # Ensure output directory exists
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -c $< -o $@
 

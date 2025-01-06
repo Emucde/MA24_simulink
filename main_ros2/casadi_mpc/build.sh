@@ -71,7 +71,7 @@ else
     # Use makefile to build
     echo "Building using makefile..."
     # make BUILD_TYPE=$BUILD_TYPE -j8
-    cmake --build ./build -j8
+    cmake --build ./cpp_class_files/build -j8
     BUILD_STATUS=$?
 fi
 
@@ -82,7 +82,7 @@ if [ $BUILD_STATUS -eq 0 ]; then
     if [ "$BUILD_TYPE" = "release" ]; then
         echo -e "Running the executable...\n----------------------------------\n"
         # $masterdir/main_ros2/read_bin_data/bin/$BUILD_TYPE/main
-        $masterdir/main_ros2/read_bin_data/build/bin/main
+        $masterdir/main_ros2/casadi_mpc/cpp_class_files/build/bin/main
         echo -e "\n----------------------------------\n"
     fi
 else
