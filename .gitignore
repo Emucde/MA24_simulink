@@ -32,6 +32,8 @@ main_ros2/franka_ros2_ws/build
 main_ros2/franka_ros2_ws/install
 main_ros2/nodejs_ros2_gui/node_modules
 build
+build_release
+build_debug
 main_ros2/read_bin_data/bin
 robot_plots.html
 robot_visualization.html

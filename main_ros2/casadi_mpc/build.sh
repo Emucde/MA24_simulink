@@ -36,17 +36,19 @@ if [[ $# -gt 0 ]]; then
     esac
 fi
 
+if [ "$BUILD_TYPE" = "release" ]; then
+    OPT_FLAGS="-O3"
+    DEBUG_FLAGS=""
+    EXECUTE_AFTER_BUILD=true   # Set a flag to indicate to execute
+    CMAKE_BUILD_PATH="./cpp_class_files/build_release"
+else
+    OPT_FLAGS="-O0"
+    DEBUG_FLAGS="-g"
+    CMAKE_BUILD_PATH="./cpp_class_files/build_debug"
+fi
+
 if [[ $BUILD_CURRENT_FILE == true ]]; then
     echo "Building current file..."
-    # Set optimization and debug flags based on build type
-    if [ "$BUILD_TYPE" = "release" ]; then
-        OPT_FLAGS="-O3"
-        DEBUG_FLAGS=""
-        EXECUTE_AFTER_BUILD=true   # Set a flag to indicate to execute
-    else
-        OPT_FLAGS="-O0"
-        DEBUG_FLAGS="-g"
-    fi
 
     # Construct the command (slow... use cmake or standalone Makefile instead)
     CMD="/usr/bin/g++-11 -fdiagnostics-color=always $OPT_FLAGS $DEBUG_FLAGS
@@ -77,7 +79,7 @@ else
         make BUILD_TYPE=$BUILD_TYPE -j8
         cd ..
     else
-        cmake --build ./cpp_class_files/build -j8
+        cmake --build $CMAKE_BUILD_PATH -j8
     fi
     
     BUILD_STATUS=$?
