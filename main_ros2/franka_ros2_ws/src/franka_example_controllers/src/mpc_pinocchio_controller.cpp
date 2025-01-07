@@ -284,10 +284,10 @@ void ModelPredictiveControllerPinocchio::start_mpc(const std::shared_ptr<mpc_int
           std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response)
 {
   shm_flags flags = {
-      .start = 1,
-      .reset = 0,
-      .stop = 0,
-      .torques_valid = 0
+      1, // start
+      0, // reset
+      0, // stop
+      0  // torques_valid
   };
 
   write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
@@ -305,10 +305,10 @@ void ModelPredictiveControllerPinocchio::reset_mpc(const std::shared_ptr<mpc_int
           std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response)
 {
   shm_flags flags = {
-      .start = 0,
-      .reset = 1,
-      .stop = 0,
-      .torques_valid = 0
+      0, // start
+      1, // reset
+      0, // stop
+      0  // torques_valid
   };
 
   write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
@@ -325,10 +325,10 @@ void ModelPredictiveControllerPinocchio::stop_mpc(const std::shared_ptr<mpc_inte
           std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response>       response)
 {
   shm_flags flags = {
-      .start = 0,
-      .reset = 0,
-      .stop = 1,
-      .torques_valid = 0
+      0, // start
+      0, // reset
+      1, // stop
+      0  // torques_valid
   };
   
   write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());

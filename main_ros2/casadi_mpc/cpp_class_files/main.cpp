@@ -15,7 +15,7 @@
 #define TRAJ_SELECT 1
 // #define PLOT_DATA
 
-void set_x_k_ndof(casadi_real *x_k_ndof_ptr, casadi_real *x_k, const std::vector<casadi_real> &x_ref_nq_vec, casadi_uint nx, const casadi_uint *n_x_indices)
+void set_x_k_ndof(casadi_real * const x_k_ndof_ptr, casadi_real * const x_k, const std::vector<casadi_real> &x_ref_nq_vec, casadi_uint nx, const casadi_uint *n_x_indices)
 {
     int cnt = 0;
     for (casadi_uint i = 0; i < nx; ++i)

@@ -176,9 +176,9 @@
   //   }
   // },
   "cmake.ignoreCMakeListsMissing": true,
-  // "terminal.integrated.env.linux": {
-  //   "PYTHONPATH": ""
-  // },
+  "terminal.integrated.env.linux": {
+    "PYTHONPATH": ""
+  },
   "cmake.environment": {
     "CLICOLOR_FORCE": "1"
   },
@@ -186,4 +186,12 @@
   "search.exclude": {
     "**/node_modules/**": true
   },
+  "python.analysis.exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/build",
+    ".git",
+    "myenv/**",
+    "main_ros2/**"
+  ]
 }

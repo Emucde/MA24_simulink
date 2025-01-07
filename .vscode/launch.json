@@ -2,6 +2,11 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "ROS: Attach",
+            "type": "ros",
+            "request": "attach"
+        },
+        {
             "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",
@@ -14,7 +19,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/build/bin/${fileBasenameNoExtension}",
+            "program": "${fileDirname}/build_debug/bin/${fileBasenameNoExtension}",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
@@ -42,6 +47,12 @@
             "externalConsole": false,
             "MIMode": "gdb",
             "preLaunchTask": "Run Program"
+        },
+        {
+            "name": "ROS2: Launch",
+            "type": "node",
+            "request": "launch",
+            "program": "franka_bringup mpc_casadi_controller.launch.py arm_id:=fr3 robot_ip:=${env:robot_ip}"
         }
     ]
 }

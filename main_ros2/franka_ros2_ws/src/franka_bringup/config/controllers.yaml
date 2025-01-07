@@ -5,8 +5,11 @@ controller_manager:
     gravity_compensation_example_controller:
       type: franka_example_controllers/GravityCompensationExampleController
       
-    mpc_controller:
-      type: franka_example_controllers/ModelPredictiveController
+    mpc_pinocchio_controller:
+      type: franka_example_controllers/ModelPredictiveControllerPinocchio
+      
+    mpc_casadi_controller:
+      type: franka_example_controllers/ModelPredictiveControllerCasadi
 
     move_to_start_example_controller:
       type: franka_example_controllers/MoveToStartExampleController

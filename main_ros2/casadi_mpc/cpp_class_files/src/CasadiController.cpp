@@ -37,7 +37,7 @@ CasadiController::CasadiController(const std::string &urdf_path, bool use_gravit
 ///////////////////////////////////////////////////////////////////////////////////////
 
 // Solve one MPC iteration and result a map to the optimal control
-Eigen::VectorXd CasadiController::solveMPC(casadi_real *x_k_ndof_ptr)
+Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr)
 {
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
 
@@ -60,7 +60,7 @@ Eigen::VectorXd CasadiController::solveMPC(casadi_real *x_k_ndof_ptr)
     }
 
     Eigen::VectorXd u_k = Eigen::Map<Eigen::VectorXd>(u_k_ptr, nq_red);
-    Eigen::VectorXd x_k_ndof = Eigen::Map<Eigen::VectorXd>(x_k_ndof_ptr, nx);
+    Eigen::VectorXd x_k_ndof = Eigen::Map<const Eigen::VectorXd>(x_k_ndof_ptr, nx);
 
     tau_full = torque_mapper.calc_full_torque(u_k, x_k_ndof);
     return tau_full;

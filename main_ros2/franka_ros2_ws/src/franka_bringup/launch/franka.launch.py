@@ -87,6 +87,8 @@ def generate_launch_description():
                 'stdout': 'screen',
                 'stderr': 'screen',
             },
+            # emulate_tty=True,
+            # prefix=['xterm -e gdb -ex run --args'],
             on_exit=Shutdown(),
         ),
 

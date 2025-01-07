@@ -55,7 +55,7 @@ public:
     CasadiController(const std::string &urdf_path, bool use_gravity);
 
     // solve the MPC
-    Eigen::VectorXd solveMPC(casadi_real *x_k_ndof);
+    Eigen::VectorXd solveMPC(const casadi_real * const x_k_ndof_ptr);
 
     // Getters and setters
     void setActiveMPC(MPCType mpc);

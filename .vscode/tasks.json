@@ -5,7 +5,10 @@
             "type": "cppbuild",
             "label": "C/C++: g++-11 build active file",
             "command": "./build.sh",
-            "args" : ["-d", "${fileDirname}"],
+            "args": [
+                "-d",
+                "${fileDirname}"
+            ],
             "options": {
                 "cwd": "${workspaceFolder}/main_ros2/casadi_mpc"
             },
@@ -22,23 +25,32 @@
             "label": "Build and Run (BUILD_MODE=release -O3)",
             "type": "shell",
             "command": "./build.sh",
-            "args": ["-r", "${fileDirname}"],
+            "args": [
+                "-r",
+                "${fileDirname}"
+            ],
             "options": {
                 "cwd": "${workspaceFolder}/main_ros2/casadi_mpc"
             },
-            "problemMatcher": ["$gcc"],
+            "problemMatcher": [
+                "$gcc"
+            ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "dependsOn": ["Run Build (No Debug Info)"],
+            "dependsOn": [
+                "Run Build (No Debug Info)"
+            ],
             "detail": "Build and run the project without debug info."
         },
         {
             "label": "Run Program",
             "type": "shell",
             "command": "${fileDirname}/main",
-            "dependsOn": ["Build and Run (BUILD_MODE=release -O3)"],
+            "dependsOn": [
+                "Build and Run (BUILD_MODE=release -O3)"
+            ],
             "group": {
                 "kind": "test",
                 "isDefault": true
@@ -69,6 +81,55 @@
             "command": "rm -rf build install log",
             "group": "build",
             "problemMatcher": []
+        },
+        {
+            "label": "colcon: build (debug)",
+            "type": "shell",
+            "command": [
+            "source ${env:_colcon_cd_root}/setup.bash;",
+            "cd ${workspaceFolder}/main_ros2/franka_ros2_ws;",
+            "colcon build --cmake-args -DCMAKE_BUILD_TYPE=Debug -DCMAKE_VERBOSE_MAKEFILE=ON"
+            ],
+            "problemMatcher": [],
+            "group": {
+            "kind": "build",
+            "isDefault": true
+            }
+        },
+        {
+            "label": "ROS2: Launch",
+            "type": "shell",
+            "command": [
+                "source $masterdir/main_ros2/franka_ros2_ws/install/setup.bash;",
+                "ros2 launch franka_bringup mpc_casadi_controller.launch.py arm_id:=fr3 robot_ip:=${env:robot_ip}"
+            ],
+            "dependsOn": [
+            "colcon: build (debug)"
+            ],
+            "group": {
+            "kind": "test",
+            "isDefault": true
+            }
+        },
+        {
+            "label": "colcon: clean",
+            "type": "shell",
+            "command": [
+                "cd project-workspace;",
+                "rm -rf build/ install/ log/;"
+            ]
+        },
+        {
+            "label": "colcon: test",
+            "type": "shell",
+            "command": [
+                "cd ${workspaceFolder}/main_ros2/franka_ros2_ws;",
+                "source ${env:_colcon_cd_root}/setup.bash;",
+                "source install/setup.bash;",
+                "colcon test",
+                "--packages-select <package-name>",
+                "--event-handlers console_direct+;"
+            ]
         }
     ]
 }
