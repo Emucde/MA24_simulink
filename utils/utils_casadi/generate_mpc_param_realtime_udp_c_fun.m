@@ -176,43 +176,44 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '\n');
     fprintf(fid, '    // Set the MPC config\n');
     fprintf(fid, ['   static mpc_config_t ', func_name, 'Config = {\n']);
-    fprintf(fid, '       .kinematic_mpc = %s_KINEMATIC_MPC,\n', func_name);
-    fprintf(fid, '       .x0_init_path = X0_INIT_PATH,\n');
-    fprintf(fid, '       .init_guess_path = %s_INIT_GUESS_PATH,\n', func_name);
-    fprintf(fid, '       .traj_data_path = TRAJ_DATA_PATH,\n');
-    fprintf(fid, '       .traj_data_per_horizon = %s_TRAJ_DATA_PER_HORIZON,\n', func_name);
-    fprintf(fid, '       .traj_data_real_len = %s_TRAJ_DATA_REAL_LEN,\n', func_name);
-    fprintf(fid, '       .traj_indices = %s_TRAJ_INDICES,\n', func_name);
+    fprintf(fid, '       .dt = %s_DT, // Sampling time of the measured data, control frequency\n', func_name);
+    fprintf(fid, '       .kinematic_mpc = %s_KINEMATIC_MPC, // Kinematic MPC (u_opt=q0_pp, x1, q1pp) or dynamic MPC (u_opt=tau0)\n', func_name);
+    fprintf(fid, '       .x0_init_path = X0_INIT_PATH, // Default path to init configuration of trajectories\n');
+    fprintf(fid, '       .init_guess_path = %s_INIT_GUESS_PATH, // Default path to trajectory dependent initial guess (warm start)\n', func_name);
+    fprintf(fid, '       .traj_data_path = TRAJ_DATA_PATH, // Default path to trajectory data\n');
+    fprintf(fid, '       .traj_data_per_horizon = %s_TRAJ_DATA_PER_HORIZON, // Number of trajectory data points per horizon\n', func_name);
+    fprintf(fid, '       .traj_data_real_len = %s_TRAJ_DATA_REAL_LEN, // Real length of trajectory data (without last prediction horizon)\n', func_name);
+    fprintf(fid, '       .traj_indices = %s_TRAJ_INDICES, // Local indices of the trajectory per horizon\n', func_name);
     if(strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_int_path_following') || strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_dev_path_following'))
-        fprintf(fid, '       .y_d_len = %s_T_K_LEN,\n', func_name);
+        fprintf(fid, '       .y_d_len = %s_T_K_LEN, // Length of the desired time points (=desired path parameter) for path following\n', func_name);
     else
-        fprintf(fid, '       .y_d_len = %s_Y_D_LEN,\n', func_name);
+        fprintf(fid, '       .y_d_len = %s_Y_D_LEN, // Length of the desired trajectory per horizon\n', func_name);
     end
-    fprintf(fid, '       .init_guess_len = %s_INIT_GUESS_LEN,\n', func_name);
-    fprintf(fid, '       .x_k_addr = %s_X_K_ADDR,\n', func_name);
+    fprintf(fid, '       .init_guess_len = %s_INIT_GUESS_LEN, // Length of the initial guess (warm start)\n', func_name);
+    fprintf(fid, '       .x_k_addr = %s_X_K_ADDR, // Relative address of the state vector\n', func_name);
     if(strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_int_path_following') || strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_dev_path_following'))
-        fprintf(fid, '       .y_d_addr = %s_T_K_ADDR,\n', func_name);
+        fprintf(fid, '       .y_d_addr = %s_T_K_ADDR, // Relative address of the desired trajectory for path following\n', func_name);
     else
-        fprintf(fid, '       .y_d_addr = %s_Y_D_ADDR,\n', func_name);
+        fprintf(fid, '       .y_d_addr = %s_Y_D_ADDR, // Relative address of the desired trajectory\n', func_name);
     end
-    fprintf(fid, '       .in_init_guess_addr = %s_IN_INIT_GUESS_ADDR,\n', func_name);
-    fprintf(fid, '       .out_init_guess_addr = %s_OUT_INIT_GUESS_OUT_ADDR,\n', func_name);
-    fprintf(fid, '       .in_param_weight_addr = %s_IN_PARAM_WEIGHT_ADDR,\n', func_name);
-    fprintf(fid, '       .param_weight = %s_param_weight,\n', func_name);
-    fprintf(fid, '       .param_weight_len = %s_PARAM_WEIGHT_LEN,\n', func_name);
-    fprintf(fid, '       .casadi_fun = &%s,\n', func_name);
-    fprintf(fid, '       .arg = arg,\n');
-    fprintf(fid, '       .res = res,\n');
-    fprintf(fid, '       .iw = iw,\n');
-    fprintf(fid, '       .w = w,\n');
-    fprintf(fid, '       .arg_indices = %s_ARG,\n', func_name);
-    fprintf(fid, '       .res_indices = %s_RES,\n', func_name);
-    fprintf(fid, '       .arg_in_len = %s_ARG_IN_LEN,\n', func_name);
-    fprintf(fid, '       .res_out_len = %s_RES_OUT_LEN,\n', func_name);
-    fprintf(fid, '       .u_opt_len = %s_U_OPT_LEN,\n', func_name);
-    fprintf(fid, '       .w_end_addr = %s_W_END_ADDR,\n', func_name);
-    fprintf(fid, '       .u_opt_addr = %s_U_OPT_ADDR,\n', func_name);
-    fprintf(fid, '       .mem = 0\n');
+    fprintf(fid, '       .in_init_guess_addr = %s_IN_INIT_GUESS_ADDR, // Relative address of the input initial guess\n', func_name);
+    fprintf(fid, '       .out_init_guess_addr = %s_OUT_INIT_GUESS_OUT_ADDR, // Relative address of the output initial guess\n', func_name);
+    fprintf(fid, '       .in_param_weight_addr = %s_IN_PARAM_WEIGHT_ADDR, // Relative address of the input parameter weights\n', func_name);
+    fprintf(fid, '       .param_weight = %s_param_weight, // Parameter weights\n', func_name);
+    fprintf(fid, '       .param_weight_len = %s_PARAM_WEIGHT_LEN, // Length of the parameter weights\n', func_name);
+    fprintf(fid, '       .casadi_fun = &%s, // CasADi function\n', func_name);
+    fprintf(fid, '       .arg = arg, // Arguments for the CasADi function\n');
+    fprintf(fid, '       .res = res, // Results from the CasADi function\n');
+    fprintf(fid, '       .iw = iw, // Integer workspace for the CasADi function\n');
+    fprintf(fid, '       .w = w, // Real workspace for the CasADi function\n');
+    fprintf(fid, '       .arg_indices = %s_ARG, // Argument indices for the CasADi function\n', func_name);
+    fprintf(fid, '       .res_indices = %s_RES, // Result indices for the CasADi function\n', func_name);
+    fprintf(fid, '       .arg_in_len = %s_ARG_IN_LEN, // Length of the input arguments\n', func_name);
+    fprintf(fid, '       .res_out_len = %s_RES_OUT_LEN, // Length of the output results\n', func_name);
+    fprintf(fid, '       .u_opt_len = %s_U_OPT_LEN, // Length of the optimal control input\n', func_name);
+    fprintf(fid, '       .w_end_addr = %s_W_END_ADDR, // Relative address of the end of the workspace\n', func_name);
+    fprintf(fid, '       .u_opt_addr = %s_U_OPT_ADDR, // Relative address of the optimal control input\n', func_name);
+    fprintf(fid, '       .mem = 0 // Memory\n');
     fprintf(fid, '   };\n');
     fprintf(fid, '   return %sConfig;\n', func_name);
     fprintf(fid, '}\n');

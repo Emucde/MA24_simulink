@@ -33,6 +33,7 @@ function generate_mpc_config_typedef(filename, structName)
 
     % Write the struct definition with typedef
     fprintf(fid, 'typedef struct {\n');
+    fprintf(fid, '    const casadi_uint dt;\n');
     fprintf(fid, '    const casadi_uint kinematic_mpc;\n');
     fprintf(fid, '    const char* x0_init_path;\n');
     fprintf(fid, '    const char* init_guess_path;\n');

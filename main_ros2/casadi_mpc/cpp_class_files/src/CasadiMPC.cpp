@@ -166,7 +166,7 @@ int CasadiMPC::solve_planner()
         memcpy(in_init_guess, out_init_guess, init_guess_len * sizeof(casadi_real));
 
         // mpc planner: use x_k+1 as x_k for next iteration - not the measurement!
-        memcpy(x_k, u_opt + nq_red, nx_red * sizeof(casadi_real));
+        memcpy(x_k, u_opt + nq_red, nx_red * sizeof(casadi_real)); // TODO: This only works for kinematic mpc!
 #ifdef DEBUG
         if (traj_count % 100 == 0)
         {
