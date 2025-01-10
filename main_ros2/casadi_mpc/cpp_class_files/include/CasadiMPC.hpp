@@ -47,6 +47,9 @@ public:
     // Method to switch the trajectory
     void switch_traj(casadi_uint traj_sel);
 
+    // Method to read the next trajectory block
+    void read_trajectory_block();
+
     ///////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////// GETTER METHODS ////////////////////////////////////
@@ -59,9 +62,22 @@ public:
         return u_opt;
     }
 
+    // Method to get the initial state address at the begin of the prediction horizon
     casadi_real *get_x_k()
     {
         return x_k;
+    }
+
+    // Method to get the desired trajectory address at the begin of the prediction horizon
+    casadi_real *get_y_d()
+    {
+        return y_d;
+    }
+
+    // Method to get the length of the trajectory data per prediction horizon
+    casadi_uint get_traj_data_per_horizon_len()
+    {
+        return traj_data_per_horizon;
     }
 
     // Method to get the length of the trajectory data
@@ -154,7 +170,6 @@ private:
     int load_initial_guess(const std::string &init_guess_path, casadi_real *init_guess_data);
     void read_x0_init(const std::string &q0_init_file, casadi_real *x0_arr);
     std::streamoff get_traj_dims();
-    void read_trajectory_block();
 };
 
 #endif // CASADIMPC_HPP

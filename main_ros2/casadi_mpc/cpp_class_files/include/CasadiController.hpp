@@ -46,9 +46,16 @@ public:
 private:
     const casadi_uint *n_x_indices;
     FullSystemTorqueMapper torque_mapper; // Torque mapper
-    casadi_real *x_k_ptr;
-    casadi_real *u_k_ptr;
+    casadi_real *x_k_ptr; // initial state address at the begin of the prediction horizon
+    casadi_real *u_k_ptr; // optimal control address
+    casadi_real *y_d_ptr; // desired trajectory address at the begin of the prediction horizon
+    casadi_uint traj_data_per_horizon; // Trajectory data per horizon
     casadi_real dt;
+    std::map<std::string, double> param_transient_traj_poly;
+    Eigen::MatrixXd transient_traj_data;
+    casadi_uint transient_traj_len;
+    casadi_uint transient_traj_rows;
+    casadi_uint transient_traj_cnt;
 
 public:
     // Constructor
@@ -58,11 +65,14 @@ public:
     Eigen::VectorXd solveMPC(const casadi_real *const x_k_ndof_ptr);
 
     // Method to generate a transient trajectory
-    Eigen::MatrixXd generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr,
-                                                                const std::map<std::string, double> &param_traj_poly);
+    void generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr,
+                                                     double T_start, double T_poly, double T_end);
+    void generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr);
 
     // Getters and setters
     void setActiveMPC(MPCType mpc);
+    void setTransientTrajParams(double T_start, double T_poly, double T_end);
+
     const casadi_uint *get_n_indices()
     {
         return robot_config.n_indices;
@@ -114,6 +124,18 @@ public:
     const std::vector<casadi_real> &get_x_ref_nq()
     {
         return active_mpc->get_x_ref_nq();
+    }
+
+    // Method to get transient trajectory data
+    const Eigen::MatrixXd &get_transient_traj_data()
+    {
+        return transient_traj_data;
+    }
+
+    // Method to get the transient trajectory length
+    casadi_uint get_transient_traj_len()
+    {
+        return transient_traj_len;
     }
 
 private:

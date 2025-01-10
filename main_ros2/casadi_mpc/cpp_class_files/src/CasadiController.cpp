@@ -18,6 +18,13 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
     }
 
     setActiveMPC(MPCType::MPC8); // Set the default MPC
+
+    // Initialize the default transient trajectory parameters
+    // Default: no transient trajectory
+    setTransientTrajParams(0.0, 0.0, 0.0);
+    transient_traj_cnt = 0;
+    transient_traj_len = 0;
+    transient_traj_rows = 7;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -51,6 +58,23 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
         }
     }
 
+    // set next y_d reference pose
+    if (transient_traj_cnt < transient_traj_len)
+    {
+        for (casadi_uint j = 0; j < traj_data_per_horizon; j++)
+        {
+            memcpy(y_d_ptr + j * transient_traj_rows,
+                   transient_traj_data.col(transient_traj_cnt).data(),
+                   transient_traj_rows * sizeof(double));
+        }
+    }
+    else
+    {
+        // read next trajectory block from file
+        active_mpc->read_trajectory_block();
+    }
+
+    // Solve the MPC
     int flag = active_mpc->solve(); // uses internal the pointer x_k_ptr
     if (flag)
     {
@@ -58,26 +82,23 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
         return tau_full; // Return zero torque
     }
 
-    Eigen::VectorXd u_k = Eigen::Map<Eigen::VectorXd>(u_k_ptr, nq_red);
-    Eigen::VectorXd x_k_ndof = Eigen::Map<const Eigen::VectorXd>(x_k_ndof_ptr, nx);
+    // Calculate the full torque (Feedforward + PD control for fixed joints)
+    Eigen::Map<Eigen::VectorXd> u_k(u_k_ptr, nq_red);
+    Eigen::Map<const Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
 
     tau_full = torque_mapper.calc_full_torque(u_k, x_k_ndof);
     return tau_full;
 }
 
-// TODO:
-// 1. aktuellen Zustand lesen
-// 2. Pose von aktuellen Zustand berechnen: pe0 und R_init (pinocchio, homogene transformation)
-// 3. Ersten Wert der Trajektorie lesen: pe0 und qe0(convert to R_target)
-// 4. Trajektorie berechnen:
-//      generate_trajectory(double dt, const Eigen::Vector4d &xe0, const Eigen::Vector4d &xeT,
-//                              const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
-//                              const std::map<std::string, double> &param_traj_poly)
-// 5. Logik für Transiente trajektorie und umschalten zu der aus file.
-
 // Method to generate a transient trajectory
-Eigen::MatrixXd CasadiController::generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr,
-                                                                const std::map<std::string, double> &param_traj_poly)
+void CasadiController::generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr,
+                                                     double T_start, double T_poly, double T_end)
+{
+    setTransientTrajParams(T_start, T_poly, T_end);
+    generate_transient_trajectory(x_k_ndof_ptr);
+}
+
+void CasadiController::generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr)
 {
     Eigen::Vector3d p_init, p_target;
     Eigen::Matrix3d R_init, R_target;
@@ -86,8 +107,10 @@ Eigen::MatrixXd CasadiController::generate_transient_trajectory(const casadi_rea
     Eigen::Map<const Eigen::VectorXd> q_init_nq(x_k_ndof_ptr, nq);
     Eigen::Map<const Eigen::VectorXd> q_target_nq(get_x_ref_nq().data(), nq);
 
+#ifdef DEBUG
     std::cout << "q_init_nq: " << q_init_nq.transpose() << std::endl;
     std::cout << "q_init_nq: " << q_target_nq.transpose() << std::endl;
+#endif
 
     // Calculate the pose from the state
     torque_mapper.calcPose(q_init_nq, p_init, R_init);
@@ -95,13 +118,16 @@ Eigen::MatrixXd CasadiController::generate_transient_trajectory(const casadi_rea
     // Get the target state from the trajectory file
     torque_mapper.calcPose(q_target_nq, p_target, R_target);
 
+#ifdef DEBUG
     std::cout << "q_init_nq: " << p_init.transpose() << std::endl;
     std::cout << "q_init_nq: " << p_target.transpose() << std::endl;
+#endif
 
     // Generate the transient trajectory
-    Eigen::MatrixXd traj_data = generate_trajectory(dt, p_init, p_target, R_init, R_target, param_traj_poly);
-
-    return traj_data;
+    transient_traj_data = generate_trajectory(dt, p_init, p_target, R_init, R_target, param_transient_traj_poly);
+    transient_traj_len = transient_traj_data.cols();
+    transient_traj_rows = transient_traj_data.rows();
+    transient_traj_cnt = 0;
 }
 
 // set the active MPC
@@ -114,12 +140,35 @@ void CasadiController::setActiveMPC(MPCType mpc_type)
         torque_mapper.set_kinematic_mpc_flag(active_mpc->is_kinematic_mpc);
         x_k_ptr = active_mpc->get_x_k();
         u_k_ptr = active_mpc->get_optimal_control();
+        y_d_ptr = active_mpc->get_y_d();
+        traj_data_per_horizon = active_mpc->get_traj_data_per_horizon_len();
         dt = active_mpc->get_dt();
     }
     else
     {
         std::cerr << "Invalid MPC type." << std::endl;
     }
+}
+
+// set the transient trajectory parameters
+void CasadiController::setTransientTrajParams(double T_start, double T_poly, double T_end)
+{
+    if (T_start < 0)
+    {
+        throw std::invalid_argument("T_start must be greater than or equal to 0 (start time of the transient trajectory)");
+    }
+    if (T_start > T_poly)
+    {
+        throw std::invalid_argument("T_start must be less than or equal to T_poly (total time of the polynomial trajectory)");
+    }
+    if (T_poly > T_end)
+    {
+        throw std::invalid_argument("T_poly must be less than or equal to T_end (total time of the transient trajectory)");
+    }
+
+    param_transient_traj_poly["T_start"] = T_start;
+    param_transient_traj_poly["T_poly"] = T_poly;
+    param_transient_traj_poly["T_end"] = T_end;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -223,7 +272,7 @@ Eigen::VectorXd CasadiController::create_poly_traj(const Eigen::Vector3d &yT, co
 
     // Create the final vector to hold both position and quaternion
     Eigen::VectorXd result(7);
-    result << p_d.head<3>(), q_d.coeffs(); // q_d.coeffs() returns the quaternion in the form {x, y, z, w}
+    result << p_d.head<3>(), q_d.w(), q_d.x(), q_d.y(), q_d.z(); // important: q_d.coeffs() returns the quaternion in the form {x, y, z, w}
 
     return result;
 }

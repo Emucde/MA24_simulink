@@ -136,7 +136,6 @@ int CasadiMPC::solve()
     // Read the next trajectory block
     if (!flag)
     {
-        read_trajectory_block();
         memcpy(in_init_guess, out_init_guess, init_guess_len * sizeof(casadi_real));
     }
     else
@@ -213,6 +212,52 @@ void CasadiMPC::switch_traj(casadi_uint traj_sel)
 
     // read first trajectory data from file
     read_trajectory_block();
+}
+
+void CasadiMPC::read_trajectory_block()
+{
+    std::ifstream file(traj_file, std::ios::binary);
+
+    if (!file)
+    {
+        std::cerr << "Error opening file: " << traj_file << std::endl;
+        return;
+    }
+
+    // Set the file pointer to the starting position
+    file.seekg(traj_data_startbyte);
+
+    for (casadi_uint j = 0; j < traj_data_per_horizon; j++)
+    {
+        // Move the read position according to mpc_traj_indices[j]
+        file.seekg((traj_count + mpc_traj_indices[j]) * traj_rows * sizeof(double), std::ios::cur);
+
+        // Read data into array y_d
+        file.read(reinterpret_cast<char *>(y_d + j * traj_rows), traj_rows * sizeof(double));
+
+        // Check for read errors
+        if (!file)
+        {
+            std::cerr << "Error reading trajectory data at column: " << j << std::endl;
+            return;
+        }
+
+        // Return to the starting position for next column
+        file.seekg(traj_data_startbyte, std::ios::beg);
+    }
+    if (traj_count < traj_data_real_len - 1)
+    {
+        traj_count++;
+    }
+#ifdef DEBUG
+    for (int i = 0; i < traj_data_per_horizon * traj_rows; i++)
+    {
+        std::cout << y_d[i] << " ";
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
+#endif
+    file.close();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -315,52 +360,6 @@ std::streamoff CasadiMPC::get_traj_dims()
     // Close the file
     file.close();
     return traj_data_startbyte;
-}
-
-void CasadiMPC::read_trajectory_block()
-{
-    std::ifstream file(traj_file, std::ios::binary);
-
-    if (!file)
-    {
-        std::cerr << "Error opening file: " << traj_file << std::endl;
-        return;
-    }
-
-    // Set the file pointer to the starting position
-    file.seekg(traj_data_startbyte);
-
-    for (casadi_uint j = 0; j < traj_data_per_horizon; j++)
-    {
-        // Move the read position according to mpc_traj_indices[j]
-        file.seekg((traj_count + mpc_traj_indices[j]) * traj_rows * sizeof(double), std::ios::cur);
-
-        // Read data into array y_d
-        file.read(reinterpret_cast<char *>(&y_d[j * traj_rows]), traj_rows * sizeof(double));
-
-        // Check for read errors
-        if (!file)
-        {
-            std::cerr << "Error reading trajectory data at column: " << j << std::endl;
-            return;
-        }
-
-        // Return to the starting position for next column
-        file.seekg(traj_data_startbyte, std::ios::beg);
-    }
-    if (traj_count < traj_data_real_len - 1)
-    {
-        traj_count++;
-    }
-#ifdef DEBUG
-    for (int i = 0; i < traj_data_per_horizon * traj_rows; i++)
-    {
-        std::cout << y_d[i] << " ";
-    }
-    std::cout << std::endl;
-    std::cout << std::endl;
-#endif
-    file.close();
 }
 
 void CasadiMPC::read_x0_init(const std::string &x0_init_file, casadi_real *x0_arr)
