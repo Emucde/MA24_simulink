@@ -30,7 +30,7 @@ robot_name = 'fr3_no_hand_6dof';
 % robot_name = 'ur5e_6dof';
 
 compile_mode = 2; % Compile mode: 1 - nlpsol, 2 - opti
-opt_flag = '-O2'; % Optimization flag for compilation
+opt_flag = '-O3'; % Optimization flag for compilation
 
 output_dir = ['./s_functions/', robot_name, '/'];
 input_dir = [output_dir, 'casadi_functions/'];
@@ -101,7 +101,7 @@ if compile_matlab_sfun
             
             casadi_fun = Function.load([input_dir, fun_name '.casadi']);
 
-            casadi_fun_to_mex(casadi_fun, output_dir, fun_name, '-O2');
+            casadi_fun_to_mex(casadi_fun, output_dir, fun_name, opt_flag);
             disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
         end
         fprintf('\n--------------------------------------------------------------------\n\n');

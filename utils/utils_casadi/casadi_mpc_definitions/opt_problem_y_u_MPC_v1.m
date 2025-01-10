@@ -124,6 +124,7 @@ x_0_0  = [q_0_red; q_0_red_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parame
 
 u_k_0  = tau_fun_red(q_0_red, q_0_red_p, q_0_red_pp); % gravity compensation
 
+q_pp_init_guess_0 = ones(n_red, N_MPC).*q_0_red_pp; % fully actuated
 u_init_guess_0 = ones(n_red, N_MPC).*u_k_0; % fully actuated
 
 % für die S-funktion ist der Initial Guess wesentlich!
@@ -135,16 +136,14 @@ x_DT_ctl_init_0 = F_kp1_sim(x_0_0,           u_init_guess_0(:, 1)    );
 x_DT2_init_0    = F2_sim(   x_DT_ctl_init_0, u_init_guess_0(:, 2)    );
 x_DT_init_0     = F_sim(    x_DT2_init_0,    u_init_guess_0(:, 3:end));
 
-q_pp_init_guess_0 = zeros(n_red, 1); % initial guess for joint acceleration
-
 x_init_guess_0     = [x_0_0 full(x_DT_ctl_init_0) full(x_DT2_init_0) full(x_DT_init_0)];
 % x_init_guess_0     = x_0_0 * ones(1, N_MPC+1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INIT GUESS 1/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(q_pp_init_guess_0), 1);
-lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(q_pp_init_guess_0), 1);
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
 
-init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); q_pp_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 if(any(isnan(full(init_guess_0))))
     error('init_guess_0 contains NaN values!');
@@ -163,28 +162,28 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables 2/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 u   = SX.sym( 'u',    n_red, N_MPC   );
 x   = SX.sym( 'x',  2*n_red, N_MPC+1 );
-q_pp_0 = SX.sym( 'q_pp_0', n_red, 1 );
 
-mpc_opt_var_inputs = {u, x, q_pp_0};
+mpc_opt_var_inputs = {u, x};
 
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')'; % optimization variables cellarray w
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables Limits 3/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min(n_x_indices), size(x, 2), 1); repmat(pp.q_pp_min(n_indices), size(q_pp_0, 2), 1)];
-ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max(n_x_indices), size(x, 2), 1); repmat(pp.q_pp_max(n_indices), size(q_pp_0, 2), 1)];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min(n_x_indices), size(x, 2), 1)];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max(n_x_indices), size(x, 2), 1)];
 
 N_u = numel(u);
 N_x = numel(x);
-u_opt_indices = [1:n_red, 1+N_u+N_x: N_u+N_x+n_red]; % tau_0 and q_pp_0
+u_opt_indices = [1:n_red]; % tau_0
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INPUT Parameter 4/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 x_k    = SX.sym( 'x_k', 2*n_red, 1       ); % current x state
 y_d    = SX.sym( 'y_d', m+1,     N_MPC+1 ); % (y_d_0 ... y_d_N)
-u_prev    = SX.sym( 'u_prev',   n_red, N_MPC );
+% u_prev    = SX.sym( 'u_prev',   n_red, N_MPC );
 x_prev    = SX.sym( 'x_prev', 2*n_red, N_MPC+1 );
+% q_pp_prev = SX.sym( 'q_pp_prev', n_red, N_MPC );
 
-mpc_parameter_inputs = {x_k, y_d, u_prev, x_prev};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:); u_init_guess_0(:); x_init_guess_0(:)];
+mpc_parameter_inputs = {x_k, y_d, x_prev};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:); x_init_guess_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -193,7 +192,7 @@ if(weights_and_limits_as_parameter) % debug input parameter
 end
 
 % constraints conditions cellarray g
-g_x = cell(1, N_MPC+1); % for F
+g_x = cell(1, N_MPC); % for F
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET Equation Constraint size 5/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if(weights_and_limits_as_parameter)
@@ -231,6 +230,7 @@ for i=0:N_MPC
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
     
     if(i < N_MPC)
+
         if(i == 0)
             g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
         elseif(i == 1)
@@ -243,16 +243,15 @@ for i=0:N_MPC
         q_p(:,  1 + (i)) = dx(      1:  n_red, 1);
         q_pp(:, 1 + (i)) = dx(n_red+1:2*n_red, 1);
         
-        q_prev = x_prev(1:n_red, 1 + (i));
+        % q_prev = x_prev(1:n_red, 1 + (i));
         %g_vec(:, 1 + (i)) = g_fun_red(q);
-        g_vec(:, 1 + (i)) = g_fun_red(q_prev);
+        % g_vec(:, 1 + (i)) = g_fun_red(q_prev);
+        g_vec(:, 1 + (i)) = g_fun_red(q);
     end
 end
 
-g_qpp_0 = { q_pp_0 - q_pp(:, 1 + (0)) }; % Set the state constraints for q_pp_0 = q_pp(t0) = tilde q_pp_0
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Total number of equation conditions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-g = [g_x, g_qpp_0];
+g = g_x;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Cost Function  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
@@ -302,22 +301,20 @@ u_err = u-g_vec; % es ist stabiler es nicht gegenüber der vorherigen Lösung zu
 %u_err = u;
 %u_err = q_pp;
 
-J_u0 = Q_norm_square(u_err(:, 1 + (0)),         pp.R_u0(n_indices, n_indices));
-J_u  = Q_norm_square(u_err(:, 1 + (1:N_MPC-1)), pp.R_u(n_indices, n_indices));
+% q_err = x(1:n_red, :) - x_prev(1:n_red, :);
+% q_err_p = x(n_red+1:2*n_red, :);% - x_prev(n_red+1:2*n_red, :);
+% x_err = [q_err; q_err_p];
 
-q_err = x(1:n_red, :) - x_prev(1:n_red, :);
-q_err_p = x(n_red+1:2*n_red, :);% - x_prev(n_red+1:2*n_red, :);
-x_err = [q_err; q_err_p];
-
-J_x0 = Q_norm_square(x_err(:, 1 + (0)),       pp.R_x0(n_x_indices, n_x_indices));
-J_x  = Q_norm_square(x_err(:, 1 + (1:N_MPC)), pp.R_x(n_x_indices, n_x_indices));
+J_x_prev = Q_norm_square(x - x_prev, pp.R_x_prev(n_x_indices, n_x_indices));
+J_q_ref = Q_norm_square(q - pp.q_ref(n_indices), pp.R_q_ref(n_indices, n_indices));
+J_q_p  = Q_norm_square(q_p, pp.R_q_p(n_indices, n_indices));
+J_u  = Q_norm_square(u_err, pp.R_u(n_indices, n_indices));
 % J_u = Q_norm_square(q_pp, pp.R_q_pp(n_indices, n_indices)) + Q_norm_square(q_p, pp.R_q_pp(n_indices, n_indices));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Additional Outputs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_u, J_x, J_u0, J_x0}';
+cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_q_p, J_u, J_q_ref, J_x_prev}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 
 % calculate cost function
-J = 100*sum([cost_vars_SX{:}]);
-% asdf
+J = sum([cost_vars_SX{:}]);
