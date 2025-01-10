@@ -2,10 +2,12 @@
 #include "eigen_templates.hpp"
 
 FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
+                                               const std::string &tcp_frame_name,
                                                robot_config_t &robot_config,
                                                bool use_gravity,
                                                bool is_kinematic_mpc)
     : urdf_filename(urdf_filename),
+      tcp_frame_name(tcp_frame_name),
       robot_config(robot_config),
       is_kinematic_mpc(is_kinematic_mpc),
       nq(robot_config.nq),
@@ -19,7 +21,7 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
       q_ref_fixed(n_indices_fixed.size())
 {
     // Initialize the robot model and data using the URDF
-    initRobot(urdf_filename, robot_model_full, robot_data_full, use_gravity);
+    initRobot(urdf_filename, tcp_frame_name, robot_model_full, robot_data_full, use_gravity);
 
     // Initialize member matrices, biases, etc.
     K_d = Eigen::MatrixXd::Zero(nq, nq);
@@ -124,6 +126,15 @@ Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &
     return tau_full;
 }
 
+// Method for calculating a pose by a given state
+void FullSystemTorqueMapper::calcPose(const Eigen::VectorXd &x_k_ndof, Eigen::Vector3d &p, Eigen::Matrix3d &R)
+{
+    Eigen::VectorXd q = x_k_ndof.head(nq);
+    pinocchio::forwardKinematics(robot_model_full, robot_data_full, q);
+    p = robot_data_full.oMi[tcp_frame_id].translation();
+    R = robot_data_full.oMi[tcp_frame_id].rotation();
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////// PRIVATE METHODS ///////////////////////////////////
@@ -139,7 +150,11 @@ Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 
-void FullSystemTorqueMapper::initRobot(const std::string &urdf_filename, pinocchio::Model &robot_model, pinocchio::Data &robot_data, bool use_gravity)
+void FullSystemTorqueMapper::initRobot(const std::string &urdf_filename,
+                                       const std::string &tcp_frame_name,
+                                       pinocchio::Model &robot_model,
+                                       pinocchio::Data &robot_data,
+                                       bool use_gravity)
 {
     // Load the URDF file into the robot model
     pinocchio::urdf::buildModel(urdf_filename, robot_model);
@@ -155,4 +170,7 @@ void FullSystemTorqueMapper::initRobot(const std::string &urdf_filename, pinocch
     {
         robot_model.gravity.linear() << 0.0, 0.0, 0.0;
     }
+
+    // Initialize the TCP frame Id
+    tcp_frame_id = robot_model.getFrameId(tcp_frame_name);
 }

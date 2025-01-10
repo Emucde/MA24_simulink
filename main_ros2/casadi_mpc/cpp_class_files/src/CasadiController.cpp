@@ -1,11 +1,10 @@
 #include "CasadiController.hpp"
 
-CasadiController::CasadiController(const std::string &urdf_path, bool use_gravity)
-    : urdf_path(urdf_path),
-      robot_config(get_robot_config()),
+CasadiController::CasadiController(const std::string &urdf_path, const std::string &tcp_frame_name, bool use_gravity)
+    : robot_config(get_robot_config()),
       nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
       n_x_indices(robot_config.n_x_indices),
-      torque_mapper(urdf_path, robot_config, use_gravity, true)
+      torque_mapper(urdf_path, tcp_frame_name, robot_config, use_gravity, true)
 {
     // Initialize MPC objects
     for (int i = 0; i < static_cast<int>(MPCType::COUNT); ++i)
@@ -75,6 +74,34 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
 //                              const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
 //                              const std::map<std::string, double> &param_traj_poly)
 // 5. Logik für Transiente trajektorie und umschalten zu der aus file.
+
+// Method to generate a transient trajectory
+// Eigen::MatrixXd CasadiController::generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr,
+//                                                                 const std::map<std::string, double> &param_traj_poly)
+// {
+//     Eigen::Vector4d xe0 = Eigen::Vector4d::Zero();
+//     Eigen::Vector4d xeT = Eigen::Vector4d::Zero();
+
+//     // Extract the position and quaternion from the state
+//     xe0.head<3>() = x_k_ndof.head<3>();
+//     Eigen::Quaterniond qe0(x_k_ndof.tail<4>());
+//     Eigen::Matrix3d R_e0 = qe0.toRotationMatrix();
+
+//     // Extract the position and quaternion from the target state
+//     xeT.head<3>() = xT.head<3>();
+//     Eigen::Quaterniond qeT(xT.tail<4>());
+//     Eigen::Matrix3d R_eT = qeT.toRotationMatrix();
+
+
+// // Eigen::MatrixXd CasadiController::generate_trajectory(double dt, const Eigen::Vector4d &xe0, const Eigen::Vector4d &xeT,
+// //                                                       const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
+// //                                                       const std::map<std::string, double> &param_traj_poly)
+
+//     // Generate the transient trajectory
+//     Eigen::MatrixXd traj_data = generate_trajectory(dt, xe0, xeT, R_e0, R_eT, param_traj_poly);
+
+//     return traj_data;
+// }
 
 // set the active MPC
 void CasadiController::setActiveMPC(MPCType mpc_type)
@@ -157,8 +184,8 @@ Eigen::Vector4d CasadiController::trajectory_poly(double t, const Eigen::Vector4
 }
 
 Eigen::VectorXd CasadiController::create_poly_traj(const Eigen::Vector4d &yT, const Eigen::Vector4d &y0, double t,
-                          const Eigen:: Matrix3d &R_init, const Eigen::Vector3d &rot_ax,
-                          double rot_alpha_scale, const std::map<std::string, double> &param_traj_poly)
+                                                   const Eigen::Matrix3d &R_init, const Eigen::Vector3d &rot_ax,
+                                                   double rot_alpha_scale, const std::map<std::string, double> &param_traj_poly)
 {
     double T_start = param_traj_poly.at("T_start");
     double T_poly = param_traj_poly.at("T_poly");
@@ -188,8 +215,8 @@ Eigen::VectorXd CasadiController::create_poly_traj(const Eigen::Vector4d &yT, co
         -rot_ax[1], rot_ax[0], 0;
 
     Eigen::Matrix3d R_act = (Eigen::Matrix3d::Identity() + sin(alpha) * skew_ew +
-                      (1 - cos(alpha)) * skew_ew * skew_ew) *
-                     R_init;
+                             (1 - cos(alpha)) * skew_ew * skew_ew) *
+                            R_init;
 
     Eigen::Quaterniond q_d(R_act);
 
@@ -201,8 +228,8 @@ Eigen::VectorXd CasadiController::create_poly_traj(const Eigen::Vector4d &yT, co
 }
 
 Eigen::MatrixXd CasadiController::generate_trajectory(double dt, const Eigen::Vector4d &xe0, const Eigen::Vector4d &xeT,
-                             const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
-                             const std::map<std::string, double> &param_traj_poly)
+                                                      const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
+                                                      const std::map<std::string, double> &param_traj_poly)
 {
     double T_end = param_traj_poly.at("T_end");
 
@@ -214,7 +241,7 @@ Eigen::MatrixXd CasadiController::generate_trajectory(double dt, const Eigen::Ve
 
     // Convert quaternion to rotation matrix, then get axis and angle
     Eigen::Vector3d rot_vec = rot_quat.vec(); // The vector part (x, y, z)
-    double rot_rho = rot_quat.w();     // The scalar part (w)
+    double rot_rho = rot_quat.w();            // The scalar part (w)
 
     double rot_alpha_scale = 2 * acos(rot_rho); // Angle from the quaternion
     Eigen::Vector3d rot_ax;

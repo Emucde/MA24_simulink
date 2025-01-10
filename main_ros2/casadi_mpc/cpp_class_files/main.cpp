@@ -151,8 +151,9 @@ int main()
     // Configuration flags
     bool use_gravity = false;
     const std::string urdf_filename = "../../../urdf_creation/fr3_no_hand_7dof.urdf";
+    const std::string tcp_frame_name = "fr3_link8_tcp";
 
-    CasadiController controller(urdf_filename, use_gravity);
+    CasadiController controller(urdf_filename, tcp_frame_name, use_gravity);
     controller.setActiveMPC(MPCType::MPC8);
     controller.switch_traj(TRAJ_SELECT);
 

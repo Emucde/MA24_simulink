@@ -15,7 +15,6 @@ if [[ $# -eq 2 ]]; then
         BUILD_CURRENT_FILE=true
     fi
 fi
-# echo "BUILD_CURRENT_FILE: $BUILD_CURRENT_FILE"
 
 # Parse command line arguments
 if [[ $# -gt 0 ]]; then
@@ -35,6 +34,11 @@ if [[ $# -gt 0 ]]; then
         ;;
     esac
 fi
+
+echo "BUILD_CURRENT_FILE: $BUILD_CURRENT_FILE"
+echo "STANDALONE_MAKEFILE: $STANDALONE_MAKEFILE"
+echo "BUILD_TYPE: $BUILD_TYPE"
+echo ""
 
 if [ "$BUILD_TYPE" = "release" ]; then
     OPT_FLAGS="-O3"
@@ -94,9 +98,17 @@ if [ $BUILD_STATUS -eq 0 ]; then
         if [ $STANDALONE_MAKEFILE == true ]; then
             $masterdir/main_ros2/casadi_mpc/cpp_class_files/bin/$BUILD_TYPE/main
         else
-            $masterdir/main_ros2/casadi_mpc/cpp_class_files/build/bin/main
+            cd $masterdir/main_ros2/casadi_mpc/cpp_class_files
+            $masterdir/main_ros2/casadi_mpc/cpp_class_files/build_release/bin/main
         fi
         echo -e "\n----------------------------------\n"
+
+        echo -e "run make install? (y/n)"
+        read -r response
+        if [[ $response =~ ^([yY][eE][sS]|[yY])$ ]]; then
+            cd $masterdir/main_ros2/casadi_mpc/cpp_class_files/build_release
+            make install
+        fi
     fi
 else
     echo "Build failed with status code $BUILD_STATUS"

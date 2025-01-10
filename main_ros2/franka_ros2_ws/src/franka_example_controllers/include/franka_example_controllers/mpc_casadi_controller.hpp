@@ -99,7 +99,9 @@ namespace franka_example_controllers
                 bool mpc_started = false;
                 bool first_torque_read = false;
                 const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
-                CasadiController controller = CasadiController(urdf_filename, false);
+                const std::string tcp_frame_name = "fr3_link8_tcp";
+                bool use_gravity = false;
+                CasadiController controller = CasadiController(urdf_filename, tcp_frame_name, use_gravity);
                 Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(num_joints);
                 std::future<Eigen::VectorXd> tau_full_future;
                 bool tau_full_future_valid = false; // Flag to check if future is valid

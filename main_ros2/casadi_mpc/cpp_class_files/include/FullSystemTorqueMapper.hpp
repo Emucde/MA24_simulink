@@ -12,6 +12,7 @@
 #include <pinocchio/multibody/data.hpp>
 #include <pinocchio/parsers/urdf.hpp>
 #include <Eigen/Dense>
+#include <Eigen/Geometry> // For rotations and quaternions
 
 class FullSystemTorqueMapper
 {
@@ -26,6 +27,7 @@ public:
 
     // Constructor
     FullSystemTorqueMapper(const std::string &urdf_filename,
+                           const std::string &tcp_frame_name,
                            robot_config_t &robot_config,
                            bool use_gravity,
                            bool is_kinematic_mpc);
@@ -43,6 +45,9 @@ public:
 
     Eigen::VectorXd calc_full_torque(const Eigen::VectorXd &u, const Eigen::VectorXd &x_k_ndof);
 
+    // Method to calculate the pose (p, R) by a given state
+    void calcPose(const Eigen::VectorXd &x_k_ndof, Eigen::Vector3d &p, Eigen::Matrix3d &R);
+
     // Getters and setters
     const Eigen::VectorXd &getTauFull() const { return tau_full; }
     void setTauFull(const Eigen::VectorXd &tau) { tau_full = tau; }
@@ -52,6 +57,7 @@ public:
 
 private:
     const std::string urdf_filename;
+    const std::string tcp_frame_name;
     robot_config_t &robot_config;
     bool is_kinematic_mpc; // Kinematic MPC flag
     casadi_uint nq;        // Number of degrees of freedom
@@ -61,6 +67,7 @@ private:
     casadi_uint nq_fixed;  // Number of reduced degrees of freedom
     pinocchio::Model robot_model_full;
     pinocchio::Data robot_data_full;
+    pinocchio::Model::FrameIndex tcp_frame_id;
     const Eigen::VectorXi n_indices;
     const Eigen::VectorXi n_indices_fixed;
     const Eigen::VectorXd q_ref_nq;
@@ -75,7 +82,11 @@ private:
 
     Config config; // Configuration parameters
 
-    void initRobot(const std::string &urdf_filename, pinocchio::Model &robot_model, pinocchio::Data &robot_data, bool use_gravity);
+    void initRobot(const std::string &urdf_filename,
+                   const std::string &tcp_frame_name,
+                   pinocchio::Model &robot_model,
+                   pinocchio::Data &robot_data,
+                   bool use_gravity);
     Eigen::VectorXd enforceTorqueLimits(const Eigen::VectorXd &tau);
 };
 

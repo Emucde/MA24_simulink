@@ -32,7 +32,6 @@ enum class MPCType
 class CasadiController
 {
 private:
-    const std::string &urdf_path;       // URDF file path
     robot_config_t robot_config;        // Robot configuration
     std::vector<CasadiMPC> casadi_mpcs; // MPC objects
     MPCType selected_mpc_type;          // Active MPC type
@@ -53,7 +52,7 @@ private:
 
 public:
     // Constructor
-    CasadiController(const std::string &urdf_path, bool use_gravity);
+    CasadiController(const std::string &urdf_path, const std::string &tcp_frame_name, bool use_gravity);
 
     // solve the MPC
     Eigen::VectorXd solveMPC(const casadi_real *const x_k_ndof_ptr);
