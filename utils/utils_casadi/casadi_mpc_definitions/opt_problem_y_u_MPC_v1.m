@@ -1,64 +1,41 @@
-% MPC v1: Optimization problem 
-% States and references
-% - x_k: Current state
-% - y_n: Predicted TCP Position
-% - y_n_ref: Reference values for TCP position
-
-% Cost function (J_d,N)
-% Minimizes the deviation between predicted outputs and references over a prediction horizon (N)
-% Classic: J = (y - y_ref)_Q_y + u_Ru
-
-% Control Law
-% Optimal control input sequence (u_n) minimizes the cost function
-
-% Constraints
-% - System dynamics enforced through state equation (F)
-% - Initial state set to current state (x_k)
-% - Output (y_n) calculated from state (q_n) using output function (h)
-% - Velocity (y_p,n) and acceleration (y_pp,n) calculated from state and control input
-%   - System dynamics (M, C, g, J_v, J_vp) used for calculation
-% - State and control input constrained to admissible sets (X, U)
-
-% Note: Simplified notation used for clarity. Define matrices and functions explicitly in implementation.
-
-% MPC v3: Optimization problem 
+% % MPC v1: Optimization problem
 
 % States:
-% - x_n: predicted states
-% - z_n^ref: Reference trajectory (predicted future references)
+% - x: predicted states for n degrees of freedom (DoF) [joint positions, velocities]
+% - y: predicted task-space outputs representing the manipulator's pose [position and orientation]
+% - q_pp: joint accelerations to be determined over the prediction horizon
 
 % Parameters:
-% - x_k: Current system state
-% - [y_d, y_p,d]: Stacked vector containing:
-%   - y_d: desired trajectory (used to calculate control law)
-%   - y_p,d: desired velocity (derivative of y_d)
+% - x_k: Current state of the system [joint positions, velocities] at the initial time step
+% - y_d: Desired trajectory stacked vector, which includes:
+%   - p_d: desired positions in task space
+%   - q_d: desired orientations in quaternion representation
+%   - y_p: desired velocity (derivative of y_d)
+% - u_prev: previous control input to ensure continuity and stability in control actions
+% - x_prev: previous state for comparison to decrease oscillations
 
 % Cost function (J_d,N):
-% Minimizes the deviation between predicted outputs (y_n) and the desired trajectory (y_d) over a prediction horizon (N)
-% J_d,N(k, x_k, (u_n)) = sum( ...                   % Loop over prediction steps (n=1 to N-1)
+% Minimizes the deviation between predicted task-space outputs (y_n) and the desired trajectory (y_d) over a prediction horizon (N)
+% J_d,N(k, x_k, (u_n)) = sum( ...                   % Loop over prediction steps (n=1 to N)
 %   [ ||y_n       - y_ref_n ||_2^2 * Q_y; ...       % Deviation between predicted output and desired trajectory
-%     ||alpha_n   - y_pp_d_n||_2^2 * I; ...         % Penalty on difference between acceleration reference (alpha_n) and desired acceleration (y_pp_d_n)
-%     ||y_ref_p,n - y_p,d_n ||_2^2 * Q_y_d_p ] ...  % Deviation between reference velocity and desired velocity
-%     ||y_ref_n   - y_d_n   ||_2^2 * Q_y_d ] ...    % Deviation between reference position and desired position
+%     ||u_n - g_n||_2^2 * R_u; ...                 % Control effort penalty
+%     ||q_pp_n - q_pp_ref_n||_2^2 * R_q_pp; ...    % Acceleration deviation penalty
+%     ||x_n - x_prev,n ||_2^2 * R_x] ...            % State deviation from previous state
+%     ||y_N - y_N_ref||_2^2 * Q_y_terminal];        % Soft terminal output constraint for final state
 % );
 
 % Control Law:
-% Optimal control input sequence (u_n) minimizes the cost function (J_d,N), which is based on the desired trajectory (y_d).
+% Optimal control input sequence (u_n) is derived from the solutions to minimize the cost function (J_d,N), 
+% ensuring that the manipulator follows the desired trajectory (y_d) while maintaining stability through previous state feedback.
 
 % Optimization Problem formulation (MPC)
 % min J_d,N(k, x_k, (u_n))
-% s.t.  x_(n+1) = F(x_n, u_n)                   - System dynamics constraint
-%       z_ref_(n+1) = H(z_ref_n, alpha_n)       - Reference trajectory dynamics constraint
+% s.t.  x_(n+1) = F(x_n, u_n)                   - Non-linear system dynamics constraint
 %       x_0 = x_k                               - Initial state constraint
-%       z_0 = [y_d^0, y_p,d^0] OR [y_k, y_p,k]  - Initial desired state constraint
-%       [q_n, q_p,n] = x_n                      - Relationship between state and predicted outputs
-%       [y_ref_n, y_ref_p,n] = z_ref_n          - Reference trajectory linked to desired state
-%       y_n = h(q_n)                            - Output calculation constraint
-%       ||y_N - y_N_ref|| <= eps                - Terminal output constraint
-%       x_n ∈ X                                 - State constraint
-%       u_n ∈ U                                 - Control input constraint
-
-% Note: Simplified notation used for clarity. Define functions and matrices explicitly.
+%       [y_n] = h(x_n)                          - Output calculation constraint connecting state to output
+%       y_n = [p_n; q_n]                        - Position and orientation outputs from state
+%       y_n ∈ Y                                 - Output constraints
+%       u_n ∈ U                                 - Control input constraints
 
 import casadi.*
 
@@ -246,13 +223,13 @@ g_x(  1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 for i=0:N_MPC
     % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
     q = x(1:n_red, 1 + (i));
-
+    
     % calculate trajectory values (y_0 ... y_N)
     H_e = H_red(q);
     y(1:3,   1 + (i)) = H_e(1:3, 4);
     y(4:7,   1 + (i)) = quat_fun_red(q);
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
-
+    
     if(i < N_MPC)
         if(i == 0)
             g_x(1, 1 + (i+1))  = { F_kp1(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
@@ -261,11 +238,11 @@ for i=0:N_MPC
         else
             g_x(1, 1 + (i+1))  = { F(  x(:, 1 + (i)), u(:, 1 + (i)) ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
         end
-
+        
         dx   = f_red(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
         q_p(:,  1 + (i)) = dx(      1:  n_red, 1);
         q_pp(:, 1 + (i)) = dx(n_red+1:2*n_red, 1);
-
+        
         q_prev = x_prev(1:n_red, 1 + (i));
         %g_vec(:, 1 + (i)) = g_fun_red(q);
         g_vec(:, 1 + (i)) = g_fun_red(q_prev);
@@ -301,17 +278,17 @@ else
         % q_y_yr_err = [1; R_y_yr(3,2); R_y_yr(1,3); R_y_yr(2,1)];
         
         % q_y_yr_err = rotm2quat_v4_casadi(R_y_yr);
-
+        
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
         % quat_e = y(4:7, 1 + (i));
         % quat_d = y_d(4:7, 1 + (i));
-
+        
         % vec_e = quat_e(1)*quat_d(2:4) - quat_d(1)*quat_e(2:4) - cross(quat_d(2:4), quat_e(2:4));
         % q_y_yr_err = [1; vec_e];
-
+        
         % q_y_yr_err = 1/2*simplify(quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i)))) - quat_mult(y_d(4:7, 1 + (i)), quat_inv(y(4:7, 1 + (i)))));
-
+        
         if(i < N_MPC)
             J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
         else
