@@ -76,32 +76,33 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
 // 5. Logik für Transiente trajektorie und umschalten zu der aus file.
 
 // Method to generate a transient trajectory
-// Eigen::MatrixXd CasadiController::generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr,
-//                                                                 const std::map<std::string, double> &param_traj_poly)
-// {
-//     Eigen::Vector4d xe0 = Eigen::Vector4d::Zero();
-//     Eigen::Vector4d xeT = Eigen::Vector4d::Zero();
+Eigen::MatrixXd CasadiController::generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr,
+                                                                const std::map<std::string, double> &param_traj_poly)
+{
+    Eigen::Vector3d p_init, p_target;
+    Eigen::Matrix3d R_init, R_target;
 
-//     // Extract the position and quaternion from the state
-//     xe0.head<3>() = x_k_ndof.head<3>();
-//     Eigen::Quaterniond qe0(x_k_ndof.tail<4>());
-//     Eigen::Matrix3d R_e0 = qe0.toRotationMatrix();
+    // only map the first nq elements to get joint angles
+    Eigen::Map<const Eigen::VectorXd> q_init_nq(x_k_ndof_ptr, nq);
+    Eigen::Map<const Eigen::VectorXd> q_target_nq(get_x_ref_nq().data(), nq);
 
-//     // Extract the position and quaternion from the target state
-//     xeT.head<3>() = xT.head<3>();
-//     Eigen::Quaterniond qeT(xT.tail<4>());
-//     Eigen::Matrix3d R_eT = qeT.toRotationMatrix();
+    std::cout << "q_init_nq: " << q_init_nq.transpose() << std::endl;
+    std::cout << "q_init_nq: " << q_target_nq.transpose() << std::endl;
 
+    // Calculate the pose from the state
+    torque_mapper.calcPose(q_init_nq, p_init, R_init);
 
-// // Eigen::MatrixXd CasadiController::generate_trajectory(double dt, const Eigen::Vector4d &xe0, const Eigen::Vector4d &xeT,
-// //                                                       const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
-// //                                                       const std::map<std::string, double> &param_traj_poly)
+    // Get the target state from the trajectory file
+    torque_mapper.calcPose(q_target_nq, p_target, R_target);
 
-//     // Generate the transient trajectory
-//     Eigen::MatrixXd traj_data = generate_trajectory(dt, xe0, xeT, R_e0, R_eT, param_traj_poly);
+    std::cout << "q_init_nq: " << p_init.transpose() << std::endl;
+    std::cout << "q_init_nq: " << p_target.transpose() << std::endl;
 
-//     return traj_data;
-// }
+    // Generate the transient trajectory
+    Eigen::MatrixXd traj_data = generate_trajectory(dt, p_init, p_target, R_init, R_target, param_traj_poly);
+
+    return traj_data;
+}
 
 // set the active MPC
 void CasadiController::setActiveMPC(MPCType mpc_type)
@@ -183,7 +184,7 @@ Eigen::Vector4d CasadiController::trajectory_poly(double t, const Eigen::Vector4
     return y_d;
 }
 
-Eigen::VectorXd CasadiController::create_poly_traj(const Eigen::Vector4d &yT, const Eigen::Vector4d &y0, double t,
+Eigen::VectorXd CasadiController::create_poly_traj(const Eigen::Vector3d &yT, const Eigen::Vector3d &y0, double t,
                                                    const Eigen::Matrix3d &R_init, const Eigen::Vector3d &rot_ax,
                                                    double rot_alpha_scale, const std::map<std::string, double> &param_traj_poly)
 {
@@ -227,7 +228,7 @@ Eigen::VectorXd CasadiController::create_poly_traj(const Eigen::Vector4d &yT, co
     return result;
 }
 
-Eigen::MatrixXd CasadiController::generate_trajectory(double dt, const Eigen::Vector4d &xe0, const Eigen::Vector4d &xeT,
+Eigen::MatrixXd CasadiController::generate_trajectory(double dt, const Eigen::Vector3d &xe0, const Eigen::Vector3d &xeT,
                                                       const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
                                                       const std::map<std::string, double> &param_traj_poly)
 {

@@ -48,7 +48,7 @@ private:
     FullSystemTorqueMapper torque_mapper; // Torque mapper
     casadi_real *x_k_ptr;
     casadi_real *u_k_ptr;
-    casadi_uint dt;
+    casadi_real dt;
 
 public:
     // Constructor
@@ -56,6 +56,10 @@ public:
 
     // solve the MPC
     Eigen::VectorXd solveMPC(const casadi_real *const x_k_ndof_ptr);
+
+    // Method to generate a transient trajectory
+    Eigen::MatrixXd generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr,
+                                                                const std::map<std::string, double> &param_traj_poly);
 
     // Getters and setters
     void setActiveMPC(MPCType mpc);
@@ -119,11 +123,11 @@ private:
     // Functions for transient polynomial trajectory generation
     Eigen::Vector4d trajectory_poly(double t, const Eigen::Vector4d &y0, const Eigen::Vector4d &yT, double T);
 
-    Eigen::VectorXd create_poly_traj(const Eigen::Vector4d &yT, const Eigen::Vector4d &y0, double t,
+    Eigen::VectorXd create_poly_traj(const Eigen::Vector3d &yT, const Eigen::Vector3d &y0, double t,
                                      const Eigen::Matrix3d &R_init, const Eigen::Vector3d &rot_ax,
                                      double rot_alpha_scale, const std::map<std::string, double> &param_traj_poly);
 
-    Eigen::MatrixXd generate_trajectory(double dt, const Eigen::Vector4d &xe0, const Eigen::Vector4d &xeT,
+    Eigen::MatrixXd generate_trajectory(double dt, const Eigen::Vector3d &xe0, const Eigen::Vector3d &xeT,
                                         const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
                                         const std::map<std::string, double> &param_traj_poly);
 };

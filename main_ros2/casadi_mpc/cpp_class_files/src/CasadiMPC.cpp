@@ -45,7 +45,8 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
                                                      n_x_indices(robot_config.n_x_indices),
                                                      n_indices_fixed(robot_config.n_indices_fixed),
                                                      n_x_indices_fixed(robot_config.n_x_indices_fixed),
-                                                     traj_count(0), traj_select(1), mem(mpc_config.mem)
+                                                     traj_count(0), traj_select(1),
+                                                     mem(mpc_config.mem), dt(mpc_config.dt)
 {
     // Check if the configuration is valid
     if (mpc_config.casadi_fun == nullptr)
@@ -191,7 +192,7 @@ int CasadiMPC::solve_planner()
 // Method for switching the trajectory
 void CasadiMPC::switch_traj(casadi_uint traj_sel)
 {
-    if(traj_sel > traj_amount || traj_sel < 1)
+    if (traj_sel > traj_amount || traj_sel < 1)
     {
         throw std::runtime_error("Trajectory selection \"" + std::to_string(traj_sel) + "\" is out of bounds. Please select a value between 1 and " + std::to_string(traj_amount));
     }

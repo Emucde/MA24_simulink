@@ -56,7 +56,7 @@ Eigen::Vector4d trajectory_poly(double t, const Eigen::Vector4d &y0, const Eigen
     return y_d;
 }
 
-Eigen::VectorXd create_poly_traj(const Eigen::Vector4d &yT, const Eigen::Vector4d &y0, double t,
+Eigen::VectorXd create_poly_traj(const Eigen::Vector3d &yT, const Eigen::Vector3d &y0, double t,
                           const Eigen:: Matrix3d &R_init, const Eigen::Vector3d &rot_ax,
                           double rot_alpha_scale, const std::map<std::string, double> &param_traj_poly)
 {
@@ -100,7 +100,7 @@ Eigen::VectorXd create_poly_traj(const Eigen::Vector4d &yT, const Eigen::Vector4
     return result;
 }
 
-Eigen::MatrixXd generate_trajectory(double dt, const Eigen::Vector4d &xe0, const Eigen::Vector4d &xeT,
+Eigen::MatrixXd generate_trajectory(double dt, const Eigen::Vector3d &xe0, const Eigen::Vector3d &xeT,
                              const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
                              const std::map<std::string, double> &param_traj_poly)
 {
@@ -185,8 +185,8 @@ int main()
     double dt = 0.01;
 
     // Initial and target states
-    Eigen::Vector4d xe0(0.0, 0.0, 0.0, 0.0); // Starting at origin with no rotation
-    Eigen::Vector4d xeT(1.0, 1.0, 1.0, 0.0); // Target point
+    Eigen::Vector3d xe0(0.0, 0.0, 0.0); // Starting at origin with no rotation
+    Eigen::Vector3d xeT(1.0, 1.0, 1.0); // Target point
 
     // Rotation matrices: identity and 90 degrees around z-axis
     Eigen::Matrix3d R_init = Eigen::Matrix3d::Identity();
@@ -200,7 +200,8 @@ int main()
     param_traj_poly["T_end"] = 2.0;  // Total duration
 
     // Generate the trajectory
-    Eigen::MatrixXd trajectory = generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly);
+    // Eigen::MatrixXd trajectory = generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly);
+    Eigen::MatrixXd trajectory = controller.generate_transient_trajectory(x_k_ndof, param_traj_poly);
 
     // Output the trajectory results
     for (int i = 0; i < trajectory.cols(); ++i)

@@ -94,7 +94,7 @@ public:
         return n_x_indices_fixed;
     }
 
-    // Method to get x_ref_nq
+    // Method to get x_ref_nq (it is x0, the initial state of each trajectory)
     const std::vector<casadi_real> &get_x_ref_nq()
     {
         return x_ref_nq;
@@ -103,7 +103,7 @@ public:
     // Method to get the control sampling time dt
     casadi_real get_dt()
     {
-        return mpc_config.dt;
+        return dt;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////
@@ -147,6 +147,7 @@ private:
     casadi_uint traj_count;                  // Trajectory count
     int traj_select;                         // Trajectory selection
     int mem;                                 // Memory
+    casadi_real dt;                          // Control sampling time
     std::vector<casadi_real> x_ref_nq;       // Reference state
 
     void read_file(std::ifstream &file, std::streampos data_start, casadi_real *data, int data_len);

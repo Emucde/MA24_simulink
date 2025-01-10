@@ -127,12 +127,12 @@ Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &
 }
 
 // Method for calculating a pose by a given state
-void FullSystemTorqueMapper::calcPose(const Eigen::VectorXd &x_k_ndof, Eigen::Vector3d &p, Eigen::Matrix3d &R)
+void FullSystemTorqueMapper::calcPose(const Eigen::VectorXd &q, Eigen::Vector3d &p, Eigen::Matrix3d &R)
 {
-    Eigen::VectorXd q = x_k_ndof.head(nq);
     pinocchio::forwardKinematics(robot_model_full, robot_data_full, q);
-    p = robot_data_full.oMi[tcp_frame_id].translation();
-    R = robot_data_full.oMi[tcp_frame_id].rotation();
+    pinocchio::updateFramePlacements(robot_model_full, robot_data_full);
+    p = robot_data_full.oMf[tcp_frame_id].translation();
+    R = robot_data_full.oMf[tcp_frame_id].rotation();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////

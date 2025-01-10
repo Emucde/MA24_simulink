@@ -8,6 +8,7 @@
 #include <iostream>
 #include <pinocchio/algorithm/crba.hpp>
 #include <pinocchio/algorithm/rnea.hpp>
+#include "pinocchio/algorithm/frames.hpp"
 #include <pinocchio/multibody/model.hpp>
 #include <pinocchio/multibody/data.hpp>
 #include <pinocchio/parsers/urdf.hpp>
@@ -46,7 +47,7 @@ public:
     Eigen::VectorXd calc_full_torque(const Eigen::VectorXd &u, const Eigen::VectorXd &x_k_ndof);
 
     // Method to calculate the pose (p, R) by a given state
-    void calcPose(const Eigen::VectorXd &x_k_ndof, Eigen::Vector3d &p, Eigen::Matrix3d &R);
+    void calcPose(const Eigen::VectorXd &q, Eigen::Vector3d &p, Eigen::Matrix3d &R);
 
     // Getters and setters
     const Eigen::VectorXd &getTauFull() const { return tau_full; }
