@@ -9,7 +9,7 @@
       "includePath": [
         "${env:_colcon_cd_root}/include/**",
         "${workspaceFolder}/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/**",
-        "${workspaceFolder}/main_ros2/read_bin_data/include/**",
+        "${workspaceFolder}/main_ros2/casadi_mpc/cpp_class_files/include/**",
         "/usr/include/**",
         "${env:eigen_path}/**"
       ],
