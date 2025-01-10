@@ -44,6 +44,7 @@ int main()
     controller.setActiveMPC(MPCType::MPC8);
     controller.switch_traj(TRAJ_SELECT);
 
+    bool is_kinematic_mpc = controller.get_is_kinematic_mpc();
     const casadi_uint nq = controller.nq;
     const casadi_uint nx = controller.nx;
     const casadi_uint nq_red = controller.nq_red;
@@ -59,9 +60,12 @@ int main()
 
     // Measure execution time
     auto start = std::chrono::high_resolution_clock::now();
+    auto freq_measure1 = std::chrono::high_resolution_clock::now();
+    auto freq_measure2 = std::chrono::high_resolution_clock::now();
+    double freq;
 
     set_x_k_ndof(x_k_ndof, x_k, x_ref_nq_vec, nx, n_x_indices_ptr);
-
+    
 #ifdef PLOT_DATA
     std::ofstream x_k_ndof_file("x_k_ndof_data.txt");
     std::ofstream tau_full_file("tau_full_data.txt");
@@ -75,7 +79,7 @@ int main()
         x_k_ndof[i] = x_k_ndof[i] + 0.1;
     }
 
-    controller.generate_transient_trajectory(x_k_ndof, 0.0, 1.0, 2.0);
+    controller.generate_transient_trajectory(x_k_ndof, 0.0, 2.0, 2.0);
     Eigen::MatrixXd trajectory = controller.get_transient_traj_data();
     casadi_uint transient_traj_len = controller.get_transient_traj_len();
 
@@ -93,10 +97,15 @@ int main()
         tau_full = controller.solveMPC(x_k_ndof);
         x_k_ndof_eig = Eigen::Map<Eigen::VectorXd>(x_k_ndof, nq);
 
+        freq_measure1 = std::chrono::high_resolution_clock::now();
+        freq = 1e6/(std::chrono::duration<double, std::micro>(freq_measure1 - freq_measure2).count());
+        freq_measure2 = freq_measure1;
+
         if (i % 100 == 0)
         {
-            // std::cout << "q_k: " << x_k_ndof_eig.transpose() << std::endl;
-            std::cout << "Full torque: " << tau_full.transpose() << std::endl;
+            // std::cout << "q_k: " << x_k_ndof_eig.transpose();
+            std::cout << "Full torque: " << tau_full.transpose();
+            std::cout << "\tFrequency: " << freq << " Hz" << std::endl;
         }
 
 #ifdef PLOT_DATA
@@ -104,13 +113,22 @@ int main()
         tau_full_file << tau_full.transpose() << std::endl;
 #endif
 
-        memcpy(x_k, u_opt + nq_red, nx_red * sizeof(casadi_real));
+        // Simulation: use next predicted state as current state
+        if(is_kinematic_mpc)
+        {
+            memcpy(x_k, u_opt + nq_red, nx_red * sizeof(casadi_real));
+        }
+        else
+        {
+            memcpy(x_k, u_opt + 2*nq_red - 880 + 916, nx_red * sizeof(casadi_real)); // only for mpc01
+        }
+        
         set_x_k_ndof(x_k_ndof, x_k, x_ref_nq_vec, nx, n_x_indices_ptr);
     }
     // Measure and print execution time
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    std::cout << "Time taken by function: " << (double)duration.count() / 1000000 << " s" << std::endl;
+    std::cout << "Time taken by function: " << (double)duration.count() / 1e6 << " s" << std::endl;
 
 #ifdef PLOT_DATA
     x_k_ndof_file.close();

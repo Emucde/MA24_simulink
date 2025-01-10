@@ -67,6 +67,7 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
                    transient_traj_data.col(transient_traj_cnt).data(),
                    transient_traj_rows * sizeof(double));
         }
+        transient_traj_cnt++;
     }
     else
     {

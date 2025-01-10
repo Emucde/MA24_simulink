@@ -11,10 +11,10 @@ param_weight.(MPC).Q_yN  = 1e5*diag([1*ones(3,1); ones(3,1)]);  % D_N
 
 % param_weight.(MPC).R_u   = 1e-7*diag(ones(n,1));  % c_kpn
 % param_weight.(MPC).R_x   = 1e-4*diag(ones(2*n,1));  % c_kpn
-param_weight.(MPC).R_u     = 1e-10*diag(ones(n,1));  % c_kpn
+param_weight.(MPC).R_u     = 1e-5*diag(ones(n,1));  % c_kpn
 param_weight.(MPC).R_q_ref = 1e-5*diag(ones(n,1));
-param_weight.(MPC).R_q_p   = 1e-10*diag(ones(n,1));
-param_weight.(MPC).R_x_prev   = 1e-10*diag([ones(n,1); ones(n,1)]);
+param_weight.(MPC).R_q_p   = 1e-5*diag(ones(n,1));
+param_weight.(MPC).R_x_prev   = 0*diag([ones(n,1); ones(n,1)]);
 
 param_weight.(MPC).q_ref = param_robot.q_n;
 param_weight.(MPC).x_min    = x_min;

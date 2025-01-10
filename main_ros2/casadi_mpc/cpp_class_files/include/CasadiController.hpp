@@ -138,6 +138,12 @@ public:
         return transient_traj_len;
     }
 
+    // Method to get the is kinematic mpc flag
+    bool get_is_kinematic_mpc()
+    {
+        return active_mpc->is_kinematic_mpc;
+    }
+
 private:
     // Private methods
     std::string mpcToString(MPCType mpc);

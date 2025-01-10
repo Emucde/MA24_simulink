@@ -18,10 +18,10 @@ plot_null_simu                  = false; % plot system simulation for x0 = 0, u0
 convert_maple_to_casadi         = false; % convert maple functions into casadi functions
 fullsimu                        = false; % make full mpc simulation and plot results
 traj_select_mpc                 = 1; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
-create_init_guess_for_all_traj  = true; % create init guess for all trajectories
-compile_sfun                    = ~false; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
+create_init_guess_for_all_traj  = ~true; % create init guess for all trajectories
+compile_sfun                    = false; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
-compile_all_mpc_sfunctions      = false;
+compile_all_mpc_sfunctions      = ~false;
 generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
 reload_parameters_m             = true; % reload parameters.m at the end (clears all variables!)
 remove_sourcefiles              = false; % remove source files after compilation
@@ -156,7 +156,7 @@ param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true:
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC01;
+param_casadi_fun_struct = param_casadi_fun_name.MPC8;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if(compile_all_mpc_sfunctions)
@@ -431,7 +431,7 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         generate_casadi_types([mpc_c_sourcefile_path, 'casadi_types.h']);
         generate_mpc_config_typedef([mpc_c_sourcefile_path, 'mpc_config.h'], 'mpc_config');
         calc_udp_cfun_addresses(f_opt, f_opt_input_cell, f_opt_output_cell, mpc_c_sourcefile_path);
-        generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC_settings, traj_settings, casadi_func_name, mpc_c_sourcefile_path, s_fun_path)
+        generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC_settings, traj_settings, f_opt_input_cell, casadi_func_name, mpc_c_sourcefile_path, s_fun_path)
         fprintf('--------------------------------------------------------------------\n\n');
     end
 end
