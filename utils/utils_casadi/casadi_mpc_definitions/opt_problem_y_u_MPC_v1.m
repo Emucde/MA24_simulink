@@ -312,7 +312,7 @@ J_u  = Q_norm_square(u_err, pp.R_u(n_indices, n_indices));
 % J_u = Q_norm_square(q_pp, pp.R_q_pp(n_indices, n_indices)) + Q_norm_square(q_p, pp.R_q_pp(n_indices, n_indices));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Additional Outputs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_q_p, J_u, J_q_ref, J_x_prev}';
+cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_u, J_q_ref, J_q_p, J_x_prev}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 

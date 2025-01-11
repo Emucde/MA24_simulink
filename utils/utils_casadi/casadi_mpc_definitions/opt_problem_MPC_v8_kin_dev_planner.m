@@ -4,12 +4,8 @@ import casadi.*
 
 diff_variant_mode = struct;
 diff_variant_mode.numdiff = 1; % default forward, central, backward deviation
-diff_variant_mode.savgol = 2; % savgol filtering and deviation
-diff_variant_mode.savgol_v2 = 3; % savgol filtering without additional equations and deviation
-diff_variant_mode.savgol_not_equidist = 4; % savgol filtering without additional equations and deviation
-diff_variant_mode.savgol_not_equidist_noise_supr = 5; % savgol filtering without additional equations and deviation
 
-diff_variant = diff_variant_mode.savgol_not_equidist;
+diff_variant = diff_variant_mode.numdiff;
 
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;
@@ -62,15 +58,14 @@ x_0_0  = [q_0_red; q_0_red_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parame
 
 u_k_0  = q_0_red_pp;
 
-u_init_guess_0 = u_k_0;
-q_init_guess_0 = ones(n_red, N_MPC+1).*x_0_0(1:n_red);
-q_p_init_guess_0 = ones(n_red, 2).*x_0_0(n_red+1:2*n_red);
+u_init_guess_0 = ones(n_red, N_MPC).*u_k_0;
+x_init_guess_0 = ones(2*n_red, N_MPC+1).*x_0_0;
 
-lam_x_init_guess_0 = zeros(numel(u_init_guess_0) + numel(q_init_guess_0) + numel(q_p_init_guess_0), 1);
-lam_g_init_guess_0 = zeros(numel(u_init_guess_0) + 4*n_red, 1);
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0) + numel(x_init_guess_0), 1);
+lam_g_init_guess_0 = zeros(numel(u_init_guess_0) + numel(x_init_guess_0(1+n_red:2*n_red, :)) + numel(x_0_0), 1);
 % eig brauch ich q0, q0p, q0pp, q1, q1p = 5n Gleichungsbedingungen.
 
-init_guess_0 = [u_init_guess_0(:); q_init_guess_0(:); q_p_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 if(any(isnan(full(init_guess_0))))
     error('115: init_guess_0 contains NaN values!');
@@ -87,31 +82,36 @@ else % hardcoded weights
 end
 
 % Optimization Variables:
-u     = SX.sym( 'u',    n_red, 1 ); % %u0=q0pp (0 to Ta)
-q     = SX.sym( 'q',    n_red, N_MPC+1 );
-q_p_out = SX.sym( 'q_p',  n_red, 2 );
-x     = [q, q_p_out];
+u     = SX.sym( 'u',    n_red,   N_MPC   );
+x     = SX.sym( 'x',    2*n_red, N_MPC+1 );
 
-mpc_opt_var_inputs = {u, q, q_p_out}; % = {u, x}
+% confusing, but I need equation constraints to relate x to q and qp = Sv q.
+% only then the joint and velocity limits are maintained in!
+mpc_opt_var_inputs = {u, x};
 
+% u = [u0; u1; ... uN-1], x = [x0; x1; ... xN] = [q_0;q_0_p;q_1;q_1_p;...;q_N;q_N_p]
+% xx = [u; x] = [u0; u1; ... uN-1; x0; x1; ... xN]
+%   u0 = q_0_pp = u(   1 :   n_red) | q_0 = x(     1     : n_red      ) | q_0_p = x(     1+  n_red :     2*n_red)
+%   u0 = q_0_pp = xx(  1 :   n_red) | q_0 = xx(N_u+1     : n_red+N_u  ) | q_0_p = xx(N_u+1+  n_red : N_u+2*n_red)
+%   u1 = q_1_pp = u( n_red+1 : 2*n_red) | q_1 = x(     1+2*n_red :     3*n_red) | q_1_p = x(     1+3*n_red :     4*n_red)
+%   u1 = q_1_pp = xx(n_red+1 : 2*n_red) | q_1 = xx(N_u+1+2*n_red : N_u+3*n_red) | q_1_p = xx(N_u+1+3*n_red : N_u+4*n_red)
 N_u = numel(u);
-N_q = numel(q);
-q0_pp_idx = [N_u+1       : N_u+  n_red, N_u+N_q+1       : N_u+N_q+  n_red, 1 : n_red]; % [q_0, q_p_0, q_pp_0] % current desired state for CT Control
-q1_pp_idx = [N_u+1+n_red : N_u+2*n_red, N_u+N_q+1+n_red : N_u+N_q+2*n_red           ]; % [q_1, q_p_1] % next init state for MPC
+q0_pp_idx = [N_u+1         : N_u+  n_red, N_u+1+  n_red:N_u+2*n_red, 1       :   n_red]; % [q_0, q_p_0, q_pp_0] % current desired state for CT Control
+q1_pp_idx = [N_u+1+2*n_red : N_u+3*n_red, N_u+1+3*n_red:N_u+4*n_red, 1+n_red : 2*n_red]; % [q_1, q_p_1] % next init state for MPC
 u_opt_indices = [q0_pp_idx, q1_pp_idx];
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min(n_indices), size(q, 2), 1); repmat(pp.x_min(n_indices+n), size(q_p_out, 2), 1)];
-ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max(n_indices), size(q, 2), 1); repmat(pp.x_max(n_indices+n), size(q_p_out, 2), 1)];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
 
 % input parameter
 x_k  = SX.sym( 'x_k',  2*n_red, 1 ); % current x state = initial x state
 y_d  = SX.sym( 'y_d',  m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
-q_prev = SX.sym( 'q_prev',  n_red, N_MPC+1 );
+x_prev = SX.sym( 'q_prev',  2*n_red, N_MPC+1 );
 
-mpc_parameter_inputs = {x_k, y_d, q_prev};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:); q_init_guess_0(:)];
+mpc_parameter_inputs = {x_k, y_d, x_prev};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:); x_init_guess_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -120,7 +120,8 @@ if(weights_and_limits_as_parameter) % debug input parameter
 end
 
 % constraints conditions cellarray g
-g_x  = cell(1, 4);
+g_x  = cell(1, N_MPC+2);
+g_u  = cell(1, N_MPC);
 
 if(weights_and_limits_as_parameter)
     lbg = SX(numel(lam_g_init_guess_0), 1);
@@ -139,68 +140,27 @@ y    = SX( 7, N_MPC+1 ); % TCP pose:      (y_0 ... y_N)
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 if(diff_variant == diff_variant_mode.numdiff)
-    S_v = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'fwdbwdcentraltwotimes', DT);
+    S_v = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'fwdbwdcentralthreetimes', DT);
     S_a = S_v^2;
     disp('Selected diff method: forward central backward, non-equidistant samples');
-elseif(diff_variant == diff_variant_mode.savgol)
-    % DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
-    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol', DT, MPC_traj_indices);
-
-    S_v = DD_DT{2};
-    S_a = DD_DT{3};
-    disp('Selected diff method: savgol, equidistant samples');
-elseif(diff_variant == diff_variant_mode.savgol_v2)
-    DD_DT  = create_numdiff_matrix(DT, n_red, N_MPC+1, 'savgol');
-
-    S_q = DD_DT{1};
-    S_v = DD_DT{2};
-    S_a = DD_DT{3};
-    disp('Selected diff method: savgol_v2 (q = SV q)');
-elseif(diff_variant == diff_variant_mode.savgol_not_equidist)
-    param_golay = struct('Nq', 2, 'd', 2);
-    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices, param_golay);
-
-    % S_q = DD_DT{1};
-    S_v = DD_DT{2};
-    S_a = DD_DT{3};
-    disp('Selected diff method: savgol_notequidist, purely polynomial filtering');
-elseif(diff_variant == diff_variant_mode.savgol_not_equidist_noise_supr)
-    param_golay = struct('Nq', 2, 'd', 2);
-    DD_DT  = create_numdiff_matrix(DT_ctl, n_red, N_MPC+1, 'savgol_notequidist', DT, MPC_traj_indices, param_golay);
-    S_v = DD_DT{2};
-
-    % Funktioniert auch, ist dann aber keine polynomableitung
-    % Interessanterweise hat diese Variante eine enorm starke Rauschunterdrückung zur Folge.
-    % Dafür ist es nicht so genau wie mit DT_DT{3}. Insbesondere wenn man die Gewichtungsmatrizen
-    % für x-xprev zu klein hat, wird es instabil, wenn der TCP still stehen soll. Geht aber auch
-    % nur für Nq=2.
-    S_a = S_v^2;
-    disp('Selected diff method: savgol_notequidist_noise_supr: S_a = S_v^2');
 else
     error('invalid mode');
 end
 %      x = [q(t0),   q(t1), ...  q(tN),  dq(t0),  dq(t1), ...  dq(tN)] = [qq;   qq_p ]
 % d/dt x = [dq(t0), dq(t1), ... dq(tN), ddq(t0), ddq(t1), ... ddq(tN)] = [qq_p; qq_pp]
-qq = reshape(q, n_red*(N_MPC+1), 1);
+qq = reshape(x(1:n_red, :), n_red*(N_MPC+1), 1);
 qq_p  = S_v * qq;
 qq_pp = S_a * qq;
-
-if(diff_variant == diff_variant_mode.savgol_v2)
-    qq = S_q * qq;
-end
 
 q = reshape(qq, n_red, N_MPC+1);
 q_p = reshape(qq_p, n_red, N_MPC+1);
 q_pp = reshape(qq_pp, n_red, N_MPC+1);
 
 g_x(1, 1 + (0)) = {x_k - [q(:, 1 + (0)); q_p(:, 1 + (0))]}; % x0 = xk
-% g_x(1, 1 + (0)) = {x_k(1:n_red) - q(:, 1 + (0))}; % x0 = xk
-g_x(1, 1 + (1)) = {q_p_out(:, 1 + (0)) - q_p(:, 1 + (0))};
-g_x(1, 1 + (2)) = {q_p_out(:, 1 + (1)) - q_p(:, 1 + (1))};
-g_x(1, 1 + (3)) = {u - q_pp(:, 1 + (0))}; % u0 = q0pp
 
 for i=0:N_MPC
     q_i = q(:, 1 + (i));
+    q_p_i = q_p(:, 1 + (i));
 
     % calculate trajectory values (y_0 ... y_N)
     H_e = H_red(q_i);
@@ -208,6 +168,11 @@ for i=0:N_MPC
     y(1:3,   1 + (i)) = H_e(1:3, 4);
     y(4:7,   1 + (i)) = quat_fun_red(q_i);
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
+    g_x(1, 1 + (i+1)) = {x(1+n_red:2*n_red, 1 + (i)) - q_p_i};
+
+    if(i < N_MPC)
+        g_u(1, 1 + (i))   = {u(:, 1 + (i)) - q_pp(:, 1 + (i))};
+    end
 end
 
 % Calculate Cost Functions and set equation constraints
@@ -241,45 +206,16 @@ else
     end
 end
 
-g = g_x;
+g = [g_x, g_u];
 
-% J_q_p = Q_norm_square(q_p, pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
-% J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_x_prev = Q_norm_square(x - x_prev, pp.R_x_prev(n_x_indices, n_x_indices)); %Q_norm_square(u, pp.R_u);
 
-% qq_prev = reshape(q_prev, n_red*(N_MPC+1), 1);
-% qq_prev_p = S_v * qq_prev;
-% qq_prev_pp = S_a * qq_prev;
-% q_prev_p = reshape(qq_prev_p, n_red, N_MPC+1);
-% q_prev_pp = reshape(qq_prev_pp, n_red, N_MPC+1);
+J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices, n_indices));
 
-% dq = q - q_prev;
-% dq_p = q_p - q_prev_p;
-% dq_pp = q_pp - q_prev_pp;
-% delta_x = [dq; dq_p];
-% delta_u = dq_pp;
-
-% J_delta_x0 = Q_norm_square(delta_x(:, 1 + (0)),       pp.R_delta_x0(n_x_indices, n_x_indices));
-% J_delta_x  = Q_norm_square(delta_x(:, 1 + (1:N_MPC)), pp.R_delta_x(n_x_indices, n_x_indices));
-
-% J_delta_u = Q_norm_square(delta_u, pp.R_delta_u(n_indices, n_indices));
-
-% cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_p, J_q_pp, J_delta_x, J_delta_x0, J_delta_u}';
-
-qq_prev = reshape(q_prev, n_red*(N_MPC+1), 1);
-qq_prev_p  = S_v * qq_prev;
-qq_prev_pp = S_a * qq_prev;
-
-q_prev_p = reshape(qq_prev_p, n_red, N_MPC+1);
-q_prev_pp = reshape(qq_prev_pp, n_red, N_MPC+1);
-
+J_q_p = Q_norm_square(q_p, pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 
-x_err = [q - q_prev; q_p];
-
-J_x0 = Q_norm_square(x_err(:, 1 + (0)),       pp.R_x0(n_x_indices, n_x_indices));
-J_x  = Q_norm_square(x_err(:, 1 + (1:N_MPC)), pp.R_x(n_x_indices, n_x_indices));
-
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_x, J_x0}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_ref, J_q_p, J_q_pp, J_x_prev}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

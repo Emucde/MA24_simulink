@@ -137,7 +137,7 @@ u_k_0  = q_0_red_pp;
 u_init_guess_0 = ones(n_red, N_MPC).*u_k_0;
 x_init_guess_0 = [x_0_0 ones(2*n_red, N_MPC).*x_0_0];
 
-t_init_guess = (MPC_traj_indices(2:end)-1)*DT_ctl;
+t_init_guess = (MPC_traj_indices-1)*DT_ctl;
 theta_init_guess_0 = t_init_guess/T;
 theta_0 = theta_init_guess_0(1);
 v_init_guess_0 = zeros(1, N_MPC);
@@ -180,7 +180,7 @@ end
 % Optimization Variables:
 u     = SX.sym( 'u',  n_red,   N_MPC   ); % u = q_0_pp
 x     = SX.sym( 'x',  2*n_red, N_MPC+1 );
-theta = SX.sym( 'theta', 1, N_MPC );
+theta = SX.sym( 'theta', 1, N_MPC+1 );
 v = SX.sym( 'v', 1, N_MPC );
 
 if(theta_sys)
@@ -213,10 +213,10 @@ w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
 x_k = SX.sym( 'x_k', 2*n_red, 1 ); % current x state = initial x state
 t_k = SX.sym( 't_k', 1, 1 ); % current time
 x_prev = SX.sym( 'x_prev',  2*n_red, N_MPC+1 );
-theta_prev = SX.sym( 'theta_prev', 1, N_MPC );
+theta_prev = SX.sym( 'theta_prev', 1, N_MPC+1 );
 
 mpc_parameter_inputs = {x_k, t_k, x_prev, theta_prev, traj_select};
-mpc_init_reference_values = [x_0_0(:); DT_ctl; x_init_guess_0(:); theta_init_guess_0(:); traj_select_mpc];
+mpc_init_reference_values = [x_0_0(:); 0; x_init_guess_0(:); theta_init_guess_0(:); traj_select_mpc];
 
 theta_d = (t_k+t_init_guess)/T;
 
@@ -238,7 +238,6 @@ end
 
 % constraints conditions cellarray g
 g_x  = cell(1, N_MPC+1); % for F
-g_theta = cell(1, N_MPC+1); % for H
 
 if(weights_and_limits_as_parameter)
     lbg = SX(numel(lam_g_init_guess_0), 1);
@@ -294,9 +293,9 @@ else
     J_yt = 0;
     for i=1:N_MPC
         if(i < N_MPC)
-            J_yt = J_yt + Q_norm_square( y(yt_indices, 1 + (i)) - sigma_t_fun(theta(1 + (i-1)), traj_select), pp.Q_y(yt_indices,yt_indices)  );
+            J_yt = J_yt + Q_norm_square( y(yt_indices, 1 + (i)) - sigma_t_fun(theta(1 + (i)), traj_select), pp.Q_y(yt_indices,yt_indices)  );
         else
-            J_yt_N = Q_norm_square( y(yt_indices, 1 + (i)) - sigma_t_fun(theta(1 + (i-1)), traj_select), pp.Q_yN(yt_indices,yt_indices)  );
+            J_yt_N = Q_norm_square( y(yt_indices, 1 + (i)) - sigma_t_fun(theta(1 + (i)), traj_select), pp.Q_yN(yt_indices,yt_indices)  );
         end
     end
 end
@@ -310,7 +309,7 @@ else
         % R_y_yr = R_e_arr{1 + (i)} * sigma_r_fun(theta(1 + (i)))';
         % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];  % am genauesten
         
-        R_y_yr = R_e_arr{1 + (i)} * sigma_r_fun(theta(1 + (i-1)), traj_select)' - sigma_r_fun(theta(1 + (i-1)), traj_select) * R_e_arr{1 + (i)}';
+        R_y_yr = R_e_arr{1 + (i)}' * sigma_r_fun(theta(1 + (i)), traj_select) - sigma_r_fun(theta(1 + (i)), traj_select)' * R_e_arr{1 + (i)};
         q_y_yr_err = [1; R_y_yr(3,2); R_y_yr(1,3); R_y_yr(2,1)];
 
         % die beiden methoden weisen größere Quaternionenfehler auf:
@@ -326,27 +325,17 @@ else
     end
 end
 
-% Es macht mmn. keinen Sinn die Loop mit i=0 zu beginnen weil theta_0 nur für y - sigma(theta_0) verwendet werden sollte.
-% Wird dafür ein Minimum gefunden ist garantiert, dass theta_0 = theta* d. h. der kürzeste Abstand zum gegenwärtigen Pfad ist.
-% Problem: Es ist nicht garantiert, dass hier ein Minimum gefunden wird, da es eine Soft Constraint ist die relativ zu anderen
-% Kosten gewichtet wird. Sauber ist es daher, theta* außerhalb der MPC zu berechnen und als Startwert zu verwenden.
-% ... geht aber nicht... [TODO]
-J_theta = 0;
-for i=2:N_MPC
-    if(i < N_MPC)
-        J_theta = J_theta + Q_norm_square( theta(1 + (i-1)) - theta_d(1 + (i-1)), pp.Q_theta  );
-    else
-        J_thetaN = Q_norm_square( theta(1 + (i-1)) - theta_d(1 + (i-1)), pp.Q_thetaN  );
-    end
-end
+J_theta = Q_norm_square(theta(1 + (1:N_MPC-1)) - theta_d(1 + (1:N_MPC-1)), pp.Q_theta);
+J_thetaN = Q_norm_square(theta(1 + (N_MPC)) - theta_d(1 + (N_MPC)), pp.Q_thetaN);
 
+J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices, n_indices));
 J_q_p = Q_norm_square(x(1+n_red:2*n_red, :), pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 
 J_x_prev = Q_norm_square(x-x_prev, pp.R_x_prev(n_x_indices, n_x_indices));
 J_theta_prev = Q_norm_square(theta-theta_prev, pp.R_theta_prev);
 
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_p, J_q_pp, J_theta, J_thetaN, J_x_prev, J_theta_prev}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_ref, J_q_p, J_q_pp, J_theta, J_thetaN, J_x_prev, J_theta_prev}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

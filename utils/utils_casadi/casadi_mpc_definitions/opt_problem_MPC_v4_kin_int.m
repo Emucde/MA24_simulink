@@ -121,11 +121,10 @@ ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max(n_x_indices),
 % input parameter
 x_k    = SX.sym( 'x_k',     2*n_red, 1 ); % current x state = initial x state
 y_d    = SX.sym( 'y_d',     m+1, N_MPC+1 );
-u_prev = SX.sym( 'u_prev',  n_red, N_MPC );
 x_prev = SX.sym( 'x_prev',  2*n_red, N_MPC+1 );
 
-mpc_parameter_inputs = {x_k, y_d, u_prev, x_prev};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:); u_init_guess_0(:); x_init_guess_0(:)];
+mpc_parameter_inputs = {x_k, y_d, x_prev};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:); x_init_guess_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -150,6 +149,7 @@ lambda_g0 = SX.sym('lambda_g0', size(lbg));
 
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
 y       = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
+q_p    = SX(n_red, N_MPC+1); % TCP velocity:  (q_0_p ... q_N_p)
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
@@ -157,7 +157,7 @@ g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 
 for i=0:N_MPC
     q = x(1:n_red, 1 + (i));
-    q_p = x(n_red+1:2*n_red, 1 + (i));
+    q_p(:,  1 + (i)) = x(n_red+1:2*n_red, 1 + (i));
 
     % calculate trajectory values (y_0 ... y_N)
     H_e = H_red(q);
@@ -250,21 +250,12 @@ int_times_eye4_2 = eye(N_MPC-1);
 int_times_eye5 = eye(N_MPC);
 int_times_eye6 = eye(N_MPC+1);
 
-q        = x(   1:n_red, :);
-q_prev = x_prev(1:n_red, :);
-q_p      = x(     n_red+1:2*n_red, :);
-q_prev_p = x_prev(n_red+1:2*n_red, :);
+J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices, n_indices));
+J_q_p = Q_norm_square(x(1+n_red:2*n_red, :), pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_x_prev  = Q_norm_square((x - x_prev), pp.R_x_prev(n_x_indices, n_x_indices));
 
-x_err = [q - q_prev; q_p - q_prev_p];
-
-J_q_p = Q_norm_square(q_p*int_times_eye6, pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
-J_q_pp = Q_norm_square(u*int_times_eye5, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
-
-J_delta_x1 = Q_norm_square(x_err(:, 1 + (1))*int_times(1),       pp.R_delta_x1(n_x_indices, n_x_indices));
-J_delta_x  = Q_norm_square(x_err(:, 1 + (2:N_MPC))*int_times_eye4_2, pp.R_delta_x(n_x_indices, n_x_indices));
-J_delta_u = Q_norm_square((u - u_prev)*int_times_eye5, pp.R_delta_u(n_indices, n_indices));
-
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_p, J_q_pp, J_delta_x1, J_delta_x, J_delta_u}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_ref, J_q_p, J_q_pp, J_x_prev}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

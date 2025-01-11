@@ -33,4 +33,24 @@ function rpy = rotm2rpy_casadi(R)
     alpha = if_else(beta == pi/2, 0, if_else(beta == -pi/2, 0, atan2(r21/cos_beta, r11/cos_beta)));
 
     rpy = vertcat(alpha, beta, gamma);
+
+    % Alernative implementation of ZYX
+    % % Calculate Pitch (Beta)
+    % pitch = atan2(-r31, sqrt(r32^2 + r33^2));
+
+    % % Check for gimbal lock condition
+    % is_pitch_gimbal_lock = if_else(abs(r31) == 1, 1, 0);
+    
+    % % roll (Gamma) calculation
+    % roll = if_else(is_pitch_gimbal_lock == 1, ...  % Pitch is +/- 90 degrees
+    %                 0, ...                        % Set roll to 0 in gimbal lock
+    %                 atan2(r32/cos(pitch), r33/cos(pitch)));
+    
+    % % Yaw (Alpha) calculation
+    % yaw = if_else(is_pitch_gimbal_lock == 1, ...
+    %                 0, ...                        % Set yaw to 0 in gimbal lock
+    %                 atan2(r21/cos(pitch), r11/cos(pitch)));
+
+    % % Concatenate the angles in the order ZYX: [Yaw, Pitch, roll]
+    % rpy = vertcat(yaw, pitch, roll);
 end
