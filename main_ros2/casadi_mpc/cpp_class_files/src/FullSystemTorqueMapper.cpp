@@ -135,6 +135,18 @@ void FullSystemTorqueMapper::calcPose(const Eigen::VectorXd &q, Eigen::Vector3d 
     R = robot_data_full.oMf[tcp_frame_id].rotation();
 }
 
+// Method for simulating the robot model
+void FullSystemTorqueMapper::simulateModel(Eigen::Map<Eigen::VectorXd> &x_k_ndof, Eigen::Map<const Eigen::VectorXd> &tau, double dt)
+{
+    Eigen::Ref<const Eigen::VectorXd> q = x_k_ndof.head(nq);
+    Eigen::Ref<const Eigen::VectorXd> q_p = x_k_ndof.tail(nq);
+
+    Eigen::VectorXd q_pp = pinocchio::aba(robot_model_full, robot_data_full, q, q_p, tau);
+
+    x_k_ndof.head(nq) += q_p * dt; // q_next = q + q_p * dt
+    x_k_ndof.tail(nq) += q_pp * dt; // q_p_next = q_p + q_pp * dt
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////// PRIVATE METHODS ///////////////////////////////////

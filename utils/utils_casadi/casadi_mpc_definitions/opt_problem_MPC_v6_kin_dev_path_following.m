@@ -456,7 +456,7 @@ J_thetaN = Q_norm_square(theta(1 + (N_MPC)) - theta_d(1 + (N_MPC)), pp.Q_thetaN)
 
 J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices, n_indices));
 J_q_p = Q_norm_square(x(1+n_red:2*n_red, :), pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
-J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_q_pp = Q_norm_square(u, pp.R_u(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 
 J_x_prev = Q_norm_square(x - x_prev, pp.R_x_prev(n_x_indices, n_x_indices)); %Q_norm_square(u, pp.R_u);
 J_theta_prev = Q_norm_square(theta-theta_prev, pp.R_theta_prev);

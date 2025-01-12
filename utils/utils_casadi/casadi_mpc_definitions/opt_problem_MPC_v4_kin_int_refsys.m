@@ -26,13 +26,13 @@ quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs
 N_x = 3*n_red;
 x = SX.sym('x', N_x);
 v = SX.sym('v', n_red);
-lambda_u = SX.sym('lambda_u', n_red, 1);
+lambda_u_ew = SX.sym('lambda_u_ew', n_red, 1);
 
 % integrator for x = [q; q_p; q_pp; q_ppp]
 x1 = x(1:n_red);           % x1= q
 x2 = x(n_red+1:2*n_red);   % x2 = d/dt q
 x3 = x(2*n_red+1:3*n_red); % x3 = d^2/dt^2 q = u
-% d/dt x3 = d^3/dt^3 q = -lambda_u x3 + v
+% d/dt x3 = d^3/dt^3 q = -lambda_u_ew x3 + v
 
 M = rk_iter; % RK4 steps per interval
 DT_ctl = param_global.Ta/M;
@@ -49,16 +49,16 @@ opt.allow_free = true;
 
 %f_red = Function('f_red', {x, v}, {[x2; x3; x4; K_p*v - K_p*x3 - K_d*x4]}, opt);
 %f_red = Function('f_red', {x, v}, {[x2; K_p*x3; x4; v - K_p*x3 - K_d*x4]}, opt);
-f_red = Function('f_red', {x, v}, {[x2; x3; -diag(lambda_u) * (x3  - v)]}, opt);
+f_red = Function('f_red', {x, v}, {[x2; x3; -diag(lambda_u_ew) * (x3  - v)]}, opt);
 
 F_int = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
-F = Function('F', {x, v, lambda_u}, {F_int(x, v)});
+F = Function('F', {x, v, lambda_u_ew}, {F_int(x, v)});
 
 F_kp1_int = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
-F_kp1 = Function('F_kp1', {x, v, lambda_u}, {F_kp1_int(x, v)});
+F_kp1 = Function('F_kp1', {x, v, lambda_u_ew}, {F_kp1_int(x, v)});
 
 F2_int = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-Ta
-F2 = Function('F2', {x, v, lambda_u}, {F2_int(x, v)});
+F2 = Function('F2', {x, v, lambda_u_ew}, {F2_int(x, v)});
 
 %% Calculate Initial Guess
 
@@ -79,7 +79,7 @@ q_0_red_p  = q_0_p(n_indices);
 q_0_red_pp = q_0_pp(n_indices);
 
 u_k_0  = q_0_red_pp;
-v_0_0  = diag( param_weight.(casadi_func_name).lambda_u(n_indices) ) * u_k_0;
+v_0_0  = diag( param_weight.(casadi_func_name).lambda_u_ew(n_indices) ) * u_k_0;
 x_0_0  = [q_0_red; q_0_red_p; v_0_0];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xd compute_tau_fun(q_0, dq_0, ddq_0); % gravity compensationof.m
 
 v_init_guess_0 = zeros(n_red, N_MPC); % macht mehr sinn da v = d/dt u ist
@@ -120,7 +120,7 @@ mpc_opt_var_inputs = {x, v};
 %     [x_N]   [q_N; q_N_p; q_N_pp]
 %
 % u      = q_0_pp
-% d/dt u = -lambda_u * q_0_pp + v
+% d/dt u = -lambda_u_ew * q_0_pp + v
 %(1+N_x : 2*N_x)
 q0_pp_idx = 1+2*n_red : 3*n_red; % [u0 = q_0_pp] needed for joint space CT control
 x1_idx = [1+3*n_red: 5*n_red];
@@ -181,11 +181,11 @@ for i=0:N_MPC
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
         if(i == 0)
-            g_x(1, 1 + (i+1))  = { F_kp1( x(:, 1 + (i)), v(:, 1 + (i)), pp.lambda_u(n_indices)) - x(:, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
+            g_x(1, 1 + (i+1))  = { F_kp1( x(:, 1 + (i)), v(:, 1 + (i)), pp.lambda_u_ew(n_indices)) - x(:, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
         elseif(i == 1)
-            g_x(1, 1 + (i+1))  = { F2(    x(:, 1 + (i)), v(:, 1 + (i)), pp.lambda_u(n_indices)) - x(:, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
+            g_x(1, 1 + (i+1))  = { F2(    x(:, 1 + (i)), v(:, 1 + (i)), pp.lambda_u_ew(n_indices)) - x(:, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
         else
-            g_x(1, 1 + (i+1))  = { F(     x(:, 1 + (i)), v(:, 1 + (i)), pp.lambda_u(n_indices)) - x(:, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
+            g_x(1, 1 + (i+1))  = { F(     x(:, 1 + (i)), v(:, 1 + (i)), pp.lambda_u_ew(n_indices)) - x(:, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
             % runs only to T_horizon-Ts_MPC, i. e. tilde x_{N-1} = x(t0+Ts_MPC*(N-1)) and x_N doesn't exist
             % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(N-1))
         end
@@ -221,7 +221,7 @@ else
     end
 end
 
-J_q_pp = 0*Q_norm_square(x(2*n_red+1:3*n_red, :), pp.R_q_pp(n_indices, n_indices));% + Q_norm_square(x(1:n_red, :), pp.R_q_pp) + Q_norm_square(x(n_red+1:2*n_red, :), pp.R_q_pp);
+J_q_pp = 0*Q_norm_square(x(2*n_red+1:3*n_red, :), pp.R_u(n_indices, n_indices));% + Q_norm_square(x(1:n_red, :), pp.R_u) + Q_norm_square(x(n_red+1:2*n_red, :), pp.R_u);
 J_v = Q_norm_square(v, pp.R_v(n_indices, n_indices));
 %J_v = Q_norm_square(v - pp.K_P_u*x(2*n_red+1:3*n_red,1:N_MPC ), pp.R_v); % weight in relation to stationary value: v == K_p*u
 

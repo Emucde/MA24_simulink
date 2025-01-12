@@ -280,8 +280,8 @@ u_opt_indices = 1:n_red; % tau_0
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min(n_indices), N_MPC, 1); repmat(pp.x_min([n_indices, n_indices+n]), N_MPC + 1, 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
-ubw = [repmat(pp.u_max(n_indices), N_MPC, 1); repmat(pp.x_max([n_indices, n_indices+n]), N_MPC + 1, 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
 
 % input parameter
 x_k  = SX.sym( 'x_k',  2*n_red,    1 ); % current x state = initial x state
@@ -293,13 +293,12 @@ y_d    = SX.sym( 'y_d',    m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
 y_d_p  = SX.sym( 'y_d_p',  m,   N_MPC+1 ); % (y_d_p_0 ... y_d_p_N)
 y_d_pp = SX.sym( 'y_d_pp', m,   N_MPC+1 ); % (y_d_pp_0 ... y_d_pp_N)
 
-u_prev    = SX.sym( 'u_prev', size(u));
 x_prev    = SX.sym( 'x_prev', size(x));
 z_prev    = SX.sym( 'z_prev', size(z));
 alpha_prev = SX.sym( 'alpha_prev', size(alpha));
 
-mpc_parameter_inputs = {x_k, z_k, y_d, y_d_p, y_d_pp, u_prev, x_prev, z_prev, alpha_prev};
-mpc_init_reference_values = [x_0_0(:); z_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:); u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:)];
+mpc_parameter_inputs = {x_k, z_k, y_d, y_d_p, y_d_pp, x_prev, z_prev, alpha_prev};
+mpc_init_reference_values = [x_0_0(:); z_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';

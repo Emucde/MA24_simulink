@@ -80,28 +80,28 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
 
     fprintf(fid, '\n');
 
-    % define setter functions
-    for i = 1:length(casadi_fun_input_cell)
-        input_cell = casadi_fun_input_cell{i};
-        for j = 1:length(input_cell)
-            dim = input_cell{j}.dim;
-            name = input_cell{j}.name;
+    % % define setter functions
+    % for i = 1:length(casadi_fun_input_cell)
+    %     input_cell = casadi_fun_input_cell{i};
+    %     for j = 1:length(input_cell)
+    %         dim = input_cell{j}.dim;
+    %         name = input_cell{j}.name;
 
-            fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, name, name);
+    %         fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, name, name);
 
-            if length(dim) == 2 && all(dim > 1)
-                % It's a matrix
-                fprintf(fid, '        /*set %s: %dx%d matrix values */\n', name, dim(1), dim(2));
-            else
-                % It's a vector or higher dimensional array
-                fprintf(fid, '        /*set %s: %s array values */\n', name, mat2str(dim));
-            end
-        end
-    end
-    fprintf(fid, '\n');
+    %         if length(dim) == 2 && all(dim > 1)
+    %             % It's a matrix
+    %             fprintf(fid, '        /*set %s: %dx%d matrix values */\n', name, dim(1), dim(2));
+    %         else
+    %             % It's a vector or higher dimensional array
+    %             fprintf(fid, '        /*set %s: %s array values */\n', name, mat2str(dim));
+    %         end
+    %     end
+    % end
+    % fprintf(fid, '\n');
 
     % Declare the function to get the MPC config
-    fprintf(fid, 'mpc_config_t get_%s_config();\n\n', func_name);
+    fprintf(fid, 'mpc_config_t const* get_%s_config();\n\n', func_name);
 
     fprintf(fid, '#ifdef __cplusplus\n');
     fprintf(fid, '}\n');
@@ -135,32 +135,32 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '#include "casadi_types.h"\n');
     fprintf(fid, '#include "param_robot.h"\n\n');
 
-    % define setter functions
-    for i = 1:length(casadi_fun_input_cell)
-        input_cell = casadi_fun_input_cell{i};
-        for j = 1:length(input_cell)
-            dim = input_cell{j}.dim;
-            name = input_cell{j}.name;
+    % % define setter functions
+    % for i = 1:length(casadi_fun_input_cell)
+    %     input_cell = casadi_fun_input_cell{i};
+    %     for j = 1:length(input_cell)
+    %         dim = input_cell{j}.dim;
+    %         name = input_cell{j}.name;
 
-            fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s)\n', func_name, name, name);
-            fprintf(fid, '{\n');
-            fprintf(fid, '    memcpy(w + %s_%s_ADDR, %s, %s_%s_LEN * sizeof(casadi_real));', func_name, upper(name), name, func_name, upper(name));
+    %         fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s)\n', func_name, name, name);
+    %         fprintf(fid, '{\n');
+    %         fprintf(fid, '    memcpy(w + %s_%s_ADDR, %s, %s_%s_LEN * sizeof(casadi_real));', func_name, upper(name), name, func_name, upper(name));
 
-            if length(dim) == 2 && all(dim > 1)
-                % It's a matrix
-                fprintf(fid, '        /*%s: %dx%d matrix values */\n', name, dim(1), dim(2));
-            else
-                % It's a vector or higher dimensional array
-                fprintf(fid, '        /*%s: %s array values */\n', name, mat2str(dim));
-            end
+    %         if length(dim) == 2 && all(dim > 1)
+    %             % It's a matrix
+    %             fprintf(fid, '        /*%s: %dx%d matrix values */\n', name, dim(1), dim(2));
+    %         else
+    %             % It's a vector or higher dimensional array
+    %             fprintf(fid, '        /*%s: %s array values */\n', name, mat2str(dim));
+    %         end
             
-            fprintf(fid, '}\n\n');
-        end
-    end
+    %         fprintf(fid, '}\n\n');
+    %     end
+    % end
 
     % create function that returns a mpc_config_t struct
     fprintf(fid, '// Function to get the MPC config\n');
-    fprintf(fid, 'mpc_config_t get_%s_config()\n', func_name);
+    fprintf(fid, 'mpc_config_t const* get_%s_config()\n', func_name);
     fprintf(fid, '{\n');
     fprintf(fid, '    // Allocate memory at compile time\n');
     fprintf(fid, '    static const casadi_real* arg[%s_ARG_LEN];\n', func_name);
@@ -169,55 +169,57 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '    static casadi_real w[%s_W_LEN];\n', func_name);
     fprintf(fid, '    // default parameter values, taken from ./utils/matlab_init_general/init_MPC_weights.m\n'); 
     % generate default parameter values
-        % Get field names
-        field_names = fieldnames(param_weight.(func_name));
+
+    % Get field names
+    field_names = fieldnames(param_weight.(func_name));
+
+    % Calculate total size of the array
+    total_size = 0;
+    for i = 1:length(field_names)
+        field = field_names{i};
+        total_size = total_size + numel(param_weight.(func_name).(field));
+    end
     
-        % Calculate total size of the array
-        total_size = 0;
+    % Start writing the array
+    % using ..param_weight[MPC8_PARAM_WEIGHT_LEN]
+    fprintf(fid, '    static casadi_real %s_param_weight[%s_PARAM_WEIGHT_LEN] =\n', func_name, func_name);
+    fprintf(fid, '    {\n');
+        
+        % Write the data for each field
         for i = 1:length(field_names)
             field = field_names{i};
-            total_size = total_size + numel(param_weight.(func_name).(field));
-        end
-        
-        % Start writing the array
-        % using ..param_weight[MPC8_PARAM_WEIGHT_LEN]
-        fprintf(fid, '    static casadi_real %s_param_weight[%s_PARAM_WEIGHT_LEN] =\n', func_name, func_name);
-        fprintf(fid, '    {\n');
+            field_data = param_weight.(func_name).(field);
+            field_size = size(field_data);
             
-            % Write the data for each field
-            for i = 1:length(field_names)
-                field = field_names{i};
-                field_data = param_weight.(func_name).(field);
-                field_size = size(field_data);
-                
-                % Add comment to indicate the start of a new field
-                fprintf(fid, '    /* %s : ', field);
-                
-                if length(field_size) == 2 && all(field_size > 1)
-                    % It's a matrix
-                    fprintf(fid, '%dx%d matrix values */\n', field_size(1), field_size(2));
-                    for row = 1:field_size(1)
-                        fprintf(fid, '    ');
-                        fprintf(fid, '%g, ', field_data(row, :));
-                        fprintf(fid, '\n');
-                    end
-                else
-                    % It's a vector or higher dimensional array
-                    fprintf(fid, '%s array values */\n', mat2str(field_size));
+            % Add comment to indicate the start of a new field
+            fprintf(fid, '    /* %s : ', field);
+            
+            if length(field_size) == 2 && all(field_size > 1)
+                % It's a matrix
+                fprintf(fid, '%dx%d matrix values */\n', field_size(1), field_size(2));
+                for row = 1:field_size(1)
                     fprintf(fid, '    ');
-                    fprintf(fid, '%g, ', field_data(:)');
+                    fprintf(fid, '%g, ', field_data(row, :));
                     fprintf(fid, '\n');
                 end
-                
-                % Add a blank line between fields for better readability
-                if i < length(field_names)
-                    fprintf(fid, '\n');
-                end
+            else
+                % It's a vector or higher dimensional array
+                fprintf(fid, '%s array values */\n', mat2str(field_size));
+                fprintf(fid, '    ');
+                fprintf(fid, '%g, ', field_data(:)');
+                fprintf(fid, '\n');
             end
             
-        % Close the array
-        fprintf(fid, '    };\n');
-    fprintf(fid, '\n');
+            % Add a blank line between fields for better readability
+            if i < length(field_names)
+                fprintf(fid, '\n');
+            end
+        end
+        
+    % Close the array
+    fprintf(fid, '    };\n\n');
+
+    % set the default parameter values
     fprintf(fid, '    // Set the MPC config\n');
     fprintf(fid, ['   static mpc_config_t ', func_name, 'Config = {\n']);
     fprintf(fid, '       .dt = %s_DT, // Sampling time of the measured data, control frequency\n', func_name);
@@ -257,9 +259,39 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '       .u_opt_len = %s_U_OPT_LEN, // Length of the optimal control input\n', func_name);
     fprintf(fid, '       .w_end_addr = %s_W_END_ADDR, // Relative address of the end of the workspace\n', func_name);
     fprintf(fid, '       .u_opt_addr = %s_U_OPT_ADDR, // Relative address of the optimal control input\n', func_name);
-    fprintf(fid, '       .mem = 0 // Memory\n');
+    fprintf(fid, '       .mem = 0, // Memory\n');
+    % create the mpc_input_config struct
+    fprintf(fid, '       .input_config = {\n');
+    
+    for i = 1:length(casadi_fun_input_cell)
+        input_cell = casadi_fun_input_cell{i};
+        for j = 1:length(input_cell)
+            dim = input_cell{j}.dim;
+            name = input_cell{j}.name;
+
+            fprintf(fid, '              .%s_addr = %s_%s_ADDR,\n', name, func_name, upper(name));
+            fprintf(fid, '              .%s_len = %s_%s_LEN,', name, func_name, upper(name));
+
+            if length(dim) == 2 && all(dim > 1)
+                % It's a matrix
+                fprintf(fid, '        /*%s: %dx%d matrix values */\n', name, dim(1), dim(2));
+            else
+                % It's a vector or higher dimensional array
+                fprintf(fid, '        /*%s: %s array values */\n', name, mat2str(dim));
+            end
+        end
+    end
+    % set the rest of the mpc_input_config struct
+    fprintf(fid, '              .reference_values_addr = %s_IN_REFERENCE_VALUES_ADDR,\n', func_name);
+    fprintf(fid, '              .reference_values_len = %s_REFERENCE_VALUES_LEN,\n', func_name);
+    fprintf(fid, '              .init_guess_addr = %s_IN_INIT_GUESS_ADDR,\n', func_name);
+    fprintf(fid, '              .init_guess_len = %s_INIT_GUESS_LEN,\n', func_name);
+    fprintf(fid, '              .param_weight_addr = %s_IN_PARAM_WEIGHT_ADDR,\n', func_name);
+    fprintf(fid, '              .param_weight_len = %s_PARAM_WEIGHT_LEN\n', func_name);
+
+    fprintf(fid, '       }\n');
     fprintf(fid, '   };\n');
-    fprintf(fid, '   return %sConfig;\n', func_name);
+    fprintf(fid, '   return &%sConfig;\n', func_name);
     fprintf(fid, '}\n');
 
     % Close the file

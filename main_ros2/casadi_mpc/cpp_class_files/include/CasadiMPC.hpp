@@ -25,7 +25,7 @@ class CasadiMPC
 {
 private:
     const std::string mpc_name; // MPC name
-    mpc_config_t mpc_config;
+    mpc_config_t const* mpc_config;
     robot_config_t &robot_config;
 
 public:
@@ -74,6 +74,12 @@ public:
         return y_d;
     }
 
+    //Method to get the workspace real pointer
+    casadi_real *get_w()
+    {
+        return w;
+    }
+
     // Method to get the length of the trajectory data per prediction horizon
     casadi_uint get_traj_data_per_horizon_len()
     {
@@ -120,6 +126,18 @@ public:
     casadi_real get_dt()
     {
         return dt;
+    }
+
+    // Method to get the mpc_config
+    mpc_config_t const* get_mpc_config()
+    {
+        return mpc_config;
+    }
+
+    // Method to get mpc_traj_indices
+    const casadi_uint *get_mpc_traj_indices()
+    {
+        return mpc_traj_indices;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////

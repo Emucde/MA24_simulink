@@ -1,4 +1,5 @@
 #include "CasadiController.hpp"
+#include "eigen_templates.hpp"
 
 CasadiController::CasadiController(const std::string &urdf_path, const std::string &tcp_frame_name, bool use_gravity)
     : robot_config(get_robot_config()),
@@ -25,6 +26,9 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
     transient_traj_cnt = 0;
     transient_traj_len = 0;
     transient_traj_rows = 7;
+
+    // Initialize the previous torque
+    tau_full_prev = Eigen::VectorXd::Zero(nq);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -49,6 +53,7 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
 
     // Copy the state to the MPC object
     int cnt = 0;
+    casadi_uint act_idx = 0;
     for (casadi_uint i = 0; i < nx; ++i)
     {
         if (i == n_x_indices[cnt])
@@ -63,8 +68,13 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
     {
         for (casadi_uint j = 0; j < traj_data_per_horizon; j++)
         {
+            act_idx = transient_traj_cnt + mpc_traj_indices[j];
+            if(act_idx > transient_traj_len-1)
+            {
+                act_idx = transient_traj_len-1;
+            }
             memcpy(y_d_ptr + j * transient_traj_rows,
-                   transient_traj_data.col(transient_traj_cnt).data(),
+                   transient_traj_data.col(act_idx).data(),
                    transient_traj_rows * sizeof(double));
         }
         transient_traj_cnt++;
@@ -80,7 +90,9 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
     if (flag)
     {
         std::cerr << "Error in Casadi function call." << std::endl;
-        return tau_full; // Return zero torque
+        error_flag = ErrorFlag::CASADI_ERROR;
+        tau_full_prev = tau_full; // zero torque
+        return tau_full;          // Return zero torque
     }
 
     // Calculate the full torque (Feedforward + PD control for fixed joints)
@@ -88,6 +100,35 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
     Eigen::Map<const Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
 
     tau_full = torque_mapper.calc_full_torque(u_k, x_k_ndof);
+
+    if (!tau_full.allFinite())
+    {
+        std::cout << "NaN in torque detected (tau = " << tau_full.transpose() << "). Output zero torque." << std::endl;
+        tau_full.setZero(); // Set torque to zero
+        error_flag = ErrorFlag::NAN_DETECTED;
+    }
+    else
+    {
+        // Check for a jump in torque
+        Eigen::VectorXd delta_u = tau_full - tau_full_prev;
+
+        // Conditions for jumps
+        bool condition1 = (delta_u.array() > 0 && delta_u.array() > tau_max_jump).any();
+        bool condition2 = (delta_u.array() < 0 && delta_u.array() < -tau_max_jump).any();
+
+        if (condition1 || condition2)
+        {
+            std::cout << "Jump in torque detected (tau = " << tau_full.transpose() << "). Output zero torque." << std::endl;
+            tau_full.setZero(); // Set torque to zero
+            error_flag = ErrorFlag::JUMP_DETECTED;
+        }
+        else
+        {
+            tau_full_prev = tau_full; // Update previous torque
+            error_flag = ErrorFlag::NO_ERROR;
+        }
+    }
+
     return tau_full;
 }
 
@@ -129,6 +170,23 @@ void CasadiController::generate_transient_trajectory(const casadi_real *const x_
     transient_traj_len = transient_traj_data.cols();
     transient_traj_rows = transient_traj_data.rows();
     transient_traj_cnt = 0;
+
+    Eigen::MatrixXd matrix;
+    Eigen::VectorXd vector;
+    Eigen::VectorXi n_x_indices_eig = ConstIntVectorMap(n_x_indices, nx_red);
+
+    // set all init guess values to zero
+    Eigen::Map<Eigen::VectorXd> init_guess(w_ptr + active_mpc_input_config->init_guess_addr, active_mpc_input_config->init_guess_len);
+    init_guess.setZero();
+
+    // set all x values to the current state
+    Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>> x_in(
+    w_ptr + active_mpc_input_config->x_addr,
+    nx_red,
+    static_cast<int>(active_mpc_input_config->x_len / nx_red));
+
+    vector = Eigen::Map<const Eigen::VectorXd>(x_k_ndof_ptr, nx);
+    x_in = vector(n_x_indices_eig).replicate(1, static_cast<int>(active_mpc_input_config->x_len / nx_red));
 }
 
 // set the active MPC
@@ -138,11 +196,16 @@ void CasadiController::setActiveMPC(MPCType mpc_type)
     {
         selected_mpc_type = mpc_type;
         active_mpc = &casadi_mpcs[static_cast<int>(selected_mpc_type)];
+        active_mpc_config = const_cast<mpc_config_t *>(active_mpc->get_mpc_config());
+        active_mpc_input_config = &active_mpc_config->input_config;
+
         torque_mapper.set_kinematic_mpc_flag(active_mpc->is_kinematic_mpc);
         x_k_ptr = active_mpc->get_x_k();
         u_k_ptr = active_mpc->get_optimal_control();
         y_d_ptr = active_mpc->get_y_d();
+        w_ptr = active_mpc->get_w();
         traj_data_per_horizon = active_mpc->get_traj_data_per_horizon_len();
+        mpc_traj_indices = const_cast<casadi_uint *>(active_mpc->get_mpc_traj_indices());
         dt = active_mpc->get_dt();
     }
     else
@@ -170,6 +233,14 @@ void CasadiController::setTransientTrajParams(double T_start, double T_poly, dou
     param_transient_traj_poly["T_start"] = T_start;
     param_transient_traj_poly["T_poly"] = T_poly;
     param_transient_traj_poly["T_end"] = T_end;
+}
+
+// Method to simulate the robot model
+void CasadiController::simulateModel(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt)
+{
+    Eigen::Map<Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
+    Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
+    torque_mapper.simulateModel(x_k_ndof, tau, dt);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////

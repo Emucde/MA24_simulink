@@ -11,7 +11,6 @@
 %   - p_d: desired positions in task space
 %   - q_d: desired orientations in quaternion representation
 %   - y_p: desired velocity (derivative of y_d)
-% - u_prev: previous control input to ensure continuity and stability in control actions
 % - x_prev: previous state for comparison to decrease oscillations
 
 % Cost function (J_d,N):
@@ -168,8 +167,8 @@ mpc_opt_var_inputs = {u, x};
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')'; % optimization variables cellarray w
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables Limits 3/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min(n_x_indices), size(x, 2), 1)];
-ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max(n_x_indices), size(x, 2), 1)];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
 
 N_u = numel(u);
 N_x = numel(x);
@@ -178,9 +177,7 @@ u_opt_indices = [1:n_red]; % tau_0
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INPUT Parameter 4/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 x_k    = SX.sym( 'x_k', 2*n_red, 1       ); % current x state
 y_d    = SX.sym( 'y_d', m+1,     N_MPC+1 ); % (y_d_0 ... y_d_N)
-% u_prev    = SX.sym( 'u_prev',   n_red, N_MPC );
 x_prev    = SX.sym( 'x_prev', 2*n_red, N_MPC+1 );
-% q_pp_prev = SX.sym( 'q_pp_prev', n_red, N_MPC );
 
 mpc_parameter_inputs = {x_k, y_d, x_prev};
 mpc_init_reference_values = [x_0_0(:); y_d_0(:); x_init_guess_0(:)];
@@ -297,7 +294,6 @@ else
 end
 
 u_err = u-g_vec; % es ist stabiler es nicht gegenüber der vorherigen Lösung zu gewichten!
-%u_err = u-u_prev; % es ist stabiler es nicht gegenüber der vorherigen Lösung zu gewichten!
 %u_err = u;
 %u_err = q_pp;
 

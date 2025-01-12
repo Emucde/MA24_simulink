@@ -9,6 +9,7 @@
 #include <pinocchio/algorithm/crba.hpp>
 #include <pinocchio/algorithm/rnea.hpp>
 #include "pinocchio/algorithm/frames.hpp"
+#include "pinocchio/algorithm/aba.hpp"
 #include <pinocchio/multibody/model.hpp>
 #include <pinocchio/multibody/data.hpp>
 #include <pinocchio/parsers/urdf.hpp>
@@ -48,6 +49,9 @@ public:
 
     // Method to calculate the pose (p, R) by a given state
     void calcPose(const Eigen::VectorXd &q, Eigen::Vector3d &p, Eigen::Matrix3d &R);
+
+    // Method to simulate the robot model
+    void simulateModel(Eigen::Map<Eigen::VectorXd> &x_k_ndof, Eigen::Map<const Eigen::VectorXd> &tau, double dt);
 
     // Getters and setters
     const Eigen::VectorXd &getTauFull() const { return tau_full; }

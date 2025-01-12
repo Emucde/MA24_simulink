@@ -10,32 +10,20 @@
 #include <Eigen/Geometry> // For rotations and quaternions
 #include "casadi_types.h"
 #include "param_robot.h"
+#include "mpc_config.h"
 #include "FullSystemTorqueMapper.hpp"
 #include "CasadiMPC.hpp"
-
-enum class MPCType
-{
-    MPC01,
-    MPC6,
-    MPC7,
-    MPC8,
-    MPC9,
-    MPC10,
-    MPC11,
-    MPC12,
-    MPC13,
-    MPC14,
-    INVALID, // Consider using INVALID for out-of-bounds
-    COUNT    // This can denote the number of valid enum values
-};
+#include "casadi_controller_types.hpp"
 
 class CasadiController
 {
 private:
-    robot_config_t robot_config;        // Robot configuration
-    std::vector<CasadiMPC> casadi_mpcs; // MPC objects
-    MPCType selected_mpc_type;          // Active MPC type
-    CasadiMPC *active_mpc;              // Active MPC object
+    robot_config_t robot_config;                 // Robot configuration
+    std::vector<CasadiMPC> casadi_mpcs;          // MPC objects
+    MPCType selected_mpc_type;                   // Active MPC type
+    CasadiMPC *active_mpc;                       // Active MPC object
+    mpc_config_t *active_mpc_config;             // Active MPC configuration
+    const mpc_input_config_t *active_mpc_input_config; // Active MPC input configuration
 
 public:
     const casadi_uint nq;     // Number of degrees of freedom
@@ -46,16 +34,21 @@ public:
 private:
     const casadi_uint *n_x_indices;
     FullSystemTorqueMapper torque_mapper; // Torque mapper
-    casadi_real *x_k_ptr; // initial state address at the begin of the prediction horizon
-    casadi_real *u_k_ptr; // optimal control address
-    casadi_real *y_d_ptr; // desired trajectory address at the begin of the prediction horizon
-    casadi_uint traj_data_per_horizon; // Trajectory data per horizon
+    casadi_real *x_k_ptr;                 // initial state address at the begin of the prediction horizon
+    casadi_real *u_k_ptr;                 // optimal control address
+    casadi_real *y_d_ptr;                 // desired trajectory address at the begin of the prediction horizon
+    casadi_real *w_ptr;                   // Workspace real address
+    casadi_uint traj_data_per_horizon;    // Trajectory data per horizon
+    casadi_uint *mpc_traj_indices;        // Trajectory indices for not equidistant sampling
     casadi_real dt;
     std::map<std::string, double> param_transient_traj_poly;
     Eigen::MatrixXd transient_traj_data;
     casadi_uint transient_traj_len;
     casadi_uint transient_traj_rows;
     casadi_uint transient_traj_cnt;
+    Eigen::VectorXd tau_full_prev;
+    ErrorFlag error_flag = ErrorFlag::NO_ERROR;
+    double tau_max_jump = 5.0;
 
 public:
     // Constructor
@@ -66,8 +59,11 @@ public:
 
     // Method to generate a transient trajectory
     void generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr,
-                                                     double T_start, double T_poly, double T_end);
+                                       double T_start, double T_poly, double T_end);
     void generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr);
+
+    // Method to simulate the robot model
+    void simulateModel(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
 
     // Getters and setters
     void setActiveMPC(MPCType mpc);
@@ -144,10 +140,22 @@ public:
         return active_mpc->is_kinematic_mpc;
     }
 
+    // Method to get the error flag
+    ErrorFlag get_error_flag()
+    {
+        return error_flag;
+    }
+
+    // Method to set the maximum torque jump
+    void set_tau_max_jump(double tau_jump)
+    {
+        tau_max_jump = tau_jump;
+    }
+
 private:
     // Private methods
     std::string mpcToString(MPCType mpc);
-    
+
     // Functions for transient polynomial trajectory generation
     Eigen::Vector4d trajectory_poly(double t, const Eigen::Vector4d &y0, const Eigen::Vector4d &yT, double T);
 

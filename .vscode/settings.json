@@ -104,7 +104,8 @@
     "*.ipp": "cpp",
     "param_robot.h": "c",
     "dense": "cpp",
-    "eigenvalues": "cpp"
+    "eigenvalues": "cpp",
+    "mpc13_param.h": "c"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",

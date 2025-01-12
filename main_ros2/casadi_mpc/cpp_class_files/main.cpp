@@ -8,31 +8,126 @@
 #include "include/FullSystemTorqueMapper.hpp"
 #include "include/CasadiMPC.hpp"
 #include "include/CasadiController.hpp"
+#include "include/casadi_controller_types.hpp"
 #include "param_robot.h"
 #include "casadi_types.h"
 #include <Eigen/Dense>
+#include "include/eigen_templates.hpp"
 
-#define TRAJ_SELECT 1
+
 // #define PLOT_DATA
 #define TRANSIENT_TRAJ_TESTS
 
-void set_x_k_ndof(casadi_real *const x_k_ndof_ptr, casadi_real *const x_k, const std::vector<casadi_real> &x_ref_nq_vec, casadi_uint nx, const casadi_uint *n_x_indices)
-{
-    int cnt = 0;
-    for (casadi_uint i = 0; i < nx; ++i)
-    {
-        if (i == n_x_indices[cnt])
-        {
-            x_k_ndof_ptr[i] = x_k[cnt];
-            cnt++;
-        }
-        else
-        {
-            x_k_ndof_ptr[i] = x_ref_nq_vec[i];
+class TicToc {
+public:
+    TicToc() : start_time(), elapsed_time(0), elapsed_total_time(0), running(false) {}
+
+    void tic(bool reset = false) {
+        if (reset) {
+            start_time = std::chrono::time_point<std::chrono::high_resolution_clock>();
+            elapsed_total_time = 0;
+            running = false;
+        } else {
+            start_time = std::chrono::high_resolution_clock::now();
+            running = true;
         }
     }
-}
 
+    double toc() {
+        if (!running) {
+            std::cerr << "Error: Tic not started.\n";
+            return 0.0;
+        }
+
+        auto current_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed_time_act = current_time - start_time;
+        elapsed_time = elapsed_time_act.count();
+        elapsed_total_time += elapsed_time;
+        start_time = current_time;
+        return elapsed_time;
+    }
+
+    double get_time() {
+        return elapsed_total_time;
+    }
+
+    std::string get_time_str(const std::string& additional_text = "time") {
+        return "\033[92mElapsed " + additional_text + ": " + format_time(elapsed_total_time) + "\033[0m";
+    }
+
+    void print_time(const std::string& additional_text = "time") {
+        std::string time_str = get_time_str(additional_text);
+        std::cout << time_str;
+    }
+
+    void reset() {
+        start_time = std::chrono::time_point<std::chrono::high_resolution_clock>();
+        elapsed_total_time = 0;
+        running = false;
+    }
+
+    double get_frequency() {
+        if (elapsed_total_time == 0) {
+            std::cerr << "Error: No elapsed time. Cannot calculate frequency.\n";
+            return 0;
+        }
+        double frequency = 1.0 / elapsed_time; // Frequency in Hz
+        return frequency;
+    }
+
+    void print_frequency(std::string additional_text = "Frequency: ") {
+        if (elapsed_total_time == 0) {
+            std::cerr << "Error: No elapsed time. Cannot calculate frequency.\n";
+            return;
+        }
+        double frequency = get_frequency();
+        std::cout << "\033[92m" << additional_text << ": " << format_frequency(frequency) << "\033[0m";
+    }
+
+
+    std::string format_frequency(double frequency, int precision = 2) {
+        std::ostringstream oss;
+        if (frequency < 1) {
+            oss << std::fixed << std::setprecision(precision) << frequency << " Hz"; // Hertz
+        } else if (frequency < 1e3) {
+            oss << std::fixed << std::setprecision(precision) << frequency << " Hz"; // Hertz
+        } else if (frequency < 1e6) {
+            oss << std::fixed << std::setprecision(precision) << frequency / 1e3 << " kHz"; // kHz
+        } else {
+            oss << std::fixed << std::setprecision(precision) << frequency / 1e6 << " MHz"; // MHz
+        }
+        return oss.str();
+    }
+
+private:
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+    double elapsed_time; // current elapsed time in seconds
+    double elapsed_total_time; // total elapsed time in seconds
+    bool running;
+
+    std::string format_time(double elapsed_time, int precision = 2) {
+        std::ostringstream oss;
+        if (elapsed_time == 0) {
+            return "0 s";
+        } else if (elapsed_time < 1e-6) {
+            oss << std::fixed << std::setprecision(precision) << elapsed_time * 1e9 << " ns";  // Nanoseconds
+        } else if (elapsed_time < 1e-3) {
+            oss << std::fixed << std::setprecision(precision) << elapsed_time * 1e6 << " µs";  // Microseconds
+        } else if (elapsed_time < 1) {
+            oss << std::fixed << std::setprecision(precision) << elapsed_time * 1e3 << " ms";  // Milliseconds
+        } else if (elapsed_time < 60) {
+            oss << std::fixed << std::setprecision(precision) << elapsed_time << " s";         // Seconds
+        } else {
+            int minutes = static_cast<int>(elapsed_time / 60);
+            double seconds = elapsed_time - minutes * 60;
+            oss << minutes << " min " << std::fixed << std::setprecision(precision) << seconds << " s";
+        }
+        
+        return oss.str();
+    }
+};
+
+#define TRAJ_SELECT 4
 int main()
 {
     // Configuration flags
@@ -41,7 +136,7 @@ int main()
     const std::string tcp_frame_name = "fr3_link8_tcp";
 
     CasadiController controller(urdf_filename, tcp_frame_name, use_gravity);
-    controller.setActiveMPC(MPCType::MPC8);
+    controller.setActiveMPC(MPCType::MPC01);
     controller.switch_traj(TRAJ_SELECT);
 
     bool is_kinematic_mpc = controller.get_is_kinematic_mpc();
@@ -49,22 +144,29 @@ int main()
     const casadi_uint nx = controller.nx;
     const casadi_uint nq_red = controller.nq_red;
     const casadi_uint nx_red = controller.nx_red;
+    const casadi_uint *n_indices_ptr = controller.get_n_indices();
     const casadi_uint *n_x_indices_ptr = controller.get_n_x_indices();
     const casadi_uint traj_data_real_len = controller.get_traj_data_len();
     const std::vector<casadi_real> x_ref_nq_vec = controller.get_x_ref_nq();
+    ErrorFlag error_flag = ErrorFlag::NO_ERROR;
+
     casadi_real *u_opt = controller.get_optimal_control();
     casadi_real *x_k = controller.get_x_k();
     casadi_real x_k_ndof[nx];
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
-    Eigen::VectorXd x_k_ndof_eig;
+
+    Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
+    Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
+    Eigen::Map<Eigen::VectorXd> x_k_eig(x_k, nx_red);
+
+    Eigen::VectorXi n_indices_eig   = ConstIntVectorMap(n_indices_ptr, nq_red);
+    Eigen::VectorXi n_x_indices_eig = ConstIntVectorMap(n_x_indices_ptr, nx_red);
 
     // Measure execution time
-    auto start = std::chrono::high_resolution_clock::now();
-    auto freq_measure1 = std::chrono::high_resolution_clock::now();
-    auto freq_measure2 = std::chrono::high_resolution_clock::now();
-    double freq;
+    TicToc timer_mpc_solver;
+    TicToc timer_total;
 
-    set_x_k_ndof(x_k_ndof, x_k, x_ref_nq_vec, nx, n_x_indices_ptr);
+    x_k_ndof_eig(n_x_indices_eig) = x_k_eig;
     
 #ifdef PLOT_DATA
     std::ofstream x_k_ndof_file("x_k_ndof_data.txt");
@@ -73,39 +175,46 @@ int main()
 
 #ifdef TRANSIENT_TRAJ_TESTS
 
-    // add error in init pose:
-    for(casadi_uint i = 0; i < nx; i++)
-    {
-        x_k_ndof[i] = x_k_ndof[i] + 0.1;
-    }
+    q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
 
-    controller.generate_transient_trajectory(x_k_ndof, 0.0, 2.0, 2.0);
+    controller.generate_transient_trajectory(x_k_ndof, 0.0, 1.0, 2.0);
     Eigen::MatrixXd trajectory = controller.get_transient_traj_data();
     casadi_uint transient_traj_len = controller.get_transient_traj_len();
 
-    // Output the trajectory results
-    for (int i = 0; i < trajectory.cols(); ++i)
-    {
-        if (i % 10 == 0)
-            std::cout << "Step " << i << ": " << trajectory.col(i).transpose() << std::endl;
-    }
+    timer_total.tic();
+
+    // // Output the trajectory results
+    // for (int i = 0; i < trajectory.cols(); ++i)
+    // {
+    //     if (i % 10 == 0)
+    //         std::cout << "Step " << i << ": " << trajectory.col(i).transpose() << std::endl;
+    // }
 #endif
 
     // Main loop for trajectory processing
     for (casadi_uint i = 0; i < traj_data_real_len + transient_traj_len; i++)
     {
+        timer_mpc_solver.tic();
         tau_full = controller.solveMPC(x_k_ndof);
-        x_k_ndof_eig = Eigen::Map<Eigen::VectorXd>(x_k_ndof, nq);
+        error_flag = controller.get_error_flag();
+        timer_mpc_solver.toc();
 
-        freq_measure1 = std::chrono::high_resolution_clock::now();
-        freq = 1e6/(std::chrono::duration<double, std::micro>(freq_measure1 - freq_measure2).count());
-        freq_measure2 = freq_measure1;
+        if (error_flag != ErrorFlag::NO_ERROR)
+        {
+            std::cerr << "Error flag: " << static_cast<int>(error_flag) << std::endl;
+            break;
+        }
 
         if (i % 100 == 0)
         {
-            // std::cout << "q_k: " << x_k_ndof_eig.transpose();
+            // std::cout << "q_k: " << q_k_ndof_eig.transpose();
             std::cout << "Full torque: " << tau_full.transpose();
-            std::cout << "\tFrequency: " << freq << " Hz" << std::endl;
+            timer_mpc_solver.print_frequency("\t");
+            std::cout << std::endl;
+        }
+        if(i == transient_traj_len)
+        {
+            std::cout << "Switching to trajectory from data" << std::endl;
         }
 
 #ifdef PLOT_DATA
@@ -113,22 +222,17 @@ int main()
         tau_full_file << tau_full.transpose() << std::endl;
 #endif
 
-        // Simulation: use next predicted state as current state
-        if(is_kinematic_mpc)
-        {
-            memcpy(x_k, u_opt + nq_red, nx_red * sizeof(casadi_real));
-        }
-        else
-        {
-            memcpy(x_k, u_opt + 2*nq_red - 880 + 916, nx_red * sizeof(casadi_real)); // only for mpc01
-        }
-        
-        set_x_k_ndof(x_k_ndof, x_k, x_ref_nq_vec, nx, n_x_indices_ptr);
+        // simulate the model
+        controller.simulateModel(x_k_ndof, tau_full.data(), 1e-3);
     }
+
     // Measure and print execution time
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    std::cout << "Time taken by function: " << (double)duration.count() / 1e6 << " s" << std::endl;
+    timer_mpc_solver.print_time("Total controller.solveMPC time: ");
+    std::cout << std::endl;
+
+    timer_total.toc();
+    timer_total.print_time("Total execution time: ");
+    std::cout << std::endl;
 
 #ifdef PLOT_DATA
     x_k_ndof_file.close();

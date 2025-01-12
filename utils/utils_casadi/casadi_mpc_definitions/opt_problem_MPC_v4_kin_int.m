@@ -115,8 +115,8 @@ u_opt_indices = [q0_pp_idx, x1_idx, q1_pp_idx];
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min(n_x_indices), size(x, 2), 1)];
-ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max(n_x_indices), size(x, 2), 1)];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
 
 % input parameter
 x_k    = SX.sym( 'x_k',     2*n_red, 1 ); % current x state = initial x state
@@ -252,7 +252,7 @@ int_times_eye6 = eye(N_MPC+1);
 
 J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices, n_indices));
 J_q_p = Q_norm_square(x(1+n_red:2*n_red, :), pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
-J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_q_pp = Q_norm_square(u, pp.R_u(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 J_x_prev  = Q_norm_square((x - x_prev), pp.R_x_prev(n_x_indices, n_x_indices));
 
 cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_ref, J_q_p, J_q_pp, J_x_prev}';
