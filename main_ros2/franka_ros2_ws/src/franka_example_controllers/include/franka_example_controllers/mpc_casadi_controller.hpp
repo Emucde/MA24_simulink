@@ -104,8 +104,7 @@ namespace franka_example_controllers
                 CasadiController controller = CasadiController(urdf_filename, tcp_frame_name, use_gravity);
                 Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(num_joints);
                 std::future<Eigen::VectorXd> tau_full_future;
-                bool tau_full_future_valid = false; // Flag to check if future is valid
-                bool tau_full_future_started = false; // Flag to check if future is started
+                ErrorFlag error_flag = ErrorFlag::NO_ERROR;
                 // rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;
                 rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
                 rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr reset_mpc_service_;

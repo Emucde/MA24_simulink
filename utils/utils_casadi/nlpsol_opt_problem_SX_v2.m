@@ -69,10 +69,16 @@ if(strcmp(MPC_solver, 'qrqp'))
     opts.print_time = false; % Disable printing of solver time
     opts.print_status = false;
     opts.error_on_fail = false;
+
+    % opts.print_time = true;
+    % opts.verbose = true;
+
+
     opts.hessian_approximation = 'exact';
+    % opts.hessian_approximation = 'limited-memory';
     % opts.iteration_callback_ignore_errors = true;
     % opts.elastic_mode = true;
-    % opts.regularity_check = false;
+    % opts.regularity_check = true;
     opts.show_eval_warnings = false;
 
     %opts.tol_du=1e-12;%1e-6;
@@ -221,7 +227,7 @@ try
         % will get an Evaluation Failed because it get's NaN values due to
         % the perfect zero gradients. Therefore add eps to init_guess to
         % avoid this problem.
-        init_guess_0 = 1e-10 + init_guess_0;
+        init_guess_0 = init_guess_0;
         param_weight_init_cell = merge_cell_arrays(struct2cell(param_weight_init), 'vector');
         [u_opt_sol, xx_full_opt_sol, cost_values_sol{1:length(cost_vars_SX)}] = f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
     else  % ohne extra parameter 5 % schneller (319s statt 335s)
@@ -269,20 +275,13 @@ if(strcmp(MPC_version, 'opt_problem_ineq_feasible_traj_MPC_v3_quat') || strcmp(M
     z_indices = reshape(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z), size(z));
     alpha_indices = reshape(1+numel(u)+numel(x)+numel(z):numel(u)+numel(x)+numel(z)+numel(alpha), size(alpha));
 
-    zt_indices_arr = z_indices(1:2*n_yt_red, :); 
-    alphat_indices_arr = alpha_indices(1:n_yt_red, :);
+    y_ref_indices_arr = z_indices(1:n_y, :); 
+    y_p_ref_indices_arr = z_indices(n_y+1:end, :);
+    y_pp_ref_indices_arr = alpha_indices;
 
-    zr_indices_arr = z_indices(2*n_yt_red+1:end, :);
-    alplhar_indices_arr = alpha_indices(n_yt_red+1:end, :);
-
-    pp_indices = [zt_indices_arr(:)', alphat_indices_arr(:)'];
-    rr_indices = [zr_indices_arr(:)', alplhar_indices_arr(:)'];
-
-    zt_dim = size(zt_indices_arr);
-    alphat_dim = size(alphat_indices_arr);
-
-    zr_dim = size(zr_indices_arr);
-    alphar_dim = size(alplhar_indices_arr);
+    y_ref_indices_dim = size(y_ref_indices_arr);
+    y_p_ref_indices_dim = size(y_p_ref_indices_arr);
+    y_pp_ref_indices_dim = size(y_pp_ref_indices_arr);
 
     sol_indices = struct( ...
         'tau', tau_indices, ...
@@ -291,18 +290,12 @@ if(strcmp(MPC_version, 'opt_problem_ineq_feasible_traj_MPC_v3_quat') || strcmp(M
         'qq_dim', qq_dim, ...
         'qqp', qqp_indices, ...
         'qqp_dim', qqp_dim, ...
-        'z', z_indices(:)', ...
-        'z_dim', size(z_indices), ...
-        'alpha', alpha_indices(:)', ...
-        'alpha_dim', size(alpha_indices), ...
-        'zt', zt_indices_arr(:)', ...
-        'zt_dim', zt_dim, ...
-        'alphat', alphat_indices_arr(:)', ...
-        'alphat_dim', alphat_dim, ...
-        'zr', zr_indices_arr(:)', ...
-        'zr_dim', zr_dim, ...
-        'alphar', alplhar_indices_arr(:)', ...
-        'alphar_dim', alphar_dim ...
+        'y_ref', y_ref_indices_arr, ...
+        'y_ref_dim', y_ref_indices_dim, ...
+        'y_p_ref', y_p_ref_indices_arr, ...
+        'y_p_ref_dim', y_p_ref_indices_dim, ...
+        'y_pp_ref', y_pp_ref_indices_arr, ...
+        'y_pp_ref_dim', y_pp_ref_indices_dim ...
         );
 else
     sol_indices = struct( ...
@@ -319,7 +312,7 @@ end
 %disp(solver.stats())
 
 % set init guess
-init_guess = full(xx_full_opt_sol)+eps;
+init_guess = full(xx_full_opt_sol);
 
 if(any(isnan(full(xx_full_opt_sol))))
     error('init_guess_0 contains NaN values!');

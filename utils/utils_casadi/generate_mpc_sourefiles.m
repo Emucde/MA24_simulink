@@ -12,7 +12,16 @@ function generate_mpc_sourefiles(casadi_fun, casadi_opt_problem_paths, current_m
         calculate_checksums_with_md5sum(casadi_opt_problem_paths, checksum_file_name);
     end
 
-    checksumData = readtable(checksum_file_name, 'Delimiter', '  ', 'ReadVariableNames', true);
+    checksumData = readtable(checksum_file_name, 'Delimiter', '  ', 'ReadVariableNames', true, 'FileType', 'text');
+    % fileID = fopen(checksum_file_name, 'r');
+    % checksumData = textscan(fileID, '%s  %s', 'Delimiter', '  ');
+    % checksumData = reshape(checksumData{1}(3:end), 2, [])';
+    % checksumData = struct2table(struct( ...
+    %     'FileName', {checksumData(:,2)}, ...
+    %     'Checksum', {checksumData(:,1)} ...
+    % ));
+    % fclose(fileID);
+
 
     [~, cmdout] = linux_md5sum(current_mpc_mfile);
     current_checksum = cmdout(1:32); % always 32 hex chars

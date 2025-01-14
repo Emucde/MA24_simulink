@@ -139,7 +139,6 @@ int main()
     controller.setActiveMPC(MPCType::MPC01);
     controller.switch_traj(TRAJ_SELECT);
 
-    bool is_kinematic_mpc = controller.get_is_kinematic_mpc();
     const casadi_uint nq = controller.nq;
     const casadi_uint nx = controller.nx;
     const casadi_uint nq_red = controller.nq_red;
@@ -150,7 +149,6 @@ int main()
     const std::vector<casadi_real> x_ref_nq_vec = controller.get_x_ref_nq();
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
 
-    casadi_real *u_opt = controller.get_optimal_control();
     casadi_real *x_k = controller.get_x_k();
     casadi_real x_k_ndof[nx];
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);

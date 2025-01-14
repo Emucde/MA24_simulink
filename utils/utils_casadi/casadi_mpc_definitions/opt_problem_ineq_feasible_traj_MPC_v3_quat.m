@@ -108,6 +108,7 @@ if(N_step_MPC <= 2)
 else
     MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
 end
+dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
 
 %% Calculate Initial Guess
 
@@ -177,15 +178,7 @@ else
     alpha_t_init_guess_0 =  y_d_pp_0(yt_indices, 1:end-1);
     alpha_t_N_0          =  y_d_pp_0(yt_indices, end    );
 
-    Ht_kp1_sim          = Ht_kp1.mapaccum(1);
-    Ht2_sim             = Ht2.mapaccum(1);
-    Ht_sim              = Ht.mapaccum(N_MPC-2);
-
-    zt_DT_ctl_init_0 = Ht_kp1_sim(zt_0_0,           alpha_t_init_guess_0(:, 1)    );
-    zt_DT2_init_0    = Ht2_sim(   zt_DT_ctl_init_0, alpha_t_init_guess_0(:, 2)    );
-    zt_DT_init_0     = Ht_sim(    zt_DT2_init_0,    alpha_t_init_guess_0(:, 3:end));
-
-    zt_init_guess_0     = [zt_0_0 full(zt_DT_ctl_init_0) full(zt_DT2_init_0) full(zt_DT_init_0)];
+    zt_init_guess_0 = [y_d_0(  yt_indices, :); y_d_p_0(yt_indices, :)];
 end
 
 if(isempty(yr_indices))
@@ -208,33 +201,41 @@ else
     alpha_r = SX.sym('alpha_r', n_alpha_r);
     hr_ref = Function('h_qw_ref', {zr, alpha_r}, {[Q(zr(1:4)) * zr(5:7); alpha_r]});
 
+    quat_r = SX.sym('quat_r', 4);
+    omega_r = SX.sym('omega_r', 3);
+    H_norm = Function('H_norm', {quat_r, omega_r}, {[if_else(norm_2(quat_r) == 0, SX([1; 0; 0; 0]), quat_r/norm_2(quat_r)); omega_r]});
+
+
     Hr_unorm = integrate_casadi(hr_ref, DT, M, int_method);
     Hr_val = Hr_unorm(zr, alpha_r); % ensure unit quaternion: normalize
     Hr = Function('H_qw', {zr, alpha_r}, {[Hr_val(1:4)/norm_2(Hr_val(1:4)); Hr_val(5:7)]});
+    % Hr = Function('H_qw', {zr, alpha_r}, {H_norm(Hr_val(1:4), Hr_val(5:7))});
 
     Hr_unorm = integrate_casadi(hr_ref, DT_ctl, M, int_method); % runs with Ta from sensors
     Hr_val = Hr_unorm(zr, alpha_r); % ensure unit quaternion: normalize
     Hr_kp1 = Function('H_qw', {zr, alpha_r}, {[Hr_val(1:4)/norm_2(Hr_val(1:4)); Hr_val(5:7)]});
+    % Hr_kp1 = Function('H_qw', {zr, alpha_r}, {H_norm(Hr_val(1:4), Hr_val(5:7))});
 
     Hr_unorm = integrate_casadi(hr_ref, DT2, M, int_method); % runs with Ts_MPC-Ta
     Hr_val = Hr_unorm(zr, alpha_r); % ensure unit quaternion: normalize
     Hr2 = Function('H_qw', {zr, alpha_r}, {[Hr_val(1:4)/norm_2(Hr_val(1:4)); Hr_val(5:7)]});
+    % Hr2 = Function('H_qw', {zr, alpha_r}, {H_norm(Hr_val(1:4), Hr_val(5:7))});
 
     % Ref System: Rotational init guess
     zr_0_0               = [y_d_0(4:7,1); y_d_p_0(4:6,1)]; % init for zr_ref
     alpha_r_init_guess_0 = y_d_pp_0(4:6, 1:end-1);
     alpha_r_N_0          = y_d_pp_0(4:6, end);
 
-    Hr_kp1_sim          = Hr_kp1.mapaccum(1);
-    Hr2_sim             = Hr2.mapaccum(1);
-    Hr_sim              = Hr.mapaccum(N_MPC-2);
+    zr_init_guess_0     = [y_d_0(4:7, :); y_d_p_0(4:6, :)];
 
-    zr_DT_ctl_init_0 = Hr_kp1_sim(zr_0_0,           alpha_r_init_guess_0(:, 1)    );
-    zr_DT2_init_0    = Hr2_sim(   zr_DT_ctl_init_0, alpha_r_init_guess_0(:, 2)    );
-    zr_DT_init_0     = Hr_sim(    zr_DT2_init_0,    alpha_r_init_guess_0(:, 3:end));
-
-    zr_init_guess_0     = [zr_0_0 full(zr_DT_ctl_init_0) full(zr_DT2_init_0) full(zr_DT_init_0)];
+    % Da bei den meisten Trajektorien die Orientierung konstant ist, kann der Solver hier oft
+    % keine Lösung finden, da die Sensitivitäten exakt 0 sind. Komischerweise ist hier nur die
+    % der letzte Wert betroffen. Daher wird hier ein minimaler Wert addiert.
+    zr_init_guess_0(1:4, 6) = zr_init_guess_0(1:4, 6) + 1e-15;
 end
+
+n_y = n_zr + n_alpha_r;
+n_z = n_zt_red + n_zr;
 
 
 % total init guess for ref system
@@ -244,7 +245,7 @@ alpha_N_0          = [alpha_t_N_0;          alpha_r_N_0         ];
 z_0_0              = [zt_0_0;               zr_0_0              ];
 
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0)+numel(z_init_guess_0)+numel(alpha_init_guess_0) + numel(alpha_N_0), 1);
-lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(z_init_guess_0)+eps_t_cnt+eps_r_cnt, 1); % + 1 wegen eps
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(z_init_guess_0)+numel(u_init_guess_0)+eps_t_cnt+eps_r_cnt, 1); % + 1 wegen eps
 
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
@@ -276,12 +277,15 @@ alpha = [ alpha_t; alpha_r ];
 mpc_opt_var_inputs = {u, x, z, alpha};
 
 N_opt = numel(u) + numel(x) + numel(z) + numel(alpha);
+N_u = numel(u);
+N_x = numel(x);
+N_z = numel(z);
 u_opt_indices = 1:n_red; % tau_0
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
-ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -Inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1); -Inf(size(z(:))); -Inf(size(alpha(:)))];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  Inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1);  Inf(size(z(:)));  Inf(size(alpha(:)))];
 
 % input parameter
 x_k  = SX.sym( 'x_k',  2*n_red,    1 ); % current x state = initial x state
@@ -296,9 +300,10 @@ y_d_pp = SX.sym( 'y_d_pp', m,   N_MPC+1 ); % (y_d_pp_0 ... y_d_pp_N)
 x_prev    = SX.sym( 'x_prev', size(x));
 z_prev    = SX.sym( 'z_prev', size(z));
 alpha_prev = SX.sym( 'alpha_prev', size(alpha));
+u_prev = SX.sym( 'u_prev', size(u) );
 
-mpc_parameter_inputs = {x_k, z_k, y_d, y_d_p, y_d_pp, x_prev, z_prev, alpha_prev};
-mpc_init_reference_values = [x_0_0(:); z_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:)];
+mpc_parameter_inputs = {x_k, z_k, y_d, y_d_p, y_d_pp, u_prev, x_prev, z_prev, alpha_prev};
+mpc_init_reference_values = [x_0_0(:); z_0_0(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:); u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_init_guess_0(:); alpha_N_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -311,6 +316,7 @@ g_x  = cell(1, N_MPC+1); % for F
 g_zt = cell(1, N_MPC+1); % for H
 g_zr = cell(1, N_MPC+1); % for H_qw
 g_eps = cell(1, eps_t_cnt+eps_r_cnt); % separate for transl and rotation
+g_u_prev = cell(1, N_MPC); % for u_prev
 
 if(weights_and_limits_as_parameter)
     lbg = SX(numel(lam_g_init_guess_0), 1);
@@ -414,6 +420,7 @@ for i=0:N_MPC
         dx   = f_red(x(:, 1 + (i)), u(:, 1 + (i))); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
         q_pp(:, 1 + (i)) = dx(n_red+1:2*n_red, 1);
         g_vec(:, 1 + (i)) = g_fun_red(q);
+        g_u_prev(1, 1 + (i)) = {u(:, 1 + (i)) - u_prev(:, 1 + (i))};
     end
 end
 
@@ -485,8 +492,15 @@ if(~isempty(yr_indices))
     g_eps(1, gcnt) = {gr_eps};
 end
 
+% jumps in tau at max 1000Nm/s
+max_du = pp.max_du;
+max_du_arr = repmat(max_du*dt_int_arr, n_red, 1);
+
+lbg(1+N_x+N_z:N_x+N_z+N_u, 1) = -max_du_arr(:);
+ubg(1+N_x+N_z:N_x+N_z+N_u, 1) =  max_du_arr(:);
+
 g_z = [g_zt, g_zr];
-g = [g_x, g_z, g_eps]; % merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
+g = [g_x, g_z, g_u_prev, g_eps]; % merge_cell_arrays([g_x, g_z, g_eps], 'vector')';
 
 u_err = u-g_vec; % es ist stabiler es nicht gegenüber der vorherigen Lösung zu gewichten!
 
@@ -498,7 +512,13 @@ J_x_prev     = Q_norm_square(x     - x_prev,     pp.R_x_prev(n_x_indices, n_x_in
 J_z_prev     = Q_norm_square(z     - z_prev,     pp.R_z_prev(n_z_indices, n_z_indices));
 J_alpha_prev = Q_norm_square(alpha - alpha_prev, pp.R_alpha_prev(n_y_indices, n_y_indices));
 
-cost_vars_names = '{J_yt, Jt_yy_ref, J_yr, Jr_yy_ref, J_u, J_q_ref, J_q_p, J_x_prev, J_z_prev, J_alpha_prev}';
+% it is really important to only weight the first control input!
+J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices, n_indices));
+
+Jt_yy_ref = Q_norm_square( alpha_t(yt_indices, :) - y_d_pp(yt_indices, :), pp.Q_y(yt_indices, yt_indices) );
+Jr_yy_ref = Q_norm_square( alpha_r(yr_indices, :) - y_d_pp(3+yr_indices, :), pp.Q_y(3+yr_indices, 3+yr_indices) );
+
+cost_vars_names = '{J_yt, Jt_yy_ref, J_yr, Jr_yy_ref, J_u, J_q_ref, J_q_p, J_x_prev, J_z_prev, J_alpha_prev, J_u0_prev}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 

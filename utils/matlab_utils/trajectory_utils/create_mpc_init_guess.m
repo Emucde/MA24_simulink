@@ -62,14 +62,8 @@ if(overwrite_init_guess)
                 % Schleife nicht die Variable i verwenden!!!!
                 nlpsol_generate_opt_problem;
                 
-                % Hint: If the init_guess is already the global minima, the solver
-                % will get an Evaluation Failed because it get's NaN values due to
-                % the perfect zero gradients. Therefore add eps to init_guess to
-                % avoid this problem.
-                init_guess_0 = eps + init_guess_0;
                 if(warm_start)
                     if(weights_and_limits_as_parameter)
-                        % TODO - why +1e-15 necessary??
                         [~, xx_full_opt_sol, ~] = f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
                     else
                         [~, xx_full_opt_sol] = f_opt(mpc_init_reference_values, init_guess_0);

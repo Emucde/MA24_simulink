@@ -82,13 +82,38 @@ namespace franka_example_controllers
             // Attempt to get the result (blocking call)
             if (tau_full_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
             {
-                invalid_counter = 0;              // Reset the counter on successful retrieval
-                tau_full = tau_full_future.get(); // Get the result
-                tau_full_future_started = false;
-                tau_full_future = std::async(std::launch::async, [this, state]()
-                                             {
-                    tau_full_future_started = true;
-                    return controller.solveMPC(state); });
+                invalid_counter = 0;                      // Reset the counter on successful retrieval
+                tau_full = tau_full_future.get();         // Get the result
+                error_flag = controller.get_error_flag(); // Get the error flag
+
+                if (error_flag == ErrorFlag::NO_ERROR)
+                {
+                    tau_full_future = std::async(std::launch::async, [this, state]()
+                                                 { return controller.solveMPC(state); });
+                }
+                else
+                {
+                    mpc_started = false;
+
+                    if (error_flag == ErrorFlag::JUMP_DETECTED)
+                    {
+                        RCLCPP_WARN(get_node()->get_logger(), "Jump in torque detected (tau (Nm): [%f, %f, %f, %f, %f, %f, %f]). Stopping the controller.",
+                                    tau_full[0], tau_full[1], tau_full[2],
+                                    tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
+                    }
+                    else if (error_flag == ErrorFlag::NAN_DETECTED)
+                    {
+                        RCLCPP_WARN(get_node()->get_logger(), "NaN in torque detected (tau (Nm): [%f, %f, %f, %f, %f, %f, %f]). Stopping the controller.",
+                                    tau_full[0], tau_full[1], tau_full[2],
+                                    tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
+                    }
+                    else if (error_flag == ErrorFlag::CASADI_ERROR)
+                    {
+                        RCLCPP_WARN(get_node()->get_logger(), "Error in Casadi function call. Stopping the controller.");
+                    }
+
+                    tau_full = Eigen::VectorXd::Zero(N_DOF);
+                }
             }
             else
             {
@@ -281,7 +306,6 @@ namespace franka_example_controllers
 
         tau_full_future = std::async(std::launch::async, [this, state]()
                                      {
-            tau_full_future_started = true;
             Eigen::VectorXd tau_full_temp = controller.solveMPC(state);
             mpc_started = true;
             first_torque_read = false;

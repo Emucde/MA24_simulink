@@ -47,6 +47,8 @@ else
     MPC_traj_indices = [0, 1, 2, (1:1+(N_MPC-3))*N_step_MPC]+1;
 end
 
+dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
+
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
 q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
 y_d_0 = [p_d_0; q_d_0];
@@ -65,7 +67,7 @@ u_init_guess_0 = ones(n_red, N_MPC).*u_k_0;
 x_init_guess_0 = [x_0_0 ones(2*n_red, N_MPC).*x_0_0];
 
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
-lam_g_init_guess_0 = zeros(numel(x_init_guess_0), 1);
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(u_init_guess_0), 1);
 
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
@@ -102,16 +104,23 @@ u_opt_indices = [q0_pp_idx, q1_pp_idx];
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
-ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
+% lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
+% ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
+
+% Interessant: Wenn u auch im Horizont beschränkt wird, erhält man eine bleibende Regelabweichung (1e-5).
+% Hingegen wenn die u im Horizont nicht beschränkt werden, sondern nur das, dass ausgegeben wird, hat man das Problem nicht:
+ubw = [repmat(pp.u_max(n_indices), 1, 1);  inf(n_red*(N_MPC-1),1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
+lbw = [repmat(pp.u_min(n_indices), 1, 1); -inf(n_red*(N_MPC-1),1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
+
 
 % input parameter
 x_k  = SX.sym( 'x_k',  2*n_red, 1 ); % current x state = initial x state
 y_d  = SX.sym( 'y_d',  m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
 x_prev = SX.sym( 'x_prev',  2*n_red, N_MPC+1 );
+u_prev = SX.sym( 'u_prev', size(u) );
 
-mpc_parameter_inputs = {x_k, y_d, x_prev};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:); x_init_guess_0(:)];
+mpc_parameter_inputs = {x_k, y_d, x_prev, u_prev};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:); x_init_guess_0(:); u_init_guess_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -140,6 +149,7 @@ y       = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
+g_u_prev = cell(1, N_MPC); % for u_prev
 
 for i=0:N_MPC
     q = x(1:n_red, 1 + (i));
@@ -162,10 +172,18 @@ for i=0:N_MPC
             % runs only to T_horizon-Ts_MPC, i. e. tilde x_{N-1} = x(t0+Ts_MPC*(N-1)) and x_N doesn't exist
             % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(N-1))
         end
+        g_u_prev(1, 1 + (i)) = {u(:, 1 + (i)) - u_prev(:, 1 + (i))};
     end
 end
 
-g = g_x;
+% avoid jump in q_pp
+max_du = pp.max_du;
+max_du_arr = repmat(max_du*dt_int_arr, n_red, 1);
+
+lbg(1+end-N_u:end, 1) = -max_du_arr(:);
+ubg(1+end-N_u:end, 1) =  max_du_arr(:);
+
+g = [g_x, g_u_prev];
 
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
@@ -203,7 +221,10 @@ J_q_p = Q_norm_square(x(1+n_red:2*n_red, :), pp.R_q_p(n_indices, n_indices)); %Q
 J_q_pp = Q_norm_square(u, pp.R_u(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 J_x_prev  = Q_norm_square((x - x_prev), pp.R_x_prev(n_x_indices, n_x_indices));
 
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_ref, J_q_p, J_q_pp, J_x_prev}';
+% it is really important to only weight the first control input!
+J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices, n_indices));
+
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_ref, J_q_p, J_q_pp, J_x_prev, J_u0_prev}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

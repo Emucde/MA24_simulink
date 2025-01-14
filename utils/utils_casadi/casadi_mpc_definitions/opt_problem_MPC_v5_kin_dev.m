@@ -52,6 +52,7 @@ if(N_step_MPC <= 2)
 else
     MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
 end
+dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
 
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
 q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
@@ -72,9 +73,9 @@ x_init_guess_0 = ones(2*n_red, N_MPC+1).*x_0_0;
 
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0) + numel(x_init_guess_0), 1);
 if(implicit_xk)
-    lam_g_init_guess_0 = zeros(numel(u_init_guess_0) + numel(x_init_guess_0(1+n_red:2*n_red, 2:end)) + numel(x_0_0), 1);
+    lam_g_init_guess_0 = zeros(2*numel(u_init_guess_0) + numel(x_init_guess_0(1+n_red:2*n_red, 2:end)) + numel(x_0_0), 1);
 else
-    lam_g_init_guess_0 = zeros(numel(u_init_guess_0) + numel(x_init_guess_0(1+n_red:2*n_red, :)) + numel(x_0_0), 1);
+    lam_g_init_guess_0 = zeros(2*numel(u_init_guess_0) + numel(x_init_guess_0(1+n_red:2*n_red, :)) + numel(x_0_0), 1);
 end
 
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
@@ -118,16 +119,22 @@ u_opt_indices = [q0_pp_idx, x1_idx, q1_pp_idx];
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
-ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
+% lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
+% ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
+
+% Interessant: Wenn u auch im Horizont beschränkt wird, erhält man eine bleibende Regelabweichung (1e-5).
+% Hingegen wenn die u im Horizont nicht beschränkt werden, sondern nur das, dass ausgegeben wird, hat man das Problem nicht:
+ubw = [repmat(pp.u_max(n_indices), 1, 1);  inf(n_red*(N_MPC-1),1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
+lbw = [repmat(pp.u_min(n_indices), 1, 1); -inf(n_red*(N_MPC-1),1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
 
 % input parameter
 x_k  = SX.sym( 'x_k',  2*n_red,       1 ); % current x state = initial x state
 y_d  = SX.sym( 'y_d',  m+1, N_MPC+1 ); % (y_d_0 ... y_d_N), p_d, q_d
 x_prev = SX.sym( 'x_prev', 2*n_red, N_MPC+1 );
+u_prev = SX.sym( 'u_prev', size(u) );
 
-mpc_parameter_inputs = {x_k, y_d, x_prev};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:); x_init_guess_0(:)];
+mpc_parameter_inputs = {x_k, y_d, x_prev, u_prev};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:); x_init_guess_0(:); u_init_guess_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -142,6 +149,7 @@ else
     g_x  = cell(1, N_MPC+2);
 end
 g_u  = cell(1, N_MPC);
+g_u_prev = cell(1, N_MPC);
 
 if(weights_and_limits_as_parameter)
     lbg = SX(numel(lam_g_init_guess_0), 1);
@@ -416,10 +424,18 @@ for i=0:N_MPC
     end
     if(i < N_MPC)
         g_u(1, 1 + (i))   = {u(:, 1 + (i)) - q_pp(:, 1 + (i))};
+        g_u_prev(1, 1 + (i)) = {u(:, 1 + (i)) - u_prev(:, 1 + (i))};
     end
 end
 
-g = [g_x, g_u];
+g = [g_x, g_u, g_u_prev];
+
+% jump in tau at max 100rad/s^2
+tau_jump_max = 1000;
+tau_jumps = repmat(tau_jump_max*dt_int_arr, n_red, 1);
+
+lbg(1+end-N_u:end, 1) = -tau_jumps(:);
+ubg(1+end-N_u:end, 1) =  tau_jumps(:);
 
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
@@ -459,7 +475,10 @@ J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indice
 J_q_p = Q_norm_square(q_p, pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 J_q_pp = Q_norm_square(u, pp.R_u(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_ref, J_q_p, J_q_pp, J_x_prev}';
+% it is really important to only weight the first control input!
+J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices, n_indices));
+
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_ref, J_q_p, J_q_pp, J_x_prev, J_u0_prev}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
