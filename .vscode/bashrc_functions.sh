@@ -15,8 +15,8 @@ function ros2enable()
 		export $(cat /etc/environment)
 		. ~/.bashrc
 		cd $masterdir/main_ros2/franka_ros2_ws
-		source /opt/ros/humble/setup.bash
 	fi
+	source /opt/ros/humble/setup.bash
 }
 
 function sourcempc()
@@ -47,7 +47,18 @@ function buildmpc()
 	CURRENT_PATH=$(pwd)
 	cd $masterdir/main_ros2/franka_ros2_ws
         echo "colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release"
-        colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+        colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=ON
+	cd $CURRENT_PATH
+}
+
+function buildmpcdebug()
+{
+	unsourcempc
+	ros2enable
+	CURRENT_PATH=$(pwd)
+	cd $masterdir/main_ros2/franka_ros2_ws
+        echo "colcon build --cmake-args -DCMAKE_BUILD_TYPE=Debug"
+        colcon build --cmake-args -DCMAKE_BUILD_TYPE=Debug -DCMAKE_VERBOSE_MAKEFILE=ON
 	cd $CURRENT_PATH
 }
 
@@ -55,14 +66,19 @@ function runmpc()
 {
 	ros2enable
 	sourcempc
-	echo "ros2 launch franka_bringup mpc_controller.launch.py arm_id:=fr3 robot_ip:=$robot_ip"
-	ros2 launch franka_bringup mpc_controller.launch.py arm_id:=fr3 robot_ip:=$robot_ip
+	echo "ros2 launch franka_bringup mpc_casadi_controller.launch.py arm_id:=fr3 robot_ip:=$robot_ip"
+	ros2 launch franka_bringup mpc_casadi_controller.launch.py arm_id:=fr3 robot_ip:=$robot_ip
 }
 
 function runnodejs()
 {
-	ros2enable
-	sourcempc
-	conda activate mpc
+	if [ ! $NODEJS_ENABLED ]; then
+		ros2enable
+		sourcempc
+		if [ $CONDA_SHLVL -eq 0 ]; then
+			conda activate mpc
+		fi
+		export NODEJS_ENABLED=true
+	fi
 	node $masterdir/main_ros2/nodejs_ros2_gui/src/app.js
 }
