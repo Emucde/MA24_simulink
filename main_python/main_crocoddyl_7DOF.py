@@ -52,6 +52,11 @@ if use_data_from_simulink:
     data_from_simulink_reset = shm_data['data_from_simulink_reset']
     data_from_simulink_stop = shm_data['data_from_simulink_stop']
     data_from_simulink_traj_switch = shm_data['data_from_simulink_traj_switch']
+    readonly_mode = shm_data['readonly_mode']
+    read_traj_length = shm_data['read_traj_length']
+    read_traj_data = shm_data['read_traj_data']
+    read_state_data = shm_data['read_state_data']
+    read_control_data = shm_data['read_control_data']
     shm_changed_semaphore = posix_ipc.Semaphore("/shm_changed_semaphore", posix_ipc.O_CREAT, initial_value=0)
 
     # create objects for debouncing the simulink buttons:
@@ -312,111 +317,193 @@ try:
         if use_data_from_simulink:
             # Read data
             shm_changed_semaphore.acquire()
-            if(data_from_simulink_valid[0] == 1):
-                data_from_simulink_valid[:] = 0
-                x_k_ndof = data_from_simulink.copy()
-                x_k = x_k_ndof[n_x_indices]
-                new_data_flag = True
 
-            # Daten von Simulink lesen
-            start = start_button.debounce(data_from_simulink_start[:])
-            reset = reset_button.debounce(data_from_simulink_reset[:])
-            stop = stop_button.debounce(data_from_simulink_stop[:])
-            
-            if run_flag == False:
-                data_from_python[:] = np.zeros(n_dof)
-                if start == 1 and reset == 0 and stop == 0 and new_data_flag:
-                    new_traj_select = data_from_simulink_traj_switch[0]
-                    data_from_simulink_start[:] = 0
+            if readonly_mode[0] == 0:
+                if(data_from_simulink_valid[0] == 1):
+                    data_from_simulink_valid[:] = 0
+                    x_k_ndof = data_from_simulink.copy()
+                    x_k = x_k_ndof[n_x_indices]
+                    new_data_flag = True
 
-                    # set initial values
-                    tau_i_prev = np.zeros(n_dof)
-
-                    # reset time measurement
-                    measureSolver.reset()
-                    measureSimu.reset()
-                    measureTotal.reset()
-                    measureTotal.tic()
-
-                    # Selbst wenn die Messung zu beginn eine Jointgeschwindigkeit ausgibt, wird diese auf 0 gesetzt
-                    # weil der Roboter zu beginn stillsteht und es damit nur noise ist
-                    x_k_ndof[n_dof::] = 0
-                    init_cnt = 0
-
+                # Daten von Simulink lesen
+                start = start_button.debounce(data_from_simulink_start[:])
+                reset = reset_button.debounce(data_from_simulink_reset[:])
+                stop = stop_button.debounce(data_from_simulink_stop[:])
+                
+                if run_flag == False:
                     data_from_python[:] = np.zeros(n_dof)
+                    if start == 1 and reset == 0 and stop == 0 and new_data_flag:
+                        new_traj_select = data_from_simulink_traj_switch[0]
+                        data_from_simulink_start[:] = 0
 
-                    if i == N_traj-1:
-                        i = 0
+                        # set initial values
+                        tau_i_prev = np.zeros(n_dof)
 
-                    if current_traj_select != new_traj_select:
-                        current_traj_select = new_traj_select
-                        traj_data, traj_init_config = process_trajectory_data(current_traj_select-1, traj_data_all, traj_param_all)
+                        # reset time measurement
+                        measureSolver.reset()
+                        measureSimu.reset()
+                        measureTotal.reset()
+                        measureTotal.tic()
+
+                        # Selbst wenn die Messung zu beginn eine Jointgeschwindigkeit ausgibt, wird diese auf 0 gesetzt
+                        # weil der Roboter zu beginn stillsteht und es damit nur noise ist
+                        x_k_ndof[n_dof::] = 0
+                        init_cnt = 0
+
+                        data_from_python[:] = np.zeros(n_dof)
+
+                        if i == N_traj-1:
+                            i = 0
+
+                        if current_traj_select != new_traj_select:
+                            current_traj_select = new_traj_select
+                            traj_data, traj_init_config = process_trajectory_data(current_traj_select-1, traj_data_all, traj_param_all)
+                            print()
+                            print(f'New Trajectory selected: {current_traj_select}')
+
+                        if i == 0:
+                            # update mpc settings and problem
+                            ddp, xs, us, xs_init_guess, us_init_guess, TCP_frame_id, \
+                            N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
+                            simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, \
+                            transient_traj, param_traj, title_text =   \
+                                init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data,     \
+                                                traj_init_config, param_robot, param_traj_poly, TCP_frame_id)
+                            
+                            # pin.forwardKinematics(robot_model_full, robot_data_full, x_k_ndof[:n_dof])
+                            # pin.updateFramePlacements(robot_model_full, robot_data_full)
+                            # xe0 = robot_data_full.oMf[TCP_frame_id].translation
+                            
+                            p_d = transient_traj['p_d']
+                            p_d_p = transient_traj['p_d_p']
+                            p_d_pp = transient_traj['p_d_pp']
+                            R_d = transient_traj['R_d']
+
+
+                        run_flag = True
                         print()
-                        print(f'New Trajectory selected: {current_traj_select}')
+                        print("MPC started by Simulink")
 
-                    if i == 0:
-                        # update mpc settings and problem
-                        ddp, xs, us, xs_init_guess, us_init_guess, TCP_frame_id, \
-                        N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
-                        simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, \
-                        transient_traj, param_traj, title_text =   \
-                            init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data,     \
-                                            traj_init_config, param_robot, param_traj_poly, TCP_frame_id)
-                        
-                        # pin.forwardKinematics(robot_model_full, robot_data_full, x_k_ndof[:n_dof])
-                        # pin.updateFramePlacements(robot_model_full, robot_data_full)
-                        # xe0 = robot_data_full.oMf[TCP_frame_id].translation
-                        
-                        p_d = transient_traj['p_d']
-                        p_d_p = transient_traj['p_d_p']
-                        p_d_pp = transient_traj['p_d_pp']
-                        R_d = transient_traj['R_d']
+                if run_flag is True:
+                    if stop == 1:
+                        print()
+                        print("MPC stopped by Simulink")
+                        data_from_python[:] = np.zeros(n_dof)
+                        data_from_simulink_stop[:] = 0
+                        run_flag = False
+                        start_solving = False
+                    elif new_data_flag:
+                        start_solving = True
+                        new_data_flag = False
+                    if start == 1:
+                        data_from_simulink_start[:] = 0 # already started, ignore start signal
 
-
-                    run_flag = True
+                if reset == 1:
                     print()
-                    print("MPC started by Simulink")
-
-            if run_flag == True:
-                if stop == 1:
-                    print()
-                    print("MPC stopped by Simulink")
+                    print("MPC reset by Simulink")
                     data_from_python[:] = np.zeros(n_dof)
-                    data_from_simulink_stop[:] = 0
+                    data_from_simulink_reset[:] = 0
                     run_flag = False
                     start_solving = False
-                elif new_data_flag:
-                    start_solving = True
-                    new_data_flag = False
+
+                    if plot_sol:
+                        def plot_sol_act():
+                            subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
+                            plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
+                        process = multiprocessing.Process(target=plot_sol_act)
+                        process.start()
+
+                    if visualize_sol:
+                        def vis_sol_act():
+                            q_sol = xs[:, :n_dof]
+                            visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
+                                            q_sol, transient_traj, Ts,
+                                            frame_skip=1, create_html = True, html_name = visualize_file_path)
+                        process = multiprocessing.Process(target=vis_sol_act)
+                        process.start()
+                    
+                    freq_per_Ta_step = np.zeros(N_traj)
+                    i = 0
+            else:
+                # in this mode, all data (states and torques) are read out of the shared memory. This mode is only
+                # used by CasaDi from ROS 2 for logging the data.
+                start = start_button.debounce(data_from_simulink_start[:])
+                reset = reset_button.debounce(data_from_simulink_reset[:])
+                stop = stop_button.debounce(data_from_simulink_stop[:])
+
+                # readonly_mode = shm_data['readonly_mode']
+                # read_traj_length = shm_data['read_traj_length']
+                # read_traj_data = shm_data['read_traj_data']
+                # read_state_data = shm_data['read_state_data']
+                # read_control_data = shm_data['read_control_data']
+                
                 if start == 1:
-                    data_from_simulink_start[:] = 0 # already started, ignore start signal
+                    data_from_simulink_start[:] = 0
+                    run_flag = True
 
-            if reset == 1:
-                print()
-                print("MPC reset by Simulink")
-                data_from_python[:] = np.zeros(n_dof)
-                data_from_simulink_reset[:] = 0
-                run_flag = False
-                start_solving = False
+                if reset == 1:
+                    data_from_simulink_reset[:] = 0
+                    run_flag = False
+                    i = 0
 
-                if plot_sol:
-                    def plot_sol_act():
+                    if plot_sol:
+                        # def plot_sol_act():
                         subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
                         plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
-                    process = multiprocessing.Process(target=plot_sol_act)
-                    process.start()
+                        # process = multiprocessing.Process(target=plot_sol_act)
+                        # process.start()
 
-                if visualize_sol:
-                    def vis_sol_act():
+                    if visualize_sol:
+                        # def vis_sol_act():
                         q_sol = xs[:, :n_dof]
                         visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
-                                        q_sol, transient_traj, Ts,
-                                        frame_skip=1, create_html = True, html_name = visualize_file_path)
-                    process = multiprocessing.Process(target=vis_sol_act)
-                    process.start()
-                
-                freq_per_Ta_step = np.zeros(N_traj)
-                i = 0
+                                            q_sol, transient_traj, Ts,
+                                            frame_skip=1, create_html = True, html_name = visualize_file_path)
+                        # process = multiprocessing.Process(target=vis_sol_act)
+                        # process.start()
+
+                if stop == 1:
+                    data_from_simulink_stop[:] = 0
+                    run_flag = False
+
+                if i == 0:
+                    # reset data
+                    N_traj = read_traj_length[0]
+                    xs = np.zeros((N_traj, 2*n_dof))
+                    us = np.zeros((N_traj, n_dof))
+                    transient_traj = {
+                        't': np.linspace(0, N_traj*Ts, N_traj),
+                        'N_traj': N_traj,
+                        'p_d': np.zeros((3, N_traj)),
+                        'p_d_p': np.zeros((3, N_traj)),
+                        'p_d_pp': np.zeros((3, N_traj)),
+                        'R_d': np.zeros((3, 3, N_traj)),
+                        'q_d': np.zeros((4, N_traj)),
+                        'omega_d': np.zeros((3, N_traj)),
+                        'omega_d_p': np.zeros((3, N_traj))
+                    }
+
+                if run_flag is True:
+                    xs[i] = read_state_data[:]
+                    us[i] = read_control_data[:]
+                    # transient_traj['p_d'][:, i] = read_traj_data[0:3]
+                    # transient_traj['p_d_p'][:, i] = read_traj_data[3:6]
+                    # transient_traj['p_d_pp'][:, i] = read_traj_data[6:9]
+                    # transient_traj['R_d'][:, :, i] = read_traj_data[9:18]
+                    # transient_traj['q_d'][:, i] = read_traj_data[18:22]
+                    # transient_traj['omega_d'][:, i] = read_traj_data[22:25]
+                    # transient_traj['omega_d_p'][:, i] = read_traj_data[25:28]
+                    transient_traj['p_d'][:, i] = read_traj_data[0:3]
+                    transient_traj['q_d'][:, i] = read_traj_data[3:7]
+
+                    if i < N_traj-1:
+                        i += 1
+                        print(i)
+                    else:
+                        run_flag = False
+
+
+
         if start_solving:
             measureSimu.tic()
 
@@ -462,7 +549,7 @@ try:
             tau_full[n_indices_fixed] = tau_full[n_indices_fixed] + tau_fixed
 
             xs[i] = x_k_ndof
-            us[i] = tau_full    
+            us[i] = tau_full
 
             if use_data_from_simulink:
                 if not err_state:

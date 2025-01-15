@@ -274,6 +274,8 @@ namespace franka_example_controllers
             close(shm_torques);
         if (shm_torques_valid != -1)
             close(shm_torques_valid);
+        if (shm_changed_semaphore != 0)
+            sem_close(shm_changed_semaphore);
     }
 
     // void ModelPredictiveControllerCasadi::topic_callback(const mpc_interfaces::msg::Num & msg)

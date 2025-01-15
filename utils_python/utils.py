@@ -464,11 +464,21 @@ def initialize_shared_memory():
         "data_from_simulink_start":       {"size": 1,             "dtype": np.int8},
         "data_from_simulink_reset":       {"size": 1,             "dtype": np.int8},
         "data_from_simulink_stop":        {"size": 1,             "dtype": np.int8},
-        "data_from_simulink_traj_switch": {"size": 1,             "dtype": np.int8}
+        "data_from_simulink_traj_switch": {"size": 1,             "dtype": np.int8},
+        "readonly_mode":                  {"size": 1,             "dtype": np.int8},
+        "read_traj_length":               {"size": 4,             "dtype": np.uint32},
+        "read_traj_data":                 {"size": 7 * 8,         "dtype": np.float64}, # pos and quaternion
+        "read_state_data":                {"size": 2 * n_dof * 8, "dtype": np.float64}, # q and qp
+        "read_control_data":              {"size": n_dof * 8,     "dtype": np.float64}, # tau
     }
 
     shm_objects = {}
     shm_data = {}
+
+    # for name, config in shm_objects.items():
+    #     # Create shared memory object
+    #     shm_objects[name].close()
+    #     shm_objects[name].unlink()
 
     for name, config in shm_configs.items():
         # Create shared memory object
@@ -477,6 +487,8 @@ def initialize_shared_memory():
         # Create numpy array from shared memory buffer
         if config["dtype"] == np.float64:
             shape = (config["size"] // 8,)
+        elif config["dtype"] == np.uint32:
+            shape = (config["size"] // 4,)
         else:
             shape = (config["size"],)
         
@@ -2512,7 +2524,8 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
     N_traj_KOS = style_settings['N_traj_KOS']
     traj_KOS_len = style_settings['traj_KOS_len']
 
-    indices = traj_data['N_init'] + np.linspace(0, traj_data['N_traj'], N_traj_KOS, dtype=int)
+    # indices = traj_data['N_init'] + np.linspace(0, traj_data['N_traj'], N_traj_KOS, dtype=int)
+    indices = np.linspace(0, traj_data['N_traj']-1, N_traj_KOS, dtype=int)
     for i, index in enumerate(indices):
         create_coordinate_system(vis, f"y_coord_system_{i}", traj_KOS_len)
         H = create_homogeneous_transform(y_d_data[index], R_d_data[:,:,index])
