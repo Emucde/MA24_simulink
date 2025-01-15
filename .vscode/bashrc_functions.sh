@@ -1,3 +1,8 @@
+export casadi_path=/media/daten/Anwendungen/casadi-3.6.6-linux64-matlab2018b
+export eigen_path=/usr/include/eigen3
+export MATLAB_ROOT=/media/daten/Anwendungen/MATLAB/R2022b
+
+
 function ros2enable()
 {
 	if [ $CONDA_SHLVL -eq 1 ]; then
