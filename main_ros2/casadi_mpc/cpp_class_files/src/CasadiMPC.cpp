@@ -5,6 +5,8 @@
 #include <vector>
 #include <memory> // for std::make_unique
 
+// #define DEBUG 1
+
 mpc_config_t const* invalid_config(const std::string &mpc_name)
 {
     throw std::runtime_error("\"" + mpc_name + "\" is not a valid MPC name. Use one of the following: MPC01, MPC6, MPC7, MPC8, MPC9, MPC10, MPC11, MPC12, MPC13, MPC14");
@@ -130,6 +132,16 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
 // Method to run the MPC
 int CasadiMPC::solve()
 {
+    #ifdef DEBUG
+    std::cout << "int CasadiMPC::solve()\nw:\n";
+    for (int i = 0; i < mpc_config->u_opt_addr; i++)
+    {
+        std::cout << w[i] << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "MPC object created." << std::endl << std::endl;
+    #endif
+    
     // Call the Casadi function
     int flag = casadi_fun(arg, res, iw, w_end, mem);
 

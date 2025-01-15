@@ -23,6 +23,9 @@ if [ ! -d "/opt/ros/humble" ]; then
     mamba activate ros_env
 fi
 
+export CXX=/usr/bin/g++
+export CC=/usr/bin/gcc
+
 BUILD_CURRENT_FILE=true
 if [[ $# -eq 2 ]]; then
     if [ $2 == "$masterdir/main_ros2/casadi_mpc/cpp_class_files" ]; then

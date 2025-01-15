@@ -188,5 +188,6 @@
   ],
   "editor.insertSpaces": true,
   "editor.tabSize": 4,
-  "ros.distro": "noetic"
+  "ros.distro": "noetic",
+  "MATLAB.startDebuggerAutomatically": false
 }

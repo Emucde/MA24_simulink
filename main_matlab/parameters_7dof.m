@@ -29,7 +29,7 @@ fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 plot_trajectory               = ~true;
 overwrite_offline_traj_forced = false; % if true then init guess is also created
 warm_start = true;
-overwrite_init_guess = false;
+overwrite_init_guess = true;
 
 % set_param(gcs,'Profile','off'); % turn off profiler when not needed anymore
 
@@ -84,7 +84,7 @@ bus_definitions;
 init_MPC_weights; %% set MPC weights
 
 create_trajectories;
-% overwrite_init_guess = false;%%%%%%%%%% ACHTUNG !!%%%%%%%%%%%%%
+
 create_mpc_init_guess;
 
 change_simulink_traj_combo_box; % saves system!

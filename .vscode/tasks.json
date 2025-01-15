@@ -3,7 +3,7 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: g++-11 build active file",
+            "label": "C/C++: g++-11 build active file (default)",
             "command": "./build.sh",
             "args": [
                 "-d",
@@ -37,7 +37,7 @@
             ],
             "group": {
                 "kind": "build",
-                "isDefault": true
+                "isDefault": false
             },
             "dependsOn": [
                 "Run Build (No Debug Info)"
@@ -53,7 +53,7 @@
             ],
             "group": {
                 "kind": "test",
-                "isDefault": true
+                "isDefault": false
             }
         },
         {
@@ -86,14 +86,14 @@
             "label": "colcon: build (debug)",
             "type": "shell",
             "command": [
-            "source ${env:_colcon_cd_root}/setup.bash;",
-            "cd ${workspaceFolder}/main_ros2/franka_ros2_ws;",
-            "colcon build --cmake-args -DCMAKE_BUILD_TYPE=Debug -DCMAKE_VERBOSE_MAKEFILE=ON"
+                "source ${env:_colcon_cd_root}/setup.bash;",
+                "cd ${workspaceFolder}/main_ros2/franka_ros2_ws;",
+                "colcon build --cmake-args -DCMAKE_BUILD_TYPE=Debug -DCMAKE_VERBOSE_MAKEFILE=ON"
             ],
             "problemMatcher": [],
             "group": {
-            "kind": "build",
-            "isDefault": true
+                "kind": "build",
+                "isDefault": false
             }
         },
         {
@@ -104,11 +104,11 @@
                 "ros2 launch franka_bringup mpc_casadi_controller.launch.py arm_id:=fr3 robot_ip:=${env:robot_ip}"
             ],
             "dependsOn": [
-            "colcon: build (debug)"
+                "colcon: build (debug)"
             ],
             "group": {
-            "kind": "test",
-            "isDefault": true
+                "kind": "test",
+                "isDefault": false
             }
         },
         {

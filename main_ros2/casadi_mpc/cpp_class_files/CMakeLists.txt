@@ -12,13 +12,13 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(OPT_FLAG "-O3")
 elseif(CMAKE_BUILD_TYPE STREQUAL "DebugSpecial")
     set(OPT_FLAG "-O0")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pthread")  # Ensure debug information is generated
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")  # Ensure debug information is generated
 endif()
 
 # Set output directory for libraries
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always -pthread")
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 
 # Set C++ standard
@@ -79,7 +79,6 @@ find_package(pinocchio REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Threads REQUIRED)
 find_library(RT_LIB rt)
-find_library(STDCPP_LIB stdc++ REQUIRED)
 
 # Add source files for main executable, including CasadiMPC.cpp
 file(GLOB_RECURSE SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")  # Recursively find all .cpp files in src folder
@@ -109,7 +108,6 @@ foreach(SOURCE_FILE ${SRC_FILES})
         ${MPC_LIBRARIES}
         ${RT_LIB}
         ${CMAKE_THREAD_LIBS_INIT}
-        ${STDCPP_LIB}
     )
 
     target_compile_options(${FILE_NAME} PRIVATE -Wall -Wextra -fdiagnostics-color=always ${OPT_FLAG})
@@ -156,7 +154,6 @@ target_link_libraries(main PRIVATE
     ${UTILS_LIBRARIES}
     ${RT_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
-    ${STDCPP_LIB}
 )
 
 target_compile_options(main PRIVATE -Wall -Wextra -fdiagnostics-color=always ${OPT_FLAG})

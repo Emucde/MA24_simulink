@@ -4,6 +4,8 @@
 #include <cstring> // for memcpy
 #include <chrono>  // for time measurement
 
+#define DEBUG 1
+
 #include "include/pinocchio_utils.hpp"
 #include "include/FullSystemTorqueMapper.hpp"
 #include "include/CasadiMPC.hpp"
@@ -22,6 +24,8 @@
 #include <cstring>
 #include <errno.h> // Include errno for error handling
 #include <semaphore.h>
+
+#include "param_robot.h"
 
 // #define PLOT_DATA
 #define TRANSIENT_TRAJ_TESTS
@@ -328,7 +332,7 @@ private:
     }
 };
 
-#define TRAJ_SELECT 4
+#define TRAJ_SELECT 1
 int main()
 {
     // Configuration flags
@@ -337,7 +341,7 @@ int main()
     const std::string tcp_frame_name = "fr3_link8_tcp";
 
     CasadiController controller(urdf_filename, tcp_frame_name, use_gravity);
-    controller.setActiveMPC(MPCType::MPC8);
+    controller.setActiveMPC(MPCType::MPC01);
     controller.switch_traj(TRAJ_SELECT);
 
     const casadi_uint nq = controller.nq;
@@ -369,6 +373,13 @@ int main()
 
     x_k_ndof_eig(n_x_indices_eig) = x_k_eig;
 
+    // robot_config_t robot_config = get_robot_config();
+    // CasadiMPC mpc_test = CasadiMPC("MPC8", robot_config);
+    // double x_k_test[6] = {0,-7.853982e-01,-2.356194e+00,0,1.570796e+00,7.853982e-01};
+    // mpc_test.solve(x_k_test);
+    // double* u_opt_test = mpc_test.get_optimal_control();
+    // std::cout << "Optimal control: " << Eigen::Map<Eigen::VectorXd>(u_opt_test, nq_red).transpose() << std::endl;
+    // std::cout << "end" << std::endl;
 #ifdef PLOT_DATA
     std::ofstream x_k_ndof_file("x_k_ndof_data.txt");
     std::ofstream tau_full_file("tau_full_data.txt");
@@ -411,7 +422,7 @@ int main()
         // Write data to shm:
         write_to_shared_memory(shm_read_state_data, x_k_ndof, nx * sizeof(casadi_real));
         write_to_shared_memory(shm_read_control_data, tau_full.data(), nq * sizeof(casadi_real));
-        write_to_shared_memory(shm_read_traj_data, trajectory.data(), 7 * sizeof(casadi_real));
+        // write_to_shared_memory(shm_read_traj_data, trajectory.data(), 7 * sizeof(casadi_real));
 
         sem_post(shm_changed_semaphore); // activate semaphore
 

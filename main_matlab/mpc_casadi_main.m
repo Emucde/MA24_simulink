@@ -19,9 +19,9 @@ convert_maple_to_casadi         = false; % convert maple functions into casadi f
 fullsimu                        = false; % make full mpc simulation and plot results
 traj_select_mpc                 = 1; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
 create_init_guess_for_all_traj  = true; % create init guess for all trajectories
-compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
-compile_matlab_sfunction        = ~false; % only needed for matlab MPC simu, filename: "casadi_func_name
-compile_all_mpc_sfunctions      = ~false;
+compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
+compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
+compile_all_mpc_sfunctions      = false;
 generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
 reload_parameters_m             = true; % reload parameters.m at the end (clears all variables!)
 remove_sourcefiles              = false; % remove source files after compilation
@@ -156,7 +156,7 @@ param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true:
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC13;
+param_casadi_fun_struct = param_casadi_fun_name.MPC8;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if(compile_all_mpc_sfunctions)
@@ -285,6 +285,7 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         % set additional needed N samples as last sample of trajectory
         % already done (see "parameter.m"):
         % traj_data = [param_trajectory.p_d; repmat(param_trajectory.p_d(end,:), N,1)];
+        % MPC01_matlab(full(mpc_init_reference_values), full(init_guess_0), param_weight_init_cell);
 
         if(weights_and_limits_as_parameter)
             f_opt2 = @(mpc_init_reference_values, init_guess_0) f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
