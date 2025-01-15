@@ -25,10 +25,13 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
     setTransientTrajParams(0.0, 0.0, 0.0);
     transient_traj_cnt = 0;
     transient_traj_len = 0;
-    transient_traj_rows = 7;
+    traj_rows = 7;
 
     // Initialize the previous torque
     tau_full_prev = Eigen::VectorXd::Zero(nq);
+
+    // Read the trajectory data
+    all_traj_data = readTrajectoryData(active_mpc->get_traj_file());
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -73,9 +76,9 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
             {
                 act_idx = transient_traj_len-1;
             }
-            memcpy(y_d_ptr + j * transient_traj_rows,
+            memcpy(y_d_ptr + j * traj_rows,
                    transient_traj_data.col(act_idx).data(),
-                   transient_traj_rows * sizeof(double));
+                   traj_rows * sizeof(double));
         }
         transient_traj_cnt++;
     }
@@ -168,7 +171,7 @@ void CasadiController::generate_transient_trajectory(const casadi_real *const x_
     // Generate the transient trajectory
     transient_traj_data = generate_trajectory(dt, p_init, p_target, R_init, R_target, param_transient_traj_poly);
     transient_traj_len = transient_traj_data.cols();
-    transient_traj_rows = transient_traj_data.rows();
+    traj_rows = transient_traj_data.rows();
     transient_traj_cnt = 0;
 
     Eigen::MatrixXd matrix;
@@ -393,4 +396,40 @@ Eigen::MatrixXd CasadiController::generate_trajectory(double dt, const Eigen::Ve
     }
 
     return traj_data;
+}
+
+
+std::vector<Eigen::MatrixXd> CasadiController::readTrajectoryData(const std::string& traj_file) {
+    std::ifstream file(traj_file, std::ios::binary);
+    if (!file) {
+        throw std::runtime_error("Error opening file: " + traj_file);
+    }
+
+    // Read dimensions
+    uint32_t rows, cols, traj_amount;
+    file.read(reinterpret_cast<char*>(&rows), sizeof(rows));
+    file.read(reinterpret_cast<char*>(&cols), sizeof(cols));
+    file.read(reinterpret_cast<char*>(&traj_amount), sizeof(traj_amount));
+    
+    #ifdef DEBUG
+    std::cout << "Rows: " << rows << ", Cols: " << cols << ", Trajectory Amount: " << traj_amount << std::endl;
+    #endif
+
+    // Create a vector to hold all trajectories
+    std::vector<Eigen::MatrixXd> trajectories(traj_amount, Eigen::MatrixXd(rows, cols));
+
+    // Read the trajectory data
+    for (size_t i = 0; i < traj_amount; ++i) {
+        file.read(reinterpret_cast<char*>(trajectories[i].data()), rows * cols * sizeof(double));
+        if (!file) {
+            throw std::runtime_error("Error reading trajectory data from file: " + traj_file);
+        }
+    }
+
+    #ifdef DEBUG
+    // Debug: Print first trajectory as an example
+    std::cout << "First trajectory:\n" << trajectories[0] << std::endl;
+    #endif
+
+    return trajectories;
 }

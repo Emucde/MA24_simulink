@@ -42,10 +42,14 @@ private:
     casadi_uint *mpc_traj_indices;        // Trajectory indices for not equidistant sampling
     casadi_real dt;
     std::map<std::string, double> param_transient_traj_poly;
-    Eigen::MatrixXd transient_traj_data;
-    casadi_uint transient_traj_len;
-    casadi_uint transient_traj_rows;
+    casadi_uint traj_rows;
     casadi_uint transient_traj_cnt;
+    Eigen::MatrixXd transient_traj_data;
+    casadi_uint transient_traj_len;       // number of columns of the transient trajectory data
+    Eigen::MatrixXd singularity_traj_data;
+    casadi_uint singularity_traj_len;     // number of columns of the singularity trajectory data
+    std::vector<Eigen::MatrixXd> all_traj_data;
+    Eigen::MatrixXd current_traj_data;
     Eigen::VectorXd tau_full_prev;
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
     double tau_max_jump = 5.0;
@@ -166,5 +170,7 @@ private:
     Eigen::MatrixXd generate_trajectory(double dt, const Eigen::Vector3d &xe0, const Eigen::Vector3d &xeT,
                                         const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
                                         const std::map<std::string, double> &param_traj_poly);
+
+    std::vector<Eigen::MatrixXd> readTrajectoryData(const std::string& traj_file);
 };
 #endif // CASADICONTROLLER_HPP

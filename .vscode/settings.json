@@ -187,5 +187,6 @@
     "main_ros2/**"
   ],
   "editor.insertSpaces": true,
-  "editor.tabSize": 4
+  "editor.tabSize": 4,
+  "ros.distro": "noetic"
 }

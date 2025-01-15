@@ -32,7 +32,7 @@ sem_t *open_write_sem(const char *name)
     if (sem == SEM_FAILED)
     {
         std::cerr << "write: open: Error opening semaphore " << name << ": " << strerror(errno) << std::endl;
-        // throw std::runtime_error("Error allocating semaphore");
+        throw std::runtime_error("Error allocating semaphore");
         return nullptr;
     }
     return sem;
@@ -44,7 +44,7 @@ int open_read_shm(const char *name)
     if (fd == -1)
     {
         std::cerr << "read: open: Error opening shared memory " << name << ": " << strerror(errno) << std::endl;
-        // throw std::runtime_error("Error allocating shared memory");
+        throw std::runtime_error("Error allocating shared memory");
         return 0;
     }
     return fd;
@@ -56,7 +56,7 @@ int open_write_shm(const char *name)//, size_t size)
     if (fd == -1)
     {
         std::cerr << "write: open: Error opening shared memory: " << strerror(errno) << std::endl;
-        // throw std::runtime_error("Error allocating shared memory");
+        throw std::runtime_error("Error allocating shared memory");
         return 0;
     }
 
