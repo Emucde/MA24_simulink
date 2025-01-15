@@ -167,15 +167,6 @@
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "terminal.integrated.inheritEnv": true,
   "debug.runConfiguration": "Run Without Debugging",
-  // "terminal.integrated.profiles.linux": {
-  //   "bash": {
-  //     "path": "/bin/bash",
-  //     "icon": "terminal-bash",
-  //     "args": [
-  //       "-l"
-  //     ]
-  //   }
-  // },
   "cmake.ignoreCMakeListsMissing": true,
   "terminal.integrated.env.linux": {
     "PYTHONPATH": ""
@@ -196,5 +187,5 @@
     "main_ros2/**"
   ],
   "editor.insertSpaces": true,
-  "editor.tabSize": 4,
+  "editor.tabSize": 4
 }

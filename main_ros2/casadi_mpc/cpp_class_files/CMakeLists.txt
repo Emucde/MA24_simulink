@@ -22,7 +22,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 
 # Set C++ standard
-set(CMAKE_CXX_STANDARD 11)  # Change to 14/17/20 as necessary
+set(CMAKE_CXX_STANDARD 14)  # Change to 14/17/20 as necessary
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Define the path to the MPC source files

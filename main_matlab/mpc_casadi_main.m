@@ -20,10 +20,10 @@ fullsimu                        = false; % make full mpc simulation and plot res
 traj_select_mpc                 = 1; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
 create_init_guess_for_all_traj  = true; % create init guess for all trajectories
 compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
-compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
-compile_all_mpc_sfunctions      = false;
+compile_matlab_sfunction        = ~false; % only needed for matlab MPC simu, filename: "casadi_func_name
+compile_all_mpc_sfunctions      = ~false;
 generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
-reload_parameters_m             = ~true; % reload parameters.m at the end (clears all variables!)
+reload_parameters_m             = true; % reload parameters.m at the end (clears all variables!)
 remove_sourcefiles              = false; % remove source files after compilation
 
 % TESTING:
@@ -406,17 +406,6 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         create_mpc_init_guess;
     end
 
-    %% COMPILE matlab s_function (can be used as normal function in matlab)
-    if(compile_matlab_sfunction)
-        % re-define same casadi function with new name
-        % Da der Name von f_opt der matlab name ist und im Objekt gespeichert ist verwendet 
-        % die Funktion casadi_fun_to_mex ebenfalls diesen Namen und er muss daher nicht
-        % übergeben werden.
-        %f_opt = Function(MPC_matlab_name, input_vars_MX, output_vars_MX);
-        casadi_fun_to_mex(f_opt, [output_dir, 'maple_msfun'], MPC_matlab_name, '-O2');
-        disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
-    end
-
     %% Create c and header file for external usage of mpcs in c
     if(generate_realtime_udp_c_fun)
         mpc_c_sourcefile_path = [s_fun_path, '/mpc_c_sourcefiles/'];
@@ -434,6 +423,21 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC_settings, traj_settings, f_opt_input_cell, casadi_func_name, mpc_c_sourcefile_path, s_fun_path)
         fprintf('--------------------------------------------------------------------\n\n');
     end
+
+    %% COMPILE matlab s_function (can be used as normal function in matlab)
+    if(compile_matlab_sfunction)
+        if(~generate_realtime_udp_c_fun)
+            warning('mpc_casadi_main.m: Warning: generate_realtime_udp_c_fun is false. This is needed for the matlab s-function!');
+        end
+        % re-define same casadi function with new name
+        % Da der Name von f_opt der matlab name ist und im Objekt gespeichert ist verwendet 
+        % die Funktion casadi_fun_to_mex ebenfalls diesen Namen und er muss daher nicht
+        % übergeben werden.
+        %f_opt = Function(MPC_matlab_name, input_vars_MX, output_vars_MX);
+        casadi_fun_to_mex(f_opt, [output_dir, 'mpc_c_sourcefiles'], [s_fun_path, '/matlab_functions'], MPC_matlab_name, '-O3');
+        disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
+    end
+
 end
 
 if(reload_parameters_m)

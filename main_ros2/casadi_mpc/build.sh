@@ -1,4 +1,5 @@
 #!/bin/bash
+source ~/.bashrc
 
 # Default to debug build
 export CLICOLOR_FORCE=1
@@ -6,6 +7,21 @@ export CMAKE_COLOR_DIAGNOSTICS=ON
 export TERM=dumb
 BUILD_TYPE="debug"
 STANDALONE_MAKEFILE=false
+
+if [ ! -d "/opt/ros/humble" ]; then
+    # !! Contents within this block are managed by 'mamba shell init' !!
+    export MAMBA_EXE='/home/rslstudent/Students/Emanuel/miniconda3/envs/mpc/bin/mamba';
+    export MAMBA_ROOT_PREFIX='/home/rslstudent/Students/Emanuel/micromamba';
+    __mamba_setup="$("$MAMBA_EXE" shell hook --shell bash --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
+    if [ $? -eq 0 ]; then
+        eval "$__mamba_setup"
+    else
+        alias mamba="$MAMBA_EXE"  # Fallback on help from mamba activate
+    fi
+    unset __mamba_setup
+    # <<< mamba initialize <<<
+    mamba activate ros_env
+fi
 
 BUILD_CURRENT_FILE=true
 if [[ $# -eq 2 ]]; then
@@ -49,6 +65,15 @@ else
     OPT_FLAGS="-O0"
     DEBUG_FLAGS="-g"
     CMAKE_BUILD_PATH="./cpp_class_files/build_debug"
+fi
+
+# Create the build directory if it does not exist
+if [ ! -d "$CMAKE_BUILD_PATH" ]; then
+    CURRENT_DIR=$(pwd)
+    mkdir -p "$CMAKE_BUILD_PATH"
+    cd "$CMAKE_BUILD_PATH"
+    cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE ..
+    cd "$CURRENT_DIR"
 fi
 
 if [[ $BUILD_CURRENT_FILE == true ]]; then
