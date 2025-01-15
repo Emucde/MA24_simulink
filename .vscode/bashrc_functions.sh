@@ -2,6 +2,10 @@ export casadi_path=/media/daten/Anwendungen/casadi-3.6.6-linux64-matlab2018b
 export eigen_path=/usr/include/eigen3
 export MATLAB_ROOT=/media/daten/Anwendungen/MATLAB/R2022b
 
+export _colcon_cd_root=/opt/ros/humble/
+export PKG_CONFIG_PATH=/opt/ros/humble/lib/x86_64-linux-gnu/pkgconfig/
+export PIN_LIBS=$(pkg-config --cflags --libs pinocchio)
+
 
 function ros2enable()
 {
