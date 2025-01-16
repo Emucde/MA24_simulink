@@ -1,4 +1,3 @@
-full_reset_flag = true;
 if(full_reset_flag)
     % get name of starting script
     S = dbstack('-completenames');
