@@ -2,6 +2,11 @@
 if(~exist('parameter_str', 'var')) % otherwise parameter_str is already defined from parameters_xdof
     %parameter_str = "parameters_2dof"; % default value
     parameter_str = "parameters_7dof"; % default value
+    addpath(fileparts(mfilename('fullpath')));
+end
+
+if(~exist('use_extern_flags', 'var'))
+    use_extern_flags = false; % only useful if dont_clear is set
 end
 
 fprintf('Start Execution of ''mpc_casadi_main.m''\n\n');
@@ -12,6 +17,8 @@ run(parameter_str); init_casadi; import casadi.*;
 %% GLOBAL SETTINGS FOR MPC
 
 % show plot functions
+if(~use_extern_flags)
+
 print_init_guess_cost_functions = true;
 plot_init_guess                 = false; % plot init guess
 plot_null_simu                  = false; % plot system simulation for x0 = 0, u0 = ID(x0)
@@ -26,6 +33,7 @@ generate_realtime_udp_c_fun     = true; % create a c function for realtime udp c
 reload_parameters_m             = true; % reload parameters.m at the end (clears all variables!)
 remove_sourcefiles              = false; % remove source files after compilation
 
+end
 % TESTING:
 %compile_sfun = false;
 %create_init_guess_for_all_traj = false;
@@ -386,6 +394,12 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
 
     mergestructs = @(x,y) cell2struct([struct2cell(x);struct2cell(y)],[fieldnames(x);fieldnames(y)]);
     param_MPC = mergestructs(param_MPC, sol_indices); % wird in create_init_guess ueberschrieben... [TODO]
+
+    % sauberes firststart-init [TODO]
+    % create mpc_settings folder if not exist
+    if ~exist(mpc_settings_path, 'dir')
+        mkdir(mpc_settings_path);
+    end
 
     eval(mpc_settings_struct_name+"=param_MPC;"); % set new struct name
     save(""+mpc_settings_path+mpc_settings_struct_name+'.mat', mpc_settings_struct_name);

@@ -1,6 +1,11 @@
 %cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/
 %cd ..
 
+filepath = fileparts(mfilename('fullpath'));
+if(~strcmp([pwd, '/main_matlab'], filepath))
+    cd([filepath, '/..']);
+end
+
 %% INIT
 if(exist('parameter_str', 'var') && strcmp(parameter_str, "parameters_2dof"))
     rmpath('./utils/matlab_init_2dof');
@@ -12,12 +17,17 @@ if(  ~( exist('mpc_casadi_main_state', 'var') && strcmp(mpc_casadi_main_state, "
     clc;
 end
 
+
 if(~exist('dont_clear', 'var'))
     clear;
 end
 
+if(~exist('reset_started_flag', 'var'))
+    reset_started_flag = false; % only useful if dont_clear is set
+end
+
 if(  ~exist('overwrite_offline_traj_forced_extern', 'var') )
-    overwrite_offline_traj_forced_extern = false;
+    overwrite_offline_traj_forced_extern = false;  % only useful if dont_clear is set
 end
 
 fprintf('Start Execution of ''parameters_7dof.m''\n\n');
@@ -26,10 +36,11 @@ fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 %trajectory_out_of_workspace = false; % TODO: einfach offset 0 setzten
 %x_traj_out_of_workspace_value = 0.1;
 
+full_reset_flag = false; % Please set this flag true after cloning or if a full reset should be  done.
 plot_trajectory               = ~true;
 overwrite_offline_traj_forced = false; % if true then init guess is also created
 warm_start = true;
-overwrite_init_guess = true;
+overwrite_init_guess = false; % but automatically true when overwrite_offline_traj_forced is true
 
 % set_param(gcs,'Profile','off'); % turn off profiler when not needed anymore
 
@@ -47,13 +58,19 @@ simulink_main_model_name = 'sim_discrete_7dof';
 % simulink file for all different robots.
 run('./utils/matlab_init_general/add_default_matlab_paths'); % because it is not on path per default
 
+get_robot_name; % set robot_name to active robot from simulink (or default value when simulink is closed)
+s_fun_path = ['./s_functions/', robot_name];
+
+add_robot_matlab_paths;
+
+% Init Casadi
+init_casadi;
+import casadi.*;
+
+full_reset;
+
 % open file defined in simulink_main_model_name
 open_simulink_slx;
-
-get_robot_name; % set robot_name to active robot from simulink (or default value when simulink is closed)
-
-s_fun_path = ['./s_functions/', robot_name];
-add_robot_matlab_paths;
 
 % %%%%%%%%%%%%%%%% SOLVE MPC BUG %%%%%%%%%%%%%%%%
 % do not comment in, this would result in an endless loop!
@@ -62,10 +79,6 @@ add_robot_matlab_paths;
 % solve_mpc_notfound_bug(simulink_main_model_name, 'reload');
 % solve_mpc_notfound_bug(simulink_main_model_name, 'comment');
 % solve_mpc_notfound_bug(simulink_main_model_name, 'uncomment');
-
-% Init Casadi
-init_casadi;
-import casadi.*;
 
 %% Init scripts
 

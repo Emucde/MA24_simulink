@@ -6,6 +6,9 @@ import casadi as cs
 import pinocchio as pin
 from pinocchio import casadi as cpin
 
+# run ekf_casadi.py
+import ekf_casadi
+
 def SX00_to_SX0(J_fun, q, q_p=None):
     if q_p is None:
         J_val = J_fun(q)
@@ -59,153 +62,163 @@ elif robot_name == "ur5e":
 else:
     raise Exception("Unknown robot name '{}'".format(robot_name), "Available robots: 'fr3_7dof', 'fr3_6dof', 'ur5e'")
 
+# Create folder if not exists
+if not os.path.exists(s_functions_path):
+    os.makedirs(s_functions_path)
+
 # Load robot model
 robot = pin.robot_wrapper.RobotWrapper.BuildFromURDF(str(urdf_path), package_dirs=[mesh_dir])
 pin_model = robot.model
 
-gravity_used = True
-if not gravity_used:
-    pin_model.gravity.linear[:] = [0, 0, 0]
-    append_gravity_str = "_nogravity"
-else:
-    append_gravity_str = ""
+# Initialize an empty list to hold metrics for both gravity configurations
+gravity_configs = [True, False]
 
-# Create casadi model and data
-casadi_model = cpin.Model(pin_model)
-cdata = casadi_model.createData()
+for gravity_used in gravity_configs:
+    # Adjust gravity settings based on current configuration
+    if gravity_used:
+        pin_model.gravity.linear[:] = [0, 0, -9.81]  # Standard gravity vector
+        append_gravity_str = ""
+    else:
+        pin_model.gravity.linear[:] = [0, 0, 0]
+        append_gravity_str = "_nogravity"
 
-n = casadi_model.nq
-u = cs.SX.sym('u', n, 1)
-q = cs.SX.sym('q', n, 1)
-q_p = cs.SX.sym('q_p', n, 1)
-q_pp = cs.SX.sym('q_pp', n, 1)
-x = cs.vertcat(q, q_p)
+    # Create casadi model and data
+    casadi_model = cpin.Model(pin_model)
+    cdata = casadi_model.createData()
 
-# get endeffector id
-endEffector_ID = casadi_model.getFrameId(end_link)
+    n = casadi_model.nq
+    u = cs.SX.sym('u', n, 1)
+    q = cs.SX.sym('q', n, 1)
+    q_p = cs.SX.sym('q_p', n, 1)
+    q_pp = cs.SX.sym('q_pp', n, 1)
+    x = cs.vertcat(q, q_p)
 
-# forward kinematics of TCP
-cpin.framesForwardKinematics(casadi_model, cdata, q)
+    # get endeffector id
+    endEffector_ID = casadi_model.getFrameId(end_link)
 
-f_e = cs.Function('f_e', [q], [cdata.oMf[endEffector_ID].translation], ['q'], ['f_e'])
-H_SX = cdata.oMf[endEffector_ID].homogeneous
-H = cs.Function('H', [q], [H_SX], ['q'], ['H(q)'])
+    # forward kinematics of TCP
+    cpin.framesForwardKinematics(casadi_model, cdata, q)
 
-quat7dim_SX = cpin.SE3ToXYZQUAT(cdata.oMf[endEffector_ID])
-quat_SX = cs.vertcat(quat7dim_SX[6], quat7dim_SX[3:6])
-quat = cs.Function('quat', [q], [quat_SX], ['q'], ['quat(q)'])
+    f_e = cs.Function('f_e', [q], [cdata.oMf[endEffector_ID].translation], ['q'], ['f_e'])
+    H_SX = cdata.oMf[endEffector_ID].homogeneous
+    H = cs.Function('H', [q], [H_SX], ['q'], ['H(q)'])
 
-cpin.forwardKinematics(casadi_model, cdata, q, q_p, q_pp)
-# cpin.forwardDynamics(casadi_model, cdata, q, q_p, u)
-cpin.updateFramePlacements(casadi_model, cdata)
+    quat7dim_SX = cpin.SE3ToXYZQUAT(cdata.oMf[endEffector_ID])
+    quat_SX = cs.vertcat(quat7dim_SX[6], quat7dim_SX[3:6])
+    quat = cs.Function('quat', [q], [quat_SX], ['q'], ['quat(q)'])
 
-C_SX = cpin.computeCoriolisMatrix(casadi_model, cdata, q, q_p) # echte 7x7 Coriolismatrix, cbra
-C = cs.Function('C', [q, q_p], [C_SX], ['q', 'q_p'], ['C(q, q_p)']) # coriolis matrix
+    cpin.forwardKinematics(casadi_model, cdata, q, q_p, q_pp)
+    # cpin.forwardDynamics(casadi_model, cdata, q, q_p, u)
+    cpin.updateFramePlacements(casadi_model, cdata)
 
-g_v2_SX = cpin.computeGeneralizedGravity(casadi_model, cdata, q)
-g_v2 = cs.Function('g', [q], [g_v2_SX], ['q'], ['g(q)']) 
-g_SX = cpin.rnea(casadi_model, cdata, q, cs.SX(n,1), cs.SX(n,1)) # tau = M*0 + C*0 + g = g
-g = cs.Function('g', [q], [g_SX], ['q'], ['g(q)']) # ist beides rnea, siehe pin doku
+    C_SX = cpin.computeCoriolisMatrix(casadi_model, cdata, q, q_p) # echte 7x7 Coriolismatrix, cbra
+    C = cs.Function('C', [q, q_p], [C_SX], ['q', 'q_p'], ['C(q, q_p)']) # coriolis matrix
 
-M_SX = cpin.crba(casadi_model, cdata, q)
-M = cs.Function('M', [q], [M_SX], ['q'], ['M(q)']) # inertia matrix
+    g_v2_SX = cpin.computeGeneralizedGravity(casadi_model, cdata, q)
+    g_v2 = cs.Function('g', [q], [g_v2_SX], ['q'], ['g(q)']) 
+    g_SX = cpin.rnea(casadi_model, cdata, q, cs.SX(n,1), cs.SX(n,1)) # tau = M*0 + C*0 + g = g
+    g = cs.Function('g', [q], [g_SX], ['q'], ['g(q)']) # ist beides rnea, siehe pin doku
 
-tau_SX = cpin.rnea(casadi_model, cdata, q, q_p, q_pp) # INV DYN: tau = M(q)q_pp + C(q, q_p)q_p + g(q) = M(q)q_pp + C_rnea(q, q_p)
-tau_v2_SX = M(q)@q_pp + C(q, q_p)@q_p + g(q)
-inv_dyn_tau = cs.Function('inv_dyn', [q, q_p, q_pp], [tau_SX], ['q', 'q_p', 'q_pp'], ['tau(q, q_p, q_pp)'])
-inv_dyn_tau_v2 = cs.Function('inv_dyn', [q, q_p, q_pp], [tau_v2_SX], ['q', 'q_p', 'q_pp'], ['tau(q, q_p, q_pp)'])
+    M_SX = cpin.crba(casadi_model, cdata, q)
+    M = cs.Function('M', [q], [M_SX], ['q'], ['M(q)']) # inertia matrix
 
-C_rnea_SX = cpin.rnea(casadi_model, cdata, q, q_p, cs.SX(n,1))# - g_SX # Nur so stimmt es mit Maple überein!
-C_rnea = cs.Function('C_rnea', [q, q_p], [C_rnea_SX], ['q', 'q_p'], ['C_rnea(q, q_p) = C(q, q_p)q_p + g(q)']) # = n(q, q_p) = C(q, q_p)q_p + g(q)
-C_rnea_v2 = cs.Function('C_rnea_v2', [q, q_p], [C(q, q_p)@q_p + g(q)], ['q', 'q_p'], ['C_rnea(q, q_p) = C(q, q_p)q_p + g(q)']) # = n(q, q_p) = C(q, q_p)q_p + g(q)
+    tau_SX = cpin.rnea(casadi_model, cdata, q, q_p, q_pp) # INV DYN: tau = M(q)q_pp + C(q, q_p)q_p + g(q) = M(q)q_pp + C_rnea(q, q_p)
+    tau_v2_SX = M(q)@q_pp + C(q, q_p)@q_p + g(q)
+    inv_dyn_tau = cs.Function('inv_dyn', [q, q_p, q_pp], [tau_SX], ['q', 'q_p', 'q_pp'], ['tau(q, q_p, q_pp)'])
+    inv_dyn_tau_v2 = cs.Function('inv_dyn', [q, q_p, q_pp], [tau_v2_SX], ['q', 'q_p', 'q_pp'], ['tau(q, q_p, q_pp)'])
 
-M_mat = cs.SX(n,n)
-for i in range(n):
-    q_pp_vec = cs.SX(n,1)
-    q_pp_vec[i] = 1
-    M_mat[:, i] = inv_dyn_tau(q, cs.SX(n,1), q_pp_vec) - g(q) # methode nach ott
-M_v2 = cs.Function('M', [q], [cs.simplify(M_mat)], ['q'], ['M(q)']) # inertia matrix
+    C_rnea_SX = cpin.rnea(casadi_model, cdata, q, q_p, cs.SX(n,1))# - g_SX # Nur so stimmt es mit Maple überein!
+    C_rnea = cs.Function('C_rnea', [q, q_p], [C_rnea_SX], ['q', 'q_p'], ['C_rnea(q, q_p) = C(q, q_p)q_p + g(q)']) # = n(q, q_p) = C(q, q_p)q_p + g(q)
+    C_rnea_v2 = cs.Function('C_rnea_v2', [q, q_p], [C(q, q_p)@q_p + g(q)], ['q', 'q_p'], ['C_rnea(q, q_p) = C(q, q_p)q_p + g(q)']) # = n(q, q_p) = C(q, q_p)q_p + g(q)
 
-tic = time.time()
-for _ in range(10000): 
-#    M_v2(q_0)
-    # C_rnea(q_0, q_0) # C_rnea: 0.22s, C_rnea_v2 (cbra): 0.39s
-    #  sys_fun_qpp_aba(q_0, q_0, q_0) # 0.35s
-    #  sys_fun_qpp_sol(q_0, q_0, q_0) # 0.35s
-    # sys_fun_qpp_v2_sol(q_0, q_0, q_0) # 0.38s
-    # sys_fun_qpp_v3_sol(q_0, q_0, q_0) # 0.38s
-    inv_dyn_tau(q_0, q_0, q_0) # 0.38s
-toc = time.time()
-runtime = toc - tic
-print(runtime)
-# Wieso ist M(q) mit cbra schneller als M_v2(q) mit rnea? (M: 0.177s, M_v2: 0.288s)
-
-M_inv_SX = cpin.computeMinverse(casadi_model, cdata, q)
-M_inv = cs.Function('M_inv', [q], [M_inv_SX], ['q'], ['M_inv(q)']) # inverse inertia matrix
-
-# Jacobian of TCP
-J_SX = cpin.computeFrameJacobian(casadi_model, cdata, q, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
-J = cs.Function('J', [q], [J_SX], ['q'], ['J(q)'])
-
-# alles irgwas
-#J_p_SX = cpin.computeFrameJacobianTimeVariation(casadi_model, cdata, q, q_p, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
-#J_p_SX = cpin.getFrameJacobianTimeVariation(casadi_model, cdata, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
-#J_p_SX = cpin.frameJacobianTimeVariation(casadi_model, cdata, q, q_p, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
-
-J_p_SX = cs.reshape(  cs.jacobian(J(q), q) @ q_p, 6 ,n)
-J_p = cs.Function('J_p', [q, q_p], [J_p_SX], ['q', 'q_p'], ['J_p(q, q_p)'])
-J_p = SX00_to_SX0(J_p, q, q_p)
-
-q_pp_aba_SX = cpin.aba(casadi_model, cdata, q, q_p, u)
-q_pp_sol_SX = cs.solve( M(q), u - C_rnea(q, q_p) ) # q_pp_aba leads to error of 1e-13, sol to 0
-q_pp_sol_v2_SX = cs.solve( M(q), u - C(q, q_p) @ q_p - g(q) ) # q_pp_aba leads to error of 1e-13, sol to 0
-q_pp_sol_v3_SX = M_inv_SX @ (u - C_rnea(q, q_p)) # same as above but a little bit slower
-
-sys_fun_qpp_aba = cs.Function('sys_fun_qpp_aba', [q, q_p, u], [q_pp_aba_SX], ['q', 'q_p', 'tau'], ['q_pp'])
-sys_fun_qpp_sol = cs.Function('sys_fun_qpp_sol', [q, q_p, u], [q_pp_sol_SX], ['q', 'q_p', 'tau'], ['q_pp'])
-sys_fun_qpp_v2_sol = cs.Function('sys_fun_qpp_sol', [q, q_p, u], [q_pp_sol_v2_SX], ['q', 'q_p', 'tau'], ['q_pp'])
-sys_fun_qpp_v3_sol = cs.Function('sys_fun_qpp_sol', [q, q_p, u], [q_pp_sol_v3_SX], ['q', 'q_p', 'tau'], ['q_pp'])
-
-sys_fun_x_aba = cs.Function('sys_fun_x_aba', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp_aba(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u) (aba)'])
-sys_fun_x_sol = cs.Function('sys_fun_x_sol', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp_sol(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u) (sol)'])
-
-# robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'g(q)'])
-robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), C(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'C(q, q_p)', 'g(q)'])
-
-# get hom. transformation matrices of all joints
-joint_names = casadi_model.names.tolist() # first joint is 'universal_joint' (ignore it)
-
-if gravity_used:
+    M_mat = cs.SX(n,n)
     for i in range(n):
-        print("Joint: ", joint_names[i+1]) # ignore first joint "universal_joint"
-        joint_id = casadi_model.getFrameId(joint_names[i+1])
-        H_qi_SX = cdata.oMf[joint_id].homogeneous
-        H_qi = cs.Function('H_q'+str(i+1), [q], [H_qi_SX], ['q'], ['H_q'+str(i+1)+'(q)'])
-        H_qi.save(s_functions_path + 'hom_transform_joint_'+str(i+1)+'_py.casadi')
+        q_pp_vec = cs.SX(n,1)
+        q_pp_vec[i] = 1
+        M_mat[:, i] = inv_dyn_tau(q, cs.SX(n,1), q_pp_vec) - g(q) # methode nach ott
+    M_v2 = cs.Function('M', [q], [cs.simplify(M_mat)], ['q'], ['M(q)']) # inertia matrix
 
-        J_qi_SX = cpin.computeFrameJacobian(casadi_model, cdata, q, joint_id, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
-        J_qi = cs.Function('J_q'+str(i+1), [q], [J_qi_SX], ['q'], ['J_q'+str(i+1)+'(q)'])
+    tic = time.time()
+    for _ in range(10000): 
+    #    M_v2(q_0)
+        # C_rnea(q_0, q_0) # C_rnea: 0.22s, C_rnea_v2 (cbra): 0.39s
+        #  sys_fun_qpp_aba(q_0, q_0, q_0) # 0.35s
+        #  sys_fun_qpp_sol(q_0, q_0, q_0) # 0.35s
+        # sys_fun_qpp_v2_sol(q_0, q_0, q_0) # 0.38s
+        # sys_fun_qpp_v3_sol(q_0, q_0, q_0) # 0.38s
+        inv_dyn_tau(q_0, q_0, q_0) # 0.38s
+    toc = time.time()
+    runtime = toc - tic
+    print(runtime)
+    # Wieso ist M(q) mit cbra schneller als M_v2(q) mit rnea? (M: 0.177s, M_v2: 0.288s)
 
-    M.save(s_functions_path + 'inertia_matrix_py.casadi')
-    M_inv.save(s_functions_path + 'inertia_matrix_inv_py.casadi')
-    
-    C_rnea.save(s_functions_path + 'n_q_coriols_qp_plus_g_py.casadi')
+    M_inv_SX = cpin.computeMinverse(casadi_model, cdata, q)
+    M_inv = cs.Function('M_inv', [q], [M_inv_SX], ['q'], ['M_inv(q)']) # inverse inertia matrix
 
-    g.save(s_functions_path + 'gravitational_forces_py.casadi')
-    H.save(s_functions_path + 'hom_transform_endeffector_py.casadi')
-    quat.save(s_functions_path + 'quat_endeffector_py.casadi')
-    J.save(s_functions_path + 'geo_jacobian_endeffector_py.casadi')
-    J_p.save(s_functions_path + 'geo_jacobian_endeffector_p_py.casadi')
+    # Jacobian of TCP
+    J_SX = cpin.computeFrameJacobian(casadi_model, cdata, q, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+    J = cs.Function('J', [q], [J_SX], ['q'], ['J(q)'])
 
-    robot_model_bus_fun.save(s_functions_path + 'robot_model_bus_fun_py.casadi')
-else:
-    C_rnea.save(s_functions_path + 'n_q_coriols_qp_no_gravity_py.casadi')
+    # alles irgwas
+    #J_p_SX = cpin.computeFrameJacobianTimeVariation(casadi_model, cdata, q, q_p, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+    #J_p_SX = cpin.getFrameJacobianTimeVariation(casadi_model, cdata, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+    #J_p_SX = cpin.frameJacobianTimeVariation(casadi_model, cdata, q, q_p, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
 
-sys_fun_qpp_aba.save(s_functions_path + 'sys_fun_qpp_aba' + append_gravity_str + '_py.casadi')
-sys_fun_qpp_sol.save(s_functions_path + 'sys_fun_qpp_sol' + append_gravity_str + '_py.casadi')
-sys_fun_x_aba.save(s_functions_path + 'sys_fun_x_aba' + append_gravity_str + '_py.casadi')
-sys_fun_x_sol.save(s_functions_path + 'sys_fun_x_sol' + append_gravity_str + '_py.casadi')
+    J_p_SX = cs.reshape(  cs.jacobian(J(q), q) @ q_p, 6 ,n)
+    J_p = cs.Function('J_p', [q, q_p], [J_p_SX], ['q', 'q_p'], ['J_p(q, q_p)'])
+    J_p = SX00_to_SX0(J_p, q, q_p)
 
-inv_dyn_tau.save(s_functions_path + 'compute_tau' + append_gravity_str + '_py.casadi')
+    q_pp_aba_SX = cpin.aba(casadi_model, cdata, q, q_p, u)
+    q_pp_sol_SX = cs.solve( M(q), u - C_rnea(q, q_p) ) # q_pp_aba leads to error of 1e-13, sol to 0
+    q_pp_sol_v2_SX = cs.solve( M(q), u - C(q, q_p) @ q_p - g(q) ) # q_pp_aba leads to error of 1e-13, sol to 0
+    q_pp_sol_v3_SX = M_inv_SX @ (u - C_rnea(q, q_p)) # same as above but a little bit slower
+
+    sys_fun_qpp_aba = cs.Function('sys_fun_qpp_aba', [q, q_p, u], [q_pp_aba_SX], ['q', 'q_p', 'tau'], ['q_pp'])
+    sys_fun_qpp_sol = cs.Function('sys_fun_qpp_sol', [q, q_p, u], [q_pp_sol_SX], ['q', 'q_p', 'tau'], ['q_pp'])
+    sys_fun_qpp_v2_sol = cs.Function('sys_fun_qpp_sol', [q, q_p, u], [q_pp_sol_v2_SX], ['q', 'q_p', 'tau'], ['q_pp'])
+    sys_fun_qpp_v3_sol = cs.Function('sys_fun_qpp_sol', [q, q_p, u], [q_pp_sol_v3_SX], ['q', 'q_p', 'tau'], ['q_pp'])
+
+    sys_fun_x_aba = cs.Function('sys_fun_x_aba', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp_aba(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u) (aba)'])
+    sys_fun_x_sol = cs.Function('sys_fun_x_sol', [x, u], [cs.vertcat(x[n:2*n], sys_fun_qpp_sol(x[0:n], x[n:2*n], u))], ['x', 'u'], ['d/dt x = f(x, u) (sol)'])
+
+    # robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'g(q)'])
+    robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), C(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'C(q, q_p)', 'g(q)'])
+
+    # get hom. transformation matrices of all joints
+    joint_names = casadi_model.names.tolist() # first joint is 'universal_joint' (ignore it)
+
+    if gravity_used:
+        for i in range(n):
+            print("Joint: ", joint_names[i+1]) # ignore first joint "universal_joint"
+            joint_id = casadi_model.getFrameId(joint_names[i+1])
+            H_qi_SX = cdata.oMf[joint_id].homogeneous
+            H_qi = cs.Function('H_q'+str(i+1), [q], [H_qi_SX], ['q'], ['H_q'+str(i+1)+'(q)'])
+            H_qi.save(s_functions_path + 'hom_transform_joint_'+str(i+1)+'_py.casadi')
+
+            J_qi_SX = cpin.computeFrameJacobian(casadi_model, cdata, q, joint_id, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+            J_qi = cs.Function('J_q'+str(i+1), [q], [J_qi_SX], ['q'], ['J_q'+str(i+1)+'(q)'])
+
+        M.save(s_functions_path + 'inertia_matrix_py.casadi')
+        M_inv.save(s_functions_path + 'inertia_matrix_inv_py.casadi')
+        
+        C_rnea.save(s_functions_path + 'n_q_coriols_qp_plus_g_py.casadi')
+
+        g.save(s_functions_path + 'gravitational_forces_py.casadi')
+        H.save(s_functions_path + 'hom_transform_endeffector_py.casadi')
+        quat.save(s_functions_path + 'quat_endeffector_py.casadi')
+        J.save(s_functions_path + 'geo_jacobian_endeffector_py.casadi')
+        J_p.save(s_functions_path + 'geo_jacobian_endeffector_p_py.casadi')
+
+        robot_model_bus_fun.save(s_functions_path + 'robot_model_bus_fun_py.casadi')
+    else:
+        C_rnea.save(s_functions_path + 'n_q_coriols_qp_no_gravity_py.casadi')
+
+    sys_fun_qpp_aba.save(s_functions_path + 'sys_fun_qpp_aba' + append_gravity_str + '_py.casadi')
+    sys_fun_qpp_sol.save(s_functions_path + 'sys_fun_qpp_sol' + append_gravity_str + '_py.casadi')
+    sys_fun_x_aba.save(s_functions_path + 'sys_fun_x_aba' + append_gravity_str + '_py.casadi')
+    sys_fun_x_sol.save(s_functions_path + 'sys_fun_x_sol' + append_gravity_str + '_py.casadi')
+
+    inv_dyn_tau.save(s_functions_path + 'compute_tau' + append_gravity_str + '_py.casadi')
+
 
 print('Done! Run \'compile_py_cfun_to_sfun.m\' to generate S-functions.')

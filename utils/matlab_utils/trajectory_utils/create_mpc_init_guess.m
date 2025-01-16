@@ -82,6 +82,13 @@ if(overwrite_init_guess)
             param_MPC = struct('init_guess', init_guess_arr);
             
             eval([param_MPC_init_guess_name, ' = param_MPC;']);
+
+            % TODO: sauberes first-start init
+            % create init_guess folder if not exist
+            if ~exist([s_fun_path, '/initial_guess'], 'dir')
+                mkdir([s_fun_path, '/initial_guess']);
+            end
+
             save(param_MPC_init_guess_mat_file, param_MPC_init_guess_name);
             save_init_guess_as_binary(init_guess_arr, param_MPC_init_guess_bin_file);
         end
@@ -95,7 +102,8 @@ if(overwrite_init_guess)
     end
 else
     init_guess_files = dir([s_fun_path, '/initial_guess/*.mat']);
-    cellfun(@load, {init_guess_files.name});
+    file_list = cellfun(@(file) [s_fun_path, '/initial_guess/', file], {init_guess_files.name}, 'UniformOutput', false);
+    cellfun(@load, file_list);
 end
 
 init_MPC_weights; % why necessary?

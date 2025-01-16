@@ -10,7 +10,10 @@ param_traj_settings = [s_fun_path, '/trajectory_data/param_traj_settings.mat'];
 param_traj_settings_online_file = [s_fun_path, '/trajectory_data/param_traj_settings_online.mat'];
 param_MPC_file_path = [s_fun_path, '/mpc_settings/'];
 files = dir([param_MPC_file_path, '*.mat']);
-cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
+
+% cellfun(@load, {files.name}); % if no files then the for loop doesn't run.
+file_list = cellfun(@(file) [param_MPC_file_path, file], {files.name}, 'UniformOutput', false);
+cellfun(@load, file_list);
 
 traj_mode.equilibrium = 1;
 traj_mode.differential_filter = 2;
@@ -23,7 +26,11 @@ overwrite_offline_traj = false;
 
 %%%%%%%%%%%%%%%%%%%% CREATE TRAJECTORY %%%%%%%%%%%%%%%%%%%%%
 if(overwrite_offline_traj || overwrite_offline_traj_forced || overwrite_offline_traj_forced_extern)
-    overwrite_init_guess = true;
+    if(~reset_started_flag)
+        overwrite_init_guess = true;
+    else
+        overwrite_init_guess = false;
+    end
     create_param_traj; % generate param_traj struct
     % Idee: Es müssen nur die Trajektorien für die MPC des längsten Prädiktionshorizonts berechnet werden, da alle anderen
     % kürzeren Prädiktionshorizonte in den längeren enthalten sind.

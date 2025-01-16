@@ -355,7 +355,7 @@ int main()
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
 
     casadi_real *x_k = controller.get_x_k();
-    casadi_real x_k_ndof[nx];
+    casadi_real x_k_ndof[nx] = {0};
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
 
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);

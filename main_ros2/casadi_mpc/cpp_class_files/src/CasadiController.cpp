@@ -31,7 +31,7 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
     tau_full_prev = Eigen::VectorXd::Zero(nq);
 
     // Read the trajectory data
-    all_traj_data = readTrajectoryData(active_mpc->get_traj_file());
+    // all_traj_data = readTrajectoryData(active_mpc->get_traj_file());
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////

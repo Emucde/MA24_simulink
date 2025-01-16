@@ -6,6 +6,8 @@ import casadi as cs
 import pinocchio as pin
 from pinocchio import casadi as cpin
 
+print('running ekf_casadi.py')
+
 def SX00_to_SX0(J_fun, q, q_p=None, q_pp=None):
     if q_p is None and q_pp is None:
         J_val = J_fun(q)

@@ -14,10 +14,9 @@
 % import casadi.*;
 % output_dir = './s_functions/s_functions_7dof/';
 
-compile_matlab_sfun = false;
+compile_matlab_sfun = true;
 
 import casadi.*;
-clc;
 
 if(~exist('parameter_str', 'var'))
     parameters_7dof;
@@ -60,7 +59,6 @@ fun_arr_matlab = { ...
     'quat_endeffector_py', ...
     'geo_jacobian_endeffector_py', ...
     'geo_jacobian_endeffector_p_py' ...
-    'inverse_inertia_matrix_py', ...
 };
 
 % s functions for simulink
@@ -83,9 +81,9 @@ try
     compile_multiple_cfun(fun_arr_sfun, s_fun_path, input_dir, output_dir, opt_flag, compile_mode, false);
     fprintf('\n--------------------------------------------------------------------\n\n');
 
-    % disp('Compile casadi functions to s-functions for realtime simulink:');
-    % compile_multiple_cfun(fun_arr_sfun_realtime, s_fun_path, input_dir, output_dir_realtime, opt_flag, compile_mode, false);
-    % fprintf('\n--------------------------------------------------------------------\n\n');
+    disp('Compile casadi functions to s-functions for realtime simulink:');
+    compile_multiple_cfun(fun_arr_sfun_realtime, s_fun_path, input_dir, output_dir_realtime, opt_flag, compile_mode, false);
+    fprintf('\n--------------------------------------------------------------------\n\n');
 catch ME
     disp('Error in compile_py_cfun_to_sfun.m')
     fprintf(2, 'Error: %s\n', getReport(ME));
@@ -101,7 +99,11 @@ if compile_matlab_sfun
             
             casadi_fun = Function.load([input_dir, fun_name '.casadi']);
 
-            casadi_fun_to_mex(casadi_fun, output_dir, fun_name, opt_flag);
+            disp('--------------------------------------------------------------------');
+            disp(['Compile casadi functions to matlab functions (mex files): ', fun_name]);
+            
+            tic;
+            casadi_fun_to_mex(casadi_fun, output_dir, [s_fun_path, '/matlab_functions'], fun_name, opt_flag);
             disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
         end
         fprintf('\n--------------------------------------------------------------------\n\n');

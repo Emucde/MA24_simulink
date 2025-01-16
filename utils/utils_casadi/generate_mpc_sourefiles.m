@@ -21,14 +21,16 @@ function generate_mpc_sourefiles(casadi_fun, casadi_opt_problem_paths, current_m
     %     'Checksum', {checksumData(:,1)} ...
     % ));
     % fclose(fileID);
+    current_casadi_func_c_file = [mpc_c_sourcefile_path, casadi_fun_c_header_name];
 
+    exists_current_mpc_c_file = exist(current_casadi_func_c_file, 'file');
 
     [~, cmdout] = linux_md5sum(current_mpc_mfile);
     current_checksum = cmdout(1:32); % always 32 hex chars
 
     index = contains(checksumData.FileName, current_mpc_mfile);
     
-    if strcmp(checksumData.Checksum{index}, current_checksum)
+    if strcmp(checksumData.Checksum{index}, current_checksum) && exists_current_mpc_c_file
         fprintf('%s did not changed. Skipping creating casadi c sources.\n', current_mpc_mfile);
     else
         fprintf('Checksum of %s changed. Regenerating header and source files.\n', current_mpc_mfile);
@@ -38,11 +40,15 @@ function generate_mpc_sourefiles(casadi_fun, casadi_opt_problem_paths, current_m
         cg.add(casadi_fun);
         cg.generate();
 
-        % double check: change checksum of both source files
-        [~, checksum_str_new] = linux_md5sum(casadi_fun_c_header_name);
-        [~, checksum_str_old] = linux_md5sum([mpc_c_sourcefile_path, casadi_fun_c_header_name]);
-
-        if strcmp(checksum_str_new(1:32), checksum_str_old(1:32))
+        if(exists_current_mpc_c_file)
+            % double check: change checksum of both source files
+            [~, checksum_str_new] = linux_md5sum(casadi_fun_c_header_name);
+            [~, checksum_str_old] = linux_md5sum(current_casadi_func_c_file);
+            checksum_same = strcmp(checksum_str_new(1:32), checksum_str_old(1:32));
+        else
+            checksum_same = false;
+        end
+        if checksum_same
             delete(casadi_fun_c_header_name);
             delete(casadi_fun_h_header_name);
             fprintf(['Header and source files ', casadi_fun_h_header_name, ' and ', casadi_fun_c_header_name, ' did not change.\nSkipping creating casadi c sources.\n']);
