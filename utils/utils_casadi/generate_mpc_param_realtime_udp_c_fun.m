@@ -1,4 +1,4 @@
-function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_settings, casadi_fun_input_cell, func_name, output_dir, s_fun_path)
+function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_settings, casadi_fun_input_cell, casadi_fun_output_cell, func_name, output_dir, s_fun_path)
     % Open the header file for writing
     param_weight_header_name = [func_name, '_param.h'];
 
@@ -288,7 +288,27 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '              .init_guess_len = %s_INIT_GUESS_LEN,\n', func_name);
     fprintf(fid, '              .param_weight_addr = %s_IN_PARAM_WEIGHT_ADDR,\n', func_name);
     fprintf(fid, '              .param_weight_len = %s_PARAM_WEIGHT_LEN\n', func_name);
+    fprintf(fid, '       },\n');
 
+    fprintf(fid, '       .output_config = {\n');
+    for i = 2:length(casadi_fun_output_cell)
+        output_cell = casadi_fun_output_cell{i};
+        for j = 1:length(output_cell)
+            dim = output_cell{j}.dim;
+            name = output_cell{j}.name;
+
+            fprintf(fid, '              .%s_addr = %s_%s_ADDR,\n', name, func_name, upper(name));
+            fprintf(fid, '              .%s_len = %s_%s_LEN,', name, func_name, upper(name));
+
+            if length(dim) == 2 && all(dim > 1)
+                % It's a matrix
+                fprintf(fid, '        /*%s: %dx%d matrix values */\n', name, dim(1), dim(2));
+            else
+                % It's a vector or higher dimensional array
+                fprintf(fid, '        /*%s: %s array values */\n', name, mat2str(dim));
+            end
+        end
+    end
     fprintf(fid, '       }\n');
     fprintf(fid, '   };\n');
     fprintf(fid, '   return &%sConfig;\n', func_name);

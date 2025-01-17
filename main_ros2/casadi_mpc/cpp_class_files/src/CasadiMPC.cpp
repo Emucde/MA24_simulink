@@ -34,13 +34,19 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
                                                      u_opt(w + mpc_config->u_opt_addr), w_end(w + mpc_config->w_end_addr),
                                                      in_init_guess(w + mpc_config->in_init_guess_addr),
                                                      out_init_guess(w + mpc_config->out_init_guess_addr),
+                                                     x_out(w + mpc_config->output_config.x_out_addr),
+                                                     u_out(w + mpc_config->output_config.u_out_addr),
                                                      x_k(w + mpc_config->x_k_addr),
                                                      y_d(w + mpc_config->y_d_addr),
+                                                     x_prev(w + mpc_config->input_config.x_prev_addr),
+                                                     u_prev(w + mpc_config->input_config.u_prev_addr),
                                                      param_weight(w + mpc_config->in_param_weight_addr),
                                                      traj_data_real_len(mpc_config->traj_data_real_len),
                                                      mpc_traj_indices(mpc_config->traj_indices),
                                                      horizon_len(mpc_config->traj_data_per_horizon),
                                                      init_guess_len(mpc_config->init_guess_len),
+                                                     x_prev_len(mpc_config->input_config.x_prev_len),
+                                                     u_prev_len(mpc_config->input_config.u_prev_len),
                                                      traj_file(mpc_config->traj_data_path),
                                                      traj_data_per_horizon(mpc_config->traj_data_per_horizon),
                                                      n_indices(robot_config.n_indices),
@@ -88,7 +94,14 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
 
     // read first trajectory data from file
     traj_data_startbyte = get_traj_dims();
-    read_trajectory_block();
+    read_trajectory_block(); // writes it into y_d
+
+    // set x_prev
+    casadi_uint x_prev_cols = x_prev_len / nx_red;
+    for (casadi_uint i = 0; i < x_prev_cols; i++)
+    {
+        memcpy(x_prev + i * nx_red, x_k, nx_red * sizeof(casadi_real));
+    }
 
     // check trajectory lengths
     if (traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1] > traj_data_total_len)
@@ -145,9 +158,11 @@ int CasadiMPC::solve()
     // Call the Casadi function
     int flag = casadi_fun(arg, res, iw, w_end, mem);
 
-    // Read the next trajectory block
+    // Set initial guess and prev ref values
     if (!flag)
     {
+        memcpy(x_prev, x_out, x_prev_len * sizeof(casadi_real));
+        memcpy(u_prev, u_out, u_prev_len * sizeof(casadi_real));
         memcpy(in_init_guess, out_init_guess, init_guess_len * sizeof(casadi_real));
     }
     else

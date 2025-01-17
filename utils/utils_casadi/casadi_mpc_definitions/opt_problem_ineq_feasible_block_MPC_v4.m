@@ -159,9 +159,9 @@ g = [g_x, g_eps];
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
 J_y        = Q_norm_square( y(        :, 1 + (1:N_MPC-1) ) - y_ref(    :, 1 + (1:N_MPC-1)), pp.Q_y  );
-J_q_pp = Q_norm_square(q_pp, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
+J_u = Q_norm_square(q_pp, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
 
-cost_vars_names = '{J_y, J_q_pp}';
+cost_vars_names = '{J_y, J_u}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 

@@ -167,8 +167,12 @@ private:
     casadi_real *w_end;                      // End address for w
     casadi_real *in_init_guess;              // Initial guess in
     casadi_real *out_init_guess;             // Initial guess out
+    casadi_real *x_out;                      // Optimal states in prediction horizon
+    casadi_real *u_out;                      // Optimal controls in prediction horizon
     casadi_real *x_k;                        // Initial state
     casadi_real *y_d;                        // Desired trajectory
+    casadi_real *x_prev;                     // Previous state
+    casadi_real *u_prev;                     // Previous control
     casadi_real *param_weight;               // Parameter weights
     std::streamoff traj_data_startbyte;      // Trajectory data start byte
     casadi_uint traj_rows;                   // Trajectory rows (normally 7, xyzquat)
@@ -178,6 +182,8 @@ private:
     const casadi_uint *mpc_traj_indices;     // MPC stepwidth indices for sampling trajectory data
     const casadi_uint horizon_len;           // Needed trajectory samples in a prediction horizon.
     const casadi_uint init_guess_len;        // Needed trajectory samples in a prediction horizon.
+    const casadi_uint x_prev_len;            // Previous state length
+    const casadi_uint u_prev_len;            // Previous control length
     const std::string traj_file;             // Path to trajectory data file
     const casadi_uint traj_data_per_horizon; // Trajectory data per horizon
     const casadi_uint *n_indices;            // Indices of reduced degrees of freedom for q

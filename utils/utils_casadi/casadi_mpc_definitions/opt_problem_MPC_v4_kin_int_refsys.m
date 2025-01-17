@@ -221,11 +221,11 @@ else
     end
 end
 
-J_q_pp = 0*Q_norm_square(x(2*n_red+1:3*n_red, :), pp.R_u(n_indices, n_indices));% + Q_norm_square(x(1:n_red, :), pp.R_u) + Q_norm_square(x(n_red+1:2*n_red, :), pp.R_u);
+J_u = 0*Q_norm_square(x(2*n_red+1:3*n_red, :), pp.R_u(n_indices, n_indices));% + Q_norm_square(x(1:n_red, :), pp.R_u) + Q_norm_square(x(n_red+1:2*n_red, :), pp.R_u);
 J_v = Q_norm_square(v, pp.R_v(n_indices, n_indices));
 %J_v = Q_norm_square(v - pp.K_P_u*x(2*n_red+1:3*n_red,1:N_MPC ), pp.R_v); % weight in relation to stationary value: v == K_p*u
 
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_pp, J_v}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_u, J_v}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
