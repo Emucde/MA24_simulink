@@ -5,8 +5,6 @@
 #include "mpc_config.h"
 #include "casadi_types.h" // Include for casadi types
 #include <vector>
-#include "MPC8.h"
-#include "MPC8_addressdef.h"
 #include "param_robot.h"
 #include "MPC01_param.h" // version: 'v1'
 #include "MPC6_param.h"  // version: 'v3_quat'
@@ -40,7 +38,7 @@ public:
 
     // // Method to run the MPC
     int solve();                    // closed loop mpc without copying
-    int solve(casadi_real *x_k_in); // closed loop mpc with copying x_k_in to x_k
+    // int solve(casadi_real *x_k_in); // closed loop mpc with copying x_k_in to x_k
 
     int solve_planner(); // mpc planner: open loop mpc
 
@@ -153,6 +151,15 @@ public:
     ///////////////////////////////////////////////////////////////////////////////////////
 
     void set_x0(casadi_real *x0_in);
+    void set_coldstart_init_guess(const casadi_real *const x_nq);
+
+    void set_x_k(const casadi_real *x_nq)
+    {
+        for (casadi_uint i = 0; i < nx_red; i++)
+        {
+            x_k[i] = x_nq[n_x_indices[i]];
+        }
+    }
 
     ///////////////////////// DESTRUCTOR /////////////////////////
     ~CasadiMPC();
@@ -200,6 +207,7 @@ private:
     int load_initial_guess(const std::string &init_guess_path, casadi_real *init_guess_data);
     void read_x0_init(const std::string &q0_init_file, casadi_real *x0_arr);
     std::streamoff get_traj_dims();
+    void set_row_vector(casadi_uint local_address, casadi_real *row_data, casadi_uint rows, casadi_uint length);
 };
 
 #endif // CASADIMPC_HPP

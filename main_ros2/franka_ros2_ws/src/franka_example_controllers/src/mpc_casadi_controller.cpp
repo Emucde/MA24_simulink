@@ -201,9 +201,11 @@ namespace franka_example_controllers
             return CallbackReturn::ERROR;
         }
 
+        int8_t readonly_mode = 1;
         try
         {
             open_shared_memories();
+            write_to_shared_memory(shm_readonly_mode, &readonly_mode, sizeof(int8_t), get_node()->get_logger());
         }
         catch (const std::exception &e)
         {
@@ -223,6 +225,8 @@ namespace franka_example_controllers
     CallbackReturn ModelPredictiveControllerCasadi::on_activate(const rclcpp_lifecycle::State &previous_state)
     {
         open_shared_memories();
+        int8_t readonly_mode = 1;
+        write_to_shared_memory(shm_readonly_mode, &readonly_mode, sizeof(int8_t), get_node()->get_logger());
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
@@ -241,39 +245,39 @@ namespace franka_example_controllers
     void ModelPredictiveControllerCasadi::open_shared_memories()
     {
         // Open shared memory for writing states to crocddyl
-        shm_states = open_write_shm("data_from_simulink", 2 * N_DOF * sizeof(double), get_node()->get_logger());
-        shm_states_valid = open_write_shm("data_from_simulink_valid", sizeof(int8_t), get_node()->get_logger());
-        shm_start_mpc = open_write_shm("data_from_simulink_start", sizeof(int8_t), get_node()->get_logger());
-        shm_reset_mpc = open_write_shm("data_from_simulink_reset", sizeof(int8_t), get_node()->get_logger());
-        shm_stop_mpc = open_write_shm("data_from_simulink_stop", sizeof(int8_t), get_node()->get_logger());
-        shm_select_trajectory = open_write_shm("data_from_simulink_traj_switch", sizeof(int8_t), get_node()->get_logger());
-
+        shm_start_mpc         = open_write_shm("data_from_simulink_start", get_node()->get_logger());
+        shm_reset_mpc         = open_write_shm("data_from_simulink_reset", get_node()->get_logger());
+        shm_stop_mpc          = open_write_shm("data_from_simulink_stop", get_node()->get_logger());
+        shm_readonly_mode     = open_write_shm("readonly_mode", get_node()->get_logger());
+        shm_read_traj_length  = open_write_shm("read_traj_length", get_node()->get_logger());
+        shm_read_traj_data    = open_write_shm("read_traj_data", get_node()->get_logger());
+        shm_read_state_data   = open_write_shm("read_state_data", get_node()->get_logger());
+        shm_read_control_data = open_write_shm("read_control_data", get_node()->get_logger());
+        shm_select_trajectory = open_write_shm("data_from_simulink_traj_switch", get_node()->get_logger());
         shm_changed_semaphore = open_write_sem("shm_changed_semaphore", get_node()->get_logger());
-
-        // Open shared memory for reading torques from crocddyl
-        shm_torques = open_read_shm("data_from_python", get_node()->get_logger());
-        shm_torques_valid = open_write_shm("data_from_python_valid", sizeof(int8_t), get_node()->get_logger());
-        RCLCPP_INFO(get_node()->get_logger(), "Shared memory opened successfully.");
+        RCLCPP_INFO(get_node()->get_logger(), "Shared memory opened successfully.", get_node()->get_logger());
     }
 
     void ModelPredictiveControllerCasadi::close_shared_memories()
     {
-        if (shm_states != -1)
-            close(shm_states);
-        if (shm_states_valid != -1)
-            close(shm_states_valid);
-        if (shm_start_mpc != -1)
+        if (shm_start_mpc != 0)
             close(shm_start_mpc);
-        if (shm_reset_mpc != -1)
+        if (shm_reset_mpc != 0)
             close(shm_reset_mpc);
-        if (shm_stop_mpc != -1)
+        if (shm_stop_mpc != 0)
             close(shm_stop_mpc);
+        if (shm_readonly_mode != 0)
+            close(shm_readonly_mode);
+        if (shm_read_traj_length != 0)
+            close(shm_read_traj_length);
+        if (shm_read_traj_data != 0)
+            close(shm_read_traj_data);
+        if (shm_read_state_data != 0)
+            close(shm_read_state_data);
+        if (shm_read_control_data != 0)
+            close(shm_read_control_data);
         if (shm_select_trajectory != -1)
             close(shm_select_trajectory);
-        if (shm_torques != -1)
-            close(shm_torques);
-        if (shm_torques_valid != -1)
-            close(shm_torques_valid);
         if (shm_changed_semaphore != 0)
             sem_close(shm_changed_semaphore);
     }
@@ -296,7 +300,6 @@ namespace franka_example_controllers
         write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
         write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
         write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
-        write_to_shared_memory(shm_torques_valid, &flags.torques_valid, sizeof(int8_t), get_node()->get_logger());
 
         response->status = "start flag set";
 
@@ -328,7 +331,6 @@ namespace franka_example_controllers
         write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
         write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
         write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
-        write_to_shared_memory(shm_torques_valid, &flags.torques_valid, sizeof(int8_t), get_node()->get_logger());
 
         response->status = "reset flag set";
         mpc_started = false;
@@ -348,7 +350,6 @@ namespace franka_example_controllers
         write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
         write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
         write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
-        write_to_shared_memory(shm_torques_valid, &flags.torques_valid, sizeof(int8_t), get_node()->get_logger());
 
         response->status = "stop flag set";
         mpc_started = false;
@@ -359,16 +360,33 @@ namespace franka_example_controllers
                                                       std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response)
     {
         int8_t traj_select = request->traj_select;
+
+        shm_flags flags = {
+            0, // start
+            1, // reset
+            0, // stop
+            0  // torques_valid
+        };
+
         write_to_shared_memory(shm_select_trajectory, &traj_select, sizeof(int8_t), get_node()->get_logger());
-        int8_t flag = 0;
-        write_to_shared_memory(shm_start_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
-        flag = 1;
-        write_to_shared_memory(shm_reset_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
-        flag = 0;
-        write_to_shared_memory(shm_stop_mpc, &flag, sizeof(int8_t), get_node()->get_logger());
+        write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
+        write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
+        write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
+
+        controller.switch_traj(traj_select);
+
         response->status = "trajectory " + std::to_string(traj_select) + " selected";
         mpc_started = false;
         sem_post(shm_changed_semaphore);
+    }
+
+    void ModelPredictiveControllerCasadi::mpc_switch(const std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Request> request,
+                                                         std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Response> response)
+    {
+        MPCType mpc_type = static_cast<MPCType>(request->mpc_type);
+        controller.setActiveMPC(mpc_type);
+
+        response->status = "MPC type " + std::to_string(request->mpc_type) + " selected";
     }
 
 } // namespace franka_example_controllers
@@ -376,9 +394,3 @@ namespace franka_example_controllers
 // NOLINTNEXTLINE
 PLUGINLIB_EXPORT_CLASS(franka_example_controllers::ModelPredictiveControllerCasadi,
                        controller_interface::ControllerInterface)
-
-int main(int argc, char **argv)
-{
-    // Your code here
-    return 0;
-}

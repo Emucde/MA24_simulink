@@ -4,8 +4,6 @@
 #include <cstring> // for memcpy
 #include <chrono>  // for time measurement
 
-#define DEBUG 1
-
 #include "include/pinocchio_utils.hpp"
 #include "include/FullSystemTorqueMapper.hpp"
 #include "include/CasadiMPC.hpp"
@@ -176,14 +174,14 @@ void close_shared_memories()
 
 void open_shared_memories()
 {
-    shm_start_mpc         = open_write_shm("data_from_simulink_start");//, sizeof(int8_t));
-    shm_reset_mpc         = open_write_shm("data_from_simulink_reset");//, sizeof(int8_t));
-    shm_stop_mpc          = open_write_shm("data_from_simulink_stop");//, sizeof(int8_t));
-    shm_readonly_mode     = open_write_shm("readonly_mode");//, sizeof(int8_t));
-    shm_read_traj_length  = open_write_shm("read_traj_length");//, sizeof(uint32_t));
-    shm_read_traj_data    = open_write_shm("read_traj_data");//, 7 * sizeof(double));
-    shm_read_state_data   = open_write_shm("read_state_data");//, 2 * 7 * sizeof(double));
-    shm_read_control_data = open_write_shm("read_control_data");//, 7 * sizeof(double));
+    shm_start_mpc         = open_write_shm("data_from_simulink_start");
+    shm_reset_mpc         = open_write_shm("data_from_simulink_reset");
+    shm_stop_mpc          = open_write_shm("data_from_simulink_stop");
+    shm_readonly_mode     = open_write_shm("readonly_mode");
+    shm_read_traj_length  = open_write_shm("read_traj_length");
+    shm_read_traj_data    = open_write_shm("read_traj_data");
+    shm_read_state_data   = open_write_shm("read_state_data");
+    shm_read_control_data = open_write_shm("read_control_data");
     shm_changed_semaphore = open_write_sem("shm_changed_semaphore");
 
     std::cout << "Shared memory opened successfully." << std::endl;
@@ -341,7 +339,7 @@ int main()
     const std::string tcp_frame_name = "fr3_link8_tcp";
 
     CasadiController controller(urdf_filename, tcp_frame_name, use_gravity);
-    controller.setActiveMPC(MPCType::MPC01);
+    controller.setActiveMPC(MPCType::MPC8);
     controller.switch_traj(TRAJ_SELECT);
 
     const casadi_uint nq = controller.nq;
@@ -433,7 +431,7 @@ int main()
 
         if (i % 100 == 0)
         {
-            // std::cout << "q_k: " << q_k_ndof_eig.transpose();
+            std::cout << "q_k: " << q_k_ndof_eig.transpose();
             std::cout << "Full torque: " << tau_full.transpose();
             timer_mpc_solver.print_frequency("\t");
             std::cout << std::endl;

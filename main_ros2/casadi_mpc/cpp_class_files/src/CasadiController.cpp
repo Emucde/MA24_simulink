@@ -31,7 +31,7 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
     tau_full_prev = Eigen::VectorXd::Zero(nq);
 
     // Read the trajectory data
-    // all_traj_data = readTrajectoryData(active_mpc->get_traj_file());
+    all_traj_data = readTrajectoryData(active_mpc->get_traj_file());
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -55,16 +55,8 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
 
     // Copy the state to the MPC object
-    int cnt = 0;
     casadi_uint act_idx = 0;
-    for (casadi_uint i = 0; i < nx; ++i)
-    {
-        if (i == n_x_indices[cnt])
-        {
-            x_k_ptr[cnt] = x_k_ndof_ptr[i];
-            cnt++;
-        }
-    }
+    active_mpc->set_x_k(x_k_ndof_ptr); // set x_k to the reference pose
 
     // set next y_d reference pose
     if (transient_traj_cnt < transient_traj_len)
@@ -141,6 +133,7 @@ void CasadiController::generate_transient_trajectory(const casadi_real *const x_
 {
     setTransientTrajParams(T_start, T_poly, T_end);
     generate_transient_trajectory(x_k_ndof_ptr);
+    active_mpc->set_coldstart_init_guess(x_k_ndof_ptr);
 }
 
 void CasadiController::generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr)
@@ -173,29 +166,6 @@ void CasadiController::generate_transient_trajectory(const casadi_real *const x_
     transient_traj_len = transient_traj_data.cols();
     traj_rows = transient_traj_data.rows();
     transient_traj_cnt = 0;
-
-    Eigen::MatrixXd matrix;
-    Eigen::VectorXd vector;
-    Eigen::VectorXi n_x_indices_eig = ConstIntVectorMap(n_x_indices, nx_red);
-
-    // // set all init guess values to zero
-    // Eigen::Map<Eigen::VectorXd> init_guess(w_ptr + active_mpc_input_config->init_guess_addr, active_mpc_input_config->init_guess_len);
-    // init_guess.setZero();
-
-    // // set all x values to the current state
-    // Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>> x_in(
-    // w_ptr + active_mpc_input_config->x_addr,
-    // nx_red,
-    // static_cast<int>(active_mpc_input_config->x_len / nx_red));
-
-    // Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>> x_prev_in(
-    // w_ptr + active_mpc_input_config->x_prev_addr,
-    // nx_red,
-    // static_cast<int>(active_mpc_input_config->x_len / nx_red));
-
-    // vector = Eigen::Map<const Eigen::VectorXd>(x_k_ndof_ptr, nx);
-    // x_in = vector(n_x_indices_eig).replicate(1, static_cast<int>(active_mpc_input_config->x_len / nx_red));
-    // x_prev_in = vector(n_x_indices_eig).replicate(1, static_cast<int>(active_mpc_input_config->x_len / nx_red));
 }
 
 // set the active MPC

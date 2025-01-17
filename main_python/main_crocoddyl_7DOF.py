@@ -16,7 +16,7 @@ sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
 from utils_python.utils import *
 
 # set nice priority to highest value
-# os.nice(10)
+os.nice(-20)
 
 autostart_fr3 = False
 

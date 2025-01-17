@@ -48,15 +48,15 @@ async function load_and_configure_controller(controller_name) {
         });
 }
 
-// ros2 service call /controller_manager/switch_controller controller_manager_msgs/srv/SwitchController "{deactivate_controllers: ['move_to_start_example_controller'], activate_controllers: ['mpc_controller'], strictness: 2}"
+// ros2 service call /controller_manager/switch_controller controller_manager_msgs/srv/SwitchController "{deactivate_controllers: ['move_to_start_example_controller'], activate_controllers: ['mpc_pinocchio_controller'], strictness: 2}"
 async function switch_to_home_control() {
     const client = node.createClient('controller_manager_msgs/srv/SwitchController', 'controller_manager/switch_controller');
-    return callService(client, {activate_controllers: ['move_to_start_example_controller'], deactivate_controllers: ['mpc_controller'], strictness: 2});
+    return callService(client, {activate_controllers: ['move_to_start_example_controller'], deactivate_controllers: ['mpc_pinocchio_controller'], strictness: 2});
 }
 
 async function switch_to_mpc_control() {
     const client = node.createClient('controller_manager_msgs/srv/SwitchController', 'controller_manager/switch_controller');
-    return callService(client, {deactivate_controllers: ['move_to_start_example_controller'], activate_controllers: ['mpc_controller'], strictness: 2});
+    return callService(client, {deactivate_controllers: ['move_to_start_example_controller'], activate_controllers: ['mpc_pinocchio_controller'], strictness: 2});
 }
 
 function callService(client, request) {

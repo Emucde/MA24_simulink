@@ -82,26 +82,18 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
     read_x0_init(mpc_config->x0_init_path, x_ref_nq.data());
 
     // Copy the initial state
-    int cnt = 0;
-    for (casadi_uint i = 0; i < nx; i++)
+    for (casadi_uint i = 0; i < nx_red; i++)
     {
-        if (i == n_x_indices[cnt])
-        {
-            x_k[cnt] = x_ref_nq[i];
-            cnt++;
-        }
+        x_k[i] = x_ref_nq[n_x_indices[i]];
     }
+
 
     // read first trajectory data from file
     traj_data_startbyte = get_traj_dims();
     read_trajectory_block(); // writes it into y_d
 
-    // set x_prev
-    casadi_uint x_prev_cols = x_prev_len / nx_red;
-    for (casadi_uint i = 0; i < x_prev_cols; i++)
-    {
-        memcpy(x_prev + i * nx_red, x_k, nx_red * sizeof(casadi_real));
-    }
+    // set x_prev to x_k
+    set_row_vector(mpc_config->input_config.x_prev_addr, x_k, nx_red, mpc_config->input_config.x_prev_len);
 
     // check trajectory lengths
     if (traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1] > traj_data_total_len)
@@ -173,13 +165,13 @@ int CasadiMPC::solve()
     return flag;
 }
 
-int CasadiMPC::solve(casadi_real *x_k_in)
-{
-    // Copy the initial state
-    memcpy(x_k, x_k_in, nx_red * sizeof(casadi_real));
+// int CasadiMPC::solve(casadi_real *x_k_in)
+// {
+//     // Copy the initial state
+//     memcpy(x_k, x_k_in, nx_red * sizeof(casadi_real));
 
-    return CasadiMPC::solve();
-}
+//     return CasadiMPC::solve();
+// }
 
 int CasadiMPC::solve_planner()
 {
@@ -191,9 +183,9 @@ int CasadiMPC::solve_planner()
     {
         read_trajectory_block();
         memcpy(in_init_guess, out_init_guess, init_guess_len * sizeof(casadi_real));
-
+        
         // mpc planner: use x_k+1 as x_k for next iteration - not the measurement!
-        memcpy(x_k, u_opt + nq_red, nx_red * sizeof(casadi_real)); // TODO: This only works for kinematic mpc!
+        memcpy(x_k, w + mpc_config->output_config.x_out_addr + nx_red, nx_red * sizeof(casadi_real));
 #ifdef DEBUG
         if (traj_count % 100 == 0)
         {
@@ -224,17 +216,13 @@ void CasadiMPC::switch_traj(casadi_uint traj_sel)
     }
     traj_select = traj_sel;
     traj_count = 0;
-    read_x0_init(mpc_config->x0_init_path, x_ref_nq.data());
+    
+    read_x0_init(mpc_config->x0_init_path, x_ref_nq.data()); // this values are overwritten if transient trajectory is used.
 
     // Copy the initial state
-    int cnt = 0;
-    for (casadi_uint i = 0; i < nx; i++)
+    for (casadi_uint i = 0; i < nx_red; i++)
     {
-        if (i == n_x_indices[cnt])
-        {
-            x_k[cnt] = x_ref_nq[i];
-            cnt++;
-        }
+        x_k[i] = x_ref_nq[n_x_indices[i]];
     }
 
     // read first trajectory data from file
@@ -285,6 +273,19 @@ void CasadiMPC::read_trajectory_block()
     std::cout << std::endl;
 #endif
     file.close();
+}
+
+void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_nq)
+{
+    memset(in_init_guess, 0, init_guess_len * sizeof(double));
+
+    set_x_k(x_nq); // set x_k to x_nq(n_indices)
+
+    // set all x input values to the current state
+    set_row_vector(mpc_config->input_config.x_addr, x_k, nx_red, mpc_config->input_config.x_len);
+
+    // set all x_prev reference values to the current state
+    set_row_vector(mpc_config->input_config.x_prev_addr, x_k, nx_red, mpc_config->input_config.x_prev_len);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -426,6 +427,17 @@ void CasadiMPC::read_x0_init(const std::string &x0_init_file, casadi_real *x0_ar
 
     // Close the file
     file.close();
+}
+
+// Method for setting all rows of matrix_data (rows x cols) to the (rows x 1) vector row_data. (length = rows * cols)
+void CasadiMPC::set_row_vector(casadi_uint local_address, casadi_real *row_data, casadi_uint rows, casadi_uint length)
+{
+    casadi_uint cols = length / rows;
+    casadi_real *matrix_data = w + local_address;
+    for (casadi_uint i = 0; i < cols; i++)
+    {
+        memcpy(matrix_data + i * rows, row_data, rows * sizeof(casadi_real));
+    }
 }
 
 // Destructor to clean up allocated memory

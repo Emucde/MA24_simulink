@@ -31,6 +31,7 @@
 #include "mpc_interfaces/srv/add_three_ints.hpp"
 #include "mpc_interfaces/srv/simple_command.hpp"
 #include "mpc_interfaces/srv/trajectory_command.hpp"
+#include "mpc_interfaces/srv/casadi_mpc_type_command.hpp"
 #include <semaphore.h>
 
 #include "CasadiController.hpp"
@@ -45,82 +46,85 @@ using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface
 namespace franka_example_controllers
 {
 
-        /**
-         * The gravity compensation controller only sends zero torques so that the robot does gravity
-         * compensation
-         */
-        class ModelPredictiveControllerCasadi : public controller_interface::ControllerInterface
-        {
-        public:
-                FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-                CallbackReturn on_configure(const rclcpp_lifecycle::State &previous_state) override;
+    /**
+     * The gravity compensation controller only sends zero torques so that the robot does gravity
+     * compensation
+     */
+    class ModelPredictiveControllerCasadi : public controller_interface::ControllerInterface
+    {
+    public:
+        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
+        CallbackReturn on_configure(const rclcpp_lifecycle::State &previous_state) override;
 
-                FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-                CallbackReturn on_init() override;
+        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
+        CallbackReturn on_init() override;
 
-                FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-                CallbackReturn on_deactivate(const rclcpp_lifecycle::State &previous_state) override;
+        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
+        CallbackReturn on_deactivate(const rclcpp_lifecycle::State &previous_state) override;
 
-                FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-                CallbackReturn on_activate(const rclcpp_lifecycle::State &previous_state) override;
+        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
+        CallbackReturn on_activate(const rclcpp_lifecycle::State &previous_state) override;
 
-                FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-                CallbackReturn on_cleanup(const rclcpp_lifecycle::State &previous_state) override;
+        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
+        CallbackReturn on_cleanup(const rclcpp_lifecycle::State &previous_state) override;
 
-                FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-                CallbackReturn on_shutdown(const rclcpp_lifecycle::State &previous_state) override;
+        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
+        CallbackReturn on_shutdown(const rclcpp_lifecycle::State &previous_state) override;
 
-                FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-                [[nodiscard]] controller_interface::InterfaceConfiguration command_interface_configuration()
-                    const override;
+        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
+        [[nodiscard]] controller_interface::InterfaceConfiguration command_interface_configuration()
+            const override;
 
-                FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-                [[nodiscard]] controller_interface::InterfaceConfiguration state_interface_configuration()
-                    const override;
+        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
+        [[nodiscard]] controller_interface::InterfaceConfiguration state_interface_configuration()
+            const override;
 
-                FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-                controller_interface::return_type update(const rclcpp::Time &time,
-                                                         const rclcpp::Duration &period) override;
+        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
+        controller_interface::return_type update(const rclcpp::Time &time,
+                                                 const rclcpp::Duration &period) override;
 
-        private:
-                std::string arm_id_;
-                const int num_joints = N_DOF;
-                double torques_prev[N_DOF] = {0}; // previous torques
-                int invalid_counter = 0;          // counter for invalid data, if exceeds MAX_INVALID_COUNT, terminate the controller
-                int shm_states = 0;
-                int shm_states_valid = 0;
-                sem_t *shm_changed_semaphore = 0;
-                int shm_start_mpc = 0;
-                int shm_reset_mpc = 0;
-                int shm_stop_mpc = 0;
-                int shm_select_trajectory = 0;
-                int shm_torques = 0;
-                int shm_torques_valid = 0;
-                bool mpc_started = false;
-                bool first_torque_read = false;
-                const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
-                const std::string tcp_frame_name = "fr3_link8_tcp";
-                bool use_gravity = false;
-                CasadiController controller = CasadiController(urdf_filename, tcp_frame_name, use_gravity);
-                Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(num_joints);
-                std::future<Eigen::VectorXd> tau_full_future;
-                ErrorFlag error_flag = ErrorFlag::NO_ERROR;
-                // rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;
-                rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
-                rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr reset_mpc_service_;
-                rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr stop_mpc_service_;
-                rclcpp::Service<mpc_interfaces::srv::TrajectoryCommand>::SharedPtr traj_switch_service_;
+    private:
+        std::string arm_id_;
+        const int num_joints = N_DOF;
+        double torques_prev[N_DOF] = {0}; // previous torques
+        int invalid_counter = 0;          // counter for invalid data, if exceeds MAX_INVALID_COUNT, terminate the controller
+        int shm_start_mpc = 0;
+        int shm_reset_mpc = 0;
+        int shm_stop_mpc = 0;
+        int shm_readonly_mode = 0;
+        int shm_read_traj_length = 0;
+        int shm_read_traj_data = 0;
+        int shm_read_state_data = 0;
+        int shm_read_control_data = 0;
+        int shm_select_trajectory = 0;
+        sem_t *shm_changed_semaphore = 0;
+        bool mpc_started = false;
+        bool first_torque_read = false;
+        const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
+        const std::string tcp_frame_name = "fr3_link8_tcp";
+        bool use_gravity = false;
+        CasadiController controller = CasadiController(urdf_filename, tcp_frame_name, use_gravity);
+        Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(num_joints);
+        std::future<Eigen::VectorXd> tau_full_future;
+        ErrorFlag error_flag = ErrorFlag::NO_ERROR;
+        // rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;
+        rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
+        rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr reset_mpc_service_;
+        rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr stop_mpc_service_;
+        rclcpp::Service<mpc_interfaces::srv::TrajectoryCommand>::SharedPtr traj_switch_service_;
 
-                void open_shared_memories();
-                void close_shared_memories();
-                // void topic_callback(const mpc_interfaces::msg::Num & msg);
-                void start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
-                               std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response);
-                void reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
-                               std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response);
-                void stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
-                              std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response);
-                void traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
-                                 std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response);
-        };
+        void open_shared_memories();
+        void close_shared_memories();
+        // void topic_callback(const mpc_interfaces::msg::Num & msg);
+        void start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+                       std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response);
+        void reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+                       std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response);
+        void stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+                      std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response);
+        void traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
+                         std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response);
+        void mpc_switch(const std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Request> request,
+                        std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Response> response);
+    };
 } // namespace franka_example_controllers

@@ -17,8 +17,10 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/Empty.srv"
   "srv/SimpleCommand.srv"
   "srv/TrajectoryCommand.srv"
-  DEPENDENCIES geometry_msgs # Add packages that above messages depend on, in this case geometry_msgs for Sphere.msg
+  "srv/CasadiMPCTypeCommand.srv"
+  DEPENDENCIES geometry_msgs
 )
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

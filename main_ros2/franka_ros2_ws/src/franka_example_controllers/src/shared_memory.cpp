@@ -11,7 +11,7 @@
 
 sem_t* open_write_sem(const char *name, rclcpp::Logger logger)
 {
-    sem_t *sem = sem_open(name, O_CREAT, 0666, 0);
+    sem_t *sem = sem_open(name, O_RDWR, 0666, 0);
     if (sem == SEM_FAILED)
     {
         RCLCPP_ERROR(logger, "write: open: Error opening semaphore: %s", strerror(errno));
@@ -33,22 +33,13 @@ int open_read_shm(const char *name, rclcpp::Logger logger)
     return fd;
 }
 
-int open_write_shm(const char *name, size_t size, rclcpp::Logger logger)
+int open_write_shm(const char *name, rclcpp::Logger logger)
 {
-    int fd = shm_open(name, O_RDWR | O_CREAT, 0666);
+    int fd = shm_open(name, O_RDWR, 0666);
     if (fd == -1)
     {
         RCLCPP_ERROR(logger, "write: open: Error opening shared memory: %s", strerror(errno));
         throw std::runtime_error("Error allocating shared memory");
-        return -1;
-    }
-
-    // Allocate the shared memory segment
-    if (ftruncate(fd, size) == -1)
-    {
-        RCLCPP_ERROR(logger, "write: open: Error allocating shared memory: %s", strerror(errno));
-        throw std::runtime_error("Error allocating shared memory");
-        close(fd);
         return -1;
     }
 
