@@ -339,7 +339,7 @@ int main()
     const std::string tcp_frame_name = "fr3_link8_tcp";
 
     CasadiController controller(urdf_filename, tcp_frame_name, use_gravity);
-    controller.setActiveMPC(MPCType::MPC8);
+    controller.setActiveMPC(MPCType::MPC01);
     controller.switch_traj(TRAJ_SELECT);
 
     const casadi_uint nq = controller.nq;

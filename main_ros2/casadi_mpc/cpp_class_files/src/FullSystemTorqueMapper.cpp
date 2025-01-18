@@ -71,6 +71,7 @@ Eigen::VectorXd FullSystemTorqueMapper::calculateNdofTorqueWithFeedforward(
     const Eigen::VectorXd &q,
     const Eigen::VectorXd &q_p)
 {
+    q_pp.setZero();
     if (is_kinematic_mpc)
     {
         // For kinematic MPC, just assign directly based on input

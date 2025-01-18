@@ -7,68 +7,70 @@ const node = new rclnodejs.Node('web_ros_bridge');
 node.spin();
 
 // Service Call Handlers
-async function startService() {
+async function startService(active_controller_name) {
     console.log("start");
-    const client = node.createClient('mpc_interfaces/srv/SimpleCommand', '/start_mpc_service');
+    const client = node.createClient('mpc_interfaces/srv/SimpleCommand', '/'+active_controller_name+'/start_mpc_service');
     return callService(client, {})
 }
 
-async function resetService() {
-    const client = node.createClient('mpc_interfaces/srv/SimpleCommand', 'reset_mpc_service');
+async function resetService(active_controller_name) {
+    const client = node.createClient('mpc_interfaces/srv/SimpleCommand', '/'+active_controller_name+'/reset_mpc_service');
     return callService(client, {});
 }
 
 // ros2 service call /stop_mpc_service mpc_interfaces/srv/SimpleCommand "{}"
-async function stopService() {
-    const client = node.createClient('mpc_interfaces/srv/SimpleCommand', 'stop_mpc_service');
+async function stopService(active_controller_name) {
+    const client = node.createClient('mpc_interfaces/srv/SimpleCommand', '/'+active_controller_name+'/stop_mpc_service');
     return callService(client, {});
 }
 
 //ros2 service call /traj_switch_service mpc_interfaces/srv/TrajectoryCommand "{traj_select: 1}"
-async function switchTrajectory(trajSelect) {
-    const client = node.createClient('mpc_interfaces/srv/TrajectoryCommand', 'traj_switch_service');
+async function switchTrajectory(active_controller_name, trajSelect) {
+    const client = node.createClient('mpc_interfaces/srv/TrajectoryCommand', '/'+active_controller_name+'/traj_switch_service');
     return callService(client, { traj_select: trajSelect });
 }
 
 // ros2 service call /controller_manager/load_controller controller_manager_msgs/srv/LoadController "{name: 'move_to_start_example_controller'}"
 // ros2 service call /controller_manager/configure_controller controller_manager_msgs/srv/ConfigureController "{name: 'move_to_start_example_controller'}"
 async function load_and_configure_controller_intern(controller_name) {
-    var clients = [node.createClient('controller_manager_msgs/srv/LoadController',      'controller_manager/load_controller'),
-                   node.createClient('controller_manager_msgs/srv/ConfigureController', 'controller_manager/configure_controller')];
+    var clients = [node.createClient('controller_manager_msgs/srv/LoadController', 'controller_manager/load_controller'),
+    node.createClient('controller_manager_msgs/srv/ConfigureController', 'controller_manager/configure_controller')];
     var requests = [{ name: controller_name }, { name: controller_name }];
     var status_strings = ['load ' + controller_name, 'configure ' + controller_name];
 
     return callMultipleServices(clients, requests, status_strings);
 }
 
-async function load_and_configure_controller(controller_name, home_robot=null, ws=null, data=null) {
-    return load_and_configure_controller_intern(controller_name)
-        .then((result) => {
-            console.log('\nService responses:', result);
-            if (home_robot) {
-                return home_robot(ws, data);
-            }
-            else
-            {
-                return { result: 'Success', status: 'Controller loaded and configured' };
-            }
-        })
-        .catch((error) => {
-            console.error('\nError occurred:', error.message);
-            console.error('Did you forget to start ROS2?\n');
-            return { result: 'Error occurred', status: error.message };
-        });
-}
+// async function load_and_configure_controller(controller_name, home_robot = null, ws = null, data = null) {
+//     return load_and_configure_controller_intern(controller_name)
+//         .then((result) => {
+//             console.log('\nService responses:', result);
+//             if (home_robot) {
+//                 return home_robot(ws, data);
+//             }
+//             else {
+//                 return { result: 'Success', status: 'Controller loaded and configured' };
+//             }
+//         })
+//         .catch((error) => {
+//             console.error('\nError occurred:', error.message);
+//             console.error('Did you forget to start ROS2?\n');
+//             return { result: 'Error occurred', status: error.message };
+//         });
+// }
 
 // ros2 service call /controller_manager/switch_controller controller_manager_msgs/srv/SwitchController "{deactivate_controllers: ['move_to_start_example_controller'], activate_controllers: ['mpc_pinocchio_controller'], strictness: 2}"
-async function switch_to_home_control() {
+async function switch_control(old_control_name, new_control_name) {
+    if(old_control_name === new_control_name) {
+        return { result: 'Success', status: 'Already in ' + new_control_name };
+    }
     const client = node.createClient('controller_manager_msgs/srv/SwitchController', 'controller_manager/switch_controller');
-    return callService(client, { activate_controllers: ['move_to_start_example_controller'], deactivate_controllers: ['mpc_pinocchio_controller'], strictness: 2 });
+    return callService(client, { deactivate_controllers: [old_control_name], activate_controllers: [new_control_name], strictness: 2 });
 }
 
-async function switch_to_mpc_control() {
+async function activate_control(new_control_name) {
     const client = node.createClient('controller_manager_msgs/srv/SwitchController', 'controller_manager/switch_controller');
-    return callService(client, { deactivate_controllers: ['move_to_start_example_controller'], activate_controllers: ['mpc_pinocchio_controller'], strictness: 2 });
+    return callService(client, { activate_controllers: [new_control_name], strictness: 2 });
 }
 
 function objectToString(obj) {
@@ -149,4 +151,16 @@ async function callMultipleServices(clients, requests, status_strings) {
     return results; // Return the array of responses
 }
 
-module.exports = { startService, resetService, stopService, switchTrajectory, load_and_configure_controller, switch_to_home_control, switch_to_mpc_control };
+async function get_controller_info() {
+    const client = node.createClient(
+        'controller_manager_msgs/srv/ListControllers',
+        '/controller_manager/list_controllers'
+    );
+    const response = await callService(client, {});
+    // console.log(response.controller);
+    var controller_names = response.controller.map(controller => controller.name);
+    var controller_active_states = response.controller.map(controller => controller.state);
+    return { controller_names, controller_active_states };
+}
+
+module.exports = { startService, resetService, stopService, switchTrajectory, switch_control, activate_control, get_controller_info, objectToString };

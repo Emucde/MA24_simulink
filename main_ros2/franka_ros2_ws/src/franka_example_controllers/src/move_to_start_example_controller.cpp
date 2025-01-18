@@ -52,8 +52,8 @@ controller_interface::return_type MoveToStartExampleController::update(
   auto trajectory_time = this->get_node()->now() - start_time_;
   auto motion_generator_output = motion_generator_->getDesiredJointPositions(trajectory_time);
   Vector7d q_desired = motion_generator_output.first;
-  bool finished = motion_generator_output.second;
-  if (not finished) {
+  // bool finished = motion_generator_output.second;
+  // if (not finished) {
     const double kAlpha = 0.99;
     dq_filtered_ = (1 - kAlpha) * dq_filtered_ + kAlpha * dq_;
     Vector7d tau_d_calculated =
@@ -61,12 +61,12 @@ controller_interface::return_type MoveToStartExampleController::update(
     for (int i = 0; i < 7; ++i) {
       command_interfaces_[i].set_value(tau_d_calculated(i));
     }
-  } else {
-    for (auto& command_interface : command_interfaces_) {
-      command_interface.set_value(0);
-    }
-    this->get_node()->set_parameter({"process_finished", true});
-  }
+  // } else {
+  //   for (auto& command_interface : command_interfaces_) {
+  //     command_interface.set_value(0);
+  //   }
+  //   this->get_node()->set_parameter({"process_finished", true});
+  // }
   return controller_interface::return_type::OK;
 }
 

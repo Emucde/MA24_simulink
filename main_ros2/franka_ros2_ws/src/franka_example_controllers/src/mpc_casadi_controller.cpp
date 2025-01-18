@@ -130,6 +130,11 @@ namespace franka_example_controllers
                     mpc_started = false;
                 }
             }
+
+            // Send data to shared memory
+            write_to_shared_memory(shm_read_state_data, state, 2 * N_DOF * sizeof(double), get_node()->get_logger());
+            write_to_shared_memory(shm_read_control_data, tau_full.data(), N_DOF * sizeof(casadi_real), get_node()->get_logger());
+            sem_post(shm_changed_semaphore);
         }
         else
         {
@@ -162,21 +167,28 @@ namespace franka_example_controllers
 
         // RCLCPP_INFO(get_node()->get_logger(), "Subscribed to topic 'topic'");
 
+        std::string node_name = get_node()->get_name();
+        std::string service_prefix = "/" + node_name + "/";
+
         start_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
-            "start_mpc_service",
+            service_prefix + "start_mpc_service",
             std::bind(&ModelPredictiveControllerCasadi::start_mpc, this, std::placeholders::_1, std::placeholders::_2));
 
         reset_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
-            "reset_mpc_service",
+            service_prefix + "reset_mpc_service",
             std::bind(&ModelPredictiveControllerCasadi::reset_mpc, this, std::placeholders::_1, std::placeholders::_2));
 
         stop_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
-            "stop_mpc_service",
+            service_prefix + "stop_mpc_service",
             std::bind(&ModelPredictiveControllerCasadi::stop_mpc, this, std::placeholders::_1, std::placeholders::_2));
 
         traj_switch_service_ = get_node()->create_service<mpc_interfaces::srv::TrajectoryCommand>(
-            "traj_switch_service",
+            service_prefix + "traj_switch_service",
             std::bind(&ModelPredictiveControllerCasadi::traj_switch, this, std::placeholders::_1, std::placeholders::_2));
+
+        mpc_switch_service_ = get_node()->create_service<mpc_interfaces::srv::CasadiMPCTypeCommand>(
+            service_prefix + "mpc_switch_service",
+            std::bind(&ModelPredictiveControllerCasadi::mpc_switch, this, std::placeholders::_1, std::placeholders::_2));
 
         RCLCPP_INFO(get_node()->get_logger(), "Service 'add_three_ints' created");
 
@@ -210,6 +222,9 @@ namespace franka_example_controllers
             fprintf(stderr, "Exception thrown during init stage with message: %s \n", e.what());
             return CallbackReturn::ERROR;
         }
+
+        controller.setActiveMPC(MPCType::MPC8);
+        controller.switch_traj(1);
 
         return CallbackReturn::SUCCESS;
     }
@@ -306,6 +321,13 @@ namespace franka_example_controllers
         {
             state[i] = state_interfaces_[i].get_value();
         }
+
+        controller.generate_transient_trajectory(state, 0.0, 4.0, 5.0);
+        casadi_uint transient_traj_len = controller.get_transient_traj_len();
+        const casadi_uint traj_data_real_len = controller.get_traj_data_len();
+
+        casadi_uint total_traj_len = traj_data_real_len + transient_traj_len;
+        write_to_shared_memory(shm_read_traj_length, &total_traj_len, sizeof(casadi_uint), get_node()->get_logger());
 
         tau_full_future = std::async(std::launch::async, [this, state]()
                                      {

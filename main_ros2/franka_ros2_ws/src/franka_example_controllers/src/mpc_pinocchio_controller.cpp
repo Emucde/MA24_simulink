@@ -181,20 +181,23 @@ namespace franka_example_controllers
 
         // RCLCPP_INFO(get_node()->get_logger(), "Subscribed to topic 'topic'");
 
+        std::string node_name = get_node()->get_name();
+        std::string service_prefix = "/" + node_name + "/";
+
         start_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
-            "start_mpc_service",
+            service_prefix + "start_mpc_service",
             std::bind(&ModelPredictiveControllerPinocchio::start_mpc, this, std::placeholders::_1, std::placeholders::_2));
 
         reset_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
-            "reset_mpc_service",
+            service_prefix + "reset_mpc_service",
             std::bind(&ModelPredictiveControllerPinocchio::reset_mpc, this, std::placeholders::_1, std::placeholders::_2));
 
         stop_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
-            "stop_mpc_service",
+            service_prefix + "stop_mpc_service",
             std::bind(&ModelPredictiveControllerPinocchio::stop_mpc, this, std::placeholders::_1, std::placeholders::_2));
 
         traj_switch_service_ = get_node()->create_service<mpc_interfaces::srv::TrajectoryCommand>(
-            "traj_switch_service",
+            service_prefix + "traj_switch_service",
             std::bind(&ModelPredictiveControllerPinocchio::traj_switch, this, std::placeholders::_1, std::placeholders::_2));
 
         RCLCPP_INFO(get_node()->get_logger(), "Service 'add_three_ints' created");

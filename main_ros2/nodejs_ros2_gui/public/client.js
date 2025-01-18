@@ -91,11 +91,11 @@ function start() {
                       ros_connected_col_el.style.backgroundColor = "green";
                       ros_connected_text_el.textContent = "ROS2 connected";
                     }
-                    if(result.status.includes("homing in progress"))
+                    if(result.status.includes("Homing in progress"))
                     {
                         document.getElementById("home_main").classList.remove("hide");
                     }
-                    if(result.status.includes("homing done") || result.status.includes("Error"))
+                    if(result.status.includes("Homing done") || result.status.includes("Error"))
                     {
                         document.getElementById("home_main").classList.add("hide");
                     }
@@ -108,7 +108,8 @@ function start() {
 }
 
 document.getElementById('start').addEventListener('click', () => {
-    ws.send(JSON.stringify({ command: 'start' }));
+    var active_controller_name = document.querySelector('#controller').value;
+    ws.send(JSON.stringify({ command: 'start', controller_name: active_controller_name}));
 });
 
 document.getElementById('reset').addEventListener('click', () => {

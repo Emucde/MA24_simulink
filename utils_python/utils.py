@@ -2645,6 +2645,8 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
         with robot_display.robot.viz.create_video_ctx("test.mp4"):
             robot_display.robot.viz.play(q_sol, dt)
 
+    start_server() # start server to visualize robot
+
 
 
 

@@ -45,9 +45,10 @@
     </div>
     <br><br>
     <select id="controller" onchange="send_controller(this)">
-        <option value="pinocchio_mpc">Pinocchio MPC</option>
-        <option value="casadi_mpc">Casadi MPC</option>
+        <option value="mpc_pinocchio_controller">Pinocchio MPC</option>
+        <option value="mpc_casadi_controller">Casadi MPC</option>
         <option value="home_control">Jointspace Homing Controller</option>
+        <option value="gravity_control">Gravity Controller</option>
     </select>
     <select id="trajectory" onchange="send_trajectory(this)">
         <option value="1">traj1</option>
