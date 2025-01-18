@@ -13,11 +13,12 @@
 #  limitations under the License.
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, ExecuteProcess
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
+# from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+
 
 
 def generate_launch_description():
@@ -67,17 +68,8 @@ def generate_launch_description():
                               }.items(),
         ),
 
-        # Node(
-        #     package='command_publisher',
-        #     executable='command_publisher',
-        #     name='command_publisher_node',
-        #     output='screen',
-        # ),
-
-        Node(
-            package='controller_manager',
-            executable='spawner',
-            arguments=['mpc_pinocchio_controller'],
-            output='screen',
-        ),
+        ExecuteProcess(
+            cmd=['ros2', 'control', 'switch_controllers', '--activate', 'mpc_pinocchio_controller'],
+            output='screen'
+        )
     ])

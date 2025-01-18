@@ -39,9 +39,9 @@ function start() {
         document.getElementById("timeconn").innerHTML=new Date();
         document.getElementById("conncon").style.backgroundColor="red";
 
-        //labview (TCP) ebenfalls disconnected
+        //ROS2 ebenfalls disconnected
         document.getElementById("labconncon").style.backgroundColor="red";
-        document.getElementById("labcon").innerHTML="Labview disconnected @ " + new Date();
+        document.getElementById("labcon").innerHTML="ROS2 disconnected @ " + new Date();
 
         //Reconnect every 5000 seconds
         setTimeout(function(){start()}, 5000);
@@ -95,7 +95,7 @@ function start() {
                     {
                         document.getElementById("home_main").classList.remove("hide");
                     }
-                    if(result.status.includes("homing done"))
+                    if(result.status.includes("homing done") || result.status.includes("Error"))
                     {
                         document.getElementById("home_main").classList.add("hide");
                     }
@@ -165,6 +165,9 @@ function send_trajectory(current_element) {
     change_button_positions();
 }
 
+function send_controller(current_element) {
+
+}
   
 function click_fun(element, number) {
     var main_div = element.parentNode.parentNode;

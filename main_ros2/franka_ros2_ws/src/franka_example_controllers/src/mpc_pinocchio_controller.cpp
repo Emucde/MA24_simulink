@@ -220,11 +220,10 @@ namespace franka_example_controllers
             return CallbackReturn::ERROR;
         }
 
-        int8_t readonly_mode = 0;
         try
         {
+            int8_t readonly_mode = 0;
             open_shared_memories();
-            write_to_shared_memory(shm_readonly_mode, &readonly_mode, sizeof(int8_t), get_node()->get_logger());
         }
         catch (const std::exception &e)
         {
@@ -270,7 +269,7 @@ namespace franka_example_controllers
         shm_reset_mpc = open_write_shm("data_from_simulink_reset", get_node()->get_logger());
         shm_stop_mpc = open_write_shm("data_from_simulink_stop", get_node()->get_logger());
         shm_select_trajectory = open_write_shm("data_from_simulink_traj_switch", get_node()->get_logger());
-        shm_select_trajectory = open_write_shm("readonly_mode", get_node()->get_logger());
+        shm_readonly_mode = open_write_shm("readonly_mode", get_node()->get_logger());
 
         shm_changed_semaphore = open_write_sem("shm_changed_semaphore", get_node()->get_logger());
 

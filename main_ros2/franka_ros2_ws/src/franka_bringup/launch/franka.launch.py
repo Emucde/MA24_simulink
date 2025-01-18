@@ -55,6 +55,26 @@ def generate_launch_description():
             'controllers.yaml',
         ]
     )
+    
+    # Spawn custom controllers
+    spawn_controllers = []
+    controller_names = [
+        "gravity_compensation_example_controller",
+        "mpc_pinocchio_controller",
+        "mpc_casadi_controller",
+        "move_to_start_example_controller"
+    ]
+
+    # load and configure controllers without activating them
+    for controller in controller_names:
+        spawn_controllers.append(
+            Node(
+                package="controller_manager",
+                executable="spawner",
+                arguments=[controller, '--inactive'],
+                output="screen",
+            )
+        )
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -89,6 +109,11 @@ def generate_launch_description():
             },
             # emulate_tty=True,
             # prefix=['xterm -e gdb -ex run --args'],
+            # Besser: ROS extension (wirklich ros von microsoft und ned ros2) in vscode installieren und ros prozess attachen (vorher in debug kompilieren)
+            # https://medium.com/@junbs95/code-completion-and-debugging-for-ros2-in-vscode-a4ede900d979            
+            
+            # alternativ (untested):
+            # https://github.com/ms-iot/vscode-ros/blob/master/doc/debug-support.md
             on_exit=Shutdown(),
         ),
 
@@ -99,4 +124,4 @@ def generate_launch_description():
              condition=IfCondition(use_rviz)
              )
 
-    ])
+    ] + spawn_controllers) # append my custom controllers

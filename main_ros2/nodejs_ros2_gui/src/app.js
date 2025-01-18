@@ -15,19 +15,19 @@ var traj_path = path.join(__dirname, '..', '..', '..', 'utils', 'matlab_init_gen
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-app.get('/', function(req, res) {
-   res.sendFile(__dirname + '/index.html');
+app.get('/', function (req, res) {
+    res.sendFile(__dirname + '/index.html');
 });
 
 load_and_configure_controller('move_to_start_example_controller');
 
 wss.on('connection', (ws) => {
-    console.log('WebSocket connection established');
-
     clients.add(ws);
-  
+
+    console.log('WebSocket connection (client '+(clients.size)+') established\n');
+
     ws.on('close', () => {
-      clients.delete(ws);
+        clients.delete(ws);
     });
 
     ws.on('message', async (message) => {
@@ -55,27 +55,11 @@ wss.on('connection', (ws) => {
                     status = result.status;
                     break;
                 case 'home':
-                    try{
-                        result = await switch_to_home_control();
-                        console.log(result);
-                        status='homing in progress';
-                        if(result.ok)
-                        {
-                            setTimeout(async function(){
-                                result = await switch_to_mpc_control();
-                                result.status='homing done';
-                                console.log(result);
-                                ws.send(JSON.stringify({ status: 'success', result: { name: 'ros_service', status: result.status } }));
-                            }, data.delay);
-                        }
-                        else
-                        {
-                            status='Error: move_to_start_example_controller was not loaded. restarting.';
-                            throw new Error('It seems that move_to_start_example_controller was not loaded')
-                        }
+                    try {
+                        ({result, status} = await home_robot(ws, data));
                     } catch (error) {
-                        console.log("trying to readding move_to_start_example_controller");
-                        load_and_configure_controller('move_to_start_example_controller');
+                        console.log("trying to add controller 'move_to_start_example_controller'");
+                        ({result, status} = await load_and_configure_controller('move_to_start_example_controller', home_robot, ws, data));
                     }
                     break;
                 case 'open_brakes':
@@ -104,32 +88,57 @@ wss.on('connection', (ws) => {
 
     // Search for trajectory names
     searchTrajectoryNames(traj_path)
-    .then(trajectoryNames => {
-        console.log('Found Trajectory Names:', trajectoryNames);
-        ws.send(JSON.stringify({ status: 'success', result: { name: 'traj_names', trajectories: trajectoryNames } }));
-    })
-    .catch(err => {
-        console.error(err);
-    }); 
+        .then(trajectoryNames => {
+            console.log('Found Trajectory Names:', trajectoryNames);
+            ws.send(JSON.stringify({ status: 'success', result: { name: 'traj_names', trajectories: trajectoryNames } }));
+        })
+        .catch(err => {
+            console.error(err);
+        });
 });
 
 function broadcast(message) {
     clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
     });
-  }
+}
+
+async function home_robot(ws, data) {
+    var result = await switch_to_home_control();
+    console.log(result);
+    var status = 'homing in progress';
+    if (result.ok) {
+        setTimeout(async function () {
+            try{
+                result = await switch_to_mpc_control();
+                result.status = 'homing done';
+            } catch (error) {
+                console.log("Error while homeing. It seems that ROS2 crashed.'");
+                result = { status: 'Error while homeing. Service timed out. It seems that ROS2 crashed.' };
+                status = result.status;
+            }
+            console.log(result);
+            ws.send(JSON.stringify({ status: 'success', result: { name: 'ros_service', status: result.status } }));
+        }, data.delay);
+    }
+    else {
+        status = 'Error: move_to_start_example_controller was not loaded. restarting.';
+        throw new Error('It seems that move_to_start_example_controller was not loaded')
+    }
+    return { result, status };
+}
 
 const terminator = (signal) => {
-  console.log(`Received ${signal} - terminating app`);
-  process.exit(1);
+    console.log(`Received ${signal} - terminating app`);
+    process.exit(1);
 };
 
 ['SIGHUP', 'SIGINT', 'SIGQUIT', 'SIGILL', 'SIGTRAP', 'SIGABRT',
- 'SIGBUS', 'SIGFPE', 'SIGUSR1', 'SIGSEGV', 'SIGUSR2', 'SIGTERM'
+    'SIGBUS', 'SIGFPE', 'SIGUSR1', 'SIGSEGV', 'SIGUSR2', 'SIGTERM'
 ].forEach((signal) => {
-  process.on(signal, () => terminator(signal));
+    process.on(signal, () => terminator(signal));
 });
 
 server.listen(8080, () => {

@@ -201,11 +201,9 @@ namespace franka_example_controllers
             return CallbackReturn::ERROR;
         }
 
-        int8_t readonly_mode = 1;
         try
         {
             open_shared_memories();
-            write_to_shared_memory(shm_readonly_mode, &readonly_mode, sizeof(int8_t), get_node()->get_logger());
         }
         catch (const std::exception &e)
         {
