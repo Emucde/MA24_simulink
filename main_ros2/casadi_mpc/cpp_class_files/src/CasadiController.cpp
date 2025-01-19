@@ -10,13 +10,15 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
 {
     // Read the trajectory data
     traj_file = robot_config.traj_data_path;
+    x0_init_file = robot_config.x0_init_path;
     all_traj_data = readTrajectoryData(traj_file);
+    all_traj_x0_init = read_x0_init(x0_init_file);
 
-    int default_traj_select = 1;
-    traj_rows = all_traj_data[default_traj_select-1].rows();
-    traj_len = all_traj_data[default_traj_select-1].cols();
+    selected_trajectory = 1;
+    traj_rows = all_traj_data[selected_trajectory-1].rows();
+    traj_len = all_traj_data[selected_trajectory-1].cols();
     traj_data.resize(traj_rows, traj_len);
-    traj_data << all_traj_data[default_traj_select-1];
+    traj_data << all_traj_data[selected_trajectory-1];
 
     // Real length of the singular trajectory data without additional samples for last prediction horizon
     traj_real_len = robot_config.traj_data_real_len; // transient trajectory length = 0
@@ -167,7 +169,7 @@ void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_rea
             casadi_mpcs[i].switch_traj(&traj_data, x_k, traj_real_len);
         }
     }
-
+    selected_trajectory = traj_select;
 }
 
 void CasadiController::init_trajectory(casadi_uint traj_select)
@@ -270,14 +272,14 @@ void CasadiController::simulateModel(casadi_real *const x_k_ndof_ptr, const casa
 }
 
 // Method to switch the trajectory
-void CasadiController::switch_traj(casadi_uint traj_select, const casadi_real *const x_k_ndof)
+void CasadiController::switch_traj(casadi_uint traj_select)
 {
     if (traj_select < 1 || traj_select > all_traj_data.size())
     {
         std::cerr << "Invalid trajectory selection. Selecting Trajectory 1" << std::endl;
         traj_select = 1;
     }
-    init_trajectory(traj_select, x_k_ndof);
+    selected_trajectory = traj_select;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -470,4 +472,45 @@ std::vector<Eigen::MatrixXd> CasadiController::readTrajectoryData(const std::str
 #endif
 
     return trajectories;
+}
+
+std::vector<Eigen::VectorXd> CasadiController::read_x0_init(const std::string &x0_init_file)
+{
+    std::ifstream file(x0_init_file, std::ios::binary);
+    if (!file)
+    {
+        throw std::runtime_error("Error opening file: " + x0_init_file);
+    }
+
+    // Read dimensions
+    uint32_t rows, cols;
+    file.read(reinterpret_cast<char *>(&rows), sizeof(rows));
+    file.read(reinterpret_cast<char *>(&cols), sizeof(cols));
+
+#ifdef DEBUG
+    std::cout << "Rows: " << rows << ", Cols: " << cols << std::endl;
+#endif
+
+    // Create a vector to hold all initial conditions
+    std::vector<Eigen::VectorXd> all_x0_init;
+    
+    // Read the initial condition data
+    for (size_t i = 0; i < cols; ++i) // Assuming each column represents an initial condition
+    {
+        Eigen::VectorXd x0(rows);
+        file.read(reinterpret_cast<char *>(x0.data()), rows * sizeof(double));
+        if (!file)
+        {
+            throw std::runtime_error("Error reading initial condition data from file: " + x0_init_file);
+        }
+        all_x0_init.push_back(x0);
+    }
+
+#ifdef DEBUG
+    // Debug: Print first initial condition as an example
+    std::cout << "First initial condition:\n"
+              << all_x0_init[0].transpose() << std::endl;
+#endif
+
+    return all_x0_init;
 }

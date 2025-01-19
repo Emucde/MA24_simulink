@@ -57,6 +57,7 @@ robot_config_t get_robot_config()
        .torque_limit_lower = PARAM_ROBOT_TORQUE_LIMIT_LOWER,
        .sugihara_limb_vector = PARAM_ROBOT_SUGIHARA_LIMB_VECTOR,
        .traj_data_path = TRAJ_DATA_PATH,
+       .x0_init_path = X0_INIT_PATH, // Default path to init configuration of trajectories
        .traj_data_real_len = TRAJ_DATA_REAL_LEN, // Real length of trajectory data (without last prediction horizon)
    };
    return Config;

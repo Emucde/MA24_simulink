@@ -11,7 +11,9 @@ extern "C" {
 #include "casadi_types.h"
 
 #define TRAJ_DATA_PATH "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.bin"
+#define X0_INIT_PATH "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/s_functions/fr3_no_hand_6dof/trajectory_data/param_x0_init.bin"
 #define TRAJ_DATA_REAL_LEN 10000
+
 #define PARAM_ROBOT_N_DOF 7
 #define PARAM_ROBOT_N_RED 6
 #define PARAM_ROBOT_N_FIXED 1
@@ -190,6 +192,7 @@ typedef struct {
     const casadi_real* torque_limit_lower;
     const casadi_real* sugihara_limb_vector;
     const char* traj_data_path;
+    const char* x0_init_path;
     const casadi_uint traj_data_real_len;
 } robot_config_t;
 

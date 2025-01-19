@@ -25,6 +25,7 @@ private:
     mpc_config_t *active_mpc_config;             // Active MPC configuration
     const mpc_input_config_t *active_mpc_input_config; // Active MPC input configuration
     std::string traj_file;                       // Path to trajectory data file
+    std::string x0_init_file;                    // Path to initial state data of trajectories
 
 public:
     const casadi_uint nq;     // Number of degrees of freedom
@@ -49,6 +50,8 @@ private:
     Eigen::MatrixXd transient_traj_data;
     casadi_uint transient_traj_len;       // number of columns of the transient trajectory data
     std::vector<Eigen::MatrixXd> all_traj_data;
+    std::vector<Eigen::VectorXd> all_traj_x0_init;
+    casadi_uint selected_trajectory;
     Eigen::MatrixXd traj_data;
     casadi_uint traj_len;
     casadi_uint traj_real_len; // number of columns of the singular trajectory data without additional samples for last prediction horizon
@@ -86,8 +89,8 @@ public:
         return robot_config.n_indices;
     }
 
-    // Method to switch the trajectory
-    void switch_traj(casadi_uint traj_select, const casadi_real *const x_k_ptr);
+    // Method to switch the trajectory (for creating run init_trajectory)
+    void switch_traj(casadi_uint traj_select);
 
     // Method to get n_x_indices
     const casadi_uint *get_n_x_indices()
@@ -165,6 +168,12 @@ public:
         return active_mpc->get_act_traj_data();
     }
 
+    const casadi_real* get_act_traj_x0_init()
+    {
+        return all_traj_x0_init[selected_trajectory-1].data();
+    }
+
+
 private:
     // Private methods
     std::string mpcToString(MPCType mpc);
@@ -181,5 +190,6 @@ private:
                                         const std::map<std::string, double> &param_traj_poly);
 
     std::vector<Eigen::MatrixXd> readTrajectoryData(const std::string& traj_file);
+    std::vector<Eigen::VectorXd> read_x0_init(const std::string &x0_init_file);
 };
 #endif // CASADICONTROLLER_HPP

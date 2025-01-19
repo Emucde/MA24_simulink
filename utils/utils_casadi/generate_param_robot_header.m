@@ -38,10 +38,14 @@ function generate_param_robot_header(s_fun_path, param_robot, traj_settings, fun
 
     % Add path to init_guess and trajectory
     param_MPC_traj_data_bin_file = fullfile(pwd, [s_fun_path, '/trajectory_data/param_traj_data.bin']);
+    param_MPC_x0_init_bin_file = fullfile(pwd, [s_fun_path, '/trajectory_data/param_x0_init.bin']);
     fprintf(fid_h, '#define TRAJ_DATA_PATH "%s"\n', param_MPC_traj_data_bin_file);
+    fprintf(fid_h, '#define X0_INIT_PATH "%s"\n', param_MPC_x0_init_bin_file);
 
     % define real length of trajectory
-    fprintf(fid_h, '#define TRAJ_DATA_REAL_LEN %d\n', traj_settings.N_data_real);
+    fprintf(fid_h, '#define TRAJ_DATA_REAL_LEN %d\n\n', traj_settings.N_data_real);
+
+
 
     field_names = fieldnames(param_robot);
     for i = 1:length(field_names)
@@ -104,6 +108,7 @@ function generate_param_robot_header(s_fun_path, param_robot, traj_settings, fun
     fprintf(fid_h, '    const casadi_real* torque_limit_lower;\n');
     fprintf(fid_h, '    const casadi_real* sugihara_limb_vector;\n');
     fprintf(fid_h, '    const char* traj_data_path;\n');
+    fprintf(fid_h, '    const char* x0_init_path;\n');
     fprintf(fid_h, '    const casadi_uint traj_data_real_len;\n');
     fprintf(fid_h, '} %s_t;\n\n', structName);
 
@@ -141,6 +146,7 @@ function generate_param_robot_header(s_fun_path, param_robot, traj_settings, fun
     fprintf(fid_c, '       .torque_limit_lower = %s_TORQUE_LIMIT_LOWER,\n', func_name_upper);
     fprintf(fid_c, '       .sugihara_limb_vector = %s_SUGIHARA_LIMB_VECTOR,\n', func_name_upper);
     fprintf(fid_c, '       .traj_data_path = TRAJ_DATA_PATH,\n');
+    fprintf(fid_c, '       .x0_init_path = X0_INIT_PATH, // Default path to init configuration of trajectories\n');
     fprintf(fid_c, '       .traj_data_real_len = TRAJ_DATA_REAL_LEN, // Real length of trajectory data (without last prediction horizon)\n');
     fprintf(fid_c, '   };\n');
     fprintf(fid_c, '   return Config;\n');

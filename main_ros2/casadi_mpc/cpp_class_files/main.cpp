@@ -373,7 +373,6 @@ void test_fun2(const casadi_real* x_k_ndof, const Eigen::VectorXi n_x_indices_ei
     //0.01s
 }
 
-#define TRAJ_SELECT 1
 int main()
 {
     // Configuration flags
@@ -397,10 +396,11 @@ int main()
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
 
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
-    q_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (controller.get_q_ref_nq(), nq);
-
     Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
 
+    // q_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (controller.get_q_ref_nq(), nq);
+
+    
     Eigen::VectorXi n_indices_eig = ConstIntVectorMap(n_indices_ptr, nq_red);
     Eigen::VectorXi n_x_indices_eig = ConstIntVectorMap(n_x_indices_ptr, nx_red);
 
@@ -417,10 +417,15 @@ int main()
 
 #ifdef TRANSIENT_TRAJ_TESTS
 
+
+    #define TRAJ_SELECT 2
+    controller.switch_traj(TRAJ_SELECT);
+    x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (controller.get_act_traj_x0_init(), nx);
     q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
-    q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.01);
+    // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
 
     controller.init_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
+    
 
     Eigen::MatrixXd trajectory = controller.get_transient_traj_data();
     casadi_uint transient_traj_len = controller.get_transient_traj_len();
@@ -442,22 +447,16 @@ int main()
     write_to_shared_memory(shm_read_traj_length, &total_traj_len, sizeof(casadi_uint));
     write_to_shared_memory(shm_start_mpc, &start, sizeof(int8_t));
 
+    // Write data to shm:
+    write_to_shared_memory(shm_read_state_data, x_k_ndof, nx * sizeof(casadi_real));
+    write_to_shared_memory(shm_read_control_data, tau_full.data(), nq * sizeof(casadi_real));
+    write_to_shared_memory(shm_read_traj_data, controller.get_act_traj_data(), 7 * sizeof(casadi_real));
 
-
-
-
-
+    sem_post(shm_changed_semaphore); // activate semaphore
 
     // Main loop for trajectory processing
     for (casadi_uint i = 0; i < total_traj_len; i++)
     {
-        // Write data to shm:
-        write_to_shared_memory(shm_read_state_data, x_k_ndof, nx * sizeof(casadi_real));
-        write_to_shared_memory(shm_read_control_data, tau_full.data(), nq * sizeof(casadi_real));
-        write_to_shared_memory(shm_read_traj_data, controller.get_act_traj_data(), 7 * sizeof(casadi_real));
-
-        sem_post(shm_changed_semaphore); // activate semaphore
-
         timer_mpc_solver.tic();
         tau_full = controller.solveMPC(x_k_ndof);
         error_flag = controller.get_error_flag();
@@ -482,6 +481,13 @@ int main()
 
         // simulate the model
         controller.simulateModel(x_k_ndof, tau_full.data(), 1e-3);
+
+        // Write data to shm:
+        write_to_shared_memory(shm_read_state_data, x_k_ndof, nx * sizeof(casadi_real));
+        write_to_shared_memory(shm_read_control_data, tau_full.data(), nq * sizeof(casadi_real));
+        write_to_shared_memory(shm_read_traj_data, controller.get_act_traj_data(), 7 * sizeof(casadi_real));
+
+        sem_post(shm_changed_semaphore); // activate semaphore
 
         if (error_flag != ErrorFlag::NO_ERROR)
         {
