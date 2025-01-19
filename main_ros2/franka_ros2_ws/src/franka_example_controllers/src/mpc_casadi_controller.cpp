@@ -224,7 +224,6 @@ namespace franka_example_controllers
         }
 
         controller.setActiveMPC(MPCType::MPC8);
-        controller.switch_traj(1);
 
         return CallbackReturn::SUCCESS;
     }
