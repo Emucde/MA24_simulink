@@ -4,9 +4,29 @@
 CasadiController::CasadiController(const std::string &urdf_path, const std::string &tcp_frame_name, bool use_gravity)
     : robot_config(get_robot_config()),
       nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
-      n_x_indices(robot_config.n_x_indices),
+      n_indices(ConstIntVectorMap(robot_config.n_indices, nq_red)),
+      n_x_indices(ConstIntVectorMap(robot_config.n_x_indices, nx_red)),
       torque_mapper(urdf_path, tcp_frame_name, robot_config, use_gravity, true)
 {
+    // Read the trajectory data
+    traj_file = robot_config.traj_data_path;
+    all_traj_data = readTrajectoryData(traj_file);
+
+    int default_traj_select = 1;
+    traj_rows = all_traj_data[default_traj_select-1].rows();
+    traj_len = all_traj_data[default_traj_select-1].cols();
+    traj_data.resize(traj_rows, traj_len);
+    traj_data << all_traj_data[default_traj_select-1];
+
+    // Real length of the singular trajectory data without additional samples for last prediction horizon
+    traj_real_len = robot_config.traj_data_real_len; // transient trajectory length = 0
+
+    // Default: no transient trajectory
+    setTransientTrajParams(0.0, 0.0, 0.0);
+    transient_traj_cnt = 0;
+    transient_traj_len = 0;
+    traj_rows = 7; // Default value
+
     // Initialize MPC objects
     for (int i = 0; i < static_cast<int>(MPCType::COUNT); ++i)
     {
@@ -14,24 +34,14 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
         if (mpc != MPCType::INVALID)
         { // Ensures we are within valid enum range
             std::string mpcName = mpcToString(mpc);
-            casadi_mpcs.push_back(CasadiMPC(mpcName, robot_config)); // Initialize all MPCs
+            casadi_mpcs.push_back(CasadiMPC(mpcName, robot_config, &traj_data, traj_real_len)); // Initialize all MPCs
         }
     }
 
     setActiveMPC(MPCType::MPC8); // Set the default MPC
 
-    // Initialize the default transient trajectory parameters
-    // Default: no transient trajectory
-    setTransientTrajParams(0.0, 0.0, 0.0);
-    transient_traj_cnt = 0;
-    transient_traj_len = 0;
-    traj_rows = 7;
-
     // Initialize the previous torque
     tau_full_prev = Eigen::VectorXd::Zero(nq);
-
-    // Read the trajectory data
-    all_traj_data = readTrajectoryData(active_mpc->get_traj_file());
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -53,35 +63,17 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
 Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr)
 {
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
+    Eigen::Map<const Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
+    double x_k[nx_red];
 
-    // Copy the state to the MPC object
-    casadi_uint act_idx = 0;
-    active_mpc->set_x_k(x_k_ndof_ptr); // set x_k to the reference pose
-
-    // set next y_d reference pose
-    if (transient_traj_cnt < transient_traj_len)
+    // Convert nx to nx_red state
+    for (casadi_uint i = 0; i < nx_red; i++)
     {
-        for (casadi_uint j = 0; j < traj_data_per_horizon; j++)
-        {
-            act_idx = transient_traj_cnt + mpc_traj_indices[j];
-            if(act_idx > transient_traj_len-1)
-            {
-                act_idx = transient_traj_len-1;
-            }
-            memcpy(y_d_ptr + j * traj_rows,
-                   transient_traj_data.col(act_idx).data(),
-                   traj_rows * sizeof(double));
-        }
-        transient_traj_cnt++;
-    }
-    else
-    {
-        // read next trajectory block from file
-        active_mpc->read_trajectory_block();
+        x_k[i] = x_k_ndof[n_x_indices[i]];
     }
 
     // Solve the MPC
-    int flag = active_mpc->solve(); // uses internal the pointer x_k_ptr
+    int flag = active_mpc->solve(x_k); // uses internal the pointer x_k_ptr
     if (flag)
     {
         std::cerr << "Error in Casadi function call." << std::endl;
@@ -92,7 +84,6 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
 
     // Calculate the full torque (Feedforward + PD control for fixed joints)
     Eigen::Map<Eigen::VectorXd> u_k(u_k_ptr, nq_red);
-    Eigen::Map<const Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
 
     tau_full = torque_mapper.calc_full_torque(u_k, x_k_ndof);
 
@@ -127,13 +118,69 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
     return tau_full;
 }
 
+void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_real *const x_k_ndof_ptr,
+                                       double T_start, double T_poly, double T_end)
+{
+    setTransientTrajParams(T_start, T_poly, T_end);
+    init_trajectory(traj_select, x_k_ndof_ptr); // Call the other init_trajectory with transient trajectory
+}
+
+void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_real *const x_k_ndof_ptr)
+{
+    double x_k[nx_red];
+
+    if (x_k_ndof_ptr != nullptr)
+    {
+        generate_transient_trajectory(x_k_ndof_ptr); // Generate transient trajectory
+    }
+    else
+    {
+        transient_traj_data = Eigen::MatrixXd::Zero(traj_rows, 0); // No transient trajectory
+    }
+
+    // Check if the trajectory selection is valid
+    if (traj_select < 1 || traj_select > all_traj_data.size())
+    {
+        std::cerr << "Invalid trajectory selection. Selecting Trajectory 1" << std::endl;
+        traj_select = 1;
+    }
+
+    // Concatenate trajectories
+    traj_data.resize(traj_rows, transient_traj_data.cols() + all_traj_data[traj_select - 1].cols());
+    traj_data << transient_traj_data, all_traj_data[traj_select - 1];
+    traj_len = traj_data.cols();
+    traj_real_len = robot_config.traj_data_real_len + transient_traj_data.cols();
+
+    std::cout << "Traj:" << traj_data.rows() << "x" << traj_data.cols() << std::endl;
+
+    // Convert nx to nx_red state
+    for (casadi_uint i = 0; i < nx_red; i++)
+    {
+        x_k[i] = x_k_ndof_ptr[n_x_indices[i]];
+    }
+
+    // send trajectory pointer to all MPCs
+    for (int i = 0; i < static_cast<int>(MPCType::COUNT); ++i)
+    {
+        if (static_cast<MPCType>(i) != MPCType::INVALID)
+        {
+            casadi_mpcs[i].switch_traj(&traj_data, x_k, traj_real_len);
+        }
+    }
+
+}
+
+void CasadiController::init_trajectory(casadi_uint traj_select)
+{
+    init_trajectory(traj_select, nullptr); // Call the other init_trajectory with no transient trajectory
+}
+
 // Method to generate a transient trajectory
 void CasadiController::generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr,
                                                      double T_start, double T_poly, double T_end)
 {
     setTransientTrajParams(T_start, T_poly, T_end);
     generate_transient_trajectory(x_k_ndof_ptr);
-    active_mpc->set_coldstart_init_guess(x_k_ndof_ptr);
 }
 
 void CasadiController::generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr)
@@ -143,7 +190,7 @@ void CasadiController::generate_transient_trajectory(const casadi_real *const x_
 
     // only map the first nq elements to get joint angles
     Eigen::Map<const Eigen::VectorXd> q_init_nq(x_k_ndof_ptr, nq);
-    Eigen::Map<const Eigen::VectorXd> q_target_nq(get_x_ref_nq().data(), nq);
+    Eigen::Map<const Eigen::VectorXd> q_target_nq(robot_config.q_0_ref, nq);
 
 #ifdef DEBUG
     std::cout << "q_init_nq: " << q_init_nq.transpose() << std::endl;
@@ -220,6 +267,17 @@ void CasadiController::simulateModel(casadi_real *const x_k_ndof_ptr, const casa
     Eigen::Map<Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
     Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
     torque_mapper.simulateModel(x_k_ndof, tau, dt);
+}
+
+// Method to switch the trajectory
+void CasadiController::switch_traj(casadi_uint traj_select, const casadi_real *const x_k_ndof)
+{
+    if (traj_select < 1 || traj_select > all_traj_data.size())
+    {
+        std::cerr << "Invalid trajectory selection. Selecting Trajectory 1" << std::endl;
+        traj_select = 1;
+    }
+    init_trajectory(traj_select, x_k_ndof);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -374,38 +432,42 @@ Eigen::MatrixXd CasadiController::generate_trajectory(double dt, const Eigen::Ve
     return traj_data;
 }
 
-
-std::vector<Eigen::MatrixXd> CasadiController::readTrajectoryData(const std::string& traj_file) {
+std::vector<Eigen::MatrixXd> CasadiController::readTrajectoryData(const std::string &traj_file)
+{
     std::ifstream file(traj_file, std::ios::binary);
-    if (!file) {
+    if (!file)
+    {
         throw std::runtime_error("Error opening file: " + traj_file);
     }
 
     // Read dimensions
     uint32_t rows, cols, traj_amount;
-    file.read(reinterpret_cast<char*>(&rows), sizeof(rows));
-    file.read(reinterpret_cast<char*>(&cols), sizeof(cols));
-    file.read(reinterpret_cast<char*>(&traj_amount), sizeof(traj_amount));
-    
-    #ifdef DEBUG
+    file.read(reinterpret_cast<char *>(&rows), sizeof(rows));
+    file.read(reinterpret_cast<char *>(&cols), sizeof(cols));
+    file.read(reinterpret_cast<char *>(&traj_amount), sizeof(traj_amount));
+
+#ifdef DEBUG
     std::cout << "Rows: " << rows << ", Cols: " << cols << ", Trajectory Amount: " << traj_amount << std::endl;
-    #endif
+#endif
 
     // Create a vector to hold all trajectories
     std::vector<Eigen::MatrixXd> trajectories(traj_amount, Eigen::MatrixXd(rows, cols));
 
     // Read the trajectory data
-    for (size_t i = 0; i < traj_amount; ++i) {
-        file.read(reinterpret_cast<char*>(trajectories[i].data()), rows * cols * sizeof(double));
-        if (!file) {
+    for (size_t i = 0; i < traj_amount; ++i)
+    {
+        file.read(reinterpret_cast<char *>(trajectories[i].data()), rows * cols * sizeof(double));
+        if (!file)
+        {
             throw std::runtime_error("Error reading trajectory data from file: " + traj_file);
         }
     }
 
-    #ifdef DEBUG
+#ifdef DEBUG
     // Debug: Print first trajectory as an example
-    std::cout << "First trajectory:\n" << trajectories[0] << std::endl;
-    #endif
+    std::cout << "First trajectory:\n"
+              << trajectories[0] << std::endl;
+#endif
 
     return trajectories;
 }

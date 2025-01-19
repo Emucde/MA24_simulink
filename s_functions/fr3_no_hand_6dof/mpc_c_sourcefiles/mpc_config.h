@@ -189,11 +189,7 @@ typedef struct {
 typedef struct {
     const casadi_real dt;
     const casadi_uint kinematic_mpc;
-    const char* x0_init_path;
-    const char* init_guess_path;
-    const char* traj_data_path;
     const casadi_uint traj_data_per_horizon;
-    const casadi_uint traj_data_real_len;
     const casadi_uint* traj_indices;
     casadi_uint y_d_len;
     casadi_uint init_guess_len;

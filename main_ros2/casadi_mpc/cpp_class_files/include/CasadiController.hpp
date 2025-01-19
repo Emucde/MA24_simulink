@@ -24,6 +24,7 @@ private:
     CasadiMPC *active_mpc;                       // Active MPC object
     mpc_config_t *active_mpc_config;             // Active MPC configuration
     const mpc_input_config_t *active_mpc_input_config; // Active MPC input configuration
+    std::string traj_file;                       // Path to trajectory data file
 
 public:
     const casadi_uint nq;     // Number of degrees of freedom
@@ -32,7 +33,8 @@ public:
     const casadi_uint nx_red; // Number of reduced degrees of freedom
 
 private:
-    const casadi_uint *n_x_indices;
+    const Eigen::VectorXi n_indices;
+    const Eigen::VectorXi n_x_indices;
     FullSystemTorqueMapper torque_mapper; // Torque mapper
     casadi_real *x_k_ptr;                 // initial state address at the begin of the prediction horizon
     casadi_real *u_k_ptr;                 // optimal control address
@@ -46,10 +48,10 @@ private:
     casadi_uint transient_traj_cnt;
     Eigen::MatrixXd transient_traj_data;
     casadi_uint transient_traj_len;       // number of columns of the transient trajectory data
-    Eigen::MatrixXd singularity_traj_data;
-    casadi_uint singularity_traj_len;     // number of columns of the singularity trajectory data
     std::vector<Eigen::MatrixXd> all_traj_data;
-    Eigen::MatrixXd current_traj_data;
+    Eigen::MatrixXd traj_data;
+    casadi_uint traj_len;
+    casadi_uint traj_real_len; // number of columns of the singular trajectory data without additional samples for last prediction horizon
     Eigen::VectorXd tau_full_prev;
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
     double tau_max_jump = 5.0;
@@ -66,6 +68,12 @@ public:
                                        double T_start, double T_poly, double T_end);
     void generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr);
 
+    // Initialize trajectory data
+    void init_trajectory(casadi_uint traj_select, const casadi_real *const x_k_ndof_ptr,
+                                       double T_start, double T_poly, double T_end);
+    void init_trajectory(casadi_uint traj_select, const casadi_real *const x_k_ndof_ptr);
+    void init_trajectory(casadi_uint traj_select);
+
     // Method to simulate the robot model
     void simulateModel(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
 
@@ -79,10 +87,7 @@ public:
     }
 
     // Method to switch the trajectory
-    void switch_traj(casadi_uint traj_sel)
-    {
-        active_mpc->switch_traj(traj_sel);
-    }
+    void switch_traj(casadi_uint traj_select, const casadi_real *const x_k_ptr);
 
     // Method to get n_x_indices
     const casadi_uint *get_n_x_indices()
@@ -117,13 +122,7 @@ public:
     // Method to get the length of the trajectory data
     casadi_uint get_traj_data_len()
     {
-        return active_mpc->get_traj_data_len();
-    }
-
-    // Method to get x_ref_nq
-    const std::vector<casadi_real> &get_x_ref_nq()
-    {
-        return active_mpc->get_x_ref_nq();
+        return traj_real_len;
     }
 
     // Method to get transient trajectory data
@@ -154,6 +153,16 @@ public:
     void set_tau_max_jump(double tau_jump)
     {
         tau_max_jump = tau_jump;
+    }
+
+    const casadi_real *get_q_ref_nq()
+    {
+        return robot_config.q_0_ref;
+    }
+
+    const casadi_real* get_act_traj_data()
+    {
+        return active_mpc->get_act_traj_data();
     }
 
 private:

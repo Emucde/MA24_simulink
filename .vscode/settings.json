@@ -105,7 +105,8 @@
     "param_robot.h": "c",
     "dense": "cpp",
     "eigenvalues": "cpp",
-    "mpc13_param.h": "c"
+    "mpc13_param.h": "c",
+    "geometry": "cpp"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",

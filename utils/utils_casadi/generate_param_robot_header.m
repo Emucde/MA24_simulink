@@ -1,7 +1,8 @@
-function generate_param_robot_header(filepath, param_robot, func_name)
+function generate_param_robot_header(s_fun_path, param_robot, traj_settings, func_name)
 
     %% Generate a C header file with the parameters of the robot model
     
+    filepath = [s_fun_path, '/mpc_c_sourcefiles/'];
     func_name_upper = upper(func_name);
 
     h_file = [filepath, func_name, '.h'];
@@ -34,6 +35,13 @@ function generate_param_robot_header(filepath, param_robot, func_name)
 
     % Include necessary headers
     fprintf(fid_h, '#include "casadi_types.h"\n\n');
+
+    % Add path to init_guess and trajectory
+    param_MPC_traj_data_bin_file = fullfile(pwd, [s_fun_path, '/trajectory_data/param_traj_data.bin']);
+    fprintf(fid_h, '#define TRAJ_DATA_PATH "%s"\n', param_MPC_traj_data_bin_file);
+
+    % define real length of trajectory
+    fprintf(fid_h, '#define TRAJ_DATA_REAL_LEN %d\n', traj_settings.N_data_real);
 
     field_names = fieldnames(param_robot);
     for i = 1:length(field_names)
@@ -95,6 +103,8 @@ function generate_param_robot_header(filepath, param_robot, func_name)
     fprintf(fid_h, '    const casadi_real* torque_limit_upper;\n');
     fprintf(fid_h, '    const casadi_real* torque_limit_lower;\n');
     fprintf(fid_h, '    const casadi_real* sugihara_limb_vector;\n');
+    fprintf(fid_h, '    const char* traj_data_path;\n');
+    fprintf(fid_h, '    const casadi_uint traj_data_real_len;\n');
     fprintf(fid_h, '} %s_t;\n\n', structName);
 
     % declare function that returns a robot_config_t struct
@@ -130,6 +140,8 @@ function generate_param_robot_header(filepath, param_robot, func_name)
     fprintf(fid_c, '       .torque_limit_upper = %s_TORQUE_LIMIT_UPPER,\n', func_name_upper);
     fprintf(fid_c, '       .torque_limit_lower = %s_TORQUE_LIMIT_LOWER,\n', func_name_upper);
     fprintf(fid_c, '       .sugihara_limb_vector = %s_SUGIHARA_LIMB_VECTOR,\n', func_name_upper);
+    fprintf(fid_c, '       .traj_data_path = TRAJ_DATA_PATH,\n');
+    fprintf(fid_c, '       .traj_data_real_len = TRAJ_DATA_REAL_LEN, // Real length of trajectory data (without last prediction horizon)\n');
     fprintf(fid_c, '   };\n');
     fprintf(fid_c, '   return Config;\n');
     fprintf(fid_c, '}\n\n');

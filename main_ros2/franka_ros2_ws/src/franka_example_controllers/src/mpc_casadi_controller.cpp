@@ -322,11 +322,9 @@ namespace franka_example_controllers
             state[i] = state_interfaces_[i].get_value();
         }
 
-        controller.generate_transient_trajectory(state, 0.0, 4.0, 5.0);
-        casadi_uint transient_traj_len = controller.get_transient_traj_len();
-        const casadi_uint traj_data_real_len = controller.get_traj_data_len();
+        controller.init_trajectory(traj_select, state, 0.0, 4.0, 5.0);
+        casadi_uint total_traj_len = controller.get_traj_data_len();
 
-        casadi_uint total_traj_len = traj_data_real_len + transient_traj_len;
         write_to_shared_memory(shm_read_traj_length, &total_traj_len, sizeof(casadi_uint), get_node()->get_logger());
 
         tau_full_future = std::async(std::launch::async, [this, state]()
@@ -379,7 +377,7 @@ namespace franka_example_controllers
     void ModelPredictiveControllerCasadi::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
                                                       std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response)
     {
-        int8_t traj_select = request->traj_select;
+        traj_select = request->traj_select; // it is later used at start_mpc() in init_trajectory
 
         shm_flags flags = {
             0, // start

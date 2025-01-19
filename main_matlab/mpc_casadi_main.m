@@ -25,8 +25,8 @@ plot_null_simu                  = false; % plot system simulation for x0 = 0, u0
 convert_maple_to_casadi         = false; % convert maple functions into casadi functions
 fullsimu                        = false; % make full mpc simulation and plot results
 traj_select_mpc                 = 1; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
-create_init_guess_for_all_traj  = true; % create init guess for all trajectories
-compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
+create_init_guess_for_all_traj  = ~true; % create init guess for all trajectories
+compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
 compile_all_mpc_sfunctions      = ~false;
 generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
@@ -432,7 +432,7 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         
         fprintf(['mpc_casadi_main.m: Creating local headers for C: \n\nOutput folder for headers: ', mpc_c_sourcefile_path, '\n\n']);
         calc_udp_cfun_addresses(f_opt, f_opt_input_cell, f_opt_output_cell, mpc_c_sourcefile_path);
-        generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC_settings, traj_settings, f_opt_input_cell, f_opt_output_cell, casadi_func_name, mpc_c_sourcefile_path, s_fun_path)
+        generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC_settings, f_opt_input_cell, f_opt_output_cell, casadi_func_name, mpc_c_sourcefile_path, s_fun_path)
         fprintf('--------------------------------------------------------------------\n\n');
     end
 
@@ -457,7 +457,7 @@ if(generate_realtime_udp_c_fun)
     casadi_opt_problem_paths = ['./utils/utils_casadi/casadi_mpc_definitions/'];
 
     fprintf(['mpc_casadi_main.m: Creating global headers for C: \n\nOutput folder for headers: ', mpc_c_sourcefile_path, '\n\n']);
-    generate_param_robot_header(mpc_c_sourcefile_path, param_robot, 'param_robot');
+    generate_param_robot_header(s_fun_path, param_robot, traj_settings, 'param_robot');
     generate_casadi_types([mpc_c_sourcefile_path, 'casadi_types.h']);
     generate_mpc_config_typedef([mpc_c_sourcefile_path, 'mpc_config.h'], 'mpc_config');
     fprintf('--------------------------------------------------------------------\n\n');

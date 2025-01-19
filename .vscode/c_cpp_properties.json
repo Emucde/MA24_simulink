@@ -7,7 +7,9 @@
       },
       "name": "linux-gcc-x64",
       "includePath": [
-        "${workspaceFolder}/**"
+        "${workspaceFolder}/**",
+        "${env:eigen_path}/**",
+        "${env:_colcon_cd_root}/include/**"
       ],
       "defines": [
         "_POSIX_C_SOURCE=199309L"

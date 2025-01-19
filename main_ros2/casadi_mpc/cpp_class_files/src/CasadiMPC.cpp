@@ -4,6 +4,7 @@
 #include <fstream>
 #include <vector>
 #include <memory> // for std::make_unique
+#include "eigen_templates.hpp"
 
 // #define DEBUG 1
 
@@ -15,7 +16,9 @@ mpc_config_t const* invalid_config(const std::string &mpc_name)
 
 // Constructor implementation
 CasadiMPC::CasadiMPC(const std::string &mpc_name,
-                     robot_config_t &robot_config) : mpc_name(mpc_name),
+                     robot_config_t &robot_config,
+                     const Eigen::MatrixXd* traj_data,
+                     const casadi_uint traj_data_real_len) : mpc_name(mpc_name),
                                                      mpc_config(mpc_name == "MPC01" ? get_MPC01_config() : mpc_name == "MPC6" ? get_MPC6_config()
                                                                                                        : mpc_name == "MPC7"   ? get_MPC7_config()
                                                                                                        : mpc_name == "MPC8"   ? get_MPC8_config()
@@ -27,6 +30,8 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
                                                                                                        : mpc_name == "MPC14"  ? get_MPC14_config()
                                                                                                                               : invalid_config(mpc_name)),
                                                      robot_config(robot_config),
+                                                     traj_data(traj_data),
+                                                     traj_data_real_len(traj_data_real_len),
                                                      is_kinematic_mpc(mpc_config->kinematic_mpc == 1),
                                                      nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
                                                      casadi_fun(mpc_config->casadi_fun),
@@ -41,18 +46,12 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
                                                      x_prev(w + mpc_config->input_config.x_prev_addr),
                                                      u_prev(w + mpc_config->input_config.u_prev_addr),
                                                      param_weight(w + mpc_config->in_param_weight_addr),
-                                                     traj_data_real_len(mpc_config->traj_data_real_len),
-                                                     mpc_traj_indices(mpc_config->traj_indices),
                                                      horizon_len(mpc_config->traj_data_per_horizon),
+                                                     mpc_traj_indices(ConstIntVectorMap(mpc_config->traj_indices, horizon_len)),
                                                      init_guess_len(mpc_config->init_guess_len),
                                                      x_prev_len(mpc_config->input_config.x_prev_len),
                                                      u_prev_len(mpc_config->input_config.u_prev_len),
-                                                     traj_file(mpc_config->traj_data_path),
                                                      traj_data_per_horizon(mpc_config->traj_data_per_horizon),
-                                                     n_indices(robot_config.n_indices),
-                                                     n_x_indices(robot_config.n_x_indices),
-                                                     n_indices_fixed(robot_config.n_indices_fixed),
-                                                     n_x_indices_fixed(robot_config.n_x_indices_fixed),
                                                      traj_count(0), traj_select(1),
                                                      mem(mpc_config->mem), dt(mpc_config->dt)
 {
@@ -74,34 +73,21 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
         res[i] = w + mpc_config->res_indices[i]; // Use each index from res_indices
     }
 
-    // read first initial guess from file
-    load_initial_guess(mpc_config->init_guess_path, in_init_guess);
-
-    // read first x0 from file
-    x_ref_nq.resize(nx);
-    read_x0_init(mpc_config->x0_init_path, x_ref_nq.data());
-
-    // Copy the initial state
-    for (casadi_uint i = 0; i < nx_red; i++)
+    // Check trajectory pointer
+    if (traj_data == nullptr)
     {
-        x_k[i] = x_ref_nq[n_x_indices[i]];
+        throw std::runtime_error("Trajectory data is not provided.");
     }
-
-
-    // read first trajectory data from file
-    traj_data_startbyte = get_traj_dims();
-    read_trajectory_block(); // writes it into y_d
-
-    // set x_prev to x_k
-    set_row_vector(mpc_config->input_config.x_prev_addr, x_k, nx_red, mpc_config->input_config.x_prev_len);
+    traj_rows = traj_data->rows();
+    traj_cols = traj_data->cols();
 
     // check trajectory lengths
-    if (traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1] > traj_data_total_len)
+    if (traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1] > traj_cols)
     {
         throw std::runtime_error("Trajectory data length + mpc_traj_indices[end] = " +
                                  std::to_string(traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1]) +
                                  " exceeds total length = " +
-                                 std::to_string(traj_data_total_len) +
+                                 std::to_string(traj_cols) +
                                  ". Please generate new.");
     }
 
@@ -135,8 +121,12 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
 ///////////////////////////////////////////////////////////////////////////////////////
 
 // Method to run the MPC
-int CasadiMPC::solve()
+int CasadiMPC::solve(casadi_real *x_k_in)
 {
+    // Copy the state to the MPC object
+
+    set_references(x_k_in);
+
     #ifdef DEBUG
     std::cout << "int CasadiMPC::solve()\nw:\n";
     for (int i = 0; i < mpc_config->u_opt_addr; i++)
@@ -181,11 +171,12 @@ int CasadiMPC::solve_planner()
     // Read the next trajectory block
     if (!flag)
     {
-        read_trajectory_block();
+        // read_trajectory_block();
         memcpy(in_init_guess, out_init_guess, init_guess_len * sizeof(casadi_real));
         
         // mpc planner: use x_k+1 as x_k for next iteration - not the measurement!
-        memcpy(x_k, w + mpc_config->output_config.x_out_addr + nx_red, nx_red * sizeof(casadi_real));
+        set_references(w + mpc_config->output_config.x_out_addr + nx_red);
+        // memcpy(x_k, w + mpc_config->output_config.x_out_addr + nx_red, nx_red * sizeof(casadi_real));
 #ifdef DEBUG
         if (traj_count % 100 == 0)
         {
@@ -208,78 +199,34 @@ int CasadiMPC::solve_planner()
 }
 
 // Method for switching the trajectory
-void CasadiMPC::switch_traj(casadi_uint traj_sel)
+void CasadiMPC::switch_traj(Eigen::MatrixXd* traj_data_new, const casadi_real *const x_k_ptr, casadi_uint traj_data_real_len_new)
 {
-    if (traj_sel > traj_amount || traj_sel < 1)
+    traj_data = traj_data_new;
+    traj_rows = traj_data->rows();
+    traj_cols = traj_data->cols();
+
+    traj_data_real_len = traj_data_real_len_new;
+
+    if (traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1] > traj_cols)
     {
-        throw std::runtime_error("Trajectory selection \"" + std::to_string(traj_sel) + "\" is out of bounds. Please select a value between 1 and " + std::to_string(traj_amount));
+        throw std::runtime_error("Trajectory data length + mpc_traj_indices[end] = " +
+                                 std::to_string(traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1]) +
+                                 " exceeds total length = " +
+                                 std::to_string(traj_cols) +
+                                 ". Please generate new.");
     }
-    traj_select = traj_sel;
+
+    set_coldstart_init_guess(x_k_ptr);
+
     traj_count = 0;
-    
-    read_x0_init(mpc_config->x0_init_path, x_ref_nq.data()); // this values are overwritten if transient trajectory is used.
-
-    // Copy the initial state
-    for (casadi_uint i = 0; i < nx_red; i++)
-    {
-        x_k[i] = x_ref_nq[n_x_indices[i]];
-    }
-
-    // read first trajectory data from file
-    read_trajectory_block();
 }
 
-void CasadiMPC::read_trajectory_block()
+// Method to set the cold start initial guess (assuming x_k was already set)
+void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_k_ptr)
 {
-    std::ifstream file(traj_file, std::ios::binary);
+    set_x_k(x_k_ptr);
 
-    if (!file)
-    {
-        std::cerr << "Error opening file: " << traj_file << std::endl;
-        return;
-    }
-
-    // Set the file pointer to the starting position
-    file.seekg(traj_data_startbyte);
-
-    for (casadi_uint j = 0; j < traj_data_per_horizon; j++)
-    {
-        // Move the read position according to mpc_traj_indices[j]
-        file.seekg((traj_count + mpc_traj_indices[j]) * traj_rows * sizeof(double), std::ios::cur);
-
-        // Read data into array y_d
-        file.read(reinterpret_cast<char *>(y_d + j * traj_rows), traj_rows * sizeof(double));
-
-        // Check for read errors
-        if (!file)
-        {
-            std::cerr << "Error reading trajectory data at column: " << j << std::endl;
-            return;
-        }
-
-        // Return to the starting position for next column
-        file.seekg(traj_data_startbyte, std::ios::beg);
-    }
-    if (traj_count < traj_data_real_len - 1)
-    {
-        traj_count++;
-    }
-#ifdef DEBUG
-    for (int i = 0; i < traj_data_per_horizon * traj_rows; i++)
-    {
-        std::cout << y_d[i] << " ";
-    }
-    std::cout << std::endl;
-    std::cout << std::endl;
-#endif
-    file.close();
-}
-
-void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_nq)
-{
     memset(in_init_guess, 0, init_guess_len * sizeof(double));
-
-    set_x_k(x_nq); // set x_k to x_nq(n_indices)
 
     // set all x input values to the current state
     set_row_vector(mpc_config->input_config.x_addr, x_k, nx_red, mpc_config->input_config.x_len);
@@ -290,14 +237,18 @@ void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_nq)
 
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////// SETTER METHODS ////////////////////////////////////
+////////////////////////////// PUBLIC GETTER METHODS //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 
-void CasadiMPC::set_x0(casadi_real *x0_in)
-{
-    memcpy(x_k, x0_in, nx_red * sizeof(casadi_real));
-}
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////// PUBLIC SETTER METHODS ////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+
+
+
 
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -314,120 +265,19 @@ void CasadiMPC::set_x0(casadi_real *x0_in)
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 
-void CasadiMPC::read_file(std::ifstream &file, std::streampos data_start, casadi_real *data, int data_len)
-{
-    file.seekg(data_start);
-    if (!file.good())
-    {
-        throw std::runtime_error("Error seeking to data start position.");
-    }
 
-    file.read(reinterpret_cast<char *>(data), data_len * sizeof(casadi_real));
-    if (!file)
-    {
-        throw std::runtime_error("Error reading data from file.");
-    }
-}
 
-int CasadiMPC::load_initial_guess(const std::string &init_guess_path, casadi_real *init_guess_data)
-{
-    std::ifstream init_guess_file(init_guess_path, std::ios::binary);
-    if (!init_guess_file.is_open())
-    {
-        std::cerr << "Error opening init_guess_file" << std::endl;
-        return 1;
-    }
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////// PRIVATE GETTER METHODS /////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
 
-    unsigned int init_guess_rows, init_guess_cols;
-
-    // Read dimensions
-    init_guess_file.read(reinterpret_cast<char *>(&init_guess_rows), sizeof(init_guess_rows));
-    init_guess_file.read(reinterpret_cast<char *>(&init_guess_cols), sizeof(init_guess_cols));
-
-    if (!init_guess_file.good())
-    {
-        std::cerr << "Error reading dimensions from file" << std::endl;
-        return 1;
-    }
-
-#ifdef DEBUG
-    std::cout << "init_guess dimensions: " << init_guess_rows << " x " << init_guess_cols << std::endl;
-#endif
-
-    // Calculate the start byte for reading data
-    std::streampos init_guess_startbyte = init_guess_file.tellg() + static_cast<std::streamoff>(init_guess_rows * (traj_select - 1) * sizeof(casadi_real));
-
-    // Read the file data into the provided array
-    read_file(init_guess_file, init_guess_startbyte, init_guess_data, init_guess_rows);
-
-    return 0; // Return success
-}
-
-std::streamoff CasadiMPC::get_traj_dims()
-{
-    std::ifstream file(traj_file, std::ios::binary);
-    std::streamoff traj_data_startbyte = 0;
-
-    if (!file)
-    {
-        std::cerr << "Error opening file: " << traj_file << std::endl;
-        return 0;
-    }
-
-    // Read dimensions
-    file.read(reinterpret_cast<char *>(&traj_rows), sizeof(traj_rows));
-    file.read(reinterpret_cast<char *>(&traj_data_total_len), sizeof(traj_data_total_len));
-    file.read(reinterpret_cast<char *>(&traj_amount), sizeof(traj_amount));
-
-#ifdef DEBUG
-    std::cout << "Rows: " << traj_rows << ", Cols: " << traj_data_total_len << ", Trajectory Amount: " << traj_amount << std::endl;
-#endif
-
-    traj_data_startbyte = file.tellg() + static_cast<std::streamoff>(traj_rows * traj_data_total_len * (traj_select - 1) * sizeof(casadi_real));
-
-    // Close the file
-    file.close();
-    return traj_data_startbyte;
-}
-
-void CasadiMPC::read_x0_init(const std::string &x0_init_file, casadi_real *x0_arr)
-{
-    std::ifstream file(x0_init_file, std::ios::binary);
-
-    if (!file)
-    {
-        std::cerr << "Error opening file: " << x0_init_file << std::endl;
-        return;
-    }
-
-    // Read dimensions
-    casadi_uint rows, cols;
-    file.read(reinterpret_cast<char *>(&rows), sizeof(rows));
-    file.read(reinterpret_cast<char *>(&cols), sizeof(cols));
-
-#ifdef DEBUG
-    std::cout << "Rows: " << rows << ", Cols: " << cols << std::endl;
-#endif
-
-    // Calculate total number of elements
-    size_t total_elements = rows * sizeof(casadi_real);
-
-    // Skip to the correct column
-    file.seekg(sizeof(rows) + sizeof(cols) + (traj_select - 1) * total_elements, std::ios::beg);
-
-    // Read initial condition data directly into x0_arr
-    file.read(reinterpret_cast<char *>(x0_arr), total_elements);
-
-    // Check for read errors
-    if (!file)
-    {
-        std::cerr << "Error reading data from file." << std::endl;
-        return;
-    }
-
-    // Close the file
-    file.close();
-}
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////// PRIVATE SETTER METHODS /////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
 
 // Method for setting all rows of matrix_data (rows x cols) to the (rows x 1) vector row_data. (length = rows * cols)
 void CasadiMPC::set_row_vector(casadi_uint local_address, casadi_real *row_data, casadi_uint rows, casadi_uint length)
@@ -438,6 +288,27 @@ void CasadiMPC::set_row_vector(casadi_uint local_address, casadi_real *row_data,
     {
         memcpy(matrix_data + i * rows, row_data, rows * sizeof(casadi_real));
     }
+}
+
+void CasadiMPC::set_references(casadi_real *x_k_in)
+{
+    set_x_k(x_k_in); // set x_k to the reference pose
+    if (traj_count < traj_data_real_len - 1)
+    {
+        for (casadi_uint j = 0; j < traj_data_per_horizon; j++)
+        {
+            memcpy(y_d + j * traj_rows,
+                   traj_data->col(traj_count + mpc_traj_indices[j]).data(),
+                   traj_rows * sizeof(double));
+        }
+        traj_count++;
+    }
+
+    // // Create a map for y_d
+    // Eigen::Map<Eigen::MatrixXd> y_d_map(y_d, traj_rows, traj_data_per_horizon);
+
+    // // Use Eigen's column slicing
+    // y_d_map = traj_data.cols(mpc_traj_indices);
 }
 
 // Destructor to clean up allocated memory

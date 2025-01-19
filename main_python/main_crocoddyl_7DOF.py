@@ -382,12 +382,12 @@ try:
 
                         run_flag = True
                         print()
-                        print("MPC started by Simulink")
+                        print("MPC started (control mode).")
 
                 if run_flag is True:
                     if stop == 1:
                         print()
-                        print("MPC stopped by Simulink")
+                        print("MPC stopped (control mode).")
                         data_from_python[:] = np.zeros(n_dof)
                         data_from_simulink_stop[:] = 0
                         run_flag = False
@@ -400,29 +400,30 @@ try:
 
                 if reset == 1:
                     print()
-                    print("MPC reset by Simulink")
+                    print("MPC reset (control mode).")
                     data_from_python[:] = np.zeros(n_dof)
                     data_from_simulink_reset[:] = 0
                     run_flag = False
                     start_solving = False
 
-                    if plot_sol:
-                        def plot_sol_act():
-                            subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
-                            plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
-                        process = multiprocessing.Process(target=plot_sol_act)
-                        process.start()
+                    if i > 0:
+                        if plot_sol:
+                            def plot_sol_act():
+                                subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
+                                plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
+                            process = multiprocessing.Process(target=plot_sol_act)
+                            process.daemon = True # this will kill the process if the main process is killed
+                            process.start()
 
-                    if visualize_sol:
-                        def vis_sol_act():
-                            q_sol = xs[:, :n_dof]
-                            visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
-                                            q_sol, transient_traj, Ts,
-                                            frame_skip=1, create_html = True, html_name = visualize_file_path)
-                        process = multiprocessing.Process(target=vis_sol_act)
-                        process.start()
-                    
-                    freq_per_Ta_step = np.zeros(N_traj)
+                        if visualize_sol:
+                            def vis_sol_act():
+                                q_sol = xs[:, :n_dof]
+                                visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
+                                                    q_sol, transient_traj, Ts,
+                                                    frame_skip=1, create_html = True, html_name = visualize_file_path)
+                            process = multiprocessing.Process(target=vis_sol_act)
+                            process.daemon = True # this will kill the process if the main process is killed
+                            process.start()
                     i = 0
             else:
                 # in this mode, all data (states and torques) are read out of the shared memory. This mode is only
@@ -440,31 +441,34 @@ try:
                 if start == 1:
                     data_from_simulink_start[:] = 0
                     run_flag = True
+                    print('Start MPC (data logging mode).')
 
                 if reset == 1:
                     data_from_simulink_reset[:] = 0
                     run_flag = False
+                    print('Reset MPC (data logging mode).')
+                    if i > 0:
+                        if plot_sol:
+                            def plot_sol_act():
+                                subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
+                                plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
+                            process = multiprocessing.Process(target=plot_sol_act)
+                            process.start()
+
+                        if visualize_sol:
+                            def vis_sol_act():
+                                q_sol = xs[:, :n_dof]
+                                visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
+                                                    q_sol, transient_traj, Ts,
+                                                    frame_skip=1, create_html = True, html_name = visualize_file_path)
+                            process = multiprocessing.Process(target=vis_sol_act)
+                            process.start()
                     i = 0
-
-                    if plot_sol:
-                        # def plot_sol_act():
-                        subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
-                        plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
-                        # process = multiprocessing.Process(target=plot_sol_act)
-                        # process.start()
-
-                    if visualize_sol:
-                        # def vis_sol_act():
-                        q_sol = xs[:, :n_dof]
-                        visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
-                                            q_sol, transient_traj, Ts,
-                                            frame_skip=1, create_html = True, html_name = visualize_file_path)
-                        # process = multiprocessing.Process(target=vis_sol_act)
-                        # process.start()
 
                 if stop == 1:
                     data_from_simulink_stop[:] = 0
                     run_flag = False
+                    print('Stop MPC (data logging mode).')
 
                 if i == 0:
                     # reset data
@@ -725,6 +729,7 @@ if visualize_sol is True:
                         q_sol, transient_traj, Ts,
                         frame_skip=1, create_html = True, html_name = visualize_file_path)
     process = multiprocessing.Process(target=vis_sol_fin)
+    process.daemon = True # this will kill the process if the main process is killed
     process.start()
 
 if plot_sol == True:# and err_state == False:
@@ -732,6 +737,7 @@ if plot_sol == True:# and err_state == False:
         subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
         plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
     process = multiprocessing.Process(target=plot_sol_fin)
+    process.daemon = True # this will kill the process if the main process is killed
     process.start()
 
 # print('Max error:       y - y_d = {:.2e}'.format(np.max(np.abs(e))), 'm')

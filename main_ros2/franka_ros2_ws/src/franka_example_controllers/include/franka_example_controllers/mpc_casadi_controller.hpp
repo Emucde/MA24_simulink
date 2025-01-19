@@ -99,6 +99,7 @@ namespace franka_example_controllers
         int shm_select_trajectory = 0;
         sem_t *shm_changed_semaphore = 0;
         bool mpc_started = false;
+        int8_t traj_select = 1; // default trajectory
         bool first_torque_read = false;
         const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
         const std::string tcp_frame_name = "fr3_link8_tcp";

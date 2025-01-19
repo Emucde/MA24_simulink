@@ -4,7 +4,6 @@
 #include <cstring> // for memcpy
 #include <chrono>  // for time measurement
 
-#include "include/pinocchio_utils.hpp"
 #include "include/FullSystemTorqueMapper.hpp"
 #include "include/CasadiMPC.hpp"
 #include "include/CasadiController.hpp"
@@ -330,6 +329,50 @@ private:
     }
 };
 
+casadi_real x_k_tst[12] = {0};
+
+void test_fun1(const casadi_real* x_k_ndof, const casadi_uint *n_x_indices_ptr)
+{
+    casadi_uint nx_red = 12;
+    
+    double x_k[nx_red];
+    for (casadi_uint i = 0; i < nx_red; i++)
+    {
+        x_k[i] = x_k_ndof[n_x_indices_ptr[i]];
+    }
+    //0.01s
+    memcpy(x_k_tst, x_k, nx_red*sizeof(casadi_real));
+}
+
+void test_fun2(const casadi_real* x_k_ndof, const Eigen::VectorXi n_x_indices_eig)
+{
+    casadi_uint nx_red = 12;
+    
+    // Eigen::Map<Eigen::VectorXd>(x_k, nx_red) = x_k_ndof_eig(n_x_indices_eig);
+
+    // double x_k[nx_red];
+    // Eigen::Map<Eigen::VectorXd>(x_k, nx_red) = Eigen::Map<const Eigen::VectorXd>(x_k_ndof, nx)(n_x_indices_eig);
+    // memcpy(x_k_tst, x_k, nx_red*sizeof(casadi_real));
+    // 0.016s
+
+    // Eigen::VectorXd x_k_ndof_tst = Eigen::Map<const Eigen::VectorXd>(x_k_ndof, nx);
+    // memcpy(x_k_tst, x_k_ndof_tst(n_x_indices_eig).eval().data(), nx_red*sizeof(casadi_real));
+    // 0.02s
+
+    // Eigen::VectorXd x_k_ndof_tst = Eigen::Map<const Eigen::VectorXd>(x_k_ndof, nx);
+    // Eigen::VectorXd selected_indices = x_k_ndof_tst(n_x_indices_eig);
+    // memcpy(x_k_tst, selected_indices.data(), nx_red*sizeof(casadi_real));
+    // 0.022s
+
+    double x_k[nx_red];
+    for (casadi_uint i = 0; i < nx_red; i++)
+    {
+        x_k[i] = x_k_ndof[n_x_indices_eig[i]];
+    }
+    memcpy(x_k_tst, x_k, nx_red*sizeof(casadi_real));
+    //0.01s
+}
+
 #define TRAJ_SELECT 1
 int main()
 {
@@ -339,8 +382,7 @@ int main()
     const std::string tcp_frame_name = "fr3_link8_tcp";
 
     CasadiController controller(urdf_filename, tcp_frame_name, use_gravity);
-    controller.setActiveMPC(MPCType::MPC01);
-    controller.switch_traj(TRAJ_SELECT);
+    controller.setActiveMPC(MPCType::MPC8);
 
     const casadi_uint nq = controller.nq;
     const casadi_uint nx = controller.nx;
@@ -349,16 +391,15 @@ int main()
     const casadi_uint *n_indices_ptr = controller.get_n_indices();
     const casadi_uint *n_x_indices_ptr = controller.get_n_x_indices();
     const casadi_uint traj_data_real_len = controller.get_traj_data_len();
-    const std::vector<casadi_real> x_ref_nq_vec = controller.get_x_ref_nq();
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
 
-    casadi_real *x_k = controller.get_x_k();
     casadi_real x_k_ndof[nx] = {0};
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
 
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
+    q_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (controller.get_q_ref_nq(), nq);
+
     Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
-    Eigen::Map<Eigen::VectorXd> x_k_eig(x_k, nx_red);
 
     Eigen::VectorXi n_indices_eig = ConstIntVectorMap(n_indices_ptr, nq_red);
     Eigen::VectorXi n_x_indices_eig = ConstIntVectorMap(n_x_indices_ptr, nx_red);
@@ -369,15 +410,6 @@ int main()
     TicToc timer_mpc_solver;
     TicToc timer_total;
 
-    x_k_ndof_eig(n_x_indices_eig) = x_k_eig;
-
-    // robot_config_t robot_config = get_robot_config();
-    // CasadiMPC mpc_test = CasadiMPC("MPC8", robot_config);
-    // double x_k_test[6] = {0,-7.853982e-01,-2.356194e+00,0,1.570796e+00,7.853982e-01};
-    // mpc_test.solve(x_k_test);
-    // double* u_opt_test = mpc_test.get_optimal_control();
-    // std::cout << "Optimal control: " << Eigen::Map<Eigen::VectorXd>(u_opt_test, nq_red).transpose() << std::endl;
-    // std::cout << "end" << std::endl;
 #ifdef PLOT_DATA
     std::ofstream x_k_ndof_file("x_k_ndof_data.txt");
     std::ofstream tau_full_file("tau_full_data.txt");
@@ -387,7 +419,8 @@ int main()
 
     q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
 
-    controller.generate_transient_trajectory(x_k_ndof, 0.0, 1.0, 2.0);
+    controller.init_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
+
     Eigen::MatrixXd trajectory = controller.get_transient_traj_data();
     casadi_uint transient_traj_len = controller.get_transient_traj_len();
 
@@ -420,7 +453,7 @@ int main()
         // Write data to shm:
         write_to_shared_memory(shm_read_state_data, x_k_ndof, nx * sizeof(casadi_real));
         write_to_shared_memory(shm_read_control_data, tau_full.data(), nq * sizeof(casadi_real));
-        // write_to_shared_memory(shm_read_traj_data, trajectory.data(), 7 * sizeof(casadi_real));
+        write_to_shared_memory(shm_read_traj_data, controller.get_act_traj_data(), 7 * sizeof(casadi_real));
 
         sem_post(shm_changed_semaphore); // activate semaphore
 

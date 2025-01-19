@@ -1,4 +1,4 @@
-function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_settings, casadi_fun_input_cell, casadi_fun_output_cell, func_name, output_dir, s_fun_path)
+function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_fun_input_cell, casadi_fun_output_cell, func_name, output_dir, s_fun_path)
     % Open the header file for writing
     param_weight_header_name = [func_name, '_param.h'];
 
@@ -25,23 +25,6 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, '#include "casadi_types.h"\n');
     fprintf(fid, '#include "mpc_config.h"\n');
     fprintf(fid, '#include "param_robot.h"\n\n');
-
-    % Add path to init_guess and trajectory
-    param_MPC_traj_data_bin_file = fullfile(pwd, [s_fun_path, '/trajectory_data/param_traj_data.bin']);
-    param_MPC_init_guess_bin_file = fullfile(pwd, [s_fun_path, '/initial_guess/param_', func_name,'_init_guess.bin']);
-    param_MPC_x0_init_bin_file = fullfile(pwd, [s_fun_path, '/trajectory_data/param_x0_init.bin']);
-
-    fprintf(fid, '#ifndef TRAJ_DATA_PATH\n');
-    fprintf(fid, '#define TRAJ_DATA_PATH "%s"\n', param_MPC_traj_data_bin_file);
-    fprintf(fid, '#endif\n\n');
-
-    fprintf(fid, '#ifndef X0_INIT_PATH\n');
-    fprintf(fid, '#define X0_INIT_PATH "%s"\n', param_MPC_x0_init_bin_file);
-    fprintf(fid, '#endif\n\n');
-
-    fprintf(fid, '#define %s_INIT_GUESS_PATH "%s"\n', func_name, param_MPC_init_guess_bin_file);
-
-    fprintf(fid, '\n');
 
     % Add MPC Param
 
@@ -74,9 +57,6 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
             error(['field data is nether numeric, integer or matrix: ', field_data])
         end
     end
-
-    % define real length of trajectory
-    fprintf(fid, '#define %s_TRAJ_DATA_REAL_LEN %d\n', func_name, traj_settings.N_data_real);
 
     fprintf(fid, '\n');
 
@@ -224,11 +204,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, traj_set
     fprintf(fid, ['   static mpc_config_t ', func_name, 'Config = {\n']);
     fprintf(fid, '       .dt = %s_DT, // Sampling time of the measured data, control frequency\n', func_name);
     fprintf(fid, '       .kinematic_mpc = %s_KINEMATIC_MPC, // Kinematic MPC (u_opt=q0_pp, x1, q1pp) or dynamic MPC (u_opt=tau0)\n', func_name);
-    fprintf(fid, '       .x0_init_path = X0_INIT_PATH, // Default path to init configuration of trajectories\n');
-    fprintf(fid, '       .init_guess_path = %s_INIT_GUESS_PATH, // Default path to trajectory dependent initial guess (warm start)\n', func_name);
-    fprintf(fid, '       .traj_data_path = TRAJ_DATA_PATH, // Default path to trajectory data\n');
     fprintf(fid, '       .traj_data_per_horizon = %s_TRAJ_DATA_PER_HORIZON, // Number of trajectory data points per horizon\n', func_name);
-    fprintf(fid, '       .traj_data_real_len = %s_TRAJ_DATA_REAL_LEN, // Real length of trajectory data (without last prediction horizon)\n', func_name);
     fprintf(fid, '       .traj_indices = %s_TRAJ_INDICES, // Local indices of the trajectory per horizon\n', func_name);
     if(strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_int_path_following') || strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_dev_path_following'))
         fprintf(fid, '       .y_d_len = %s_T_K_LEN, // Length of the desired time points (=desired path parameter) for path following\n', func_name);

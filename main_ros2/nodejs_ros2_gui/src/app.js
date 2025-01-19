@@ -138,7 +138,6 @@ async function main() {
                         }
                         else if (result.status.includes('Already in')) {
                             status = result.status + '. Homing done';
-                            init_ros();
                         }
                         else {
                             if (result.error instanceof Error) {
@@ -146,7 +145,6 @@ async function main() {
                             } else {
                                 console.log(result);
                             }
-                            init_ros();
                         }
                         break;
                     case 'open_brakes':

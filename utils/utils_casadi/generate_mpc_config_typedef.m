@@ -214,11 +214,7 @@ function generate_mpc_config_typedef(filename, structName)
     fprintf(fid, 'typedef struct {\n');
     fprintf(fid, '    const casadi_real dt;\n');
     fprintf(fid, '    const casadi_uint kinematic_mpc;\n');
-    fprintf(fid, '    const char* x0_init_path;\n');
-    fprintf(fid, '    const char* init_guess_path;\n');
-    fprintf(fid, '    const char* traj_data_path;\n');
     fprintf(fid, '    const casadi_uint traj_data_per_horizon;\n');
-    fprintf(fid, '    const casadi_uint traj_data_real_len;\n');
     fprintf(fid, '    const casadi_uint* traj_indices;\n');
     fprintf(fid, '    casadi_uint y_d_len;\n');
     fprintf(fid, '    casadi_uint init_guess_len;\n');
