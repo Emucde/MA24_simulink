@@ -18,37 +18,25 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
       n_indices(ConstIntVectorMap(robot_config.n_indices, nq_red)),
       n_indices_fixed(ConstIntVectorMap(robot_config.n_indices_fixed, nq_fixed)),
       q_ref_nq(ConstDoubleVectorMap(robot_config.q_0_ref, nq)),
-      q_ref_fixed(n_indices_fixed.size())
+      q_ref_fixed(Eigen::Map<const Eigen::VectorXd>(robot_config.q_0_ref, nq_fixed)(n_indices_fixed))
 {
     // Initialize the robot model and data using the URDF
     initRobot(urdf_filename, tcp_frame_name, robot_model_full, robot_data_full, use_gravity);
 
     // Initialize member matrices, biases, etc.
-    K_d = Eigen::MatrixXd::Zero(nq, nq);
-    D_d = Eigen::MatrixXd::Zero(nq, nq);
     tau_full = Eigen::VectorXd::Zero(nq);
     q_pp = Eigen::VectorXd::Zero(nq);
 
+    config.K_d = Eigen::MatrixXd::Zero(nq, nq); // Proportional gain matrix
     // Default configurations
-    config.K_d = Eigen::MatrixXd::Zero(nq, nq);
-    config.D_d = Eigen::MatrixXd::Zero(nq, nq);
-
-    // Set the diagonal elements of K_d
     config.K_d.diagonal() << 100, 200, 500, 200, 50, 50, 10;
-    D_d = (2 * K_d).array().sqrt();
+    config.D_d = (2 * config.K_d).array().sqrt();
+    config.K_d_fixed = config.K_d(n_indices_fixed, n_indices_fixed);
+    config.D_d_fixed = config.D_d(n_indices_fixed, n_indices_fixed);
+    config.q_ref_nq = q_ref_nq;
+    config.q_ref_nq_fixed = q_ref_fixed;
+
     config.torque_limit = 100.0;
-
-    K_d_fixed = Eigen::MatrixXd::Zero(nq_fixed, nq_fixed);
-    D_d_fixed = Eigen::MatrixXd::Zero(nq_fixed, nq_fixed);
-
-    for (int i = 0; i < n_indices_fixed.size(); ++i)
-    {
-        for (int j = 0; j < n_indices_fixed.size(); ++j)
-        {
-            K_d_fixed(i, j) = K_d(n_indices_fixed(i), n_indices_fixed(j));
-            D_d_fixed(i, j) = D_d(n_indices_fixed(i), n_indices_fixed(j));
-        }
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -102,12 +90,9 @@ Eigen::VectorXd FullSystemTorqueMapper::calculateNdofTorqueWithFeedforward(
 }
 
 Eigen::VectorXd FullSystemTorqueMapper::applyPDControl(const Eigen::VectorXd &q_fixed,
-                                                       const Eigen::VectorXd &q_p_fixed,
-                                                       const Eigen::VectorXd &q_0_ref_fixed,
-                                                       const Eigen::MatrixXd &K_d_fixed,
-                                                       const Eigen::MatrixXd &D_d_fixed)
+                                                       const Eigen::VectorXd &q_p_fixed)
 {
-    return -K_d_fixed * (q_fixed - q_0_ref_fixed) - D_d_fixed * q_p_fixed;
+    return -config.K_d_fixed * (q_fixed - config.q_ref_nq_fixed) - config.D_d_fixed * q_p_fixed;
 }
 
 Eigen::VectorXd FullSystemTorqueMapper::enforceTorqueLimits(const Eigen::VectorXd &tau)
@@ -121,7 +106,7 @@ Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &
     Eigen::VectorXd q = x_k_ndof.head(nq);
     Eigen::VectorXd q_p = x_k_ndof.segment(nq, nq);
     tau_full = calculateNdofTorqueWithFeedforward(u, q, q_p);
-    tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed), q_ref_fixed, K_d_fixed, D_d_fixed);
+    tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed));
 
     // tau_full = enforceTorqueLimits(tau_full); // Apply torque limits
     return tau_full;

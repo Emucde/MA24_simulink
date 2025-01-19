@@ -347,7 +347,7 @@ void test_fun1(const casadi_real* x_k_ndof, const casadi_uint *n_x_indices_ptr)
 void test_fun2(const casadi_real* x_k_ndof, const Eigen::VectorXi n_x_indices_eig)
 {
     casadi_uint nx_red = 12;
-    
+
     // Eigen::Map<Eigen::VectorXd>(x_k, nx_red) = x_k_ndof_eig(n_x_indices_eig);
 
     // double x_k[nx_red];
@@ -418,6 +418,7 @@ int main()
 #ifdef TRANSIENT_TRAJ_TESTS
 
     q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
+    q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.01);
 
     controller.init_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
 

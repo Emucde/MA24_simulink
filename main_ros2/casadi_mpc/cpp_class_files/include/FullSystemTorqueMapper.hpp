@@ -24,6 +24,10 @@ public:
     {
         Eigen::MatrixXd K_d; // Proportional gain matrix
         Eigen::MatrixXd D_d; // Derivative gain matrix
+        Eigen::MatrixXd K_d_fixed; // For fixed proportional gain
+        Eigen::MatrixXd D_d_fixed; // For fixed derivative gain
+        Eigen::VectorXd q_ref_nq; // Reference joint positions
+        Eigen::VectorXd q_ref_nq_fixed; // Reference joint positions for fixed PD control
         double torque_limit; // Max allowable torque
     };
 
@@ -40,10 +44,7 @@ public:
                                                        const Eigen::VectorXd &q_p);
 
     Eigen::VectorXd applyPDControl(const Eigen::VectorXd &q_fixed,
-                                   const Eigen::VectorXd &q_p_fixed,
-                                   const Eigen::VectorXd &q_0_ref_fixed,
-                                   const Eigen::MatrixXd &K_d_fixed,
-                                   const Eigen::MatrixXd &D_d_fixed);
+                                   const Eigen::VectorXd &q_p_fixed);
 
     Eigen::VectorXd calc_full_torque(const Eigen::VectorXd &u, const Eigen::VectorXd &x_k_ndof);
 
@@ -78,10 +79,6 @@ private:
     const Eigen::VectorXd q_ref_nq;
     const Eigen::VectorXd q_ref_fixed;
 
-    Eigen::MatrixXd K_d;       // Stiffness matrix
-    Eigen::MatrixXd D_d;       // Damping matrix
-    Eigen::MatrixXd K_d_fixed; // For fixed proportional gain
-    Eigen::MatrixXd D_d_fixed; // For fixed derivative gain
     Eigen::VectorXd tau_full;
     Eigen::VectorXd q_pp;
 

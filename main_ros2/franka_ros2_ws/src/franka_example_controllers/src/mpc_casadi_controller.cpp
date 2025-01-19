@@ -322,7 +322,9 @@ namespace franka_example_controllers
             state[i] = state_interfaces_[i].get_value();
         }
 
+        
         controller.init_trajectory(traj_select, state, 0.0, 4.0, 5.0);
+        // controller.switch_traj(traj_select, state); // eig nicht useful
         casadi_uint total_traj_len = controller.get_traj_data_len();
 
         write_to_shared_memory(shm_read_traj_length, &total_traj_len, sizeof(casadi_uint), get_node()->get_logger());
@@ -390,8 +392,6 @@ namespace franka_example_controllers
         write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
         write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
         write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
-
-        controller.switch_traj(traj_select);
 
         response->status = "trajectory " + std::to_string(traj_select) + " selected";
         mpc_started = false;
