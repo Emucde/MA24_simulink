@@ -2007,105 +2007,13 @@ async def send_message(message, port=8765):
     
     return False
 
-def get_reload_tab_script():
+def get_autoscale_script():
     return '''
-            const ws = new WebSocket('ws://localhost:8765');
-
-            ws.onmessage = function(event) {
-                console.log(event.data);
-                if (event.data === 'reload') {
-                    location.reload();
-                }
-            };
-        '''
-
-def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', plot_fig=True, matlab_import=True, reload_page=False, title_text=''):
-    subplot_number = len(subplot_data)
-    sig_labels = np.empty(24, dtype=object)
-
-    if matlab_import:
-        for i in range(0, subplot_number):
-            sig_label     = subplot_data[i][0][0][0][0]
-            if len(subplot_data[i][0]) > 1:
-                sig_labels[i] = sig_label[:-2]
-            else:
-                sig_labels[i] = sig_label
-            #row=1+np.mod(i,4), col=1+int(np.floor(i/4)
-    else:
-        for i in range(0, subplot_number):
-            sig_labels[i] = subplot_data[i]['title']
-
-    sig_labels_orig = sig_labels
-    sig_labels = sig_labels.reshape(6,4).T.flatten().tolist()
-    
-    # Create a Plotly subplot
-    fig = make_subplots(rows=4, cols=int(subplot_number/4), shared_xaxes=False, vertical_spacing=0.05, horizontal_spacing=0.035, subplot_titles=sig_labels)
-    
-    # Plot tdata
-    for i in range(0, subplot_number):
-        sig_title = sig_labels_orig[i]
-        signal_number = len(subplot_data[i]['sig_ydata'])
-        for j in range(0, signal_number):
-            if matlab_import:
-                sig_label     = subplot_data[i][0][j][0][0]
-                sig_xdata     = subplot_data[i][0][j][1][0]
-                sig_ydata     = subplot_data[i][0][j][2][0]
-                sig_linestyle = subplot_data[i][0][j][3][0]
-                sig_color     = 255*subplot_data[i][0][j][4][0]
-                sig_color     = f"rgb({','.join(map(str, sig_color))})"
-            else:
-                sig_label = subplot_data[i]['sig_labels'][j]
-                sig_xdata = subplot_data[i]['sig_xdata']
-                sig_ydata = subplot_data[i]['sig_ydata'][j]
-                sig_linestyle = subplot_data[i]['sig_linestyles'][j]
-                sig_color = subplot_data[i]['sig_colors'][j]
-
-            if sig_linestyle == '-':
-                line_style = dict(width=1, color=sig_color, dash='solid')
-            elif sig_linestyle == '--':
-                line_style = dict(width=1, color=sig_color, dash='dash')
-
-            act_row = 1+np.mod(i,4)
-            act_col = 1+int(np.floor(i/4))
-            fig.add_trace(go.Scatter(x=sig_xdata, y=sig_ydata, name=sig_label, line = line_style, hoverinfo = 'x+y+text', hovertext=sig_label, text=sig_title), row=act_row, col=act_col)
-            if act_row == 4:
-                fig.update_xaxes(title_text='t (s)', row=act_row, col=act_col)
-
-    # fig.update_layout(plot_bgcolor='#1e1e1e', paper_bgcolor='#1e1e1e', font=dict(color='#ffffff'), legend=dict(orientation='h'))
-    fig.update_layout(
-        plot_bgcolor='#101010',  # Set plot background color
-        paper_bgcolor='#1e1e1e',  # Set paper background color
-        font=dict(color='#ffffff'),  # Set font color
-        legend=dict(orientation='h', yanchor='middle', y=10, yref='container'),  # Set legend orientation
-        hovermode = 'closest',
-        margin=dict(l=10, r=10, t=50, b=70),
-        height=1080,
-        title=title_text,
-        title_x=0,
-        title_y=1,
-        # legend_indentation = 0,
-        # margin_pad=0,
-        # Gridline customization for all subplots
-        **{f'xaxis{i}': dict(gridwidth=1, gridcolor='#757575', linecolor='#757575', zerolinecolor='#757575', zerolinewidth=1) for i in range(1, subplot_number+1)},
-        **{f'yaxis{i}': dict(gridwidth=1, gridcolor='#757575', linecolor='#757575', zerolinecolor='#757575', zerolinewidth=1) for i in range(1, subplot_number+1)}
-    )
-
-    fig.update_layout(
-        **{f'xaxis{i}': dict(showticklabels=False) for i in range(1, subplot_number+1-6)}
-    )
-
-    fig.update_xaxes(matches='x', autorange=True)
-
-    if(plot_fig):
-        fig.show()
-
-    if(save_plot):
-        autoscale_code='''
         rec_time = 100; //ms
         prev_xrange_flag = false;
         function autoscale_function(){
             //console.log('run');
-            graphDiv = document.querySelector('.plotly-graph-div');
+            var graphDiv = document.querySelector('.plotly-graph-div');
             //console.log(graphDiv);
             if(graphDiv == null || graphDiv.on == undefined)
             {
@@ -2236,6 +2144,199 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
         setTimeout(autoscale_function, rec_time);
         '''
 
+def get_reload_tab_script():
+    return '''
+            const ws = new WebSocket('ws://localhost:8765');
+
+            ws.onmessage = function(event) {
+                console.log(event.data);
+                if (event.data === 'reload') {
+                    location.reload();
+                }
+            };
+        '''
+
+# returns the script for a custom download button in plotly
+def get_custom_download_button_script():
+    return '''
+    function downloadData(data, filename, type) {
+        let content;
+
+        if (type === 'text/csv') {
+            // Create a header row with the names of the traces
+            const namesRow = ['t (s)'].concat(data.map(trace => trace.name)).join(',') + '\\n';
+
+            // Create an array to hold the rows of data
+            const dataRows = [];
+
+            // Iterate over the x values (time values)
+            const maxLength = Math.max(...data.map(trace => trace.x.length)); // Get the maximum length of x arrays
+            
+            for (let i = 0; i < maxLength; i++) {
+                // Start with the x value for this row
+                const row = [];
+
+                // Get the x value (time)
+                const xValue = data[0].x[i] !== undefined ? data[0].x[i] : ''; // Only take from the first trace
+
+                row.push(xValue); // Add time value
+
+                // Iterate over each trace to get y values (with gap if x is not from the same trace)
+                data.forEach(trace => {
+                    const yValue = trace.y[i] !== undefined ? trace.y[i] : ''; // Handle undefined y value
+                    row.push(yValue);
+                });
+
+                // Join the row and push it to dataRows
+                dataRows.push(row.join(','));
+            }
+
+            // Combine namesRow and all dataRows to create content
+            content = namesRow + dataRows.join('\\n');
+        } else {
+            content = JSON.stringify(data);
+        }
+
+        var blob = new Blob([content], { type: type });
+        var url = window.URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename; // Ensure filename ends with .csv
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    const downloadBtn = document.createElement('div');
+    downloadBtn.className = 'modebar-group';
+    downloadBtn.innerHTML = `
+        <a rel="tooltip" class="modebar-btn" data-title="Download plot as CSV" data-toggle="false" data-gravity="n">
+            <svg viewBox="0 0 24 24" class="icon" height="1em" width="1em">
+                <path d="M12 15l4-4h-3V3h-2v8H8l4 4zm-8 3h16v2H4z"/>
+            </svg>
+        </a>
+    `;
+    downloadBtn.onclick = () => {
+        graphDiv = document.querySelector('.plotly-graph-div');
+        var plotData = graphDiv.data;
+        var exportData = plotData.map(trace => ({
+            x: trace.x,
+            y: trace.y,
+            name: trace.name
+        }));
+        const currentDate = new Date();
+        const year = currentDate.getFullYear();
+        const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = currentDate.getDate().toString().padStart(2, '0');
+        const hours = currentDate.getHours().toString().padStart(2, '0');
+        const minutes = currentDate.getMinutes().toString().padStart(2, '0');
+        const seconds = currentDate.getSeconds().toString().padStart(2, '0');
+
+        const filename = 'robot_plots_' + year + month + day + '_' + hours + minutes + seconds + '.csv';
+        downloadData(exportData, filename, 'text/csv');
+    };
+
+    var rec_time_btn = 100; //ms
+    function add_custom_button() {
+        var graphDiv = document.querySelector('.plotly-graph-div');
+        if(graphDiv == null || graphDiv.on == undefined)
+        {
+            setTimeout(add_custom_button, rec_time_btn);
+        }
+        else
+        {
+            // Append the button to the modebar container
+            const modebarContainer = document.querySelector('.modebar-container div');
+            modebarContainer.insertAdjacentElement('afterbegin', downloadBtn);
+        }
+    }
+    setTimeout(add_custom_button, rec_time_btn);
+    '''
+
+def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', plot_fig=True, matlab_import=True, reload_page=False, title_text=''):
+    subplot_number = len(subplot_data)
+    sig_labels = np.empty(24, dtype=object)
+
+    if matlab_import:
+        for i in range(0, subplot_number):
+            sig_label     = subplot_data[i][0][0][0][0]
+            if len(subplot_data[i][0]) > 1:
+                sig_labels[i] = sig_label[:-2]
+            else:
+                sig_labels[i] = sig_label
+            #row=1+np.mod(i,4), col=1+int(np.floor(i/4)
+    else:
+        for i in range(0, subplot_number):
+            sig_labels[i] = subplot_data[i]['title']
+
+    sig_labels_orig = sig_labels
+    sig_labels = sig_labels.reshape(6,4).T.flatten().tolist()
+    
+    # Create a Plotly subplot
+    fig = make_subplots(rows=4, cols=int(subplot_number/4), shared_xaxes=False, vertical_spacing=0.05, horizontal_spacing=0.035, subplot_titles=sig_labels)
+    
+    # Plot tdata
+    for i in range(0, subplot_number):
+        sig_title = sig_labels_orig[i]
+        signal_number = len(subplot_data[i]['sig_ydata'])
+        for j in range(0, signal_number):
+            if matlab_import:
+                sig_label     = subplot_data[i][0][j][0][0]
+                sig_xdata     = subplot_data[i][0][j][1][0]
+                sig_ydata     = subplot_data[i][0][j][2][0]
+                sig_linestyle = subplot_data[i][0][j][3][0]
+                sig_color     = 255*subplot_data[i][0][j][4][0]
+                sig_color     = f"rgb({','.join(map(str, sig_color))})"
+            else:
+                sig_label = subplot_data[i]['sig_labels'][j]
+                sig_xdata = subplot_data[i]['sig_xdata']
+                sig_ydata = subplot_data[i]['sig_ydata'][j]
+                sig_linestyle = subplot_data[i]['sig_linestyles'][j]
+                sig_color = subplot_data[i]['sig_colors'][j]
+
+            if sig_linestyle == '-':
+                line_style = dict(width=1, color=sig_color, dash='solid')
+            elif sig_linestyle == '--':
+                line_style = dict(width=1, color=sig_color, dash='dash')
+
+            act_row = 1+np.mod(i,4)
+            act_col = 1+int(np.floor(i/4))
+            fig.add_trace(go.Scatter(x=sig_xdata, y=sig_ydata, name=sig_label, line = line_style, hoverinfo = 'x+y+text', hovertext=sig_label, text=sig_title), row=act_row, col=act_col)
+            if act_row == 4:
+                fig.update_xaxes(title_text='t (s)', row=act_row, col=act_col)
+
+    # fig.update_layout(plot_bgcolor='#1e1e1e', paper_bgcolor='#1e1e1e', font=dict(color='#ffffff'), legend=dict(orientation='h'))
+    fig.update_layout(
+        plot_bgcolor='#101010',  # Set plot background color
+        paper_bgcolor='#1e1e1e',  # Set paper background color
+        font=dict(color='#ffffff'),  # Set font color
+        legend=dict(orientation='h', yanchor='middle', y=10, yref='container'),  # Set legend orientation
+        hovermode = 'closest',
+        margin=dict(l=10, r=10, t=50, b=70),
+        height=1080,
+        title=title_text,
+        title_x=0,
+        title_y=1,
+        # legend_indentation = 0,
+        # margin_pad=0,
+        # Gridline customization for all subplots
+        **{f'xaxis{i}': dict(gridwidth=1, gridcolor='#757575', linecolor='#757575', zerolinecolor='#757575', zerolinewidth=1) for i in range(1, subplot_number+1)},
+        **{f'yaxis{i}': dict(gridwidth=1, gridcolor='#757575', linecolor='#757575', zerolinecolor='#757575', zerolinewidth=1) for i in range(1, subplot_number+1)}
+    )
+
+    fig.update_layout(
+        **{f'xaxis{i}': dict(showticklabels=False) for i in range(1, subplot_number+1-6)}
+    )
+
+    fig.update_xaxes(matches='x', autorange=True)
+
+    if(plot_fig):
+        fig.show()
+
+    if(save_plot):
+        autoscale_code = get_autoscale_script()
+
+        custom_download_button_code = get_custom_download_button_script()
+
         reload_tab_code = get_reload_tab_script()
 
         # py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False, include_plotlyjs='cdn') # online use
@@ -2246,7 +2347,7 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
             first_script_tag = soup.find('script')
             if first_script_tag:
                 new_script = soup.new_tag('script')
-                new_script.string = "document.body.style.background='#1e1e1e';"+autoscale_code+reload_tab_code
+                new_script.string = "document.body.style.background='#1e1e1e';"+autoscale_code+custom_download_button_code+reload_tab_code
                 first_script_tag.insert_after(new_script)
                 with open(file_name, 'w', encoding='utf-8') as file:
                     file.write(str(soup))
