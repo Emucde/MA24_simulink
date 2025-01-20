@@ -106,7 +106,9 @@
     "dense": "cpp",
     "eigenvalues": "cpp",
     "mpc13_param.h": "c",
-    "geometry": "cpp"
+    "geometry": "cpp",
+    "charconv": "cpp",
+    "source_location": "cpp"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",

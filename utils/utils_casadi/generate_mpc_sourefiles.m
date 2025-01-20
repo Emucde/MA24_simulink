@@ -1,6 +1,7 @@
-function generate_mpc_sourefiles(casadi_fun, casadi_opt_problem_paths, current_mpc_mfile, mpc_c_sourcefile_path)
+function generate_mpc_sourefiles(casadi_fun, casadi_opt_problem_paths, current_mpc_mfile, s_fun_path, old_param_MPC, param_MPC)
     % Generate C code (compare "compile_casadi_sfunction.m")
     % Disable Mex Compile and create only .h and .c files for including in main.c with udp communication (gcc)
+    mpc_c_sourcefile_path = [s_fun_path, '/mpc_c_sourcefiles/'];
 
     casadi_fun_name = casadi_fun.name;
 
@@ -29,11 +30,22 @@ function generate_mpc_sourefiles(casadi_fun, casadi_opt_problem_paths, current_m
     current_checksum = cmdout(1:32); % always 32 hex chars
 
     index = contains(checksumData.FileName, current_mpc_mfile);
+
+    % compare old and new parameters
+    if ~isequal(param_MPC, old_param_MPC.(['param_', casadi_fun_name]))
+        param_changed = true;
+    else
+        param_changed = false;
+    end
     
-    if strcmp(checksumData.Checksum{index}, current_checksum) && exists_current_mpc_c_file
+    if strcmp(checksumData.Checksum{index}, current_checksum) && exists_current_mpc_c_file && ~param_changed
         fprintf('%s did not changed. Skipping creating casadi c sources.\n', current_mpc_mfile);
     else
-        fprintf('Checksum of %s changed. Regenerating header and source files.\n', current_mpc_mfile);
+        if(~param_changed)
+            fprintf('Checksum of %s changed. Regenerating header and source files.\n', current_mpc_mfile);
+        else
+            fprintf('Parameters of %s changed. Regenerating header and source files.\n', current_mpc_mfile);
+        end
         cg_options = struct;
         cg_options.with_header = true;
         cg = casadi.CodeGenerator(casadi_fun_name, cg_options);

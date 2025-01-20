@@ -10,8 +10,8 @@ extern "C" {
 
 #include "casadi_types.h"
 
-#define TRAJ_DATA_PATH "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.bin"
-#define X0_INIT_PATH "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/s_functions/fr3_no_hand_6dof/trajectory_data/param_x0_init.bin"
+#define TRAJ_DATA_PATH "/home/rslstudent/Students/Emanuel/MA24_simulink/s_functions/fr3_no_hand_6dof/trajectory_data/param_traj_data.bin"
+#define X0_INIT_PATH "/home/rslstudent/Students/Emanuel/MA24_simulink/s_functions/fr3_no_hand_6dof/trajectory_data/param_x0_init.bin"
 #define TRAJ_DATA_REAL_LEN 10000
 
 #define PARAM_ROBOT_N_DOF 7

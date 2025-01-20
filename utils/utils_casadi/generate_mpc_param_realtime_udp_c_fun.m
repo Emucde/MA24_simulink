@@ -1,8 +1,10 @@
 function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_fun_input_cell, casadi_fun_output_cell, func_name, output_dir, s_fun_path)
     % Open the header file for writing
     param_weight_header_name = [func_name, '_param.h'];
+    output_file = [output_dir, param_weight_header_name, '_tmp'];
+    output_file_fin = [output_dir, param_weight_header_name];
 
-    fid = fopen([output_dir, param_weight_header_name], 'w');
+    fid = fopen(output_file, 'w');
 
     % Check if the file opened successfully
     if fid == -1
@@ -92,11 +94,31 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
 
     fclose(fid);
 
+    % check whether file changed
+    if ~isequal(fileread(output_file), fileread(output_file_fin))
+        % Rename the temporary file to the final file
+        movefile(output_file, output_file_fin);
+        fprintf('Header file %s has been created successfully.\n', param_weight_header_name);
+    else
+        % Delete the temporary file
+        delete(output_file);
+        fprintf('Header file %s unchanged.\n', param_weight_header_name);
+    end
+
+
+
+
+
+
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Write the MPC config struct in the source file
 
     param_weight_source_name = [func_name, '_param.c'];
-    fid = fopen([output_dir, param_weight_source_name], 'w');
+
+    output_file = [output_dir, param_weight_source_name, '_tmp'];
+    output_file_fin = [output_dir, param_weight_source_name];
+
+    fid = fopen(output_file, 'w');
 
     % Check if the file opened successfully
     if fid == -1
@@ -293,5 +315,16 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     % Close the file
     fclose(fid);
 
-    fprintf('Header and source files %s and %s have been created successfully.\n', param_weight_header_name, param_weight_source_name);
+    % check whether file changed
+    if ~isequal(fileread(output_file), fileread(output_file_fin))
+        % Rename the temporary file to the final file
+        movefile(output_file, output_file_fin);
+        fprintf('Source file %s has been created successfully.\n', param_weight_source_name);
+    else
+        % Delete the temporary file
+        delete(output_file);
+        fprintf('Source file %s unchanged.\n', param_weight_source_name);
+    end
+
+    
 end

@@ -109,7 +109,8 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
     data2save = {iw_len; arg_len; res_len; w_len; n_in; n_out; arg_in_addr; res_out_addr; w_end_address};
 
     addressdef_header_name = [casadi_fun_name, '_addressdef.h'];
-    output_file = [output_dir, addressdef_header_name];
+    output_file = [output_dir, addressdef_header_name, '_tmp'];
+    output_file_fin = [output_dir, addressdef_header_name];
 
     % ARG_LEN and ARG_IN_LEN differ because ARG_LEN is the total number of
     % elements in the ARG array (which is larger than the number of
@@ -324,6 +325,17 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
     
     % Close the file
     fclose(fid);
+
+    % check whether file changed
+    if ~isequal(fileread(output_file), fileread(output_file_fin))
+        % Rename the temporary file to the final file
+        movefile(output_file, output_file_fin);
+        fprintf(['Header file ', addressdef_header_name, ' created.\n']);
+    else
+        % Delete the temporary file
+        delete(output_file);
+        fprintf(['Header file ', addressdef_header_name, ' unchanged.\n']);
+    end
     
-    fprintf(['Header file ', addressdef_header_name, ' created.\n']);
+    
 end

@@ -62,10 +62,15 @@ async function load_and_configure_controller_intern(controller_name) {
 // ros2 service call /controller_manager/switch_controller controller_manager_msgs/srv/SwitchController "{deactivate_controllers: ['move_to_start_example_controller'], activate_controllers: ['mpc_pinocchio_controller'], strictness: 2}"
 async function switch_control(old_control_name, new_control_name) {
     if(old_control_name === new_control_name) {
-        return { result: 'Success', status: 'Already in ' + new_control_name };
+        return { ok : true, status: 'Already in ' + new_control_name };
     }
     const client = node.createClient('controller_manager_msgs/srv/SwitchController', 'controller_manager/switch_controller');
-    return callService(client, { deactivate_controllers: [old_control_name], activate_controllers: [new_control_name], strictness: 2 });
+    return await callService(client, { deactivate_controllers: [old_control_name], activate_controllers: [new_control_name], strictness: 2 });
+}
+
+async function switch_casadi_mpc(mpc_type) {
+    const client = node.createClient('mpc_interfaces/srv/CasadiMPCTypeCommand', '/mpc_casadi_controller/mpc_switch_service');
+    return callService(client, { mpc_type: mpc_type });
 }
 
 async function activate_control(new_control_name) {
@@ -160,7 +165,9 @@ async function get_controller_info() {
     // console.log(response.controller);
     var controller_names = response.controller.map(controller => controller.name);
     var controller_active_states = response.controller.map(controller => controller.state);
-    return { controller_names, controller_active_states };
+    var active_controller_idx = controller_active_states.findIndex(state => state === 'active');
+    var active_controller_name = controller_names[active_controller_idx];
+    return { controller_names, controller_active_states, active_controller_idx, active_controller_name, ok: true };
 }
 
-module.exports = { startService, resetService, stopService, switchTrajectory, switch_control, activate_control, get_controller_info, objectToString };
+module.exports = { startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, activate_control, get_controller_info, objectToString };

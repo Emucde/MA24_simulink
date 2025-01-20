@@ -31,6 +31,15 @@
     <br>
     <br>
     <div class="float_left">
+        <p id="homedelay_p" class="margin_left">Home Delay (ms):</p>
+        <input class="margin_left delay_input" type="text" id="home_delay" value="5000">
+        <p class="margin_left" id="response" class="response"></p>
+    </div>
+    <br>
+    <br>
+    <br>
+    <div class="float_left">
+        <button id="update">Update</button>
         <button id="start">Start</button>
         <button id="reset">Reset</button>
         <button id="stop">Stop</button>
@@ -39,9 +48,6 @@
             <div class="status-indicator" id="homingdiv" style="animation: spin 1s infinite;"></div>
             <span id="homing">Homing...</span>
         </div>
-        <p id="homedelay_p" class="margin_left">Home Delay (ms):</p>
-        <input class="margin_left delay_input" type="text" id="home_delay" value="5000">
-        <p class="margin_left" id="response" class="response"></p>
     </div>
     <br><br>
     <select id="controller" onchange="send_controller(this)">
@@ -53,6 +59,18 @@
     <select id="trajectory" onchange="send_trajectory(this)">
         <option value="1">traj1</option>
         <option value="2">traj2</option>
+    </select>
+    <select id="casadi_mpcs" onchange="send_mpc(this)">
+        <option value="0">MPC01</option>
+        <option value="1">MPC6</option>
+        <option value="2">MPC7</option>
+        <option value="3" selected>MPC8</option>
+        <option value="4">MPC9</option>
+        <option value="5">MPC10</option>
+        <option value="6">MPC11</option>
+        <option value="7">MPC12</option>
+        <option value="8">MPC13</option>
+        <option value="9">MPC14</option>
     </select>
     <br>
     <br>
@@ -66,8 +84,8 @@
                 onclick="click_fun(this, 0)" target="">Traj 1</a>
             <a class="visualize_a" _href="robot_visualization.html" _target="iframe_vis1" href="javascript:void(0)"
                 is_loaded="0" onclick="click_fun(this, 1)" target="">Visualize</a>
-            <button class="hide_plot_button" onclick="hide_iframe(this, 0);"
-                style="display: initial; left: 674px;">Show Plot</button>
+            <button class="hide_plot_button" onclick="hide_iframe(this, 0);" style="display: initial; left: 674px;">Show
+                Plot</button>
             <button class="hide_settings_button" onclick="hide_settings(this);"
                 style="display: initial; left: 769px;">Show Settings</button>
             <button class="hide_video_button" onclick="hide_iframe(this, 1);"

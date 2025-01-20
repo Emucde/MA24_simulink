@@ -5,8 +5,11 @@ function generate_param_robot_header(s_fun_path, param_robot, traj_settings, fun
     filepath = [s_fun_path, '/mpc_c_sourcefiles/'];
     func_name_upper = upper(func_name);
 
-    h_file = [filepath, func_name, '.h'];
-    c_file = [filepath, func_name, '.c'];
+    h_file = [filepath, func_name, '.h_tmp'];
+    c_file = [filepath, func_name, '.c_tmp'];
+
+    h_file_fin = [filepath, func_name, '.h'];
+    c_file_fin = [filepath, func_name, '.c'];
 
     fid_h = fopen(h_file, 'w');
     fid_c = fopen(c_file, 'w');
@@ -160,6 +163,25 @@ function generate_param_robot_header(s_fun_path, param_robot, traj_settings, fun
 
     fclose(fid_h);
     fclose(fid_c);
+    
+    % Check if header file was changed:
+    if ~isequal(fileread(h_file), fileread(h_file_fin))
+        movefile(h_file, h_file_fin, 'f');
+        fprintf('Header File %s updated.\n', h_file_fin);
+    else
+        delete(h_file);
+        fprintf('Header File %s unchanged.\n', h_file_fin);
+    end
+
+    % Check if source file was changed:
+    if ~isequal(fileread(c_file), fileread(c_file_fin))
+        movefile(c_file, c_file_fin, 'f');
+        fprintf('Source File %s updated.\n', c_file_fin);
+    else
+        delete(c_file);
+        fprintf('Source File %s unchanged.\n', c_file_fin);
+    end
+    
 end
 
 function len_name = get_indices_len_name(field, field_data, func_name_upper, param_robot)

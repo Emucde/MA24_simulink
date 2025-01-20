@@ -70,7 +70,16 @@ namespace franka_example_controllers
                 state[i] = state_interfaces_[i].get_value();
             }
 
+            Eigen::Map<Eigen::VectorXd> q_measured(state, N_DOF);
+            Eigen::Map<Eigen::VectorXd> q_p_measured(state + N_DOF, N_DOF);
+            Eigen::Map<Eigen::VectorXd> q_filtered(x_filtered.data(), N_DOF);
+            Eigen::Map<Eigen::VectorXd> q_p_filtered(x_filtered.data() + N_DOF, N_DOF);
+            
+            q_filtered = A1 * q_filtered + B1 * q_measured;
+            q_p_filtered = A2 * q_p_filtered + B2 * q_p_measured;
+
             // Logging joint states
+            #ifdef DEBUG
             RCLCPP_INFO(get_node()->get_logger(), "q (rad): [%f, %f, %f, %f, %f, %f, %f]",
                         state[0], state[1], state[2],
                         state[3], state[4], state[5], state[6]);
@@ -78,6 +87,7 @@ namespace franka_example_controllers
             RCLCPP_INFO(get_node()->get_logger(), "q_p (rad/s): [%f, %f, %f, %f, %f, %f, %f]",
                         state[N_DOF + 0], state[N_DOF + 1], state[N_DOF + 2],
                         state[N_DOF + 3], state[N_DOF + 4], state[N_DOF + 5], state[N_DOF + 6]);
+            #endif
 
             // Attempt to get the result (blocking call)
             if (tau_full_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
@@ -88,8 +98,8 @@ namespace franka_example_controllers
 
                 if (error_flag == ErrorFlag::NO_ERROR)
                 {
-                    tau_full_future = std::async(std::launch::async, [this, state]()
-                                                 { return controller.solveMPC(state); });
+                    tau_full_future = std::async(std::launch::async, [this]()
+                                                 { return controller.solveMPC(x_filtered.data()); });
                 }
                 else
                 {
@@ -117,6 +127,7 @@ namespace franka_example_controllers
             }
             else
             {
+                controller.increase_traj_count();
                 if (invalid_counter < MAX_INVALID_COUNT)
                 {
                     invalid_counter++;
@@ -134,6 +145,7 @@ namespace franka_example_controllers
             // Send data to shared memory
             write_to_shared_memory(shm_read_state_data, state, 2 * N_DOF * sizeof(double), get_node()->get_logger());
             write_to_shared_memory(shm_read_control_data, tau_full.data(), N_DOF * sizeof(casadi_real), get_node()->get_logger());
+            write_to_shared_memory(shm_read_traj_data, controller.get_act_traj_data(), 7 * sizeof(casadi_real), get_node()->get_logger());
             sem_post(shm_changed_semaphore);
         }
         else
@@ -148,9 +160,11 @@ namespace franka_example_controllers
         }
 
         // Logging torques
+        #ifdef DEBUG
         RCLCPP_INFO(get_node()->get_logger(), "tau (Nm): [%f, %f, %f, %f, %f, %f, %f]",
                     tau_full[0], tau_full[1], tau_full[2],
                     tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
+        #endif
 
         return controller_interface::return_type::OK;
     }
@@ -190,7 +204,7 @@ namespace franka_example_controllers
             service_prefix + "mpc_switch_service",
             std::bind(&ModelPredictiveControllerCasadi::mpc_switch, this, std::placeholders::_1, std::placeholders::_2));
 
-        RCLCPP_INFO(get_node()->get_logger(), "Service 'add_three_ints' created");
+        RCLCPP_INFO(get_node()->get_logger(), "Services created");
 
         return CallbackReturn::SUCCESS;
     }
@@ -224,6 +238,7 @@ namespace franka_example_controllers
         }
 
         controller.setActiveMPC(MPCType::MPC8);
+        RCLCPP_INFO(get_node()->get_logger(), "MPC controller initialized");
 
         return CallbackReturn::SUCCESS;
     }
@@ -231,6 +246,7 @@ namespace franka_example_controllers
     CallbackReturn ModelPredictiveControllerCasadi::on_deactivate(const rclcpp_lifecycle::State &previous_state)
     {
         close_shared_memories();
+        RCLCPP_INFO(get_node()->get_logger(), "on_deactivate: Shared memory closed successfully.", get_node()->get_logger());
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
@@ -239,18 +255,21 @@ namespace franka_example_controllers
         open_shared_memories();
         int8_t readonly_mode = 1;
         write_to_shared_memory(shm_readonly_mode, &readonly_mode, sizeof(int8_t), get_node()->get_logger());
+        RCLCPP_INFO(get_node()->get_logger(), "on_activate: Shared memory opened successfully.", get_node()->get_logger());
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
     CallbackReturn ModelPredictiveControllerCasadi::on_cleanup(const rclcpp_lifecycle::State &previous_state)
     {
         close_shared_memories();
+        RCLCPP_INFO(get_node()->get_logger(), "on_cleanup: Shared memory closed successfully.", get_node()->get_logger());
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
     CallbackReturn ModelPredictiveControllerCasadi::on_shutdown(const rclcpp_lifecycle::State &previous_state)
     {
         close_shared_memories();
+        RCLCPP_INFO(get_node()->get_logger(), "on_shutdown: Shared memory closed successfully.", get_node()->get_logger());
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
@@ -321,6 +340,8 @@ namespace franka_example_controllers
             state[i] = state_interfaces_[i].get_value();
         }
 
+        Eigen::VectorXd state_eig = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
+        x_filtered = state_eig; // set x0 for Lowpass Filter
         
         controller.init_trajectory(traj_select, state, 0.0, 4.0, 5.0);
         // controller.switch_traj(traj_select, state); // eig nicht useful
@@ -328,12 +349,20 @@ namespace franka_example_controllers
 
         write_to_shared_memory(shm_read_traj_length, &total_traj_len, sizeof(casadi_uint), get_node()->get_logger());
 
+        RCLCPP_INFO(get_node()->get_logger(), "Trajectory initialized");
+
         tau_full_future = std::async(std::launch::async, [this, state]()
                                      {
             Eigen::VectorXd tau_full_temp = controller.solveMPC(state);
             mpc_started = true;
             first_torque_read = false;
+
+            write_to_shared_memory(shm_read_state_data, state, 2 * N_DOF * sizeof(double), get_node()->get_logger());
+            write_to_shared_memory(shm_read_control_data, tau_full.data(), N_DOF * sizeof(casadi_real), get_node()->get_logger());
+            write_to_shared_memory(shm_read_traj_data, controller.get_act_traj_data(), 7 * sizeof(casadi_real), get_node()->get_logger());
+
             sem_post(shm_changed_semaphore);
+            RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC started");
             return tau_full_temp; });
     }
 
@@ -351,9 +380,12 @@ namespace franka_example_controllers
         write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
         write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
 
+        controller.reset();
+
         response->status = "reset flag set";
         mpc_started = false;
         sem_post(shm_changed_semaphore);
+        RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC reset");
     }
 
     void ModelPredictiveControllerCasadi::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
@@ -373,6 +405,7 @@ namespace franka_example_controllers
         response->status = "stop flag set";
         mpc_started = false;
         sem_post(shm_changed_semaphore);
+        RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC stopped");
     }
 
     void ModelPredictiveControllerCasadi::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
@@ -395,6 +428,7 @@ namespace franka_example_controllers
         response->status = "trajectory " + std::to_string(traj_select) + " selected";
         mpc_started = false;
         sem_post(shm_changed_semaphore);
+        RCLCPP_INFO(get_node()->get_logger(), "Trajectory %d selected", traj_select);
     }
 
     void ModelPredictiveControllerCasadi::mpc_switch(const std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Request> request,
@@ -404,6 +438,22 @@ namespace franka_example_controllers
         controller.setActiveMPC(mpc_type);
 
         response->status = "MPC type " + std::to_string(request->mpc_type) + " selected";
+        std::string status_message;
+        switch(mpc_type) {
+            case MPCType::MPC01: status_message = "Switched to Casadi MPC01"; break;
+            case MPCType::MPC6: status_message = "Switched to Casadi MPC6"; break;
+            case MPCType::MPC7: status_message = "Switched to Casadi MPC7"; break;
+            case MPCType::MPC8: status_message = "Switched to Casadi MPC8"; break;
+            case MPCType::MPC9: status_message = "Switched to Casadi MPC9"; break;
+            case MPCType::MPC10: status_message = "Switched to Casadi MPC10"; break;
+            case MPCType::MPC11: status_message = "Switched to Casadi MPC11"; break;
+            case MPCType::MPC12: status_message = "Switched to Casadi MPC12"; break;
+            case MPCType::MPC13: status_message = "Switched to Casadi MPC13"; break;
+            case MPCType::MPC14: status_message = "Switched to Casadi MPC14"; break;
+            default: status_message = "Switched to Casadi MPC01"; break;
+        }
+        RCLCPP_INFO(get_node()->get_logger(), status_message.c_str());
+        response->status = status_message;
     }
 
 } // namespace franka_example_controllers

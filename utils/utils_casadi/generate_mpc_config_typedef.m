@@ -3,6 +3,9 @@ function generate_mpc_config_typedef(filename, structName)
     if nargin < 1 || isempty(filename)
         filename = 'mpc_config.h';
     end
+
+    filename_fin = filename;
+    filename = [filename_fin, '_tmp'];
     
     % Default struct name if not provided
     if nargin < 2 || isempty(structName)
@@ -252,5 +255,12 @@ function generate_mpc_config_typedef(filename, structName)
     % Close the file
     fclose(fid);
 
-    fprintf('Header file "%s" has been created successfully.\n', filename);
+    % Check whether Header file was changed
+    if ~isequal(fileread(filename), fileread(filename_fin))
+        movefile(filename, filename_fin, 'f');
+        fprintf('Header file %s has been updated.\n', filename_fin);
+    else
+        fprintf('Header file %s unchanged.\n', filename_fin);
+        delete(filename);
+    end
 end

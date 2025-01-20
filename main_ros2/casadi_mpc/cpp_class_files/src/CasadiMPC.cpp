@@ -301,14 +301,11 @@ void CasadiMPC::set_references(casadi_real *x_k_in)
                    traj_data->col(traj_count + mpc_traj_indices[j]).data(),
                    traj_rows * sizeof(double));
         }
+        
+        // this loop would be replaceable by the following line (1% slower)
+        // Eigen::Map<Eigen::MatrixXd> (y_d, traj_rows, traj_data_per_horizon) = (*traj_data)(Eigen::all, mpc_traj_indices.array() + traj_count);
         traj_count++;
     }
-
-    // // Create a map for y_d
-    // Eigen::Map<Eigen::MatrixXd> y_d_map(y_d, traj_rows, traj_data_per_horizon);
-
-    // // Use Eigen's column slicing
-    // y_d_map = traj_data.cols(mpc_traj_indices);
 }
 
 // Destructor to clean up allocated memory

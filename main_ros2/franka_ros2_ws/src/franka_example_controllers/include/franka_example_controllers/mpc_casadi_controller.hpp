@@ -14,8 +14,8 @@
 
 #pragma once
 
-#define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_WARN
-// #define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_INFO
+// #define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_WARN
+#define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_INFO
 
 #define N_DOF 7
 #define MAX_INVALID_COUNT 100
@@ -106,6 +106,11 @@ namespace franka_example_controllers
         bool use_gravity = false;
         CasadiController controller = CasadiController(urdf_filename, tcp_frame_name, use_gravity);
         Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(num_joints);
+        Eigen::VectorXd x_filtered = Eigen::VectorXd::Zero(2*num_joints);
+        Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(2*num_joints);
+        double Ts = 0.001;
+        double T1 = 1/400, A1 = std::exp(-Ts/T1), B1 = 1 - A1; // Lowpass Filter for q
+        double T2 = 1/400, A2 = std::exp(-Ts/T2), B2 = 1 - A2; // Lowpass Filter for q_p
         std::future<Eigen::VectorXd> tau_full_future;
         ErrorFlag error_flag = ErrorFlag::NO_ERROR;
         // rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;

@@ -11,6 +11,7 @@
 #include "param_robot.h"
 #include "casadi_types.h"
 #include <Eigen/Dense>
+#include <Eigen/Core>
 #include "include/eigen_templates.hpp"
 
 #include <iostream>
@@ -418,10 +419,10 @@ int main()
 #ifdef TRANSIENT_TRAJ_TESTS
 
 
-    #define TRAJ_SELECT 2
-    controller.switch_traj(TRAJ_SELECT);
-    x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (controller.get_act_traj_x0_init(), nx);
-    q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
+    #define TRAJ_SELECT 1
+    // controller.switch_traj(TRAJ_SELECT);
+    x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (controller.get_traj_x0_init(TRAJ_SELECT), nx);
+    // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
 
     controller.init_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
@@ -440,6 +441,12 @@ int main()
     // }
 #endif
 
+    Eigen::VectorXd q_filtered = Eigen::VectorXd::Zero(nq);
+    Eigen::VectorXd x_filtered = Eigen::VectorXd::Zero(nx);
+    Eigen::VectorXd q_measured = Eigen::VectorXd::Zero(nq);
+    Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nq);
+    double Ts = 0.001, T = 1/400, Phi = 0;
+
     // enable shm read mode:
     casadi_uint total_traj_len = traj_data_real_len + transient_traj_len;
     int8_t readonly_mode = 1, start = 1;
@@ -457,8 +464,18 @@ int main()
     // Main loop for trajectory processing
     for (casadi_uint i = 0; i < total_traj_len; i++)
     {
+        if(i == 0)
+        {
+            x_filtered = x_k_ndof_eig.head(nx);
+        }
+        else
+        {
+            Phi = std::exp(-Ts/T);
+            x_filtered = Phi * x_filtered + (1 - Phi) * x_measured;
+        }
+
         timer_mpc_solver.tic();
-        tau_full = controller.solveMPC(x_k_ndof);
+        tau_full = controller.solveMPC(x_filtered.data());
         error_flag = controller.get_error_flag();
         timer_mpc_solver.toc();
 
@@ -481,6 +498,7 @@ int main()
 
         // simulate the model
         controller.simulateModel(x_k_ndof, tau_full.data(), 1e-3);
+        x_measured = Eigen::Map<Eigen::VectorXd>(x_k_ndof, nx);
 
         // Write data to shm:
         write_to_shared_memory(shm_read_state_data, x_k_ndof, nx * sizeof(casadi_real));

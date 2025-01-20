@@ -53,6 +53,7 @@ private:
     std::vector<Eigen::VectorXd> all_traj_x0_init;
     casadi_uint selected_trajectory;
     Eigen::MatrixXd traj_data;
+    Eigen::VectorXd traj_x0_init;
     casadi_uint traj_len;
     casadi_uint traj_real_len; // number of columns of the singular trajectory data without additional samples for last prediction horizon
     Eigen::VectorXd tau_full_prev;
@@ -72,17 +73,25 @@ public:
     void generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr);
 
     // Initialize trajectory data
-    void init_trajectory(casadi_uint traj_select, const casadi_real *const x_k_ndof_ptr,
+    void init_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
                                        double T_start, double T_poly, double T_end);
-    void init_trajectory(casadi_uint traj_select, const casadi_real *const x_k_ndof_ptr);
+    void init_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr);
     void init_trajectory(casadi_uint traj_select);
 
     // Method to simulate the robot model
     void simulateModel(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
 
+    void reset();
+
     // Getters and setters
     void setActiveMPC(MPCType mpc);
     void setTransientTrajParams(double T_start, double T_poly, double T_end);
+
+    // increase counter from casadi mpc if it solves too slow
+    void increase_traj_count()
+    {
+        active_mpc->increase_traj_count();
+    }
 
     const casadi_uint *get_n_indices()
     {
@@ -171,6 +180,16 @@ public:
     const casadi_real* get_act_traj_x0_init()
     {
         return all_traj_x0_init[selected_trajectory-1].data();
+    }
+
+    const casadi_real* get_traj_x0_init(casadi_uint traj_select)
+    {
+        if (traj_select < 1 || traj_select > all_traj_x0_init.size())
+        {
+            std::cerr << "Invalid trajectory selection. Selecting Trajectory 1" << std::endl;
+            traj_select = 1;
+        }
+        return all_traj_x0_init[traj_select-1].data();
     }
 
 

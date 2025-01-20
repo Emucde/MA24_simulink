@@ -6,6 +6,7 @@
 #include "casadi_types.h" // Include for casadi types
 #include <vector>
 #include <Eigen/Dense>
+#include <Eigen/Core>
 #include "param_robot.h"
 #include "MPC01_param.h" // version: 'v1'
 #include "MPC6_param.h"  // version: 'v3_quat'
@@ -97,6 +98,12 @@ public:
 
     // Method to switch the trajectory
     void switch_traj(Eigen::MatrixXd* traj_data_new, const casadi_real *const x_k_ptr, casadi_uint traj_data_real_len_new);
+
+    // if it solves too slow.
+    void increase_traj_count()
+    {
+        traj_count++;
+    }
 
     // Method to read the next trajectory block
     // void read_trajectory_block();

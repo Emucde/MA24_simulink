@@ -10,8 +10,8 @@ param_weight.(MPC).Q_y   = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);
 param_weight.(MPC).Q_yN  = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);
 
 param_weight.(MPC).R_q_ref   = 0*diag(ones(n,1));
-param_weight.(MPC).R_q_p     = 1e-5*diag(ones(n,1));
-param_weight.(MPC).R_u       = 1e-10*diag(ones(n,1)); % = R_tau
+param_weight.(MPC).R_q_p     = 1e-2*diag(ones(n,1));
+param_weight.(MPC).R_u       = 1e-5*diag(ones(n,1)); % = R_tau
 param_weight.(MPC).R_x_prev  = 0*diag([ones(n,1); ones(n,1)]);
 param_weight.(MPC).R_u0_prev = 0*diag(ones(n,1)); % = R_tau
 
@@ -95,7 +95,7 @@ P = lyap(A, Q); % V = x'Px => Idea: Use V as end cost term
 param_weight.(MPC).Q_y      = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);
 param_weight.(MPC).Q_yN     = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);
 
-param_weight.(MPC).R_q_ref   = 0*diag(ones(n,1));
+param_weight.(MPC).R_q_ref   = 1e-2*diag(ones(n,1));
 param_weight.(MPC).R_q_p     = 1e-2*diag(ones(n, 1));
 param_weight.(MPC).R_u       = 1e-5*diag(ones(n, 1)); % = R_q_pp
 param_weight.(MPC).R_x_prev  = 0*diag([1*ones(n,1); 0*ones(n,1)]);

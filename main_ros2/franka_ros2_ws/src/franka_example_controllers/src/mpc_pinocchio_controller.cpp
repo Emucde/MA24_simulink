@@ -60,7 +60,7 @@ namespace franka_example_controllers
         const rclcpp::Time & /*time*/,
         const rclcpp::Duration & /*period*/)
     {
-        double *torques_crocoddyl = 0;
+        double *torques = 0;
         double read_torques[N_DOF] = {0.0};
         double zero_torques[N_DOF] = {0.0};
         int8_t valid_flag = 0;
@@ -93,6 +93,15 @@ namespace franka_example_controllers
                 state[i] = state_interfaces_[i].get_value();
             }
 
+            Eigen::Map<Eigen::VectorXd> q_measured(state, N_DOF);
+            Eigen::Map<Eigen::VectorXd> q_p_measured(state + N_DOF, N_DOF);
+            Eigen::Map<Eigen::VectorXd> q_filtered(x_filtered.data(), N_DOF);
+            Eigen::Map<Eigen::VectorXd> q_p_filtered(x_filtered.data() + N_DOF, N_DOF);
+            
+            q_filtered = A1 * q_filtered + B1 * q_measured;
+            q_p_filtered = A2 * q_p_filtered + B2 * q_p_measured;
+
+
             // Write combined state (q, q_p) to shared memory (send data to crocoddyl)
             write_to_shared_memory(shm_states, state, sizeof(state), get_node()->get_logger());
 
@@ -100,6 +109,7 @@ namespace franka_example_controllers
             valid_flag = 1;
             write_to_shared_memory(shm_states_valid, &valid_flag, sizeof(int8_t), get_node()->get_logger());
 
+            #ifdef DEBUG
             // Logging joint states
             RCLCPP_INFO(get_node()->get_logger(), "q (rad): [%f, %f, %f, %f, %f, %f, %f]",
                         state[0], state[1], state[2],
@@ -108,6 +118,7 @@ namespace franka_example_controllers
             RCLCPP_INFO(get_node()->get_logger(), "q_p (rad/s): [%f, %f, %f, %f, %f, %f, %f]",
                         state[N_DOF + 0], state[N_DOF + 1], state[N_DOF + 2],
                         state[N_DOF + 3], state[N_DOF + 4], state[N_DOF + 5], state[N_DOF + 6]);
+            #endif
 
             // Read validity flag for torque data from shared memory
             valid_flag = 0;
@@ -116,7 +127,7 @@ namespace franka_example_controllers
             if (valid_flag == 0 && !first_torque_read)
             {
                 RCLCPP_INFO(get_node()->get_logger(), "No valid Python data received yet. Using zero torques.");
-                torques_crocoddyl = &zero_torques[0];
+                torques = &zero_torques[0];
             }
             else if (valid_flag == 1)
             {
@@ -125,7 +136,7 @@ namespace franka_example_controllers
                 // Reading data from shared memory
                 read_shared_memory(shm_torques, &read_torques[0], N_DOF * sizeof(double), get_node()->get_logger());
                 std::memcpy(torques_prev, read_torques, N_DOF * sizeof(double));
-                torques_crocoddyl = &read_torques[0];
+                torques = &read_torques[0];
 
                 invalid_counter = 0;
                 valid_flag = 0;
@@ -136,14 +147,14 @@ namespace franka_example_controllers
                 // wenn die Echtzeitbedingung nicht erfüllt ist, wird der vorherige Torque-Wert verwendet
                 if (invalid_counter < MAX_INVALID_COUNT)
                 {
-                    torques_crocoddyl = &torques_prev[0];
+                    torques = &torques_prev[0];
                     invalid_counter++;
                     RCLCPP_WARN(get_node()->get_logger(), "No valid Python data (%d/%d). Using previous torques.", invalid_counter, MAX_INVALID_COUNT);
                 }
                 else
                 {
                     RCLCPP_ERROR(get_node()->get_logger(), "No valid data received from Python %d times. Stopping the controller.", MAX_INVALID_COUNT);
-                    torques_crocoddyl = &zero_torques[0];
+                    torques = &zero_torques[0];
                     invalid_counter = 0;
                     mpc_started = false;
                 }
@@ -151,19 +162,21 @@ namespace franka_example_controllers
         }
         else
         {
-            torques_crocoddyl = &zero_torques[0];
+            torques = &zero_torques[0];
         }
 
         // Write torques to shared memory (send data to robot)
         for (int i = 0; i < N_DOF; ++i)
         {
-            command_interfaces_[i].set_value(torques_crocoddyl[i]);
+            command_interfaces_[i].set_value(torques[i]);
         }
 
+        #ifdef DEBUG
         // Logging torques
         RCLCPP_INFO(get_node()->get_logger(), "tau (Nm): [%f, %f, %f, %f, %f, %f, %f]",
-                    torques_crocoddyl[0], torques_crocoddyl[1], torques_crocoddyl[2],
-                    torques_crocoddyl[3], torques_crocoddyl[4], torques_crocoddyl[5], torques_crocoddyl[6]);
+                    torques[0], torques[1], torques[2],
+                    torques[3], torques[4], torques[5], torques[6]);
+        #endif
 
         sem_post(shm_changed_semaphore);
         return controller_interface::return_type::OK;
@@ -200,7 +213,7 @@ namespace franka_example_controllers
             service_prefix + "traj_switch_service",
             std::bind(&ModelPredictiveControllerPinocchio::traj_switch, this, std::placeholders::_1, std::placeholders::_2));
 
-        RCLCPP_INFO(get_node()->get_logger(), "Service 'add_three_ints' created");
+        RCLCPP_INFO(get_node()->get_logger(), "Services created");
 
         return CallbackReturn::SUCCESS;
     }
@@ -234,12 +247,14 @@ namespace franka_example_controllers
             return CallbackReturn::ERROR;
         }
 
+        RCLCPP_INFO(get_node()->get_logger(), "Pinocchio MPC controller initialized.");
         return CallbackReturn::SUCCESS;
     }
 
     CallbackReturn ModelPredictiveControllerPinocchio::on_deactivate(const rclcpp_lifecycle::State &previous_state)
     {
         close_shared_memories();
+        RCLCPP_INFO(get_node()->get_logger(), "on_deactivate: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
@@ -248,18 +263,21 @@ namespace franka_example_controllers
         open_shared_memories();
         int8_t readonly_mode = 0;
         write_to_shared_memory(shm_readonly_mode, &readonly_mode, sizeof(int8_t), get_node()->get_logger());
+        RCLCPP_INFO(get_node()->get_logger(), "on_activate: Shared memory opened successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
     CallbackReturn ModelPredictiveControllerPinocchio::on_cleanup(const rclcpp_lifecycle::State &previous_state)
     {
         close_shared_memories();
+        RCLCPP_INFO(get_node()->get_logger(), "on_cleanup: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
     CallbackReturn ModelPredictiveControllerPinocchio::on_shutdown(const rclcpp_lifecycle::State &previous_state)
     {
         close_shared_memories();
+        RCLCPP_INFO(get_node()->get_logger(), "on_shutdown: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
@@ -324,10 +342,20 @@ namespace franka_example_controllers
         write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
         write_to_shared_memory(shm_torques_valid, &flags.torques_valid, sizeof(int8_t), get_node()->get_logger());
 
+        double state[2 * N_DOF];
+        for (int i = 0; i < 2 * N_DOF; ++i)
+        {
+            state[i] = state_interfaces_[i].get_value();
+        }
+
+        Eigen::VectorXd state_eig = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
+        x_filtered = state_eig; // set x0 for Lowpass Filter
+
         response->status = "start flag set";
         mpc_started = true;
         first_torque_read = false;
         sem_post(shm_changed_semaphore);
+        RCLCPP_INFO(get_node()->get_logger(), "Pinocchio MPC started");
     }
 
     void ModelPredictiveControllerPinocchio::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
@@ -348,6 +376,7 @@ namespace franka_example_controllers
         response->status = "reset flag set";
         mpc_started = false;
         sem_post(shm_changed_semaphore);
+        RCLCPP_INFO(get_node()->get_logger(), "Pinocchio MPC reset");
     }
 
     void ModelPredictiveControllerPinocchio::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
@@ -368,6 +397,7 @@ namespace franka_example_controllers
         response->status = "stop flag set";
         mpc_started = false;
         sem_post(shm_changed_semaphore);
+        RCLCPP_INFO(get_node()->get_logger(), "Pinocchio MPC stopped");
     }
 
     void ModelPredictiveControllerPinocchio::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
@@ -390,6 +420,7 @@ namespace franka_example_controllers
         response->status = "trajectory " + std::to_string(traj_select) + " selected";
         mpc_started = false;
         sem_post(shm_changed_semaphore);
+        RCLCPP_INFO(get_node()->get_logger(), "Pinocchio MPC trajectory %d selected", traj_select);
     }
 
 } // namespace franka_example_controllers

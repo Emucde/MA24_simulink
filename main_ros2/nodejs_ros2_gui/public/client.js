@@ -29,6 +29,10 @@ function start() {
       });
       document.getElementById("timeconn").innerHTML = formattedDate; // Display the formatted date
       document.getElementById("conncon").style.backgroundColor = "green";
+
+      // send current active controller
+      var active_controller_name = document.querySelector('#controller').value;
+      ws.send(JSON.stringify({ command: 'switch_controller', controller_name: active_controller_name}));
     }
 
     ws.onclose = function(){
@@ -125,6 +129,10 @@ document.getElementById('home').addEventListener('click', () => {
     ws.send(JSON.stringify({ command: 'home', delay: home_delay }));
 });
 
+document.getElementById('update').addEventListener('click', () => {
+  ws.send(JSON.stringify({ command: 'update'}));
+});
+
 document.getElementById('open_brakes').addEventListener('click', () => {
   ws.send(JSON.stringify({ command: 'open_brakes' }));
 });
@@ -167,7 +175,13 @@ function send_trajectory(current_element) {
 }
 
 function send_controller(current_element) {
+    var active_controller_name = current_element.value;
+    ws.send(JSON.stringify({ command: 'switch_controller', controller_name: active_controller_name}));
+}
 
+function send_mpc(current_element) {
+    var mpc_type = parseInt(current_element.value, 10);
+    ws.send(JSON.stringify({ command: 'casadi_mpc_switch', mpc_type: mpc_type }));
 }
   
 function click_fun(element, number) {

@@ -14,11 +14,12 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
     all_traj_data = readTrajectoryData(traj_file);
     all_traj_x0_init = read_x0_init(x0_init_file);
 
-    selected_trajectory = 1;
+    selected_trajectory = 2;
     traj_rows = all_traj_data[selected_trajectory-1].rows();
     traj_len = all_traj_data[selected_trajectory-1].cols();
     traj_data.resize(traj_rows, traj_len);
     traj_data << all_traj_data[selected_trajectory-1];
+    traj_x0_init = all_traj_x0_init[selected_trajectory-1];
 
     // Real length of the singular trajectory data without additional samples for last prediction horizon
     traj_real_len = robot_config.traj_data_real_len; // transient trajectory length = 0
@@ -106,39 +107,30 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
 
         if (condition1 || condition2)
         {
+            error_flag = ErrorFlag::JUMP_DETECTED;
             std::cout << "Jump in torque detected (tau = " << tau_full.transpose() << "). Output zero torque." << std::endl;
             tau_full.setZero(); // Set torque to zero
-            error_flag = ErrorFlag::JUMP_DETECTED;
         }
         else
         {
-            tau_full_prev = tau_full; // Update previous torque
             error_flag = ErrorFlag::NO_ERROR;
+            tau_full_prev = tau_full; // Update previous torque
         }
     }
 
     return tau_full;
 }
 
-void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_real *const x_k_ndof_ptr,
+void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
                                        double T_start, double T_poly, double T_end)
 {
     setTransientTrajParams(T_start, T_poly, T_end);
     init_trajectory(traj_select, x_k_ndof_ptr); // Call the other init_trajectory with transient trajectory
 }
 
-void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_real *const x_k_ndof_ptr)
+void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr)
 {
     double x_k[nx_red];
-
-    if (x_k_ndof_ptr != nullptr)
-    {
-        generate_transient_trajectory(x_k_ndof_ptr); // Generate transient trajectory
-    }
-    else
-    {
-        transient_traj_data = Eigen::MatrixXd::Zero(traj_rows, 0); // No transient trajectory
-    }
 
     // Check if the trajectory selection is valid
     if (traj_select < 1 || traj_select > all_traj_data.size())
@@ -147,11 +139,26 @@ void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_rea
         traj_select = 1;
     }
 
+    selected_trajectory = traj_select;
+    traj_x0_init = all_traj_x0_init[selected_trajectory-1];
+
+    if (x_k_ndof_ptr != nullptr)
+    {
+        generate_transient_trajectory(x_k_ndof_ptr); // Generate transient trajectory
+    }
+    else
+    {
+        transient_traj_data = Eigen::MatrixXd::Zero(traj_rows, 0); // No transient trajectory
+        x_k_ndof_ptr = traj_x0_init.data();
+    }
+
     // Concatenate trajectories
     traj_data.resize(traj_rows, transient_traj_data.cols() + all_traj_data[traj_select - 1].cols());
     traj_data << transient_traj_data, all_traj_data[traj_select - 1];
     traj_len = traj_data.cols();
     traj_real_len = robot_config.traj_data_real_len + transient_traj_data.cols();
+
+    traj_x0_init = all_traj_x0_init[selected_trajectory-1];
 
     std::cout << "Traj:" << traj_data.rows() << "x" << traj_data.cols() << std::endl;
 
@@ -169,7 +176,6 @@ void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_rea
             casadi_mpcs[i].switch_traj(&traj_data, x_k, traj_real_len);
         }
     }
-    selected_trajectory = traj_select;
 }
 
 void CasadiController::init_trajectory(casadi_uint traj_select)
@@ -187,12 +193,18 @@ void CasadiController::generate_transient_trajectory(const casadi_real *const x_
 
 void CasadiController::generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr)
 {
+    //safety checks
+    if (x_k_ndof_ptr == nullptr)
+    {
+        throw std::invalid_argument("CasadiController::generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr): x_k_ndof_ptr is a nullptr.");
+    }
+
     Eigen::Vector3d p_init, p_target;
     Eigen::Matrix3d R_init, R_target;
 
     // only map the first nq elements to get joint angles
     Eigen::Map<const Eigen::VectorXd> q_init_nq(x_k_ndof_ptr, nq);
-    Eigen::Map<const Eigen::VectorXd> q_target_nq(robot_config.q_0_ref, nq);
+    Eigen::Map<const Eigen::VectorXd> q_target_nq(traj_x0_init.data(), nq);
 
 #ifdef DEBUG
     std::cout << "q_init_nq: " << q_init_nq.transpose() << std::endl;
@@ -269,6 +281,11 @@ void CasadiController::simulateModel(casadi_real *const x_k_ndof_ptr, const casa
     Eigen::Map<Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
     Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
     torque_mapper.simulateModel(x_k_ndof, tau, dt);
+}
+
+void CasadiController::reset()
+{
+    tau_full_prev = Eigen::VectorXd::Zero(nq);
 }
 
 // Method to switch the trajectory

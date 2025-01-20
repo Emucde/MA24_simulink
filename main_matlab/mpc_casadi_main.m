@@ -26,11 +26,12 @@ convert_maple_to_casadi         = false; % convert maple functions into casadi f
 fullsimu                        = false; % make full mpc simulation and plot results
 traj_select_mpc                 = 1; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
 create_init_guess_for_all_traj  = ~true; % create init guess for all trajectories
+create_test_solve               = ~true; % create init guess for all trajectories
 compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
-compile_all_mpc_sfunctions      = ~false;
+compile_all_mpc_sfunctions      = false;
 generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
-reload_parameters_m             = true; % reload parameters.m at the end (clears all variables!)
+reload_parameters_m             = ~true; % reload parameters.m at the end (clears all variables!)
 remove_sourcefiles              = false; % remove source files after compilation
 
 end
@@ -86,7 +87,7 @@ param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v4_kin_int'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).N_MPC   = 20;
 param_casadi_fun_name.(MPC).compile_mode = 2; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
@@ -164,7 +165,7 @@ param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true:
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC6;
+param_casadi_fun_struct = param_casadi_fun_name.MPC8;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if(compile_all_mpc_sfunctions)
@@ -401,6 +402,8 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         mkdir(mpc_settings_path);
     end
 
+    old_param_MPC = load(""+mpc_settings_path+mpc_settings_struct_name+'.mat');
+
     eval(mpc_settings_struct_name+"=param_MPC;"); % set new struct name
     save(""+mpc_settings_path+mpc_settings_struct_name+'.mat', mpc_settings_struct_name);
 
@@ -428,7 +431,7 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         current_mpc_mfile = [casadi_opt_problem_paths, MPC_version, '.m'];
 
         % they are only generated if a file in casadi_opt_problem_paths changed
-        generate_mpc_sourefiles(f_opt, casadi_opt_problem_paths, current_mpc_mfile, mpc_c_sourcefile_path);
+        generate_mpc_sourefiles(f_opt, casadi_opt_problem_paths, current_mpc_mfile, s_fun_path, old_param_MPC, param_MPC);
         
         fprintf(['mpc_casadi_main.m: Creating local headers for C: \n\nOutput folder for headers: ', mpc_c_sourcefile_path, '\n\n']);
         calc_udp_cfun_addresses(f_opt, f_opt_input_cell, f_opt_output_cell, mpc_c_sourcefile_path);
