@@ -9,17 +9,7 @@ BUILD_TYPE="debug"
 STANDALONE_MAKEFILE=false
 
 if [ ! -d "/opt/ros/humble" ]; then
-    # !! Contents within this block are managed by 'mamba shell init' !!
-    export MAMBA_EXE='/home/rslstudent/Students/Emanuel/miniconda3/envs/mpc/bin/mamba';
-    export MAMBA_ROOT_PREFIX='/home/rslstudent/Students/Emanuel/micromamba';
-    __mamba_setup="$("$MAMBA_EXE" shell hook --shell bash --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
-    if [ $? -eq 0 ]; then
-        eval "$__mamba_setup"
-    else
-        alias mamba="$MAMBA_EXE"  # Fallback on help from mamba activate
-    fi
-    unset __mamba_setup
-    # <<< mamba initialize <<<
+    source $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
     mamba activate ros_env
 fi
 
@@ -27,9 +17,18 @@ fi
 # export CC=/usr/bin/gcc
 
 BUILD_CURRENT_FILE=true
-if [[ $# -eq 2 ]]; then
+RUN_MAKE_INSTALL=false
+BUILD_ROS2_MPCS=false
+RUN_FILE=true
+
+if [[ $# -ge 2 ]]; then
     if [ $2 == "$masterdir/main_ros2/casadi_mpc/cpp_class_files" ]; then
         BUILD_CURRENT_FILE=false # use makefile to build
+    elif [ $2 == "all" ]; then
+        BUILD_CURRENT_FILE=false
+        RUN_MAKE_INSTALL=true
+        BUILD_ROS2_MPCS=true
+        RUN_FILE=false
     else
         BUILD_CURRENT_FILE=true
     fi
@@ -122,23 +121,68 @@ if [ $BUILD_STATUS -eq 0 ]; then
     echo -e "Build complete\n"
     # If the build was successful and it's a release build, run the executable
     if [ "$BUILD_TYPE" = "release" ]; then
-        echo -e "Running the executable...\n----------------------------------\n"
-        if [ $STANDALONE_MAKEFILE == true ]; then
-            $masterdir/main_ros2/casadi_mpc/cpp_class_files/bin/$BUILD_TYPE/main
-        else
-            cd $masterdir/main_ros2/casadi_mpc/cpp_class_files
-            $masterdir/main_ros2/casadi_mpc/cpp_class_files/build_release/bin/main
+        UTILS_BUILD_PATH=$masterdir/main_ros2/casadi_mpc/cpp_class_files/build_release
+        if [ $RUN_FILE == true ]; then
+            echo -e "Running the executable...\n----------------------------------\n"
+            if [ $STANDALONE_MAKEFILE == true ]; then
+                $masterdir/main_ros2/casadi_mpc/cpp_class_files/bin/$BUILD_TYPE/main
+            else
+                cd $masterdir/main_ros2/casadi_mpc/cpp_class_files
+                $UTILS_BUILD_PATH/bin/main
+            fi
         fi
+
         echo -e "\n----------------------------------\n"
 
-        echo -e "run make install? (y/n)"
-        read -r response
-        if [[ $response =~ ^([yY][eE][sS]|[yY])$ ]]; then
-            cd $masterdir/main_ros2/casadi_mpc/cpp_class_files/build_release
-            make install
+        if [ $RUN_MAKE_INSTALL == false ]; then
+            echo -e "run make install? (y/n)"
+            read -r response
+            if [[ $response =~ ^([yY][eE][sS]|[yY])$ ]]; then
+                cd $UTILS_BUILD_PATH
+                make install
+            fi
         fi
+    else
+        UTILS_BUILD_PATH=$masterdir/main_ros2/casadi_mpc/cpp_class_files/build_debug
+    fi
+
+    if [ $RUN_MAKE_INSTALL == true ]; then
+        cd $UTILS_BUILD_PATH
+        make install
     fi
 else
     echo "Build failed with status code $BUILD_STATUS"
     exit $BUILD_STATUS   # Exit with the same status code as the build command
+fi
+
+# build ros2
+if [ $BUILD_ROS2_MPCS == true ]; then
+    if [ "$BUILD_TYPE" = "release" ]; then
+        BUILD_PATH=$masterdir/main_ros2/franka_ros2_ws/build_release
+        BUILD_TYPE="Release"
+    else
+        BUILD_PATH=$masterdir/main_ros2/franka_ros2_ws/build_debug
+        BUILD_TYPE="Debug"
+    fi
+    source $MAMBA_ROOT_PREFIX/envs/ros_env/setup.bash
+
+    CURRENT_PATH=$(pwd);
+    LOG=$BUILD_PATH/log
+    INSTALL=$BUILD_PATH/install
+    BUILD=$BUILD_PATH/build
+    
+    mkdir -p $LOG
+    mkdir -p $INSTALL
+    mkdir -p $BUILD
+
+    cd $masterdir/main_ros2/franka_ros2_ws
+    COMMAND="colcon --log-base $LOG \
+                build --cmake-args \
+                -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+                -DCMAKE_VERBOSE_MAKEFILE=ON \
+                --install-base $INSTALL \
+                --build-base $BUILD"
+    echo $COMMAND
+    eval $COMMAND
+    cd $CURRENT_PATH
 fi

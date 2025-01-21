@@ -19,7 +19,8 @@ bus_definitions;
 robot_name = 'fr3_no_hand_6dof';
 param_robot_init;
 
-robot_ip = '172.16.10.2';
+%robot_ip = '172.16.10.2';
+robot_ip = '172.16.0.2';
 % restoredefaultpath
 % addpath(genpath('./s_functions'));
 

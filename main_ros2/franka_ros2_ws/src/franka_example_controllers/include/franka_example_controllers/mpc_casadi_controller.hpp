@@ -95,6 +95,7 @@ namespace franka_example_controllers
         int shm_readonly_mode = 0;
         int shm_read_traj_length = 0;
         int shm_read_traj_data = 0;
+        int shm_read_frequency = 0;
         int shm_read_state_data = 0;
         int shm_read_control_data = 0;
         int shm_select_trajectory = 0;

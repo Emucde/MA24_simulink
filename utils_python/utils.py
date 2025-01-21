@@ -468,6 +468,7 @@ def initialize_shared_memory():
         "readonly_mode":                  {"size": 1,             "dtype": np.int8},
         "read_traj_length":               {"size": 4,             "dtype": np.uint32},
         "read_traj_data":                 {"size": 7 * 8,         "dtype": np.float64}, # pos and quaternion
+        "read_frequency":                 {"size": 1 * 8,         "dtype": np.float64}, # scalar frequency (0 if skipped)
         "read_state_data":                {"size": 2 * n_dof * 8, "dtype": np.float64}, # q and qp
         "read_control_data":              {"size": n_dof * 8,     "dtype": np.float64}, # tau
     }

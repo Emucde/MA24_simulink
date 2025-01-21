@@ -55,6 +55,7 @@ if use_data_from_simulink:
     readonly_mode = shm_data['readonly_mode']
     read_traj_length = shm_data['read_traj_length']
     read_traj_data = shm_data['read_traj_data']
+    read_frequency = shm_data['read_frequency']
     read_state_data = shm_data['read_state_data']
     read_control_data = shm_data['read_control_data']
     shm_changed_semaphore = posix_ipc.Semaphore("/shm_changed_semaphore", posix_ipc.O_CREAT, initial_value=0)
@@ -472,6 +473,7 @@ try:
 
                 if i == 0:
                     # reset data
+                    freq_per_Ta_step = np.zeros(N_traj)
                     N_traj = read_traj_length[0]
                     xs = np.zeros((N_traj, 2*n_dof))
                     us = np.zeros((N_traj, n_dof))
@@ -490,6 +492,7 @@ try:
                 if run_flag is True:
                     xs[i] = read_state_data[:]
                     us[i] = read_control_data[:]
+                    freq_per_Ta_step[i] = read_frequency[0]
                     # transient_traj['p_d'][:, i] = read_traj_data[0:3]
                     # transient_traj['p_d_p'][:, i] = read_traj_data[3:6]
                     # transient_traj['p_d_pp'][:, i] = read_traj_data[6:9]
