@@ -256,7 +256,7 @@ function generate_mpc_config_typedef(filename, structName)
     fclose(fid);
 
     % Check whether Header file was changed
-    if ~isequal(fileread(filename), fileread(filename_fin))
+    if ~exist(filename_fin, 'file') || ~isequal(fileread(filename), fileread(filename_fin))
         movefile(filename, filename_fin, 'f');
         fprintf('Header file %s has been updated.\n', filename_fin);
     else

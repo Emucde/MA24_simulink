@@ -65,7 +65,7 @@ async function switch_control(old_control_name, new_control_name) {
         return { ok : true, status: 'Already in ' + new_control_name };
     }
     const client = node.createClient('controller_manager_msgs/srv/SwitchController', 'controller_manager/switch_controller');
-    return await callService(client, { deactivate_controllers: [old_control_name], activate_controllers: [new_control_name], strictness: 2 });
+    return callService(client, { deactivate_controllers: [old_control_name], activate_controllers: [new_control_name], strictness: 2 });
 }
 
 async function switch_casadi_mpc(mpc_type) {
