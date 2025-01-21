@@ -131,10 +131,6 @@ document.getElementById('home').addEventListener('click', () => {
     ws.send(JSON.stringify({ command: 'home', delay: home_delay }));
 });
 
-document.getElementById('update').addEventListener('click', () => {
-  ws.send(JSON.stringify({ command: 'update'}));
-});
-
 document.getElementById('open_brakes').addEventListener('click', () => {
   ws.send(JSON.stringify({ command: 'open_brakes' }));
 });
@@ -180,11 +176,17 @@ function get_trajectory() {
 function get_controller() {
     var current_element = document.querySelector('#controller');
     var active_controller_name = current_element.value;
+    return active_controller_name;
+}
+
+function controller_change()
+{
+    var current_element = document.querySelector('#controller');
+    var active_controller_name = current_element.value;
     if(active_controller_name == 'mpc_casadi_controller')
       document.getElementById("casadi_mpcs").classList.remove("hide");
     else
       document.getElementById("casadi_mpcs").classList.add("hide");
-    return active_controller_name;
 }
 
 function get_mpc(current_element) {

@@ -95,11 +95,15 @@ namespace franka_example_controllers
                 invalid_counter = 0;                      // Reset the counter on successful retrieval
                 tau_full = tau_full_future.get();         // Get the result
                 error_flag = controller.get_error_flag(); // Get the error flag
+                current_frequency = timer_mpc_solver.get_frequency();
 
                 if (error_flag == ErrorFlag::NO_ERROR)
                 {
                     tau_full_future = std::async(std::launch::async, [this]()
-                                                 { return controller.solveMPC(x_filtered.data()); });
+                                                 {  timer_mpc_solver.tic();
+                                                    Eigen::VectorXd tau_temp = controller.solveMPC(x_filtered.data());
+                                                    timer_mpc_solver.toc();
+                                                    return tau_temp; });
                 }
                 else
                 {
@@ -127,6 +131,7 @@ namespace franka_example_controllers
             }
             else
             {
+                current_frequency = 0.0;
                 controller.increase_traj_count();
                 if (invalid_counter < MAX_INVALID_COUNT)
                 {
@@ -146,6 +151,7 @@ namespace franka_example_controllers
             write_to_shared_memory(shm_read_state_data, state, 2 * N_DOF * sizeof(double), get_node()->get_logger());
             write_to_shared_memory(shm_read_control_data, tau_full.data(), N_DOF * sizeof(casadi_real), get_node()->get_logger());
             write_to_shared_memory(shm_read_traj_data, controller.get_act_traj_data(), 7 * sizeof(casadi_real), get_node()->get_logger());
+            write_to_shared_memory(shm_read_frequency, &current_frequency, sizeof(double), get_node()->get_logger());
             sem_post(shm_changed_semaphore);
         }
         else
@@ -284,6 +290,7 @@ namespace franka_example_controllers
         shm_read_traj_data    = open_write_shm("read_traj_data", get_node()->get_logger());
         shm_read_state_data   = open_write_shm("read_state_data", get_node()->get_logger());
         shm_read_control_data = open_write_shm("read_control_data", get_node()->get_logger());
+        shm_read_frequency    = open_write_shm("read_frequency", get_node()->get_logger());
         shm_select_trajectory = open_write_shm("data_from_simulink_traj_switch", get_node()->get_logger());
         shm_changed_semaphore = open_write_sem("shm_changed_semaphore", get_node()->get_logger());
         RCLCPP_INFO(get_node()->get_logger(), "Shared memory opened successfully.", get_node()->get_logger());

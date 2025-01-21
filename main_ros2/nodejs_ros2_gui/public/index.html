@@ -41,7 +41,6 @@
     <br>
     <br>
     <div class="float_left">
-        <button id="update">Update</button>
         <button id="start">Start</button>
         <button id="reset">Reset</button>
         <button id="stop">Stop</button>
@@ -50,7 +49,7 @@
         <input class="margin_left delay_input" type="text" id="home_delay" value="5000">
     </div>
     <br><br>
-    <select id="controller">
+    <select id="controller" onchange="controller_change()">
         <option value="mpc_pinocchio_controller">Pinocchio MPC</option>
         <option value="mpc_casadi_controller">Casadi MPC</option>
         <option value="move_to_start_example_controller">Jointspace Homing Controller</option>

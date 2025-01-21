@@ -2,7 +2,6 @@
 #include <fstream>
 #include <vector>
 #include <cstring> // for memcpy
-#include <chrono>  // for time measurement
 
 #include "include/FullSystemTorqueMapper.hpp"
 #include "include/CasadiMPC.hpp"
@@ -13,8 +12,8 @@
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include "include/eigen_templates.hpp"
+#include "include/TicToc.hpp"
 
-#include <iostream>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -187,148 +186,7 @@ void open_shared_memories()
     std::cout << "Shared memory opened successfully." << std::endl;
 }
 
-class TicToc
-{
-public:
-    TicToc() : start_time(), elapsed_time(0), elapsed_total_time(0), running(false) {}
 
-    void tic(bool reset = false)
-    {
-        if (reset)
-        {
-            start_time = std::chrono::time_point<std::chrono::high_resolution_clock>();
-            elapsed_total_time = 0;
-            running = false;
-        }
-        else
-        {
-            start_time = std::chrono::high_resolution_clock::now();
-            running = true;
-        }
-    }
-
-    double toc()
-    {
-        if (!running)
-        {
-            std::cerr << "Error: Tic not started.\n";
-            return 0.0;
-        }
-
-        auto current_time = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> elapsed_time_act = current_time - start_time;
-        elapsed_time = elapsed_time_act.count();
-        elapsed_total_time += elapsed_time;
-        start_time = current_time;
-        return elapsed_time;
-    }
-
-    double get_time()
-    {
-        return elapsed_total_time;
-    }
-
-    std::string get_time_str(const std::string &additional_text = "time")
-    {
-        return "\033[92mElapsed " + additional_text + ": " + format_time(elapsed_total_time) + "\033[0m";
-    }
-
-    void print_time(const std::string &additional_text = "time")
-    {
-        std::string time_str = get_time_str(additional_text);
-        std::cout << time_str;
-    }
-
-    void reset()
-    {
-        start_time = std::chrono::time_point<std::chrono::high_resolution_clock>();
-        elapsed_total_time = 0;
-        running = false;
-    }
-
-    double get_frequency()
-    {
-        if (elapsed_total_time == 0)
-        {
-            std::cerr << "Error: No elapsed time. Cannot calculate frequency.\n";
-            return 0;
-        }
-        double frequency = 1.0 / elapsed_time; // Frequency in Hz
-        return frequency;
-    }
-
-    void print_frequency(std::string additional_text = "Frequency: ")
-    {
-        if (elapsed_total_time == 0)
-        {
-            std::cerr << "Error: No elapsed time. Cannot calculate frequency.\n";
-            return;
-        }
-        double frequency = get_frequency();
-        std::cout << "\033[92m" << additional_text << ": " << format_frequency(frequency) << "\033[0m";
-    }
-
-    std::string format_frequency(double frequency, int precision = 2)
-    {
-        std::ostringstream oss;
-        if (frequency < 1)
-        {
-            oss << std::fixed << std::setprecision(precision) << frequency << " Hz"; // Hertz
-        }
-        else if (frequency < 1e3)
-        {
-            oss << std::fixed << std::setprecision(precision) << frequency << " Hz"; // Hertz
-        }
-        else if (frequency < 1e6)
-        {
-            oss << std::fixed << std::setprecision(precision) << frequency / 1e3 << " kHz"; // kHz
-        }
-        else
-        {
-            oss << std::fixed << std::setprecision(precision) << frequency / 1e6 << " MHz"; // MHz
-        }
-        return oss.str();
-    }
-
-private:
-    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
-    double elapsed_time;       // current elapsed time in seconds
-    double elapsed_total_time; // total elapsed time in seconds
-    bool running;
-
-    std::string format_time(double elapsed_time, int precision = 2)
-    {
-        std::ostringstream oss;
-        if (elapsed_time == 0)
-        {
-            return "0 s";
-        }
-        else if (elapsed_time < 1e-6)
-        {
-            oss << std::fixed << std::setprecision(precision) << elapsed_time * 1e9 << " ns"; // Nanoseconds
-        }
-        else if (elapsed_time < 1e-3)
-        {
-            oss << std::fixed << std::setprecision(precision) << elapsed_time * 1e6 << " µs"; // Microseconds
-        }
-        else if (elapsed_time < 1)
-        {
-            oss << std::fixed << std::setprecision(precision) << elapsed_time * 1e3 << " ms"; // Milliseconds
-        }
-        else if (elapsed_time < 60)
-        {
-            oss << std::fixed << std::setprecision(precision) << elapsed_time << " s"; // Seconds
-        }
-        else
-        {
-            int minutes = static_cast<int>(elapsed_time / 60);
-            double seconds = elapsed_time - minutes * 60;
-            oss << minutes << " min " << std::fixed << std::setprecision(precision) << seconds << " s";
-        }
-
-        return oss.str();
-    }
-};
 
 casadi_real x_k_tst[12] = {0};
 

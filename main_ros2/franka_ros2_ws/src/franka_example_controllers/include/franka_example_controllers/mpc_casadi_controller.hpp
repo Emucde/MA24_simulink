@@ -35,6 +35,7 @@
 #include <semaphore.h>
 
 #include "CasadiController.hpp"
+#include "TicToc.hpp"
 #include "param_robot.h"
 #include "casadi_types.h"
 #include <Eigen/Dense>
@@ -113,6 +114,10 @@ namespace franka_example_controllers
         double T2 = 1/400, A2 = std::exp(-Ts/T2), B2 = 1 - A2; // Lowpass Filter for q_p
         std::future<Eigen::VectorXd> tau_full_future;
         ErrorFlag error_flag = ErrorFlag::NO_ERROR;
+
+        double current_frequency = 0.0;
+        TicToc timer_mpc_solver;
+
         // rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr reset_mpc_service_;

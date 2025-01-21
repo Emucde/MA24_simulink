@@ -85,8 +85,8 @@ async function check(result, checked_command, data)
         case 'switch_control':
             if (result.ok) {
                 result = await update(); // Update controller info
-                status += 'Controller switched to ' + data.controller_name + ' ';
-                console.log('Controller switched to ' + data.controller_name);
+                status += 'Controller switched to ' + active_controller_name + ' ';
+                console.log('Controller switched to ' + active_controller_name);
             }
             else
                 status += 'Error while switching controller';
@@ -134,7 +134,7 @@ async function check(result, checked_command, data)
             }
             else
                 status += 'Error while starting controller: ' + result.status;
-            result.name = 'ros_service';
+            name = 'ros_service';
             break;
         case 'reset_service':
             if(result.ok)
@@ -146,7 +146,7 @@ async function check(result, checked_command, data)
             }
             else
                 status += 'Error while resetting controller: ' + result.status;
-            result.name = 'ros_service';
+            name = 'ros_service';
             break;
         case 'stop_service':
             if(result.ok )
@@ -156,7 +156,7 @@ async function check(result, checked_command, data)
             }
             else
                 status += 'Error while stopping controller: ' + result.status;
-            result.name = 'ros_service';
+            name = 'ros_service';
             break;
     }
     return { ok: result.ok, status: status, name: name };
@@ -189,10 +189,6 @@ async function main() {
                 // no ros services:
                 switch (data.command)
                 {
-                    case 'update':
-                        result = await update(); // Update controller info
-                        log_check = await check(result, 'update', data)
-                        break;
                     case 'open_brakes':
                         broadcast('open_brakes');
                         log_check = { ok: true, status: 'brakes_service: open_brakes', name: 'open_brakes' };
@@ -280,7 +276,7 @@ async function main() {
                     ws.send(JSON.stringify({ status: 'error', result: { name: log_check.name, status: log_check.status } }));
             } catch (error)
             {
-                console.log(error);
+                console.error('An error occurred:', error.message);
                 ws.send(JSON.stringify({ status: 'error', error: error.message }));
             }
         });
