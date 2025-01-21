@@ -112,8 +112,10 @@ function start() {
 }
 
 document.getElementById('start').addEventListener('click', () => {
-    var active_controller_name = document.querySelector('#controller').value;
-    ws.send(JSON.stringify({ command: 'start', controller_name: active_controller_name}));
+    var traj_num = get_trajectory();
+    var active_controller_name = get_controller();
+    var mpc_type = get_mpc();
+    ws.send(JSON.stringify({ command: 'start', controller_name: active_controller_name, mpc_type: mpc_type, traj_num: traj_num}));
 });
 
 document.getElementById('reset').addEventListener('click', () => {
@@ -165,23 +167,30 @@ toggle.addEventListener('change', () => {
     localStorage.setItem('theme', toggle.checked ? 'light' : 'dark');
 });
 
-function send_trajectory(current_element) {
+function get_trajectory() {
+    var current_element = document.querySelector('#trajectory');
     var traj_num = parseInt(current_element.value, 10);
     var traj_text = current_element.options[traj_num-1].text;
-    ws.send(JSON.stringify({ command: 'trajectory_selection', traj_select: traj_num }));
     var a_iframe_plot = document.querySelector('a[_target=iframe_plot1]')
     a_iframe_plot.textContent = traj_text;
     change_button_positions();
+    return traj_num;
 }
 
-function send_controller(current_element) {
+function get_controller() {
+    var current_element = document.querySelector('#controller');
     var active_controller_name = current_element.value;
-    ws.send(JSON.stringify({ command: 'switch_controller', controller_name: active_controller_name}));
+    if(active_controller_name == 'mpc_casadi_controller')
+      document.getElementById("casadi_mpcs").classList.remove("hide");
+    else
+      document.getElementById("casadi_mpcs").classList.add("hide");
+    return active_controller_name;
 }
 
-function send_mpc(current_element) {
+function get_mpc(current_element) {
+    var current_element = document.querySelector('#casadi_mpcs');
     var mpc_type = parseInt(current_element.value, 10);
-    ws.send(JSON.stringify({ command: 'casadi_mpc_switch', mpc_type: mpc_type }));
+    return mpc_type;
 }
   
 function click_fun(element, number) {

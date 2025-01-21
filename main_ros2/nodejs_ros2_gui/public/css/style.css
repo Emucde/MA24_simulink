@@ -131,7 +131,7 @@ li {
 
 hr {
     margin-top: 28px;
-    width: 25%;
+    width: 930px;
     margin-left: 0;
 }
 
@@ -257,6 +257,7 @@ select:focus {
     border-radius: 50%;
     display: inline-block;
     margin-right: 5px;
+    margin-left: 5px;
 }
 
 @keyframes spin {

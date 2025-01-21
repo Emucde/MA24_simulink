@@ -31,9 +31,11 @@
     <br>
     <br>
     <div class="float_left">
-        <p id="homedelay_p" class="margin_left">Home Delay (ms):</p>
-        <input class="margin_left delay_input" type="text" id="home_delay" value="5000">
+        <p> Response: </p>
         <p class="margin_left" id="response" class="response"></p>
+        <div id="home_main" class="status-item hide">
+            <div class="status-indicator" id="homingdiv" style="animation: spin 1s infinite;"></div>
+        </div>
     </div>
     <br>
     <br>
@@ -44,23 +46,17 @@
         <button id="reset">Reset</button>
         <button id="stop">Stop</button>
         <button id="home">Home</button>
-        <div id="home_main" class="status-item hide">
-            <div class="status-indicator" id="homingdiv" style="animation: spin 1s infinite;"></div>
-            <span id="homing">Homing...</span>
-        </div>
+        <p id="homedelay_p" class="margin_left">Home Delay (ms):</p>
+        <input class="margin_left delay_input" type="text" id="home_delay" value="5000">
     </div>
     <br><br>
-    <select id="controller" onchange="send_controller(this)">
+    <select id="controller">
         <option value="mpc_pinocchio_controller">Pinocchio MPC</option>
         <option value="mpc_casadi_controller">Casadi MPC</option>
         <option value="move_to_start_example_controller">Jointspace Homing Controller</option>
         <option value="gravity_compensation_example_controller">Gravity Controller</option>
     </select>
-    <select id="trajectory" onchange="send_trajectory(this)">
-        <option value="1">traj1</option>
-        <option value="2">traj2</option>
-    </select>
-    <select id="casadi_mpcs" onchange="send_mpc(this)">
+    <select id="casadi_mpcs" class="hide">
         <option value="0">MPC01</option>
         <option value="1">MPC6</option>
         <option value="2">MPC7</option>
@@ -71,6 +67,12 @@
         <option value="7">MPC12</option>
         <option value="8">MPC13</option>
         <option value="9">MPC14</option>
+    </select>
+    <br>
+    <br>
+    <select id="trajectory"">
+        <option value="1">traj1</option>
+        <option value="2">traj2</option>
     </select>
     <br>
     <br>

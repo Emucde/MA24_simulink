@@ -88,125 +88,127 @@ async function main() {
         ws.on('message', async (message) => {
             // ws.send(JSON.stringify({ status: 'success', result: "test" }));
             const data = JSON.parse(message);
-            let result;
-
+        
             try {
-                switch (data.command) {
-                    case 'start':
-                        var extra_status = '';
-                        if(data.controller_name !== active_controller_name)
-                        {
-                            result = await switch_control(active_controller_name, data.controller_name);
-                            result.name = 'ros_service';
-                            if(result.ok)
-                            {
+                let result = await update(); // Update controller info
+                if(result.ok)
+                {
+                    switch (data.command) {
+                        case 'start':
+                            // Switch Controller
+                            var old_controller_name = active_controller_name;
+                            result = await switch_control(old_controller_name, data.controller_name);
+                            result.status = '';
+                            if (result.ok) {
                                 result = await update(); // Update controller info
-                                extra_status = 'Controller switched to ' + active_controller_name + ' and ';
+                                result.status = 'Controller switched to ' + data.controller_name + ' ';
                             }
                             else
                                 break;
-                        }
-                        result = await startService(active_controller_name);
-                        result.name = 'ros_service';
-                        if(result.status != null && !result.status.includes('No active controller'))
-                        {
-                            result.status = extra_status + active_controller_name + ' started';
-                        }
-                        break;
-                    case 'reset':
-                        result = await resetService(active_controller_name);
-                        if(result.status != null && !result.status.includes('No active controller'))
-                        {
-                            result.status = active_controller_name + ' reset';
-                        }
-                        result.name = 'ros_service';
-                        break;
-                    case 'stop':
-                        result = await stopService(active_controller_name);
-                        result.name = 'ros_service';
-                        if(result.status != null && !result.status.includes('No active controller'))
-                            result.status = active_controller_name + ' stopped';
-                        break;
-                    case 'trajectory_selection':
-                        result = await switchTrajectory(active_controller_name, data.traj_select);
-                        if(result.status != null && !result.status.includes('No active controller'))
-                        {
-                            result.status = 'Trajectory ' + data.traj_select + ' on ' + active_controller_name + ' selected';
-                        }
-                        result.name = 'ros_service';
-                        break;
-                    case 'switch_controller':
-                        var old_controller_name = active_controller_name;
-                        result = await switch_control(old_controller_name, data.controller_name);
-                        if (result.ok) {
-                            result = await update(); // Update controller info
-                            result.status = 'Controller switched to ' + data.controller_name;
-                        }
-                        break;
-                    case 'home':
-                        var old_controller_name = active_controller_name;
-                        result = await switch_control(old_controller_name, 'move_to_start_example_controller');
-                        if (result.ok) {
-                            result = await update(); // Update controller info
-                            result.status = 'Homing in progress';
-                            result.name = 'ros_service';
-                            setTimeout(async function () {
-                                result = await switch_control(active_controller_name, old_controller_name);
-                                if (result.ok)
-                                {
-                                    result = await update(); // Update controller info
-                                    ws.send(JSON.stringify({ status: 'success', result: { name: 'ros_service', status: 'Homing done' } }));
+
+
+                            if(active_controller_name === 'mpc_casad_controller')
+                            {
+                                // Switch Casadi MPC Type
+                                // switch internal mpc in casadi_controller
+                                var mpc_type = data.mpc_type;
+                                result = await switch_casadi_mpc(mpc_type);
+                                if (result.ok) {
+                                    switch(mpc_type) {
+                                        case 0: result.status += 'Switched to Casadi MPC01'; break;
+                                        case 1: result.status += 'Switched to Casadi MPC6'; break;
+                                        case 2: result.status += 'Switched to Casadi MPC7'; break;
+                                        case 3: result.status += 'Switched to Casadi MPC8'; break;
+                                        case 4: result.status += 'Switched to Casadi MPC9'; break;
+                                        case 5: result.status += 'Switched to Casadi MPC10'; break;
+                                        case 6: result.status += 'Switched to Casadi MPC11'; break;
+                                        case 7: result.status += 'Switched to Casadi MPC12'; break;
+                                        case 8: result.status += 'Switched to Casadi MPC13'; break;
+                                        case 9: result.status += 'Switched to Casadi MPC14'; break;
+                                        default: result.status += 'Switched to Casadi MPC01'; break;
+                                    }
                                 }
-                            }, data.delay);
-                        }
-                        else
-                            break;
-                        if (result.status != null && result.status.includes('Already in')) {
-                            result.status = result.status + '. Homing done';
-                        }
-                        result.name = 'ros_service';
-                        break;
-                    case 'update':
-                        result = await update(); // Update controller info
-                        result.name = 'ros_service';
-                    case 'casadi_mpc_switch':
-                        // switch internal mpc in casadi_controller
-                        var mpc_type = data.mpc_type;
-                        result = await switch_casadi_mpc(mpc_type);
-                        if (result.ok) {
-                            switch(mpc_type) {
-                                case 0: result.status = 'Switched to Casadi MPC01'; break;
-                                case 1: result.status = 'Switched to Casadi MPC6'; break;
-                                case 2: result.status = 'Switched to Casadi MPC7'; break;
-                                case 3: result.status = 'Switched to Casadi MPC8'; break;
-                                case 4: result.status = 'Switched to Casadi MPC9'; break;
-                                case 5: result.status = 'Switched to Casadi MPC10'; break;
-                                case 6: result.status = 'Switched to Casadi MPC11'; break;
-                                case 7: result.status = 'Switched to Casadi MPC12'; break;
-                                case 8: result.status = 'Switched to Casadi MPC13'; break;
-                                case 9: result.status = 'Switched to Casadi MPC14'; break;
-                                default: result.status = 'Switched to Casadi MPC01'; break;
+                                else
+                                    break;
                             }
-                        }
-                        break;
-                    case 'open_brakes':
-                        broadcast('open_brakes');
-                        result = { status: 'brakes_service: open_brakes', name: 'open_brakes' };
-                        break;
-                    case 'close_brakes':
-                        broadcast('close_brakes');
-                        result = { status: 'brakes_service: close_brakes', name: 'close_brakes' };
-                        break;
-                    default:
-                        result = { status: 'error', error: 'Unknown command ' + data.command };
-                        break;
+
+                            // Switch Trajectory
+                            result = await switchTrajectory(active_controller_name, data.traj_select);
+                            if(result.ok && result.status != null && !result.status.includes('No active controller'))
+                            {
+                                result.status += 'Trajectory ' + data.traj_select + ' on ' + active_controller_name + ' selected ';
+                            }
+                            result.name = 'ros_service';
+
+                            // start controller
+                            result = await startService(active_controller_name);
+                            result.name = 'ros_service';
+                            if(result.status != null && !result.status.includes('No active controller'))
+                            {
+                                result.status += active_controller_name + ' started ';
+                            }
+                            break;
+                        case 'reset':
+                            result = await resetService(active_controller_name);
+                            if(result.status != null && !result.status.includes('No active controller'))
+                            {
+                                result.status = active_controller_name + ' reset';
+                            }
+                            result.name = 'ros_service';
+                            break;
+                        case 'stop':
+                            result = await stopService(active_controller_name);
+                            result.name = 'ros_service';
+                            if(result.status != null && !result.status.includes('No active controller'))
+                                result.status = active_controller_name + ' stopped';
+                            break;
+                        case 'home':
+                            var old_controller_name = active_controller_name;
+                            result = await switch_control(old_controller_name, 'move_to_start_example_controller');
+                            if (result.ok) {
+                                result = await update(); // Update controller info
+                                result.status = 'Homing in progress';
+                                result.name = 'ros_service';
+                                setTimeout(async function () {
+                                    result = await switch_control(active_controller_name, old_controller_name);
+                                    if (result.ok)
+                                    {
+                                        result = await update(); // Update controller info
+                                        ws.send(JSON.stringify({ status: 'success', result: { name: 'ros_service', status: 'Homing done' } }));
+                                    }
+                                }, data.delay);
+                            }
+                            else
+                                break;
+                            if (result.status != null && result.status.includes('Already in')) {
+                                result.status = result.status + '. Homing done';
+                            }
+                            result.name = 'ros_service';
+                            break;
+                        case 'update':
+                            result = await update(); // Update controller info
+                            result.name = 'ros_service';
+                        case 'open_brakes':
+                            broadcast('open_brakes');
+                            result = { status: 'brakes_service: open_brakes', name: 'open_brakes' };
+                            break;
+                        case 'close_brakes':
+                            broadcast('close_brakes');
+                            result = { status: 'brakes_service: close_brakes', name: 'close_brakes' };
+                            break;
+                        default:
+                            result = { status: 'error', error: 'Unknown command ' + data.command };
+                            break;
+                    }
                 }
 
                 if(result.status == null)
                     result.status = result;
                 console.log(result.status);
-
-                ws.send(JSON.stringify({ status: 'success', result: { name: result.name, status: result.status } }));
+                if(result.ok)
+                    ws.send(JSON.stringify({ status: 'success', result: { name: result.name, status: result.status } }));
+                else
+                    ws.send(JSON.stringify({ status: 'error', result: { name: result.name, status: result.status } }));
             } catch (error) {
                 console.log(error);
                 ws.send(JSON.stringify({ status: 'error', error: error.message }));
