@@ -4,7 +4,7 @@
         "children": [
             {
                 "label": "init_mpc_weights_fr3_no_hand_6dof.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/matlab_init_general/init_mpc_weights_fr3_no_hand_6dof.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/matlab_init_general/init_mpc_weights_fr3_no_hand_6dof.m"
             }
         ]
     },
@@ -13,55 +13,55 @@
         "children": [
             {
                 "label": "nlpsol_generate_opt_problem.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/nlpsol_generate_opt_problem.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/nlpsol_generate_opt_problem.m"
             },
             {
                 "label": "nlpsol_opt_problem_SX_v2.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/nlpsol_opt_problem_SX_v2.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/nlpsol_opt_problem_SX_v2.m"
             },
             {
                 "label": "opt_problem_ineq_feasible_block_MPC_v4.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_ineq_feasible_block_MPC_v4.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_ineq_feasible_block_MPC_v4.m"
             },
             {
                 "label": "opt_problem_ineq_feasible_traj_MPC_v3_quat.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_ineq_feasible_traj_MPC_v3_quat.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_ineq_feasible_traj_MPC_v3_quat.m"
             },
             {
                 "label": "opt_problem_ineq_feasible_traj_MPC_v3_rpy.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_ineq_feasible_traj_MPC_v3_rpy.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_ineq_feasible_traj_MPC_v3_rpy.m"
             },
             {
                 "label": "opt_problem_MPC_v4_kin_int_refsys.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v4_kin_int_refsys.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v4_kin_int_refsys.m"
             },
             {
                 "label": "opt_problem_MPC_v4_kin_int.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v4_kin_int.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v4_kin_int.m"
             },
             {
                 "label": "opt_problem_MPC_v5_kin_dev.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v5_kin_dev.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v5_kin_dev.m"
             },
             {
                 "label": "opt_problem_MPC_v6_kin_dev_path_following.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v6_kin_dev_path_following.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v6_kin_dev_path_following.m"
             },
             {
                 "label": "opt_problem_MPC_v6_kin_int_path_following.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v6_kin_int_path_following.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v6_kin_int_path_following.m"
             },
             {
                 "label": "opt_problem_MPC_v7_kin_int_planner.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v7_kin_int_planner.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v7_kin_int_planner.m"
             },
             {
                 "label": "opt_problem_MPC_v8_kin_dev_planner.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v8_kin_dev_planner.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_MPC_v8_kin_dev_planner.m"
             },
             {
                 "label": "opt_problem_y_u_MPC_v1.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_y_u_MPC_v1.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/utils_casadi/casadi_mpc_definitions/opt_problem_y_u_MPC_v1.m"
             }
         ]
     },
@@ -70,15 +70,15 @@
         "children": [
             {
                 "label": "main_crocoddyl_7DOF.py",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_python/main_crocoddyl_7DOF.py"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_python/main_crocoddyl_7DOF.py"
             },
             {
                 "label": "mpc_weights_crocoddyl.json",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils_python/mpc_weights_crocoddyl.json"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils_python/mpc_weights_crocoddyl.json"
             },
             {
                 "label": "utils.py",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils_python/utils.py"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils_python/utils.py"
             }
         ]
     },
@@ -87,15 +87,15 @@
         "children": [
             {
                 "label": "param_ct_pdplus_control_init.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/matlab_init_general/param_ct_pdplus_control_init.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/matlab_init_general/param_ct_pdplus_control_init.m"
             },
             {
                 "label": "param_EKF_init.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/matlab_init_general/param_EKF_init.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/matlab_init_general/param_EKF_init.m"
             },
             {
                 "label": "param_traj_fr3_no_hand_6dof.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils/matlab_init_general/param_traj_fr3_no_hand_6dof.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils/matlab_init_general/param_traj_fr3_no_hand_6dof.m"
             }
         ]
     },
@@ -104,15 +104,15 @@
         "children": [
             {
                 "label": "mpc_casadi_main.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_matlab/mpc_casadi_main.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_matlab/mpc_casadi_main.m"
             },
             {
                 "label": "parameters_7dof.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_matlab/parameters_7dof.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_matlab/parameters_7dof.m"
             },
             {
                 "label": "parameters_franka_fr3.m",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_franka/Controller/parameters_franka_fr3.m"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/Controller/parameters_franka_fr3.m"
             }
         ]
     },
@@ -121,43 +121,43 @@
         "children": [
             {
                 "label": "build.sh",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/build.sh"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/build.sh"
             },
             {
                 "label": "CasadiController.cpp",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CasadiController.cpp"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CasadiController.cpp"
             },
             {
                 "label": "CasadiController.hpp",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/include/CasadiController.hpp"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/include/CasadiController.hpp"
             },
             {
                 "label": "CasadiMPC.cpp",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CasadiMPC.cpp"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CasadiMPC.cpp"
             },
             {
                 "label": "CasadiMPC.hpp",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/include/CasadiMPC.hpp"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/include/CasadiMPC.hpp"
             },
             {
                 "label": "CMakeLists.txt",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/CMakeLists.txt"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/CMakeLists.txt"
             },
             {
                 "label": "eigen_templates.hpp",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/include/eigen_templates.hpp"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/include/eigen_templates.hpp"
             },
             {
                 "label": "main.cpp",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/main.cpp"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/main.cpp"
             },
             {
                 "label": "FullSystemTorqueMapper.cpp",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/FullSystemTorqueMapper.cpp"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/FullSystemTorqueMapper.cpp"
             },
             {
                 "label": "FullSystemTorqueMapper.hpp",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/include/FullSystemTorqueMapper.hpp"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/include/FullSystemTorqueMapper.hpp"
             }
         ]
     },
@@ -166,47 +166,47 @@
         "children": [
             {
                 "label": "CMakeLists.txt",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/CMakeLists.txt"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/CMakeLists.txt"
             },
             {
                 "label": "controllers.yaml",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_bringup/config/controllers.yaml"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_bringup/config/controllers.yaml"
             },
             {
                 "label": "franka_example_controllers.xml",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/franka_example_controllers.xml"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/franka_example_controllers.xml"
             },
             {
                 "label": "franka.launch.py",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_bringup/launch/franka.launch.py"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_bringup/launch/franka.launch.py"
             },
             {
                 "label": "model_example_controller_parameters.yaml",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/src/model_example_controller_parameters.yaml"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/src/model_example_controller_parameters.yaml"
             },
             {
                 "label": "mpc_casadi_controller.cpp",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/src/mpc_casadi_controller.cpp"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/src/mpc_casadi_controller.cpp"
             },
             {
                 "label": "mpc_casadi_controller.hpp",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/include/franka_example_controllers/mpc_casadi_controller.hpp"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/include/franka_example_controllers/mpc_casadi_controller.hpp"
             },
             {
                 "label": "mpc_casadi_controller.launch.py",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_bringup/launch/mpc_casadi_controller.launch.py"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_bringup/launch/mpc_casadi_controller.launch.py"
             },
             {
                 "label": "mpc_pinocchio_controller.cpp",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/src/mpc_pinocchio_controller.cpp"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/src/mpc_pinocchio_controller.cpp"
             },
             {
                 "label": "mpc_pinocchio_controller.hpp",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/include/franka_example_controllers/mpc_pinocchio_controller.hpp"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_example_controllers/include/franka_example_controllers/mpc_pinocchio_controller.hpp"
             },
             {
                 "label": "mpc_pinocchio_controller.launch.py",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_bringup/launch/mpc_pinocchio_controller.launch.py"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/franka_ros2_ws/src/franka_bringup/launch/mpc_pinocchio_controller.launch.py"
             }
         ]
     },
@@ -215,27 +215,27 @@
         "children": [
             {
                 "label": "app.js",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/nodejs_ros2_gui/src/app.js"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/nodejs_ros2_gui/src/app.js"
             },
             {
                 "label": "client.js",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/nodejs_ros2_gui/public/client.js"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/nodejs_ros2_gui/public/client.js"
             },
             {
                 "label": "index.html",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/nodejs_ros2_gui/public/index.html"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/nodejs_ros2_gui/public/index.html"
             },
             {
                 "label": "package.json",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/nodejs_ros2_gui/package.json"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/nodejs_ros2_gui/package.json"
             },
             {
                 "label": "ros_services.js",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/nodejs_ros2_gui/src/ros_services.js"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/nodejs_ros2_gui/src/ros_services.js"
             },
             {
                 "label": "style.css",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/nodejs_ros2_gui/public/css/style.css"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/nodejs_ros2_gui/public/css/style.css"
             }
         ]
     }
