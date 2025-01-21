@@ -15,6 +15,10 @@ s_functions/*/*/*.mat
 s_functions/*/*/*.bin
 s_functions/*/*/MPC*.c
 s_functions/*/*/MPC*.h
+s_functions/*/*/casadi_types.h
+s_functions/*/*/mpc_config.h
+s_functions/*/*/param_robot.c
+s_functions/*/*/param_robot.h
 s_functions/*/*MPC*.c
 s_functions/*/*MPC*.h
 s_functions/MPC*.c
