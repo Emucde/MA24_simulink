@@ -11,6 +11,9 @@ STANDALONE_MAKEFILE=false
 if [ ! -d "/opt/ros/humble" ]; then
     source $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
     mamba activate ros_env
+    source $MAMBA_ROOT_PREFIX/envs/ros_env/setup.bash
+else
+    source /opt/ros/humble/setup.bash
 fi
 
 # export CXX=/usr/bin/g++
@@ -164,7 +167,6 @@ if [ $BUILD_ROS2_MPCS == true ]; then
         BUILD_PATH=$masterdir/main_ros2/franka_ros2_ws/build_debug
         BUILD_TYPE="Debug"
     fi
-    source $MAMBA_ROOT_PREFIX/envs/ros_env/setup.bash
 
     CURRENT_PATH=$(pwd);
     LOG=$BUILD_PATH/log
