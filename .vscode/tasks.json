@@ -7,7 +7,7 @@
             "command": "./build.sh",
             "args": [
                 "-d",
-                "${fileDirname}"
+                "${env:masterdir}/main_ros2/casadi_mpc/cpp_class_files" //"${fileDirname}"
             ],
             "options": {
                 "cwd": "${workspaceFolder}/main_ros2/casadi_mpc"
@@ -27,7 +27,7 @@
             "command": "./build.sh",
             "args": [
                 "-r",
-                "${fileDirname}"
+                "${env:masterdir}/main_ros2/casadi_mpc/cpp_class_files"//"${fileDirname}"
             ],
             "options": {
                 "cwd": "${workspaceFolder}/main_ros2/casadi_mpc"
@@ -43,30 +43,7 @@
                 "Run Build (No Debug Info)"
             ],
             "detail": "Build and run the project without debug info."
-        },
-                {
-            "label": "Build and Run (-O3)",
-            "type": "shell",
-            "command": "./build.sh",
-            "args": [
-                "-r",
-                "${fileDirname}"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}/main_ros2/casadi_mpc"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "dependsOn": [
-                "Run Build (No Debug Info)"
-            ],
-            "detail": "Build and run the project without debug info."
-        },        
+        },     
         {
             "label": "Build ALL (ROS2 Release)",
             "type": "shell",
