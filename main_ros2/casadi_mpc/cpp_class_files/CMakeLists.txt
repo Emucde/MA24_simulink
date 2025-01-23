@@ -22,7 +22,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always -pthread")
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 
 # Set C++ standard
-set(CMAKE_CXX_STANDARD 14)  # Change to 14/17/20 as necessary
+set(CMAKE_CXX_STANDARD 17)  # Change to 14/17/20 as necessary
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Define the path to the MPC source files
@@ -78,6 +78,7 @@ link_directories("${MPC_SOURCE_DIR}")
 find_package(pinocchio REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Threads REQUIRED)
+find_package(rclcpp REQUIRED)
 find_library(RT_LIB rt)
 
 # Add source files for main executable, including CasadiMPC.cpp
@@ -97,13 +98,15 @@ foreach(SOURCE_FILE ${SRC_FILES})
     target_include_directories(${FILE_NAME} PRIVATE 
         ${pinocchio_INCLUDE_DIRS} 
         ${EIGEN3_INCLUDE_DIR}
+        ${rclcpp_INCLUDE_DIRS}
         ${MPC_SOURCE_DIR} 
         ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
 
     target_link_libraries(${FILE_NAME} PRIVATE
         ${pinocchio_LIBRARIES} 
-        ${EIGEN3_LIBRARIES} 
+        ${EIGEN3_LIBRARIES}
+        ${rclcpp_LIBRARIES}
         ${MPC_PARAM_LIBRARIES}
         ${MPC_LIBRARIES}
         ${RT_LIB}
@@ -141,14 +144,16 @@ endif()
 target_include_directories(main PRIVATE 
     ${pinocchio_INCLUDE_DIRS} 
     ${EIGEN3_INCLUDE_DIR} 
+    ${rclcpp_INCLUDE_DIRS}
     ${MPC_SOURCE_DIR} 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # Link libraries to the main executable
 target_link_libraries(main PRIVATE 
-    ${pinocchio_LIBRARIES} 
-    ${EIGEN3_LIBRARIES} 
+    ${pinocchio_LIBRARIES}
+    ${EIGEN3_LIBRARIES}
+    ${rclcpp_LIBRARIES}
     ${MPC_PARAM_LIBRARIES}
     ${MPC_LIBRARIES}
     ${UTILS_LIBRARIES}

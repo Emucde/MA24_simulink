@@ -33,7 +33,7 @@ public:
     void switchController(ControllerType type);
     void update(const double const* x);
 private:
-    BaseController* active_controller;
+    BaseController* active_controller; // I do not need a smart pointer because I store all instances in the class.
     
     // Robot model data
     pinocchio::Model robot_model;
@@ -79,7 +79,7 @@ private:
     CTController ct_controller;       // Instance of CTController
     PDPlusController pd_plus_controller; // Instance of PDPlusController
     InverseDynamicsController inverse_dyn_controller; // Instance of InverseDynamicsController
- }
+ };
 
 
 //  void update(double* x) {
