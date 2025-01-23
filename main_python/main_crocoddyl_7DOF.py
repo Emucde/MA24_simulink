@@ -509,7 +509,7 @@ try:
                         run_flag = False
 
                     if (i+1) % update_interval == 0:
-                        print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()} | {format_freq(freq_per_Ta_step[i], 2)}     ", end='\r')
+                        print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()} | {format_freq(freq_per_Ta_step[i-1], 2)}     ", end='\r')
 
 
 

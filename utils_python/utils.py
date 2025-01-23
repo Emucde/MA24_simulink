@@ -1949,7 +1949,7 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
 ###########################################################################
 ###########################################################################
 
-def start_server():
+def start_server(broadcast_message = 'reload_plotly'):
     LOCK_FILE = '/tmp/my_server.lock'
     SCRIPT_PATH = 'main_python/websocket_fr3.py'
     PID_FILE = '/tmp/my_server.pid'
@@ -1972,7 +1972,7 @@ def start_server():
 
     if is_server_running():
         print("Server is already running.")
-        asyncio.run(send_message('reload'))
+        asyncio.run(send_message(broadcast_message))
         return False
 
     # Erstelle Lock-Datei
@@ -2145,13 +2145,13 @@ def get_autoscale_script():
         setTimeout(autoscale_function, rec_time);
         '''
 
-def get_reload_tab_script():
+def get_reload_tab_script(reload_message = 'reload_plotly'):
     return '''
             const ws = new WebSocket('ws://localhost:8765');
 
             ws.onmessage = function(event) {
                 console.log(event.data);
-                if (event.data === 'reload') {
+                if (event.data === \''''+reload_message+'''\') {
                     location.reload();
                 }
             };
@@ -2338,7 +2338,7 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
 
         custom_download_button_code = get_custom_download_button_script()
 
-        reload_tab_code = get_reload_tab_script()
+        reload_tab_code = get_reload_tab_script('reload_plotly')
 
         # py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False, include_plotlyjs='cdn') # online use
         py.plot(fig, filename=file_name, include_mathjax='cdn', auto_open=False) # offline use
@@ -2353,7 +2353,7 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
                 with open(file_name, 'w', encoding='utf-8') as file:
                     file.write(str(soup))
         if(reload_page):
-            started = start_server()
+            started = start_server('reload_plotly')
             if started:
                 webbrowser.open('file://' + file_name)
         else: # otherwise open in browser
@@ -2729,7 +2729,7 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
         html_out = vis.static_html()
         soup = BeautifulSoup(html_out, 'html.parser')
         script_tag = soup.new_tag('script', type='text/javascript')
-        script_tag.string = get_reload_tab_script()
+        script_tag.string = get_reload_tab_script('reload_meshcat')
 
         # Add the script tag to the body of the HTML
         soup.body.append(script_tag)
@@ -2747,7 +2747,7 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
         with robot_display.robot.viz.create_video_ctx("test.mp4"):
             robot_display.robot.viz.play(q_sol, dt)
 
-    start_server() # start server to visualize robot
+    start_server('reload_meshcat') # start server to visualize robot
 
 
 
