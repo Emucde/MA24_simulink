@@ -49,6 +49,10 @@ if [[ $# -gt 0 ]]; then
         BUILD_TYPE="debug"
         shift
         ;;
+        -c|--cmake)
+        JUST_CREATE_CMAKE=true
+        shift
+        ;;
         *)
         echo "Unknown option: $key"
         exit 1
@@ -59,7 +63,21 @@ fi
 echo "BUILD_CURRENT_FILE: $BUILD_CURRENT_FILE"
 echo "STANDALONE_MAKEFILE: $STANDALONE_MAKEFILE"
 echo "BUILD_TYPE: $BUILD_TYPE"
+echo "RUN_MAKE_INSTALL: $RUN_MAKE_INSTALL"
+echo "BUILD_ROS2_MPCS: $BUILD_ROS2_MPCS"
+echo "JUST_CREATE_CMAKE: $JUST_CREATE_CMAKE"
 echo ""
+
+if [ "$JUST_CREATE_CMAKE" = true ]; then
+    cmake -B build_debug -S . -DCMAKE_BUILD_TYPE=Debug
+    echo ""
+    echo "----------------------------------"
+    
+    cmake -B build_release -S . -DCMAKE_BUILD_TYPE=Release
+    echo ""
+    echo "----------------------------------"
+    exit 0
+fi
 
 if [ "$BUILD_TYPE" = "release" ]; then
     OPT_FLAGS="-O3"
@@ -137,14 +155,14 @@ if [ $BUILD_STATUS -eq 0 ]; then
 
         echo -e "\n----------------------------------\n"
 
-        if [ $RUN_MAKE_INSTALL == false ]; then
-            echo -e "run make install? (y/n)"
-            read -r response
-            if [[ $response =~ ^([yY][eE][sS]|[yY])$ ]]; then
-                cd $UTILS_BUILD_PATH
-                make install
-            fi
-        fi
+        # if [ $RUN_MAKE_INSTALL == false ]; then
+        #     echo -e "run make install? (y/n)"
+        #     read -r response
+        #     if [[ $response =~ ^([yY][eE][sS]|[yY])$ ]]; then
+        #         cd $UTILS_BUILD_PATH
+        #         make install
+        #     fi
+        # fi
     else
         UTILS_BUILD_PATH=$masterdir/main_ros2/casadi_mpc/cpp_class_files/build_debug
     fi

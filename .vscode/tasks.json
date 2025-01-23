@@ -43,7 +43,23 @@
                 "Run Build (No Debug Info)"
             ],
             "detail": "Build and run the project without debug info."
-        },     
+        },
+        {
+            "label": "Create cmake files (Debug and Release)",
+            "type": "shell",
+            "command": "../build.sh",
+            "args": [
+                "-c",
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/main_ros2/casadi_mpc/cpp_class_files"
+            },
+            "group": {
+                "kind": "none",
+                "isDefault": false
+            },
+            "detail": "Only run cmake -DCMAKE_BUILD_TYPE=Release .. and cmake -DCMAKE_BUILD_TYPE=Debug .."
+        },  
         {
             "label": "Build ALL (ROS2 Release)",
             "type": "shell",

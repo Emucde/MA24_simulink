@@ -108,7 +108,8 @@
     "mpc13_param.h": "c",
     "geometry": "cpp",
     "charconv": "cpp",
-    "source_location": "cpp"
+    "source_location": "cpp",
+    "cerrno": "cpp"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",
@@ -192,5 +193,6 @@
   "editor.insertSpaces": true,
   "editor.tabSize": 4,
   "ros.distro": "noetic",
-  "MATLAB.startDebuggerAutomatically": false
+  "MATLAB.startDebuggerAutomatically": false,
+  "terminal.integrated.scrollback": 10000,
 }
