@@ -171,6 +171,12 @@
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "terminal.integrated.inheritEnv": true,
   "debug.runConfiguration": "Run Without Debugging",
+  "files.exclude": {
+    "**/MPC*.c": true
+  },
+  "C_Cpp.files.exclude": {
+    "**/MPC*.c": true
+  },
   "cmake.ignoreCMakeListsMissing": true,
   "terminal.integrated.env.linux": {
     "PYTHONPATH": ""
