@@ -187,6 +187,10 @@
   "search.exclude": {
     "**/node_modules/**": true
   },
+  "python.analysis.extraPaths": [
+    "/media/daten/Anwendungen/anaconda/envs/mpc/lib/python3.12/site-packages",
+    "/home/rslstudent/Students/Emanuel/miniconda/envs/mpc/lib/python3.12/site-packages"
+  ],
   "python.analysis.exclude": [
     "**/node_modules",
     "**/__pycache__",

@@ -104,6 +104,12 @@ def generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_tr
     T_poly = param_traj_poly['T_poly']
     T_end = param_traj_poly['T_end']
 
+    if 'T_max_horizon' in param_traj_poly.keys():
+        T_max_horizon = param_traj_poly['T_max_horizon']
+        T_end += T_max_horizon
+    else:
+        T_max_horizon = 0
+
     t = np.arange(0, T_end, dt)
 
     # normalize time
@@ -153,6 +159,19 @@ def generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_tr
 
     return traj_data
 
+def create_custom_trajectory(q_k, param_target, TCP_frame_id, robot_model, robot_data, mpc_settings, param_traj_poly, plot_traj=False):
+    # generate init trajectory
+    xeT = param_target['p_d']
+    R_target = param_target['R_d']
+
+    pinocchio.forwardKinematics(robot_model, robot_data, q_k)
+    pinocchio.updateFramePlacements(robot_model, robot_data)
+    
+    xe0 = robot_data.oMf[TCP_frame_id].translation
+    R_init = robot_data.oMf[TCP_frame_id].rotation
+
+    dt = mpc_settings['Ts']
+    return generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_traj=plot_traj)
 
 def create_transient_trajectory(q_k, TCP_frame_id, robot_model, robot_data, traj_data, mpc_settings, param_traj_poly, plot_traj=False):
 
@@ -1444,18 +1463,22 @@ def check_solver_status(warn_cnt, hasConverged, ddp, i, dt, conv_max_limit=5):
     #     error = 1
     return warn_cnt, error
 
-def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_full, traj_data, traj_init_config, param_robot, param_traj_poly, TCP_frame_id, i=3):
+def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_full, traj_data, traj_init_config, param_robot, param_traj_poly, TCP_frame_id, use_custom_trajectory=False, param_target=None):
     # because later I add the initial trajectory to the true trajectory
     n_dof = param_robot['n_dof']
 
     mpc_settings, param_mpc_weight = load_mpc_config(robot_model)
-    # mpc_settings['N_MPC'] = i
-    # mpc_settings['T_horizon'] = i
-    
-    transient_traj = create_transient_trajectory(x_k[:n_dof], TCP_frame_id, robot_model_full, robot_data_full, traj_data, mpc_settings, param_traj_poly, plot_traj=False)
+   
+    if use_custom_trajectory:
+        transient_traj = create_custom_trajectory(x_k[:n_dof], param_target, TCP_frame_id, robot_model_full, robot_data_full, mpc_settings, param_traj_poly, plot_traj=False)
+        T_max_horizon = param_traj_poly['T_max_horizon']
+        dt = mpc_settings['Ts']
+        N_traj = transient_traj['N_traj'] - int(T_max_horizon/dt)
+    else:
+        transient_traj = create_transient_trajectory(x_k[:n_dof], TCP_frame_id, robot_model_full, robot_data_full, traj_data, mpc_settings, param_traj_poly, plot_traj=False)
 
-    N_init_traj = transient_traj['N_init']
-    N_traj = traj_init_config['N_traj_true'] + N_init_traj
+        N_init_traj = transient_traj['N_init']
+        N_traj = traj_init_config['N_traj_true'] + N_init_traj
 
     n_indices = param_robot['n_indices']
     n_x_indices = param_robot['n_x_indices']
@@ -1617,16 +1640,16 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
     omega_e = np.zeros((N, 3))
     omega_e_p = np.zeros((N, 3))
 
-    t = traj_data['t']
+    t = traj_data['t'][:N]
     N_total = len(t)
 
-    p_d = traj_data['p_d']
-    p_d_p = traj_data['p_d_p']
-    p_d_pp = traj_data['p_d_pp']
+    p_d = traj_data['p_d'][:N]
+    p_d_p = traj_data['p_d_p'][:N]
+    p_d_pp = traj_data['p_d_pp'][:N]
 
-    quat_d = traj_data['q_d']
-    omega_d = traj_data['omega_d']
-    omega_d_p = traj_data['omega_d_p']
+    quat_d = traj_data['q_d'][:N]
+    omega_d = traj_data['omega_d'][:N]
+    omega_d_p = traj_data['omega_d_p'][:N]
 
     w = np.zeros(N)  # manipulability
 

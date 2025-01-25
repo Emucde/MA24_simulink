@@ -26,7 +26,7 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = True
+use_data_from_simulink = False
 manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
@@ -35,10 +35,18 @@ visualize_sol = True
 plot_sol=True
 debounce_delay = 0.1
 
+use_custom_trajectory = True
+
 param_traj_poly = {}
-param_traj_poly['T_start'] = 0
-param_traj_poly['T_poly'] = 4
-param_traj_poly['T_end'] = 5
+if not use_custom_trajectory:
+    param_traj_poly['T_start'] = 0
+    param_traj_poly['T_poly'] = 4
+    param_traj_poly['T_end'] = 5
+else:
+    param_traj_poly['T_start'] = 0
+    param_traj_poly['T_poly'] = 10
+    param_traj_poly['T_end'] = 10
+    param_traj_poly['T_max_horizon'] = 2
 
 if use_data_from_simulink:
     # only available for franka research 3 robot (n_dof = 7)
@@ -243,14 +251,24 @@ x_k_ndof[:n_dof] = q_0_ref
 # x_k_ndof[n_dof::] = 0 # weil er stillsteht, jegliche Geschwindigkeitsmessung ist noise!
 x_k = x_k_ndof[n_x_indices]
 
-# TODO: in init_crocoddyl die initiale trajektorie erstellen!
+pin.forwardKinematics(robot_model_full, robot_data_full, q_0_ref)
+pin.updateFramePlacements(robot_model_full, robot_data_full)
+
+p_d = np.array([0.6, 0, 0.6])
+R_d = robot_data_full.oMf[TCP_frame_id].rotation
+
+param_target = {
+    'p_d': p_d,
+    'R_d': R_d,
+}
 
 ddp, xs, us, xs_init_guess, us_init_guess, TCP_frame_id, \
 N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
 simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, \
 transient_traj, param_traj, title_text =   \
     init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data,     \
-                    traj_init_config, param_robot, param_traj_poly, TCP_frame_id)
+                    traj_init_config, param_robot, param_traj_poly, TCP_frame_id, \
+                    use_custom_trajectory, param_target)
 
 # N_MPC = N_MPC + 1
 
@@ -368,8 +386,9 @@ try:
                             N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
                             simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, \
                             transient_traj, param_traj, title_text =   \
-                                init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data,     \
-                                                traj_init_config, param_robot, param_traj_poly, TCP_frame_id)
+                                init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data, \
+                                                traj_init_config, param_robot, param_traj_poly, TCP_frame_id, \
+                                                use_custom_trajectory, param_target)
                             
                             # pin.forwardKinematics(robot_model_full, robot_data_full, x_k_ndof[:n_dof])
                             # pin.updateFramePlacements(robot_model_full, robot_data_full)
@@ -727,23 +746,15 @@ if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
     us = us[:, 3::]
     xs = xs[:, 6::]
 
-if visualize_sol is True:
-    def vis_sol_fin():
-        q_sol = xs[:, :n_dof]
-        visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
-                        q_sol, transient_traj, Ts,
-                        frame_skip=1, create_html = True, html_name = visualize_file_path)
-    process = multiprocessing.Process(target=vis_sol_fin)
-    process.daemon = True # this will kill the process if the main process is killed
-    process.start()
-
 if plot_sol == True:# and err_state == False:
-    def plot_sol_fin():
-        subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
-        plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
-    process = multiprocessing.Process(target=plot_sol_fin)
-    process.daemon = True # this will kill the process if the main process is killed
-    process.start()
+    subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
+    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
+
+if visualize_sol is True:
+    q_sol = xs[:, :n_dof]
+    visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
+                    q_sol, transient_traj, Ts,
+                    frame_skip=1, create_html = True, html_name = visualize_file_path)
 
 # print('Max error:       y - y_d = {:.2e}'.format(np.max(np.abs(e))), 'm')
 # print('Max error:   y_p - y_d_p = {:.2e}'.format(np.max(np.abs(e_p))), 'm/s')
