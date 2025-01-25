@@ -200,4 +200,8 @@
   "ros.distro": "humble",
   "MATLAB.startDebuggerAutomatically": false,
   "terminal.integrated.scrollback": 10000,
+  "C_Cpp.intelliSenseEngine": "default",
+  "C_Cpp.autocomplete": "default",
+  "C_Cpp.intelliSenseCacheSize": 0,
+  "C_Cpp.intelliSenseMemoryLimit": 512
 }

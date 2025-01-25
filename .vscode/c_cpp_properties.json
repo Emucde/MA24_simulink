@@ -3,7 +3,7 @@
     {
       "browse": {
         "databaseFilename": "${default}",
-        "limitSymbolsToIncludedHeaders": false
+        "limitSymbolsToIncludedHeaders": true
       },
       "name": "linux-gcc-x64",
       "includePath": [
