@@ -10,7 +10,7 @@
 
 mpc_config_t const* invalid_config(const std::string &mpc_name)
 {
-    throw std::runtime_error("\"" + mpc_name + "\" is not a valid MPC name. Use one of the following: MPC01, MPC6, MPC7, MPC8, MPC9, MPC10, MPC11, MPC12, MPC13, MPC14");
+    throw std::runtime_error("CasadiMPC.cpp: \"" + mpc_name + "\" is not a valid MPC name. Use one of the following: MPC01, MPC6, MPC7, MPC8, MPC9, MPC10, MPC11, MPC12, MPC13, MPC14");
     return nullptr;
 }
 
@@ -58,7 +58,7 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
     // Check if the configuration is valid
     if (mpc_config->casadi_fun == nullptr)
     {
-        throw std::runtime_error(mpc_name + "is not a valid MPC name. Use one of the following: MPC01, MPC6, MPC7, MPC8, MPC9, MPC10, MPC11, MPC12, MPC13, MPC14");
+        throw std::runtime_error("CasadiMPC::CasadiMPC(): " + mpc_name + "is not a valid MPC name. Use one of the following: MPC01, MPC6, MPC7, MPC8, MPC9, MPC10, MPC11, MPC12, MPC13, MPC14");
     }
 
     // Initialize arg with pointers based on provided indices
@@ -76,7 +76,7 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
     // Check trajectory pointer
     if (traj_data == nullptr)
     {
-        throw std::runtime_error("Trajectory data is not provided.");
+        throw std::runtime_error("CasadiMPC::CasadiMPC(): Trajectory data is not provided.");
     }
     traj_rows = traj_data->rows();
     traj_cols = traj_data->cols();
@@ -84,9 +84,10 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
     // check trajectory lengths
     if (traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1] > traj_cols)
     {
-        throw std::runtime_error("Trajectory data length + mpc_traj_indices[end] = " +
+        throw std::runtime_error("CasadiMPC::CasadiMPC(): \
+                                  Trajectory data length + mpc_traj_indices[end] = " +
                                  std::to_string(traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1]) +
-                                 " exceeds total length = " +
+                                 " exceeds totalthrow length = " +
                                  std::to_string(traj_cols) +
                                  ". Please generate new.");
     }
@@ -209,9 +210,11 @@ void CasadiMPC::switch_traj(const Eigen::MatrixXd* traj_data_new, const casadi_r
 
     if (traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1] > traj_cols)
     {
-        throw std::runtime_error("Trajectory data length + mpc_traj_indices[end] = " +
+        throw std::runtime_error("void CasadiMPC::switch_traj(const Eigen::MatrixXd* traj_data_new, \
+                                  const casadi_real *const x_k_ptr, casadi_uint traj_data_real_len_new): \
+                                  Trajectory data length + mpc_traj_indices[end] = " +
                                  std::to_string(traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1]) +
-                                 " exceeds total length = " +
+                                 " exceeds totalthrow length = " +
                                  std::to_string(traj_cols) +
                                  ". Please generate new.");
     }

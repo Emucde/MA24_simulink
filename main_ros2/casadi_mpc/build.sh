@@ -38,6 +38,7 @@ if [[ $# -ge 2 ]]; then
 fi
 
 # Parse command line arguments
+JUST_CREATE_CMAKE=false
 if [[ $# -gt 0 ]]; then
     key="$1"
     case $key in

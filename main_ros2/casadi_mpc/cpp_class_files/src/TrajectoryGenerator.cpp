@@ -12,95 +12,60 @@ TrajectoryGenerator::TrajectoryGenerator(FullSystemTorqueMapper &torque_mapper, 
 {
     traj_file = robot_config.traj_data_path;
     x0_init_file = robot_config.x0_init_path;
-    all_traj_data = readTrajectoryData(traj_file);
-    all_traj_x0_init = read_x0_init(x0_init_file);
+    all_traj_data_file = readTrajectoryData(traj_file);
+    all_traj_data_x0_init = read_x0_init(x0_init_file);
 
     selected_trajectory = 1;
-    traj_rows = all_traj_data[selected_trajectory-1].rows();
-    traj_len = all_traj_data[selected_trajectory-1].cols();
-    traj_data.resize(traj_rows, traj_len);
-    traj_data << all_traj_data[selected_trajectory-1];
-    traj_file_x0_init = all_traj_x0_init[selected_trajectory-1];
-    traj_x0_init = traj_file_x0_init;
+    traj_data_file_x0_init = all_traj_data_x0_init[selected_trajectory - 1];
+    traj_data_file = all_traj_data_file[selected_trajectory - 1];
 
-    traj_real_len = robot_config.traj_data_real_len;
+    traj_rows = traj_data_file.rows();
+    traj_data_out_len = traj_data_file.cols();
+    traj_data_out.resize(traj_rows, traj_data_out_len);
+    traj_data_out << traj_data_file;
 
-    setTransientTrajParams(0.0, 0.0, 0.0);
-    transient_traj_cnt = 0;
-    transient_traj_len = 0;
-    traj_rows = 7;
+    traj_data_out_x0_init = traj_data_file_x0_init;
+
+    traj_data_file_real_len = robot_config.traj_data_real_len;
+
+    traj_data_transient_len = 0;
+    param_init_traj_poly.T_start = 0.0;
+    param_init_traj_poly.T_poly = 0.0;
+    param_init_traj_poly.T_end = 0.0;
+
+    Eigen::VectorXd p_d_0 = traj_data_file.col(0).head(3);                                       // Get the first point
+    Eigen::Quaterniond q_d_0(Eigen::Map<Eigen::Vector4d>(traj_data_file.col(0).tail(4).data())); // Get the first quaternion [w,x,y,z]
+
+    param_target_traj_poly.p_target = p_d_0;
+    param_target_traj_poly.R_target = param_init_traj_poly.R_init;
+
+    param_init_traj_poly.p_init = p_d_0;
+    param_init_traj_poly.R_init = q_d_0.toRotationMatrix();
 }
 
-void TrajectoryGenerator::init_trajectory(int traj_select, const double *x_k_ndof_ptr, double T_start, double T_poly, double T_end)
+void TrajectoryGenerator::switch_traj(uint traj_select)
 {
-    setTransientTrajParams(T_start, T_poly, T_end);
-    init_trajectory(traj_select, x_k_ndof_ptr);
-}
-
-void TrajectoryGenerator::init_trajectory(int traj_select, const double *x_k_ndof_ptr)
-{
-    if (traj_select < 1 || traj_select > all_traj_data.size())
+    if (traj_select < 1 || traj_select > all_traj_data_file.size())
     {
         std::cerr << "Invalid trajectory selection. Selecting Trajectory 1" << std::endl;
         traj_select = 1;
     }
-
     selected_trajectory = traj_select;
-    traj_file_x0_init = all_traj_x0_init[selected_trajectory-1];
+    traj_data_file = all_traj_data_file[selected_trajectory - 1];
+    traj_data_file_x0_init = all_traj_data_x0_init[selected_trajectory - 1];
 
-    if (x_k_ndof_ptr != nullptr)
-    {
-        generate_transient_trajectory(x_k_ndof_ptr);
-    }
-    else
-    {
-        transient_traj_data = Eigen::MatrixXd::Zero(traj_rows, 0);
-        x_k_ndof_ptr = traj_file_x0_init.data();
-    }
+    Eigen::VectorXd p_d_0 = traj_data_file.col(0).head(3);                                       // Get the first point
+    Eigen::Quaterniond q_d_0(Eigen::Map<Eigen::Vector4d>(traj_data_file.col(0).tail(4).data())); // Get the first quaternion [w,x,y,z]
 
-    traj_data.resize(traj_rows, transient_traj_data.cols() + all_traj_data[traj_select - 1].cols());
-    traj_data << transient_traj_data, all_traj_data[traj_select - 1];
-    traj_len = traj_data.cols();
-    traj_real_len = robot_config.traj_data_real_len + transient_traj_data.cols();
-
-    traj_x0_init = Eigen::Map<const Eigen::VectorXd>(x_k_ndof_ptr, nx);
+    param_target_traj_poly.p_target = p_d_0;
+    param_target_traj_poly.R_target = param_init_traj_poly.R_init;
 }
 
-void TrajectoryGenerator::init_trajectory(int traj_select)
+void TrajectoryGenerator::setTransientTrajParams(ParamInitTrajectory param_init_traj)
 {
-    init_trajectory(traj_select, nullptr);
-}
-
-void TrajectoryGenerator::generate_transient_trajectory(const double *const x_k_ndof_ptr, double T_start, double T_poly, double T_end)
-{
-    setTransientTrajParams(T_start, T_poly, T_end);
-    generate_transient_trajectory(x_k_ndof_ptr);
-}
-
-void TrajectoryGenerator::generate_transient_trajectory(const double *const x_k_ndof_ptr)
-{
-    if (x_k_ndof_ptr == nullptr)
-    {
-        throw std::invalid_argument("TrajectoryGenerator::generate_transient_trajectory(const double *const x_k_ndof_ptr): x_k_ndof_ptr is a nullptr.");
-    }
-
-    Eigen::Vector3d p_init, p_target;
-    Eigen::Matrix3d R_init, R_target;
-
-    Eigen::Map<const Eigen::VectorXd> q_init_nq(x_k_ndof_ptr, nq);
-    Eigen::Map<const Eigen::VectorXd> q_target_nq(traj_file_x0_init.data(), nq);
-
-    torque_mapper.calcPose(q_init_nq, p_init, R_init);
-    torque_mapper.calcPose(q_target_nq, p_target, R_target);
-
-    transient_traj_data = generate_trajectory(dt, p_init, p_target, R_init, R_target, param_transient_traj_poly);
-    transient_traj_len = transient_traj_data.cols();
-    traj_rows = transient_traj_data.rows();
-    transient_traj_cnt = 0;
-}
-
-void TrajectoryGenerator::setTransientTrajParams(double T_start, double T_poly, double T_end)
-{
+    double T_start = param_init_traj.T_start;
+    double T_poly = param_init_traj.T_poly;
+    double T_end = param_init_traj.T_end;
     if (T_start < 0)
     {
         throw std::invalid_argument("T_start must be greater than or equal to 0 (start time of the transient trajectory)");
@@ -114,86 +79,102 @@ void TrajectoryGenerator::setTransientTrajParams(double T_start, double T_poly, 
         throw std::invalid_argument("T_poly must be less than or equal to T_end (total time of the transient trajectory)");
     }
 
-    param_transient_traj_poly["T_start"] = T_start;
-    param_transient_traj_poly["T_poly"] = T_poly;
-    param_transient_traj_poly["T_end"] = T_end;
+    param_init_traj_poly = param_init_traj;
 }
 
-void TrajectoryGenerator::switch_traj(int traj_select)
+// In this case only a transient trajectory to a custom target is generated
+void TrajectoryGenerator::init_trajectory_custom_target(ParamInitTrajectory param_init_traj,
+                                                        ParamTargetTrajectory param_target,
+                                                        double T_horizon_max)
 {
-    if (traj_select < 1 || traj_select > all_traj_data.size())
+    setTransientTrajParams(param_init_traj);
+    param_target_traj_poly = param_target;
+    if (param_init_traj_poly.T_end == 0)
+    {
+        throw std::runtime_error("Eigen::MatrixXd TrajectoryGenerator::init_trajectory_custom_target(): T_end must be greater than 0");
+    }
+    init_trajectory(true, T_horizon_max); // per default T_horizon_max = 2s
+}
+
+// Functions for generating a polynomial transient trajectory
+void TrajectoryGenerator::init_trajectory(uint traj_select, ParamInitTrajectory param_init_traj)
+{
+    setTransientTrajParams(param_init_traj);
+    init_trajectory(traj_select);
+}
+
+void TrajectoryGenerator::init_trajectory(uint traj_select)
+{
+    if (traj_select < 1 || traj_select > all_traj_data_file.size())
     {
         std::cerr << "Invalid trajectory selection. Selecting Trajectory 1" << std::endl;
         traj_select = 1;
     }
+
     selected_trajectory = traj_select;
+    switch_traj(selected_trajectory);
+    init_trajectory();
 }
 
-Eigen::Vector4d TrajectoryGenerator::trajectory_poly(double t, const Eigen::Vector4d &y0, const Eigen::Vector4d &yT, double T)
+// Private Method!
+void TrajectoryGenerator::init_trajectory(bool custom_traj, double T_horizon_max)
 {
-    Eigen::Vector4d y_d;
-
-    double t_T = t / T;
-    double t_T2 = t_T * t_T;
-    double t_T3 = t_T2 * t_T;
-    double t_T4 = t_T3 * t_T;
-    double t_T5 = t_T4 * t_T;
-
-    y_d = y0 + (6.0 * t_T5 - 15.0 * t_T4 + 10.0 * t_T3) * (yT - y0);
-    return y_d;
-}
-
-Eigen::VectorXd TrajectoryGenerator::create_poly_traj(const Eigen::Vector3d &yT, const Eigen::Vector3d &y0, double t,
-                                                      const Eigen::Matrix3d &R_init, const Eigen::Vector3d &rot_ax,
-                                                      double rot_alpha_scale, const std::map<std::string, double> &param_traj_poly)
-{
-    double T_start = param_traj_poly.at("T_start");
-    double T_poly = param_traj_poly.at("T_poly");
-    Eigen::Vector4d p_d;
-
-    if (t - T_start < 0)
+    if (custom_traj)
     {
-        p_d << y0[0], y0[1], y0[2], 0.0;
-    }
-    else if (t - T_start > T_poly)
-    {
-        p_d << yT[0], yT[1], yT[2], rot_alpha_scale;
+        traj_data_transient = Eigen::MatrixXd::Zero(traj_rows, 0);
+        traj_data_transient_len = 0;
+
+        traj_data_out = generate_transient_trajectory(T_horizon_max);
+        traj_data_out_x0_init = param_init_traj_poly.x_init;
+
+        traj_data_out_len = traj_data_out.cols();
+        traj_data_file_real_len = robot_config.traj_data_real_len;
     }
     else
     {
-        p_d = trajectory_poly(t - T_start,
-                              Eigen::Vector4d(y0[0], y0[1], y0[2], 0.0),
-                              Eigen::Vector4d(yT[0], yT[1], yT[2], rot_alpha_scale),
-                              T_poly);
+        if (param_init_traj_poly.T_end == 0) // only selected trajectory from file is used
+        {
+            traj_data_transient = Eigen::MatrixXd::Zero(traj_rows, 0);
+            traj_data_transient_len = 0;
+
+            traj_data_out = traj_data_file;
+            traj_data_out_x0_init = traj_data_file_x0_init;
+
+            traj_data_out_len = traj_data_out.cols();
+            traj_data_file_real_len = robot_config.traj_data_real_len;
+        }
+        else // create transient trajectory and prepend it to selected trajectory from file
+        {
+            traj_data_transient = generate_transient_trajectory();
+            traj_data_transient_len = traj_data_transient.cols();
+
+            traj_data_out.resize(traj_rows, traj_data_transient.cols() + traj_data_file.cols());
+            traj_data_out << traj_data_transient, traj_data_file;
+            traj_data_out_x0_init = param_init_traj_poly.x_init;
+
+            traj_data_out_len = traj_data_out.cols();
+            traj_data_file_real_len = robot_config.traj_data_real_len + traj_data_transient.cols();
+        }
     }
-
-    double alpha = p_d[3];
-
-    Eigen::Matrix3d skew_ew;
-    skew_ew << 0, -rot_ax[2], rot_ax[1],
-        rot_ax[2], 0, -rot_ax[0],
-        -rot_ax[1], rot_ax[0], 0;
-
-    Eigen::Matrix3d R_act = (Eigen::Matrix3d::Identity() + sin(alpha) * skew_ew +
-                             (1 - cos(alpha)) * skew_ew * skew_ew) *
-                            R_init;
-
-    Eigen::Quaterniond q_d(R_act);
-
-    Eigen::VectorXd result(7);
-    result << p_d.head<3>(), q_d.w(), q_d.x(), q_d.y(), q_d.z();
-
-    return result;
 }
 
-Eigen::MatrixXd TrajectoryGenerator::generate_trajectory(double dt, const Eigen::Vector3d &xe0, const Eigen::Vector3d &xeT,
-                                                         const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
-                                                         const std::map<std::string, double> &param_traj_poly)
+Eigen::MatrixXd TrajectoryGenerator::generate_transient_trajectory(double T_horizon_max)
 {
-    double T_end = param_traj_poly.at("T_end");
+    Eigen::Map<const Eigen::Matrix3d> R_init(param_init_traj_poly.R_init.data());
+    Eigen::Map<const Eigen::Matrix3d> R_target(param_target_traj_poly.R_target.data());
 
-    int N = static_cast<int>(T_end / dt);
-    Eigen::MatrixXd traj_data(7, N);
+    double T_end = param_init_traj_poly.T_end;
+
+    if (T_end == 0)
+    {
+        throw std::runtime_error("Eigen::MatrixXd TrajectoryGenerator::generate_transient_trajectory(): T_end must be greater than 0");
+    }
+
+    // Per default T_horizon_max is already considered in the trajectory from file, see 'create_trajectories.m'
+    // Only for the custom target trajectory it is important because extra samples for the
+    // last prediction horizon are necessary to calulate all MPC control values
+    int N = static_cast<int>((T_end + T_horizon_max) / dt);
+    Eigen::MatrixXd traj_data_temp(7, N);
 
     Eigen::Matrix3d RR = R_target * R_init.transpose();
     Eigen::Quaterniond rot_quat(RR);
@@ -224,12 +205,78 @@ Eigen::MatrixXd TrajectoryGenerator::generate_trajectory(double dt, const Eigen:
     for (int i = 0; i < N; i++)
     {
         current_time = i * dt;
-        Eigen::VectorXd x_d = create_poly_traj(xeT, xe0, current_time, R_init, rot_ax, rot_alpha_scale, param_traj_poly);
-        traj_data.col(i) = x_d;
+        Eigen::VectorXd x_d = create_poly_traj(current_time, rot_ax, rot_alpha_scale);
+        traj_data_temp.col(i) = x_d;
     }
 
-    return traj_data;
+    return traj_data_temp;
 }
+
+// This function generates a 5th order polynomial trajectory
+Eigen::Vector4d TrajectoryGenerator::trajectory_poly(double t, const Eigen::Vector4d &p_init, const Eigen::Vector4d &p_target, double T)
+{
+    Eigen::Vector4d y_d;
+
+    double t_T = t / T;
+    double t_T2 = t_T * t_T;
+    double t_T3 = t_T2 * t_T;
+    double t_T4 = t_T3 * t_T;
+    double t_T5 = t_T4 * t_T;
+
+    y_d = p_init + (6.0 * t_T5 - 15.0 * t_T4 + 10.0 * t_T3) * (p_target - p_init);
+    return y_d;
+}
+
+Eigen::VectorXd TrajectoryGenerator::create_poly_traj(double t, const Eigen::Vector3d &rot_ax, double rot_alpha_scale)
+{
+    // , param_init_traj_poly, param_target_traj_poly
+    Eigen::Map<const Eigen::VectorXd> p_init(param_init_traj_poly.p_init.data(), 3);
+    Eigen::Map<const Eigen::VectorXd> p_target(param_target_traj_poly.p_target.data(), 3);
+
+    Eigen::Map<const Eigen::Matrix3d> R_init(param_init_traj_poly.R_init.data());
+    Eigen::Map<const Eigen::Matrix3d> R_target(param_target_traj_poly.R_target.data());
+
+    double T_start = param_init_traj_poly.T_start;
+    double T_poly = param_init_traj_poly.T_poly;
+
+    Eigen::Vector4d p_d;
+
+    if (t - T_start < 0)
+    {
+        p_d << p_init[0], p_init[1], p_init[2], 0.0;
+    }
+    else if (t - T_start > T_poly)
+    {
+        p_d << p_target[0], p_target[1], p_target[2], rot_alpha_scale;
+    }
+    else
+    {
+        p_d = trajectory_poly(t - T_start,
+                              Eigen::Vector4d(p_init[0], p_init[1], p_init[2], 0.0),
+                              Eigen::Vector4d(p_target[0], p_target[1], p_target[2], rot_alpha_scale),
+                              T_poly);
+    }
+
+    double alpha = p_d[3];
+
+    Eigen::Matrix3d skew_ew;
+    skew_ew << 0, -rot_ax[2], rot_ax[1],
+        rot_ax[2], 0, -rot_ax[0],
+        -rot_ax[1], rot_ax[0], 0;
+
+    Eigen::Matrix3d R_act = (Eigen::Matrix3d::Identity() + sin(alpha) * skew_ew +
+                             (1 - cos(alpha)) * skew_ew * skew_ew) *
+                            R_init;
+
+    Eigen::Quaterniond q_d(R_act);
+
+    Eigen::VectorXd result(7);
+    result << p_d.head<3>(), q_d.w(), q_d.x(), q_d.y(), q_d.z();
+
+    return result;
+}
+
+// Functions for reading trajectory from file
 
 std::vector<Eigen::MatrixXd> TrajectoryGenerator::readTrajectoryData(const std::string &traj_file)
 {

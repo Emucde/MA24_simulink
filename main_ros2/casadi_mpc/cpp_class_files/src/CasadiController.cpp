@@ -103,13 +103,15 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
 void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
                                        double T_start, double T_poly, double T_end)
 {
-    trajectory_generator.init_trajectory(traj_select, x_k_ndof_ptr, T_start, T_poly, T_end);
+    ParamInitTrajectory param_init_traj = calc_param_init(x_k_ndof_ptr, T_start, T_poly, T_end);
+    trajectory_generator.init_trajectory(traj_select, param_init_traj);
     update_trajectory_data(x_k_ndof_ptr);
 }
 
-void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr)
+void CasadiController::init_trajectory_custom_target(ParamTargetTrajectory param_target, const casadi_real *x_k_ndof_ptr, double T_start, double T_poly, double T_end, double T_horizon_max)
 {
-    trajectory_generator.init_trajectory(traj_select, x_k_ndof_ptr);
+    ParamInitTrajectory param_init = calc_param_init(x_k_ndof_ptr, T_start, T_poly, T_end);
+    trajectory_generator.init_trajectory_custom_target(param_init, param_target, T_horizon_max);
     update_trajectory_data(x_k_ndof_ptr);
 }
 
@@ -136,6 +138,20 @@ void CasadiController::update_trajectory_data(const casadi_real *const x_k_ndof_
             casadi_mpcs[i].switch_traj(trajectory_generator.get_traj_data(), x_k, trajectory_generator.get_traj_data_real_len());
         }
     }
+}
+
+ParamInitTrajectory CasadiController::calc_param_init(const casadi_real *x_k_ndof_ptr, double T_start, double T_poly, double T_end)
+{
+    Eigen::Vector3d p_init;
+    Eigen::Matrix3d R_init;
+    Eigen::Map<const Eigen::VectorXd> q_init_nq(x_k_ndof_ptr, nq);
+    Eigen::Map<const Eigen::VectorXd> x_init_nq(x_k_ndof_ptr, nx);
+
+    torque_mapper.calcPose(q_init_nq, p_init, R_init);
+
+    ParamInitTrajectory param_init_traj = {T_start, T_poly, T_end, x_init_nq, p_init, R_init};
+
+    return param_init_traj;
 }
 
 // set the active MPC

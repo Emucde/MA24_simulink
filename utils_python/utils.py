@@ -2151,7 +2151,7 @@ def get_reload_tab_script(reload_message = 'reload_plotly'):
 
             ws.onmessage = function(event) {
                 console.log(event.data);
-                if (event.data === \''''+reload_message+'''\') {
+                if (event.data === "'''+reload_message+'''") {
                     location.reload();
                 }
             };
