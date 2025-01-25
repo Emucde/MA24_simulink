@@ -11,11 +11,12 @@
 #include "casadi_types.h"
 #include "param_robot.h"
 #include "mpc_config.h"
+#include "TrajectoryGenerator.hpp"
 #include "FullSystemTorqueMapper.hpp"
 #include "CasadiMPC.hpp"
 #include "casadi_controller_types.hpp"
 
-class CasadiController
+class CasadiController// : public TrajectoryGenerator
 {
 private:
     robot_config_t robot_config;                 // Robot configuration
@@ -37,6 +38,7 @@ private:
     const Eigen::VectorXi n_indices;
     const Eigen::VectorXi n_x_indices;
     FullSystemTorqueMapper torque_mapper; // Torque mapper
+    TrajectoryGenerator trajectory_generator;    // Trajectory generator
     casadi_real *x_k_ptr;                 // initial state address at the begin of the prediction horizon
     casadi_real *u_k_ptr;                 // optimal control address
     casadi_real *y_d_ptr;                 // desired trajectory address at the begin of the prediction horizon
@@ -44,18 +46,22 @@ private:
     casadi_uint traj_data_per_horizon;    // Trajectory data per horizon
     casadi_uint *mpc_traj_indices;        // Trajectory indices for not equidistant sampling
     casadi_real dt;
-    std::map<std::string, double> param_transient_traj_poly;
-    casadi_uint traj_rows;
-    casadi_uint transient_traj_cnt;
-    Eigen::MatrixXd transient_traj_data;
-    casadi_uint transient_traj_len;       // number of columns of the transient trajectory data
-    std::vector<Eigen::MatrixXd> all_traj_data;
-    std::vector<Eigen::VectorXd> all_traj_x0_init;
-    casadi_uint selected_trajectory;
-    Eigen::MatrixXd traj_data;
-    Eigen::VectorXd traj_x0_init;
-    casadi_uint traj_len;
-    casadi_uint traj_real_len; // number of columns of the singular trajectory data without additional samples for last prediction horizon
+
+
+    // std::map<std::string, double> param_transient_traj_poly;
+    // casadi_uint traj_rows;
+    // casadi_uint transient_traj_cnt;
+    // Eigen::MatrixXd transient_traj_data;
+    // casadi_uint transient_traj_len;       // number of columns of the transient trajectory data
+    // std::vector<Eigen::MatrixXd> all_traj_data;
+    // std::vector<Eigen::VectorXd> all_traj_x0_init;
+    // casadi_uint selected_trajectory;
+    // Eigen::MatrixXd traj_data;
+    // Eigen::VectorXd traj_x0_init;
+    // casadi_uint traj_len;
+    // casadi_uint traj_real_len; // number of columns of the singular trajectory data without additional samples for last prediction horizon
+    
+    
     Eigen::VectorXd tau_full_prev;
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
     double tau_max_jump = 5.0;
@@ -66,11 +72,6 @@ public:
 
     // solve the MPC
     Eigen::VectorXd solveMPC(const casadi_real *const x_k_ndof_ptr);
-
-    // Method to generate a transient trajectory
-    void generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr,
-                                       double T_start, double T_poly, double T_end);
-    void generate_transient_trajectory(const casadi_real *const x_k_ndof_ptr);
 
     // Initialize trajectory data
     void init_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
@@ -85,7 +86,7 @@ public:
 
     // Getters and setters
     void setActiveMPC(MPCType mpc);
-    void setTransientTrajParams(double T_start, double T_poly, double T_end);
+    // void setTransientTrajParams(double T_start, double T_poly, double T_end);
 
     // increase counter from casadi mpc if it solves too slow
     void increase_traj_count()
@@ -131,22 +132,28 @@ public:
         return active_mpc->get_x_k();
     }
 
+    // Method to get the real length of the trajectory data (= length of the trajectory data without additional samples for last prediction horizon)
+    casadi_uint get_traj_data_real_len()
+    {
+        return trajectory_generator.get_traj_data_real_len();
+    }
+
     // Method to get the length of the trajectory data
     casadi_uint get_traj_data_len()
     {
-        return traj_real_len;
+        return trajectory_generator.get_traj_data_len();
     }
 
     // Method to get transient trajectory data
-    const Eigen::MatrixXd &get_transient_traj_data()
+    const Eigen::MatrixXd* get_transient_traj_data()
     {
-        return transient_traj_data;
+        return trajectory_generator.get_transient_traj_data();
     }
 
     // Method to get the transient trajectory length
     casadi_uint get_transient_traj_len()
     {
-        return transient_traj_len;
+        return trajectory_generator.get_transient_traj_len();
     }
 
     // Method to get the is kinematic mpc flag
@@ -179,17 +186,12 @@ public:
 
     const casadi_real* get_act_traj_x0_init()
     {
-        return all_traj_x0_init[selected_trajectory-1].data();
+        return trajectory_generator.get_act_traj_x0_init()->data();
     }
 
     const casadi_real* get_traj_x0_init(casadi_uint traj_select)
     {
-        if (traj_select < 1 || traj_select > all_traj_x0_init.size())
-        {
-            std::cerr << "Invalid trajectory selection. Selecting Trajectory 1" << std::endl;
-            traj_select = 1;
-        }
-        return all_traj_x0_init[traj_select-1].data();
+        return trajectory_generator.get_traj_file_x0_init(traj_select)->data();
     }
 
 
@@ -197,18 +199,6 @@ private:
     // Private methods
     std::string mpcToString(MPCType mpc);
 
-    // Functions for transient polynomial trajectory generation
-    Eigen::Vector4d trajectory_poly(double t, const Eigen::Vector4d &y0, const Eigen::Vector4d &yT, double T);
-
-    Eigen::VectorXd create_poly_traj(const Eigen::Vector3d &yT, const Eigen::Vector3d &y0, double t,
-                                     const Eigen::Matrix3d &R_init, const Eigen::Vector3d &rot_ax,
-                                     double rot_alpha_scale, const std::map<std::string, double> &param_traj_poly);
-
-    Eigen::MatrixXd generate_trajectory(double dt, const Eigen::Vector3d &xe0, const Eigen::Vector3d &xeT,
-                                        const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
-                                        const std::map<std::string, double> &param_traj_poly);
-
-    std::vector<Eigen::MatrixXd> readTrajectoryData(const std::string& traj_file);
-    std::vector<Eigen::VectorXd> read_x0_init(const std::string &x0_init_file);
+    void update_trajectory_data(const casadi_real *const x_k_ndof_ptr);
 };
 #endif // CASADICONTROLLER_HPP

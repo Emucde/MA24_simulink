@@ -20,6 +20,9 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
       q_ref_nq(ConstDoubleVectorMap(robot_config.q_0_ref, nq)),
       q_ref_fixed(Eigen::Map<const Eigen::VectorXd>(robot_config.q_0_ref, nq_fixed)(n_indices_fixed))
 {
+    // Initialize the function pointer based on the type of MPC
+    setFeedforwardTorqueFunction(is_kinematic_mpc);
+
     // Initialize the robot model and data using the URDF
     initRobot(urdf_filename, tcp_frame_name, robot_model_full, robot_data_full, use_gravity);
 
@@ -54,39 +57,51 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 
-Eigen::VectorXd FullSystemTorqueMapper::calculateNdofTorqueWithFeedforward(
+// Implementation of kinematic torque mapping
+Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueKinematic(
     const Eigen::VectorXd &u,
     const Eigen::VectorXd &q,
     const Eigen::VectorXd &q_p)
 {
-    q_pp.setZero();
-    if (is_kinematic_mpc)
-    {
-        // For kinematic MPC, just assign directly based on input
-        q_pp(n_indices) = u;
+    // Assuming q_pp is properly defined elsewhere
+    q_pp.setZero(); // Initialize q_pp if necessary
+    q_pp(n_indices) = u; // Set specific index using input
+
+    // Calculate the resulting torques
+    return pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, q_pp);
+}
+
+// Implementation of dynamic torque mapping
+Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueDynamic(
+    const Eigen::VectorXd &u,
+    const Eigen::VectorXd &q,
+    const Eigen::VectorXd &q_p)
+{
+    q_pp.setZero(); // Initialize q_pp
+    Eigen::VectorXd tau_red = u; // Define reduced input vector
+
+    // Calculate inertia matrix and Coriolis forces
+    Eigen::MatrixXd M = pinocchio::crba(robot_model_full, robot_data_full, q);
+    Eigen::VectorXd C_rnea = pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, Eigen::VectorXd::Zero(nq));
+
+    // Slice the inertia matrix and Coriolis forces
+    Eigen::MatrixXd M_red = M(n_indices, n_indices);
+    Eigen::VectorXd C_rnea_tilde = C_rnea(n_indices);
+
+    // Compute the acceleration for the reduced system
+    Eigen::VectorXd q_pp_red = M_red.ldlt().solve(tau_red - C_rnea_tilde);
+    q_pp(n_indices) = q_pp_red; // Update full acceleration vector
+
+    // Calculate the resulting full torques
+    return pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, q_pp);
+}
+
+void FullSystemTorqueMapper::setFeedforwardTorqueFunction(bool is_kinematic_mpc) {
+    if (is_kinematic_mpc) {
+        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematic;
+    } else {
+        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamic;
     }
-    else
-    {
-        // Define a reduced input vector corresponding to the identified indices
-        Eigen::VectorXd tau_red = u;
-
-        // Get the full inertia matrix and Coriolis forces
-        Eigen::MatrixXd M = pinocchio::crba(robot_model_full, robot_data_full, q);
-        Eigen::VectorXd C_rnea = pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, Eigen::VectorXd::Zero(nq));
-
-        // Slice the inertia matrix and Coriolis forces to our reduced indices
-        Eigen::MatrixXd M_red = M(n_indices, n_indices);
-        Eigen::VectorXd C_rnea_tilde = C_rnea(n_indices);
-
-        // Compute the acceleration for the reduced system
-        Eigen::VectorXd q_pp_red = M_red.ldlt().solve(tau_red - C_rnea_tilde);
-        q_pp(n_indices) = q_pp_red;
-    }
-
-    // Use updated q_pp to calculate the resulting full torques
-    tau_full = pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, q_pp);
-
-    return tau_full;
 }
 
 Eigen::VectorXd FullSystemTorqueMapper::applyPDControl(const Eigen::VectorXd &q_fixed,
@@ -105,7 +120,7 @@ Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &
 {
     Eigen::VectorXd q = x_k_ndof.head(nq);
     Eigen::VectorXd q_p = x_k_ndof.segment(nq, nq);
-    tau_full = calculateNdofTorqueWithFeedforward(u, q, q_p);
+    tau_full = (this->*calcFeedforwardTorqueFunPtr)(u, q, q_p);
     tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed));
 
     // tau_full = enforceTorqueLimits(tau_full); // Apply torque limits

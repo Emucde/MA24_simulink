@@ -4,8 +4,8 @@
 #include <Eigen/Dense> // Include for matrix types
 
 struct JointData {
-    double q; // Joint position
-    double q_p; // Joint velocity
+    Eigen::VectorXd q; // Joint positions
+    Eigen::VectorXd q_p; // Joint velocities
 };
 
 struct KinematicsData {

@@ -450,11 +450,11 @@ try:
                     print('Reset MPC (data logging mode).')
                     if i > 0:
                         if plot_sol:
-                            def plot_sol_act():
-                                subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
-                                plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
-                            process = multiprocessing.Process(target=plot_sol_act)
-                            process.start()
+                            # def plot_sol_act():
+                            subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
+                            plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
+                            # process = multiprocessing.Process(target=plot_sol_act)
+                            # process.start()
 
                         if visualize_sol:
                             def vis_sol_act():

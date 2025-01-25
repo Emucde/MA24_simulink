@@ -97,7 +97,7 @@ public:
     int solve_planner(); // mpc planner: open loop mpc
 
     // Method to switch the trajectory
-    void switch_traj(Eigen::MatrixXd* traj_data_new, const casadi_real *const x_k_ptr, casadi_uint traj_data_real_len_new);
+    void switch_traj(const Eigen::MatrixXd* traj_data_new, const casadi_real *const x_k_ptr, casadi_uint traj_data_real_len_new);
 
     // if it solves too slow.
     void increase_traj_count()

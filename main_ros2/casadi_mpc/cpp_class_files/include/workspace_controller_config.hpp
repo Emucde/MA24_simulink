@@ -23,7 +23,7 @@ struct RegularizationSettings {
     double lambda_min;                  // Minimum eigenvalue for regularization
 };
 
-struct Config {
+struct ControllerSettings {
     PDSettings pd_plus_settings;        // PD controller settings
     CTSettings ct_settings;              // CT controller settings
     RegularizationSettings regularization_settings; // Regularization settings

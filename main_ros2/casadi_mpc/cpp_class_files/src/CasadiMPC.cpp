@@ -199,7 +199,7 @@ int CasadiMPC::solve_planner()
 }
 
 // Method for switching the trajectory
-void CasadiMPC::switch_traj(Eigen::MatrixXd* traj_data_new, const casadi_real *const x_k_ptr, casadi_uint traj_data_real_len_new)
+void CasadiMPC::switch_traj(const Eigen::MatrixXd* traj_data_new, const casadi_real *const x_k_ptr, casadi_uint traj_data_real_len_new)
 {
     traj_data = traj_data_new;
     traj_rows = traj_data->rows();

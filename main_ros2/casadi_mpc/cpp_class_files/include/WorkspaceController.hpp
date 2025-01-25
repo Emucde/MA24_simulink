@@ -14,6 +14,8 @@
 #include <Eigen/Geometry> // For rotations and quaternions
 #include <vector>
 
+#include "RobotModel.hpp"
+#include "TrajectoryGenerator.hpp"
 
 class BaseController {
 public:
@@ -28,34 +30,23 @@ public:
     WorkspaceController(const std::string &urdf_filename,
                         const std::string &tcp_frame_name,
                         bool use_gravity,
-                        const Config &config);
+                        ControllerSettings &controller_settings,
+                        RegularizationSettings &regularization_settings);
     
     void switchController(ControllerType type);
-    void update(const double const* x);
+    void update(const double* const x);
 private:
     BaseController* active_controller; // I do not need a smart pointer because I store all instances in the class.
     
-    // Robot model data
-    pinocchio::Model robot_model;
-    pinocchio::Data robot_data;
-    pinocchio::Model robot_model_reduced;
-    pinocchio::Data robot_data_reduced;
-    
-    // Calculated Robot Data
-    JointData joint_data;
-    KinematicsData kinematics_data;
-    DynamicsData dynamics_data;
-    
-    // Robot configuration struct
+    const std::string urdf_filename;
+    const std::string tcp_frame_name;
     robot_config_t robot_config;
+    ControllerSettings controller_settings;
+    RegularizationSettings regularization_settings;
 
-	// Create robot models
-    void createRobotModels(const std::string &urdf_filename);
-	
-    void calculateRobotData(const double const* x);
-    
-    Config createControllerConfig();
-    
+    // Robot model
+    RobotModel robot_model;
+
     // Nested classes inheriting from BaseController
     class CTController : public BaseController {
     public:
@@ -80,22 +71,3 @@ private:
     PDPlusController pd_plus_controller; // Instance of PDPlusController
     InverseDynamicsController inverse_dyn_controller; // Instance of InverseDynamicsController
  };
-
-
-//  void update(double* x) {
-// 	calculateRobotData(double* x);
-//     active_controller->control();
-        
-// void switchController(ControllerType type) {
-// 	switch (type) {
-// 		case ControllerType::CT:
-// 			active_controller = &ct_controller;
-// 			break;
-// 		case ControllerType::PDPlus:
-// 			active_controller = &pd_plus_controller;
-// 			break;
-// 		case ControllerType::InverseDynamics:
-// 			active_controller = &inverse_dyn_controller;
-// 			break;
-// 	}
-// }

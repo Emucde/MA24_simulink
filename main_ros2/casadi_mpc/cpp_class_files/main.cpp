@@ -108,7 +108,7 @@ int main()
     casadi_real x_k_ndof[nx] = {0};
     double current_frequency = 0.0;
 
-    const casadi_uint traj_data_real_len = controller.get_traj_data_len();
+    const casadi_uint traj_len = controller.get_traj_data_real_len();
 
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
 
@@ -133,11 +133,10 @@ int main()
     timer_total.tic();
 
     // enable shm read mode:
-    casadi_uint total_traj_len = traj_data_real_len + transient_traj_len;
     int8_t readonly_mode = 1, start = 1;
 
     shm.write("readonly_mode", &readonly_mode, sizeof(int8_t));
-    shm.write("read_traj_length", &total_traj_len, sizeof(casadi_uint));
+    shm.write("read_traj_length", &traj_len, sizeof(casadi_uint));
     shm.write("data_from_simulink_start", &start, sizeof(int8_t));
 
     // Write data to shm:
@@ -149,7 +148,7 @@ int main()
     shm.post_semaphore("shm_changed_semaphore");
 
     // Main loop for trajectory processing
-    for (casadi_uint i = 0; i < total_traj_len; i++)
+    for (casadi_uint i = 0; i < traj_len; i++)
     {
         filter.run(x_measured_ptr); // updates data from x_filtered_ptr
 

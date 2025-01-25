@@ -1678,7 +1678,7 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
 
         p_e[i] = robot_data.oMf[TCP_frame_id].translation.T.copy()
         p_e_p[i] = J[0:3, :] @ q_p[i]
-        # p_e_pp[i] = J[0:3, :] @ q_pp[i] + J_p[0:3, :] @ q_p[i]
+        # p_e_pp[i] = J[0:3, :] @ q_pp[i] + J_p[0:3, :] @ q_p[i] # update: Bug wurde gefixt, es ist nun 1:1 wie unterer Befehl
         p_e_pp[i] = pinocchio.getFrameClassicalAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).linear
 
         quat_e_7val = pinocchio.SE3ToXYZQUAT(robot_data.oMf[TCP_frame_id])
