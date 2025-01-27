@@ -92,6 +92,20 @@ for gravity_used in gravity_configs:
     q_p = cs.SX.sym('q_p', n, 1)
     q_pp = cs.SX.sym('q_pp', n, 1)
     x = cs.vertcat(q, q_p)
+    r = cs.SX.sym('R', 34, 1)
+    R = cs.SX.sym('R', 3, 3)
+    R[0,0] = r[11]
+    R[0,1] = r[12]
+    R[0,2] = r[13]
+    R[1,0] = r[21]
+    R[1,1] = r[22]
+    R[1,2] = r[23]
+    R[2,0] = r[31]
+    R[2,1] = r[32]
+    R[2,2] = r[33]
+
+    p = cs.SX.sym('p', 3, 1)
+    
 
     # get endeffector id
     endEffector_ID = casadi_model.getFrameId(end_link)
@@ -106,6 +120,10 @@ for gravity_used in gravity_configs:
     quat7dim_SX = cpin.SE3ToXYZQUAT(cdata.oMf[endEffector_ID])
     quat_SX = cs.vertcat(quat7dim_SX[6], quat7dim_SX[3:6])
     quat = cs.Function('quat', [q], [quat_SX], ['q'], ['quat(q)'])
+
+    quat7dim_R_SX = cpin.SE3ToXYZQUAT(cpin.SE3(R, p))
+    quat_R_SX = cs.vertcat(quat7dim_R_SX[6], quat7dim_R_SX[3:6])
+    quat_R = cs.Function('quat_R', [R], [quat_R_SX], ['R'], ['quat(R, p)'])
 
     cpin.forwardKinematics(casadi_model, cdata, q, q_p, q_pp)
     # cpin.forwardDynamics(casadi_model, cdata, q, q_p, u)
@@ -206,6 +224,7 @@ for gravity_used in gravity_configs:
         g.save(s_functions_path + 'gravitational_forces_py.casadi')
         H.save(s_functions_path + 'hom_transform_endeffector_py.casadi')
         quat.save(s_functions_path + 'quat_endeffector_py.casadi')
+        quat_R.save(s_functions_path + 'quat_R_endeffector_py.casadi')
         J.save(s_functions_path + 'geo_jacobian_endeffector_py.casadi')
         J_p.save(s_functions_path + 'geo_jacobian_endeffector_p_py.casadi')
 

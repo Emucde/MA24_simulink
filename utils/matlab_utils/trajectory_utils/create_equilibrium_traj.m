@@ -18,7 +18,7 @@ function [x_d] = create_equilibrium_traj(traj_select, t, param_traj, init_bus_pa
 
     omega_d   = zeros(3,1);
     omega_d_p = zeros(3,1);
-    q_d   = rotm2quat_v4(R_init);
+    q_d   = quat_R_endeffector_py(R_init);%rotm2quat_v4(R_init);
     q_d_p = zeros(4,1);
     q_d_pp = zeros(4,1);
 
@@ -42,5 +42,5 @@ function [x_d] = create_equilibrium_traj(traj_select, t, param_traj, init_bus_pa
     x_d.alpha_d_pp = 0;
     x_d.rot_ax_d = rot_ax_d;
     x_d.alpha_d_offset = alpha_offset;
-    x_d.q_d_rel = rotm2quat_v4(R_init);
+    x_d.q_d_rel = quat_R_endeffector_py(R_init);%rotm2quat_v4(R_init);
 end
