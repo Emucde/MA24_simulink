@@ -11,7 +11,7 @@ opts.ipopt.tol = 1e-8;  % Default: 1e-8
 opts.ipopt.max_iter = 3000;  % Default: 3000
 
 % Maximum walltime clock seconds
-opts.ipopt.max_wall_time = 10+20;  % Default: 10+20
+% opts.ipopt.max_wall_time = 10+20;  % Default: 10+20
 
 % Maximum CPU seconds
 opts.ipopt.max_cpu_time = 10+20;  % Default: 10+20

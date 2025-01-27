@@ -36,6 +36,18 @@ set(MPC_ALL_LIBRARIES "")
 set(MPC_PARAM_LIBRARIES "")
 set(MPC_LIBRARIES "")
 
+set(IPOPT_INCLUDE_DIRS "/usr/local/include/coin-or")
+set(IPOPT_LIBRARY_DIRS "/usr/local/lib")
+
+set(FATROP_INCLUDE_DIRS "/usr/local/include/fatrop/")
+set(FATROP_LIBRARY_DIRS "/usr/local/lib")
+
+set(BLASFEO_INCLUDE_DIRS "/usr/local/include/blasfeo/include/")
+# set(BLASFEO_INCLUDE_DIRS "/opt/blasfeo/include/")
+set(BLASFEO_LIBRARY_DIRS "/opt/blasfeo/lib/")
+
+
+
 # Set up compile time measurement
 set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
 
@@ -50,7 +62,18 @@ foreach(SOURCE_FILE ${MPC_SOURCES})
     set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}")
 
     # Include directories
-    target_include_directories(${FILE_NAME} PRIVATE ${MPC_SOURCE_DIR})
+    target_include_directories(${FILE_NAME} PRIVATE
+        ${MPC_SOURCE_DIR}
+        ${IPOPT_INCLUDE_DIRS}
+        ${FATROP_INCLUDE_DIRS}
+        ${BLASFEO_INCLUDE_DIRS}
+        )
+
+    target_link_libraries(${FILE_NAME} PRIVATE 
+        ipopt
+        blasfeo
+        fatrop
+        )
 
     target_compile_options(${FILE_NAME} PRIVATE -fdiagnostics-color=always -O3) # it makes sense to optimize the MPC library also in debug mode
 

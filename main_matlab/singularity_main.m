@@ -6,6 +6,7 @@ n = param_robot.n_DOF; % Define the number of degrees of freedom.
 
 param_sing = struct();
 param_sing.n = n;
+param_sing.n_red = 6;
 param_sing.y_d_t = [0.3921; 0.3921; 0.5211];
 param_sing.R_d = [0 1 0; 1 0 0; 0 0 -1];
 
@@ -64,20 +65,43 @@ delta = 0.2;
 lb = [param_robot.q_limit_lower + delta; -inf(6,1); -inf(6,1)];
 ub = [param_robot.q_limit_upper - delta; inf(6,1); inf(6,1)];
 
-% Solve the constrained optimization problem
-[x_opt, f_val] = fmincon(@(x) f_cost(x, param_sing), [q_0; q_0_p; q_0_pp], A, b, Aeq, beq, lb, ub, [], options);
+% % Solve the constrained optimization problem
+% [x_opt, f_val] = fmincon(@(x) f_cost(x, param_sing), [q_0; q_0_p; q_0_pp], A, b, Aeq, beq, lb, ub, [], options);
 
-% Extract the optimized values
-q_opt = x_opt(1:n);
-q_p_opt = x_opt(n+1:2*n);
-q_pp_opt = x_opt(2*n+1:3*n);
+% % Extract the optimized values
+% q_opt = x_opt(1:n);
+% q_p_opt = x_opt(n+1:2*n);
+% q_pp_opt = x_opt(2*n+1:3*n);
 
-H = hom_transform_endeffector_py(q_opt);
-J = geo_jacobian_endeffector_py(q_opt);
-J_tilde = J ./ vecnorm(J, 2);
-R_J = J_tilde' * J_tilde;
+% H = hom_transform_endeffector_py(q_opt);
+% J = geo_jacobian_endeffector_py(q_opt);
+% J_tilde = J ./ vecnorm(J, 2);
+% R_J = J_tilde' * J_tilde;
 
-w = sqrt(det(J * J'));
+% w = sqrt(det(J * J'));
+
+input_dir = [s_fun_path, '/casadi_functions/'];
+traj_select_mpc = 1;
+
+% q_0 = param_traj.q_0(:, traj_select_mpc)+rand(n,1);
+
+q_0 = rand(n,1);
+q_1 = q_0 + ones(n,1)*0.1;
+q_0 = min(max(q_0, param_robot.q_limit_lower*0.5), param_robot.q_limit_upper*0.5);
+q_1 = min(max(q_1, param_robot.q_limit_lower*0.5), param_robot.q_limit_upper*0.5);
+q_0(param_robot.n_indices_fixed) = 0;
+q_1(param_robot.n_indices_fixed) = 0;
+
+H_0 = hom_transform_endeffector_py(q_0);
+
+p_d_0 = H_0(1:3, 4);
+R_d_0 = H_0(1:3, 1:3);
+q_d_0 = rotm2quat_v4(H_0(1:3, 1:3));
+
+MPC_solver = 'fatrop';
+opt_problem_find_multiple_singular_solutions;
+gen_opt_problem_test;
+% casadi_fun_to_mex(f_opt, [output_dir, 'mpc_c_sourcefiles'], [s_fun_path, '/matlab_functions'], MPC_matlab_name, '-O3');
 
 function f = f_cost(x, param)
     n = param.n;
@@ -148,22 +172,6 @@ end
 
 function Q = Q_norm(z, Q)
     Q = dot( z, mtimes(Q, z));
-end
-
-function param = set_collin_matrices(R_J_d, K_J, param)
-    n = param.n;
-    R = eye(n);
-    K = zeros(n);
-    for i = 2:n
-        for j = 1:i-1
-            R(i,j) = R_J_d.("r"+i+""+j);
-            R(j,i) = R(i,j);
-            K(i,j) = K_J.("k"+i+""+j);
-            K(j,i) = K(i,j);
-        end
-    end
-    param.R_J_d = R;
-    param.K_J = K;
 end
 
 function rot_ax = get_rotax(R)

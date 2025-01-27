@@ -4,6 +4,8 @@ if(exist('parameter_str', 'var') && strcmp(parameter_str, "parameters_7dof"))
     rmpath('../maple/maple_generated/7_dof_system');
 end
 
+error('deprecated. Dont use!');
+
 %if strcmp(mfilename, 'parameters')
     clear
     %close all

@@ -52,6 +52,14 @@ if(full_reset_flag)
             % compile casadi functions to simulink s-functions and matlab functions
             compile_py_cfun_to_sfun;
 
+            % regenerate paths (otherwise matlab casadi functions are not detected)
+            restoredefaultpath;
+            parameter_str = "parameters_7dof";
+            simulink_main_model_name = 'sim_discrete_7dof';
+            run('./utils/matlab_init_general/add_default_matlab_paths'); % because it is not on path per default
+            get_robot_name; % set robot_name to active robot from simulink (or default value when simulink is closed)
+            s_fun_path = ['./s_functions/', robot_name];
+
             % regenerate trajectory
             overwrite_offline_traj_forced_extern = true;
             run(parameter_str);
@@ -65,6 +73,7 @@ if(full_reset_flag)
             fullsimu                        = false; % make full mpc simulation and plot results
             traj_select_mpc                 = 1; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
             create_init_guess_for_all_traj  = true; % create init guess for all trajectories
+            create_test_solve               = true;
             compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
             compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
             compile_all_mpc_sfunctions      = true;
@@ -85,14 +94,22 @@ if(full_reset_flag)
 end
 
 function removeDir(dirPath)
-    maxAttempts = 5;
-    for attempt = 1:maxAttempts
+    for attempt = 1:5
         try
+            rmpath(dirPath);
             rmdir(dirPath, 's');
             return;  % Success, exit the function
         catch
             pause(1);  % Wait for 1 second before retrying
         end
     end
-    error('Failed to remove directory after %d attempts', maxAttempts);
+    fprintf(2, 'Failed to remove directory after 5 attempts. This happens sometimes, because matlab has problems with paths. running ''restoredefaultpath'' should do it. Please simply try it again.\n');
+    disp('Do you want to run it again? (y/n)');
+    user_response = input('','s');
+    if(strcmp(user_response, 'y'))
+        clc;
+        clear('dont_clear');
+        restoredefaultpath;
+        run('./main_matlab/parameters_7dof');
+    end
 end

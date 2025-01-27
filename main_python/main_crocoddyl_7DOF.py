@@ -26,7 +26,7 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = False
+use_data_from_simulink = True
 manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
@@ -746,40 +746,37 @@ if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
     us = us[:, 3::]
     xs = xs[:, 6::]
 
-if plot_sol == True:# and err_state == False:
-    subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
-    plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
+try:
+    if plot_sol == True:# and err_state == False:
+        subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
+        plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
 
-if visualize_sol is True:
-    q_sol = xs[:, :n_dof]
-    visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
-                    q_sol, transient_traj, Ts,
-                    frame_skip=1, create_html = True, html_name = visualize_file_path)
+    if visualize_sol is True:
+        q_sol = xs[:, :n_dof]
+        visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
+                        q_sol, transient_traj, Ts,
+                        frame_skip=1, create_html = True, html_name = visualize_file_path)
+except KeyboardInterrupt:
+    print("Plotting was interrupted by user. Quitting...")
 
-# print('Max error:       y - y_d = {:.2e}'.format(np.max(np.abs(e))), 'm')
-# print('Max error:   y_p - y_d_p = {:.2e}'.format(np.max(np.abs(e_p))), 'm/s')
-# print('Max error: y_pp - y_d_pp = {:.2e}'.format(np.max(np.abs(e_pp))), 'm/s^2')
-#print("\nTotal cost:", ddp.cost)
+try:
+    if use_data_from_simulink:
+        user_input = input("Do you want to clear the shared memory? (y/n): ").lower()
+        if user_input == 'y':
+            for name, config in shm_objects.items():
+                # Create shared memory object
+                shm_objects[name].close()
+                shm_objects[name].unlink()
+            shm_changed_semaphore.unlink()
+            shm_changed_semaphore.close()
+            print("Shared memory closed and cleared.")
+        else:
+            print("Shared memory not cleared.")
 
-# visualize_sol=False
-# if visualize_sol==True:
-#     visualize_sol_robot(robot, q, transient_traj, Ts, 3, 1)
-
-if use_data_from_simulink:
-    user_input = input("Do you want to clear the shared memory? (y/n): ").lower()
-    if user_input == 'y':
-        for name, config in shm_objects.items():
-            # Create shared memory object
-            shm_objects[name].close()
-            shm_objects[name].unlink()
-        shm_changed_semaphore.unlink()
-        shm_changed_semaphore.close()
-        print("Shared Memory freigegeben.")
-    else:
-        print("Shared Memory nicht freigegeben.")
-
-if autostart_fr3:
-    user_input = input("Do you want to enable brakes? (y/n): ").lower()
-    if user_input == 'y':
-        message = "stop"
-        asyncio.run(send_message(message))
+    if autostart_fr3:
+        user_input = input("Do you want to enable brakes? (y/n): ").lower()
+        if user_input == 'y':
+            message = "stop"
+            asyncio.run(send_message(message))
+except KeyboardInterrupt:
+    print("Interrupted by user. Shared Memory not closed and cleared.")

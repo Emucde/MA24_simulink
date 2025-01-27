@@ -113,8 +113,51 @@ end
         
         %mex(s_func_matlab_file, casadi_fun_c_header_path, '-outdir', s_fun_path);
         disp(['Compiling s-function ', s_fun_file_new, ' with ', opt_flag, ' (nlpsol-opti method)'])
-        mex(s_fun_file_new, casadi_fun_c_header_path, '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
-        
+
+        if((strcmp(MPC_solver, 'ipopt')))
+            % for codegenerating ipopt install
+            %{
+            sudo apt-get install gcc g++ gfortran git patch wget pkg-config
+            sudo apt-get install cmake libeigen3-dev
+            sudo apt-get install liblapack-dev libmetis-dev libblas-dev
+            git clone https://github.com/coin-or-tools/ThirdParty-Mumps.git
+            cd ThirdParty-Mumps/
+            ./get.Mumps
+            ./configure
+            make
+            sudo make install
+            git clone https://github.com/coin-or/Ipopt.git
+            cd Ipopt/
+            ./configure 
+            make
+            make test # ignore the errors, if it solves it works
+            sudo make install
+            % PS: it does not run in simulink, crashes instant.
+            %}
+            mex(s_fun_file_new, casadi_fun_c_header_path, '-lipopt', '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
+        elseif((strcmp(MPC_solver, 'fatrop')))
+            % for codegenerating fatrop install (not tested in simulink but might not work)
+            %{
+            # Dependency: blasfeo
+            git clone https://github.com/giaf/blasfeo.git
+            cd blasfeo
+            make shared_library -j $(nproc)
+            sudo make install_shared
+
+            git clone https://github.com/meco-group/fatrop.git --recursive
+            cd fatrop
+            export CMAKE_ARGS="-DBLASFEO_TARGET=X64_AUTOMATIC -DENABLE_MULTITHREADING=OFF"
+            mkdir build
+            cd build/
+            cmake -DBLASFEO_TARGET=X64_AUTOMATIC ..
+            make -j
+            sudo make install
+            %}
+            mex(s_fun_file_new, casadi_fun_c_header_path, '-I/usr/local/include/blasfeo/include/', '-lblasfeo', '-lfatrop', '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
+        else
+            mex(s_fun_file_new, casadi_fun_c_header_path, '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
+        end
+
         if(remove_sourcefiles)
             delete(s_fun_file_new);
             delete(casadi_fun_c_header_path);

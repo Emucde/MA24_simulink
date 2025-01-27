@@ -116,7 +116,7 @@ int main()
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
     Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
 
-    #define TRAJ_SELECT 1
+    #define TRAJ_SELECT 2
     x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (controller.get_traj_x0_init(TRAJ_SELECT), nx);
     // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
@@ -127,12 +127,13 @@ int main()
     double* x_measured_ptr = x_k_ndof;
 
     // initialize the trajectory
-    //controller.init_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
+    controller.init_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
     
-    ParamTargetTrajectory param_target;
-    param_target.p_target = Eigen::Vector3d(0.5, 0.0, 0.6);
-    param_target.R_target = Eigen::Matrix3d::Identity();
-    controller.init_trajectory_custom_target(param_target, x_k_ndof, 0.0, 10.0, 10.0, 2.0);
+    // ParamTargetTrajectory param_target;
+    // param_target.p_target = Eigen::Vector3d(0.5, 0.0, 0.6);
+    // param_target.R_target = Eigen::Matrix3d::Identity();
+    // controller.init_trajectory_custom_target(param_target, x_k_ndof, 0.0, 10.0, 10.0, 2.0);
+
     casadi_uint transient_traj_len = controller.get_transient_traj_len();
     
     // Start measuring time

@@ -166,10 +166,10 @@ for i=0:N_MPC
     q_p(:,  1 + (i)) = x(n_red+1:2*n_red, 1 + (i));
 
     % calculate trajectory values (y_0 ... y_N)
-    H_e = H_red(q);
+    H_e = cse(H_red(q));
     R_e = H_e(1:3, 1:3);
     y(1:3,   1 + (i)) = H_e(1:3, 4);
-    y(4:7,   1 + (i)) = quat_fun_red(q);
+    y(4:7,   1 + (i)) = cse(quat_fun_red(q));
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
     if(i < N_MPC)
