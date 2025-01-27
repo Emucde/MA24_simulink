@@ -181,6 +181,7 @@
   "terminal.integrated.env.linux": {
     "PYTHONPATH": ""
   },
+  "terminal.integrated.tabs.enableAnimation": false,
   "cmake.environment": {
     "CLICOLOR_FORCE": "1"
   },
