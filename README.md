@@ -20,7 +20,7 @@
 <tr>
 <td><code>linsys_solver</code></td>
 <td>Linear systems solver type</td>
-<td>See <a href="linear_systems_solvers.html#linear-system-solvers-setting">Linear Systems Solvers</a></td>
+<td>See <a href="https://osqp.org/docs/interfaces/linear_systems_solvers.html#linear-system-solvers-setting">Linear Systems Solvers</a></td>
 <td>qdldl</td>
 </tr>
 <tr>
