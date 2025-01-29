@@ -1,7 +1,7 @@
 # MA24_simulink
 <details>
   <summary>Group: plugin_OSQP</summary>
-<a name='options'></a><table>
+<a name='options' href='https://osqp.org/docs/interfaces/solver_settings.html'>https://osqp.org/docs/interfaces/solver_settings.html</a><br><table>
 <thead>
 <tr>
 <th>Argument</th>
