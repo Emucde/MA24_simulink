@@ -1,5 +1,181 @@
 # MA24_simulink
 <details>
+  <summary>Group: plugin_OSQP</summary>
+<a name='options'></a><table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Description</th>
+<th>Allowed values</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>device</code></td>
+<td>Device identifier</td>
+<td>0 <= <code>device</code> (integer)</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>linsys_solver</code></td>
+<td>Linear systems solver type</td>
+<td>See <a href="linear_systems_solvers.html#linear-system-solvers-setting">Linear Systems Solvers</a></td>
+<td>qdldl</td>
+</tr>
+<tr>
+<td><code>verbose</code> *</td>
+<td>Print output</td>
+<td>True/False</td>
+<td>True</td>
+</tr>
+<tr>
+<td><code>warm_starting</code> *</td>
+<td>Perform warm starting</td>
+<td>True/False</td>
+<td>True</td>
+</tr>
+<tr>
+<td><code>scaling</code></td>
+<td>Number of scaling iterations</td>
+<td>0 (disabled) or 0 < <code>scaling</code> (integer)</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>polishing</code> *</td>
+<td>Perform polishing</td>
+<td>True/False</td>
+<td>False</td>
+</tr>
+<tr>
+<td><code>rho</code> *</td>
+<td>ADMM rho step</td>
+<td>0 < <code>rho</code></td>
+<td>0.1</td>
+</tr>
+<tr>
+<td><code>rho_is_vec</code></td>
+<td>Is <code>rho</code> a vector?</td>
+<td>True/False</td>
+<td>True</td>
+</tr>
+<tr>
+<td><code>sigma</code></td>
+<td>ADMM sigma step</td>
+<td>0 < <code>sigma</code></td>
+<td>1e-06</td>
+</tr>
+<tr>
+<td><code>alpha</code> *</td>
+<td>ADMM relaxation parameter</td>
+<td>0 < <code>alpha</code> < 2</td>
+<td>1.6</td>
+</tr>
+<tr>
+<td><code>cg_max_iter</code> *</td>
+<td>Maximum number of CG iterations per solver</td>
+<td>0 < <code>cg_max_iter</code> (integer)</td>
+<td>20</td>
+</tr>
+<tr>
+<td><code>cg_tol_reduction</code> *</td>
+<td>No. of consecutive CG iterations before the tol is halved</td>
+<td>0 < <code>cg_tol_reduction</code> (integer)</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>cg_tol_fraction</code> *</td>
+<td>CG tolerance (fraction of ADMM residuals)</td>
+<td>0 < <code>cg_tol_fraction</code> < 1</td>
+<td>0.15</td>
+</tr>
+<tr>
+<td><code>adaptive_rho</code></td>
+<td>Adaptive rho</td>
+<td>True/False</td>
+<td>True</td>
+</tr>
+<tr>
+<td><code>adaptive_rho_interval</code></td>
+<td>Adaptive rho interval</td>
+<td>0 (automatic) or 0 < <code>adaptive_rho_interval</code> (integer)</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>adaptive_rho_fraction</code></td>
+<td>Adaptive rho interval as fraction of setup time (auto mode)</td>
+<td>0 < <code>adaptive_rho_fraction</code></td>
+<td>0.4</td>
+</tr>
+<tr>
+<td><code>adaptive_rho_tolerance</code></td>
+<td>Tolerance for adapting rho</td>
+<td>1 <= <code>adaptive_rho_tolerance</code></td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>max_iter</code> *</td>
+<td>Maximum number of iterations</td>
+<td>0 < <code>max_iter</code> (integer)</td>
+<td>4000</td>
+</tr>
+<tr>
+<td><code>eps_abs</code> *</td>
+<td>Absolute tolerance</td>
+<td>0 <= <code>eps_abs</code></td>
+<td>1e-03</td>
+</tr>
+<tr>
+<td><code>eps_rel</code> *</td>
+<td>Relative tolerance</td>
+<td>0 <= <code>eps_rel</code></td>
+<td>1e-03</td>
+</tr>
+<tr>
+<td><code>eps_prim_inf</code> *</td>
+<td>Primal infeasibility tolerance</td>
+<td>0 <= <code>eps_prim_inf</code></td>
+<td>1e-04</td>
+</tr>
+<tr>
+<td><code>eps_dual_inf</code> *</td>
+<td>Dual infeasibility tolerance</td>
+<td>0 <= <code>eps_dual_inf</code></td>
+<td>1e-04</td>
+</tr>
+<tr>
+<td><code>scaled_termination</code> *</td>
+<td>Scaled termination conditions</td>
+<td>True/False</td>
+<td>False</td>
+</tr>
+<tr>
+<td><code>check_termination</code> *</td>
+<td>Check termination interval</td>
+<td>0 (disabled) or 0 < <code>check_termination</code> (integer)</td>
+<td>25</td>
+</tr>
+<tr>
+<td><code>time_limit</code> *</td>
+<td>Runtime limit in seconds</td>
+<td>0 < <code>time_limit</code></td>
+<td>1e+10</td>
+</tr>
+<tr>
+<td><code>delta</code> *</td>
+<td>Polishing regularization parameter</td>
+<td>0 < <code>delta</code></td>
+<td>1e-06</td>
+</tr>
+<tr>
+<td><code>polish_refine_iter</code> *</td>
+<td>Refinement iterations in polishing</td>
+<td>0 < <code>polish_refine_iter</code> (integer)</td>
+<td>3</td>
+</tr>
+</tbody>
+</table></details>
+<details>
   <summary>class casadi::Qrqp</summary>
 <a name='options'></a><table>
 <caption>List of available options</caption>
