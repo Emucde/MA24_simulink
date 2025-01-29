@@ -82,3 +82,5 @@ function runnodejs()
 	fi
 	node $masterdir/main_ros2/nodejs_ros2_gui/src/app.js
 }
+
+export LD_PRELOAD=/lib/x86_64-linux-gnu/libstdc++.so.6

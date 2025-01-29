@@ -153,7 +153,7 @@ end
             make -j
             sudo make install
             %}
-            mex(s_fun_file_new, casadi_fun_c_header_path, '-I/usr/local/include/blasfeo/include/', '-lblasfeo', '-lfatrop', '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
+            mex(s_fun_file_new, casadi_fun_c_header_path, '-I/opt/blasfeo/include/', '-lblasfeo', '-lfatrop', '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
         else
             mex(s_fun_file_new, casadi_fun_c_header_path, '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
         end

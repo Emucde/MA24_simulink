@@ -70,7 +70,7 @@ int main()
 
     // Configuration flags
     bool use_gravity = false;
-    const std::string urdf_filename = "../../../urdf_creation/fr3_no_hand_7dof.urdf";
+    const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
     const std::string tcp_frame_name = "fr3_link8_tcp";
 
     CasadiController controller(urdf_filename, tcp_frame_name, use_gravity);
@@ -116,7 +116,7 @@ int main()
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
     Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
 
-    #define TRAJ_SELECT 2
+    #define TRAJ_SELECT 5
     x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (controller.get_traj_x0_init(TRAJ_SELECT), nx);
     // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
@@ -145,7 +145,7 @@ int main()
     shm.write("readonly_mode", &readonly_mode, sizeof(int8_t));
     shm.write("read_traj_length", &traj_len, sizeof(casadi_uint));
     shm.write("data_from_simulink_start", &start, sizeof(int8_t));
-
+    
     // Write data to shm:
     current_frequency = 0;
     shm.write("read_state_data", x_k_ndof, nx * sizeof(casadi_real));

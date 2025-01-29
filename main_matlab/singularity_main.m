@@ -101,7 +101,82 @@ q_d_0 = rotm2quat_v4(H_0(1:3, 1:3));
 MPC_solver = 'fatrop';
 opt_problem_find_multiple_singular_solutions;
 gen_opt_problem_test;
-% casadi_fun_to_mex(f_opt, [output_dir, 'mpc_c_sourcefiles'], [s_fun_path, '/matlab_functions'], MPC_matlab_name, '-O3');
+% casadi_fun_to_mex(f_opt, [s_fun_path, '/mpc_c_sourcefiles'], [s_fun_path, '/matlab_functions'], casadi_func_name, '-O3', MPC_solver, false);
+
+
+N_min = 10;
+qq_min = repmat({[q_0, q_1]}, 1, N_min);
+w_min = 100*ones(N_min, 1);
+delta_H_min = 100*ones(N_min, 1);
+delta_q_min = 100*ones(N_min, 1);
+krit_min = 100*ones(N_min, 1);
+
+% könnte man auch zufällig ändern
+Qt_1_ref = 1e2*diag([1, 1, 1]);
+Qr_1_ref = 1e0*diag([1, 1, 1]);
+Qt_2_ref = 1e2*diag([1, 1, 1]);
+Qr_2_ref = 1e0*diag([1, 1, 1]);
+Qt_3_ref = 1e8*diag([1, 1, 1]);
+Qr_3_ref = 1e8*diag([1, 1, 1]);
+Q4_ref = 1e1*eye(n_red);
+Q5_ref = 1e1*eye(n_red);
+q1_manip_ref = 1e4;
+q2_manip_ref = 1e4;
+dq_eps_ref = 1e2;
+q_eps_ref = 1e4;
+
+mpc_init_reference_values = [y_d_0(:); Qt_1_ref(:); Qr_1_ref(:); Qt_2_ref(:); Qr_2_ref(:); Qt_3_ref(:); Qr_3_ref(:); Q4_ref(:); Q5_ref(:); q1_manip_ref; q2_manip_ref; dq_eps_ref; q_eps_ref];
+init_guess_0 = [x_init_guess_0(:); epsilon_max; lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+qq_n_sol = zeros(n, 2);
+q_min = zeros(n, 1);
+min_idx=1;
+tic
+for i=1:20000
+    q_0 = q_min + 0*rand(n, 1);
+    q_1 = q_0 + rand(n, 1);
+    q_0 = min(max(q_0, param_robot.q_limit_lower*0.5), param_robot.q_limit_upper*0.5);
+    q_1 = min(max(q_1, param_robot.q_limit_lower*0.5), param_robot.q_limit_upper*0.5);
+    q_0(param_robot.n_indices_fixed) = 0;
+    q_1(param_robot.n_indices_fixed) = 0;
+
+    H_0 = hom_transform_endeffector_py(q_0);
+    p_d_0 = H_0(1:3, 4);
+    q_d_0 = quat_R_endeffector_py(H_0(1:3, 1:3));
+    
+    y_d_0 = [p_d_0; q_d_0];
+    mpc_init_reference_values(1:7) = y_d_0;
+
+    x_init_guess_0 = [q_0(n_indices) q_1(n_indices)];
+    init_guess_0(1:2*n_red) = x_init_guess_0(:);
+
+    xsol = find_singularities(mpc_init_reference_values, init_guess_0); % Dont run this without args otherwise matlab crashes!!!
+    qq_sol = reshape(full(xsol), n_red, 2);
+    qq_n_sol(n_indices, :) = qq_sol;
+
+    H1=hom_transform_endeffector_py(qq_n_sol(:,1));
+    H2=hom_transform_endeffector_py(qq_n_sol(:,2));
+    JJ1 = geo_jacobian_endeffector_py(qq_n_sol(:,1));
+    JJ2 = geo_jacobian_endeffector_py(qq_n_sol(:,2));
+    w1 = sqrt(det(JJ1 * JJ1'));
+    w2 = sqrt(det(JJ2 * JJ2'));
+    delta_q = norm(qq_n_sol(:,1)-qq_n_sol(:,2), 2);
+    w = (w1 + w2) / 2;
+    delta_H = norm(H1-H2, 2);
+    krit_min_new = (1/delta_q + delta_H + w) / 3;
+    indices = find(krit_min_new < krit_min);
+
+    if(~isempty(indices))
+        [~, max_idx] = max(krit_min);
+        qq_min{max_idx} = qq_n_sol;
+        w_min(max_idx) = w;
+        delta_H_min(max_idx) = delta_H;
+        delta_q_min(max_idx) = delta_q;
+        krit_min(max_idx) = krit_min_new;
+        [~, min_idx] = min(krit_min);
+        q_min(n_indices) = qq_min{min_idx}(n_indices,1+round(rand(1)));
+    end
+end
+toc;
 
 function f = f_cost(x, param)
     n = param.n;

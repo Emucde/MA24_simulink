@@ -23,9 +23,9 @@ for i=1:n_optval
     tmp.name = ['lambda_', tmp.name];
     init_guess_str_cell(i+n_optval) = {tmp};
 end
-g_dim1 = num2str(length(g{1}));
-g_dim2 = num2str(length(g));
-init_guess_str_cell{end} = struct('name', 'g', 'dim_str', ['(',g_dim1,'x',g_dim2,')'], 'dim', [length(g{1}) length(g)]);
+g_dim1 = size(g, 1);
+g_dim2 = size(g, 2);
+init_guess_str_cell{end} = struct('name', 'g', 'dim_str', ['(',g_dim1,'x',g_dim2,')'], 'dim', [g_dim1 g_dim2]);
 
 xx_dims = cell(1, n_optval);
 icnt = 0;

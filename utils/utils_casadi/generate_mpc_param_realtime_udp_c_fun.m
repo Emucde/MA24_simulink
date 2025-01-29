@@ -98,7 +98,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     if ~exist(output_file_fin, 'file') || ~isequal(fileread(output_file), fileread(output_file_fin))
         % Rename the temporary file to the final file
         movefile(output_file, output_file_fin);
-        fprintf('Header file %s has been created successfully.\n', param_weight_header_name);
+        fprintf(2, 'Header file %s has been created successfully.\n', param_weight_header_name);
     else
         % Delete the temporary file
         delete(output_file);
@@ -319,7 +319,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     if ~exist(output_file_fin, 'file') || ~isequal(fileread(output_file), fileread(output_file_fin))
         % Rename the temporary file to the final file
         movefile(output_file, output_file_fin);
-        fprintf('Source file %s has been created successfully.\n', param_weight_source_name);
+        fprintf(2, 'Source file %s has been created successfully.\n', param_weight_source_name);
     else
         % Delete the temporary file
         delete(output_file);

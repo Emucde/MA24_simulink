@@ -36,17 +36,18 @@ set(MPC_ALL_LIBRARIES "")
 set(MPC_PARAM_LIBRARIES "")
 set(MPC_LIBRARIES "")
 
-set(IPOPT_INCLUDE_DIRS "/usr/local/include/coin-or")
-set(IPOPT_LIBRARY_DIRS "/usr/local/lib")
+set(CASADI_PATH "/media/daten/Anwendungen/casadi-3.6.7-linux64-matlab2018b")
 
-set(FATROP_INCLUDE_DIRS "/usr/local/include/fatrop/")
-set(FATROP_LIBRARY_DIRS "/usr/local/lib")
+set(CASADI_INCLUDE_DIRS "${CASADI_PATH}/include")
+set(HIGHS_INCLUDE_DIRS_2 "${CASADI_PATH}/include/highs")
+set(CASADI_LIBRARY_DIRS "${CASADI_PATH}")
 
-set(BLASFEO_INCLUDE_DIRS "/usr/local/include/blasfeo/include/")
-# set(BLASFEO_INCLUDE_DIRS "/opt/blasfeo/include/")
-set(BLASFEO_LIBRARY_DIRS "/opt/blasfeo/lib/")
+message(STATUS "HIGHS_INCLUDE_DIRS_2: ${HIGHS_INCLUDE_DIRS_2}")
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(HIGHS REQUIRED highs)
 
+add_definitions(-DMASTERDIR="$ENV{masterdir}")
 
 # Set up compile time measurement
 set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
@@ -64,15 +65,18 @@ foreach(SOURCE_FILE ${MPC_SOURCES})
     # Include directories
     target_include_directories(${FILE_NAME} PRIVATE
         ${MPC_SOURCE_DIR}
-        ${IPOPT_INCLUDE_DIRS}
-        ${FATROP_INCLUDE_DIRS}
-        ${BLASFEO_INCLUDE_DIRS}
+        ${CASADI_INCLUDE_DIRS}
+        ${HIGHS_INCLUDE_DIRS}
+        ${HIGHS_INCLUDE_DIRS_2}
         )
 
     target_link_libraries(${FILE_NAME} PRIVATE 
-        ipopt
-        blasfeo
-        fatrop
+        ${CASADI_LIBRARY_DIRS}/libipopt.so
+        ${CASADI_LIBRARY_DIRS}/libfatrop.so
+        ${CASADI_LIBRARY_DIRS}/libblasfeo.so
+        ${CASADI_LIBRARY_DIRS}/libosqp.so
+        ${CASADI_LIBRARY_DIRS}/libdaqp.so
+        ${CASADI_LIBRARY_DIRS}/libhighs.so
         )
 
     target_compile_options(${FILE_NAME} PRIVATE -fdiagnostics-color=always -O3) # it makes sense to optimize the MPC library also in debug mode

@@ -19,26 +19,23 @@ fi
 # export CXX=/usr/bin/g++
 # export CC=/usr/bin/gcc
 
-BUILD_CURRENT_FILE=true
+BUILD_CURRENT_FILE=false
 RUN_MAKE_INSTALL=false
 BUILD_ROS2_MPCS=false
 RUN_FILE=true
 
 if [[ $# -ge 2 ]]; then
-    if [ $2 == "$masterdir/main_ros2/casadi_mpc/cpp_class_files" ]; then
-        BUILD_CURRENT_FILE=false # use makefile to build
-    elif [ $2 == "all" ]; then
+    if [ $2 == "all" ]; then
         BUILD_CURRENT_FILE=false
         RUN_MAKE_INSTALL=true
         BUILD_ROS2_MPCS=true
         RUN_FILE=false
-    else
-        BUILD_CURRENT_FILE=true
     fi
 fi
 
 # Parse command line arguments
 JUST_CREATE_CMAKE=false
+echo $#
 if [[ $# -gt 0 ]]; then
     key="$1"
     case $key in
@@ -70,11 +67,11 @@ echo "JUST_CREATE_CMAKE: $JUST_CREATE_CMAKE"
 echo ""
 
 if [ "$JUST_CREATE_CMAKE" = true ]; then
-    cmake -B build_debug -S . -DCMAKE_BUILD_TYPE=Debug
+    cmake -B build_debug -S ./main_ros2/casadi_mpc/cpp_class_files/ -DCMAKE_BUILD_TYPE=Debug
     echo ""
     echo "----------------------------------"
     
-    cmake -B build_release -S . -DCMAKE_BUILD_TYPE=Release
+    cmake -B build_release -S ./main_ros2/casadi_mpc/cpp_class_files/ -DCMAKE_BUILD_TYPE=Release
     echo ""
     echo "----------------------------------"
     exit 0
@@ -84,11 +81,11 @@ if [ "$BUILD_TYPE" = "release" ]; then
     OPT_FLAGS="-O3"
     DEBUG_FLAGS=""
     EXECUTE_AFTER_BUILD=true   # Set a flag to indicate to execute
-    CMAKE_BUILD_PATH="./cpp_class_files/build_release"
+    CMAKE_BUILD_PATH="./main_ros2/casadi_mpc/cpp_class_files/build_release"
 else
     OPT_FLAGS="-O0"
     DEBUG_FLAGS="-g"
-    CMAKE_BUILD_PATH="./cpp_class_files/build_debug"
+    CMAKE_BUILD_PATH="./main_ros2/casadi_mpc/cpp_class_files/build_debug"
 fi
 
 # Create the build directory if it does not exist
@@ -143,14 +140,13 @@ if [ $BUILD_STATUS -eq 0 ]; then
     echo -e "Build complete\n"
     # If the build was successful and it's a release build, run the executable
     if [ "$BUILD_TYPE" = "release" ]; then
-        UTILS_BUILD_PATH=$masterdir/main_ros2/casadi_mpc/cpp_class_files/build_release
+        UTILS_BUILD_PATH=./main_ros2/casadi_mpc/cpp_class_files/build_release
         if [ $RUN_FILE == true ]; then
             echo -e "Running the executable...\n----------------------------------\n"
             if [ $STANDALONE_MAKEFILE == true ]; then
-                $masterdir/main_ros2/casadi_mpc/cpp_class_files/bin/$BUILD_TYPE/main
+                ./main_ros2/casadi_mpc/cpp_class_files/bin/$BUILD_TYPE/main
             else
-                cd $masterdir/main_ros2/casadi_mpc/cpp_class_files
-                $UTILS_BUILD_PATH/bin/main
+                ./main_ros2/casadi_mpc/cpp_class_files/build_release/bin/main
             fi
         fi
 
@@ -165,7 +161,7 @@ if [ $BUILD_STATUS -eq 0 ]; then
         #     fi
         # fi
     else
-        UTILS_BUILD_PATH=$masterdir/main_ros2/casadi_mpc/cpp_class_files/build_debug
+        UTILS_BUILD_PATH=./main_ros2/casadi_mpc/cpp_class_files/build_debug
     fi
 
     if [ $RUN_MAKE_INSTALL == true ]; then
@@ -180,10 +176,10 @@ fi
 # build ros2
 if [ $BUILD_ROS2_MPCS == true ]; then
     if [ "$BUILD_TYPE" = "release" ]; then
-        BUILD_PATH=$masterdir/main_ros2/franka_ros2_ws/build_release
+        BUILD_PATH=./main_ros2/franka_ros2_ws/build_release
         BUILD_TYPE="Release"
     else
-        BUILD_PATH=$masterdir/main_ros2/franka_ros2_ws/build_debug
+        BUILD_PATH=./main_ros2/franka_ros2_ws/build_debug
         BUILD_TYPE="Debug"
     fi
 

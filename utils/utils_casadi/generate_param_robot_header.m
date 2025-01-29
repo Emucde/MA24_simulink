@@ -167,7 +167,7 @@ function generate_param_robot_header(s_fun_path, param_robot, traj_settings, fun
     % Check if header file was changed:
     if ~exist(h_file_fin, 'file') || ~isequal(fileread(h_file), fileread(h_file_fin))
         movefile(h_file, h_file_fin, 'f');
-        fprintf('Header File %s updated.\n', h_file_fin);
+        fprintf(2, 'Header File %s updated.\n', h_file_fin);
     else
         delete(h_file);
         fprintf('Header File %s unchanged.\n', h_file_fin);
@@ -176,7 +176,7 @@ function generate_param_robot_header(s_fun_path, param_robot, traj_settings, fun
     % Check if source file was changed:
     if ~exist(c_file_fin, 'file') || ~isequal(fileread(c_file), fileread(c_file_fin))
         movefile(c_file, c_file_fin, 'f');
-        fprintf('Source File %s updated.\n', c_file_fin);
+        fprintf(2, 'Source File %s updated.\n', c_file_fin);
     else
         delete(c_file);
         fprintf('Source File %s unchanged.\n', c_file_fin);

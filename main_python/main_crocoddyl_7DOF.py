@@ -17,6 +17,7 @@ from utils_python.utils import *
 
 # set nice priority to highest value
 os.nice(0)
+start_server() # start plotting update server
 
 autostart_fr3 = False
 
@@ -34,6 +35,17 @@ use_gravity = False
 visualize_sol = True
 plot_sol=True
 debounce_delay = 0.1
+
+# use_multisolving = False
+# n_proc = 1 # number of processes for parallel solving
+# TODO! Es stellt sich aber noch die Frage, ob es tatsächlich etwas bringt.
+# Dabei muss ich den Code hier überarbeiten, denn es müssen n_proc unabhängige
+# ddp objekte in n_proc unabhängigen Prozessen, die auf n_proc Kernen laufen
+# erstellt werden. Auch die Referenzwerte werden in den parallelen Prozessen
+# geschrieben. Dadurch kommt es zu keinen Reduktionen in der Laufzeit. Allerdings
+# wäre es viel einfacher, wenn ich eine Klasse dazu schrieben würde. Aber dann kann
+# ich es gleich in C++ machen. Dort kann ich noch um einiges mehr Performance herausholen
+# da dort auch das Referenzwerte schreiben viel schneller geht.
 
 use_custom_trajectory = True
 
@@ -317,6 +329,11 @@ tau_i_prev = np.zeros(n_dof)
 init_cnt = 0
 init_cnt_max = 100
 
+# add arrays for multisolving
+# cost_array = multiprocessing.Array('d', n_proc)
+# u_opt_array = multiprocessing.Array('d', n_proc*nq)
+# has_converged_array = multiprocessing.Array('i', n_proc)
+
 # folderpath1 = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
 # folderpath2 = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
 # paths = [folderpath1, folderpath2]
@@ -451,12 +468,6 @@ try:
                 start = start_button.debounce(data_from_simulink_start[:])
                 reset = reset_button.debounce(data_from_simulink_reset[:])
                 stop = stop_button.debounce(data_from_simulink_stop[:])
-
-                # readonly_mode = shm_data['readonly_mode']
-                # read_traj_length = shm_data['read_traj_length']
-                # read_traj_data = shm_data['read_traj_data']
-                # read_state_data = shm_data['read_state_data']
-                # read_control_data = shm_data['read_control_data']
                 
                 if start == 1:
                     data_from_simulink_start[:] = 0
@@ -537,13 +548,12 @@ try:
 
             measureSolver.tic()
             hasConverged = ddp.solve(xs_init_guess, us_init_guess, N_solver_steps, False, 1e-5)
+            u_k = ddp.us[0]
             measureSolver.toc()
 
             warn_cnt, err_state = check_solver_status(warn_cnt, hasConverged, ddp, i, Ts, conv_max_limit=5)
             
             xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
-
-            u_k = ddp.us[0]
 
             if use_clipping:
                 du_max = 1 # Nm/ms
@@ -725,28 +735,29 @@ try:
 except KeyboardInterrupt:
     print("\nFinish Solving!")
 
-if err_state:
-    print("Error Occured, output zero torque:", hasConverged)
-    if use_data_from_simulink:
-        data_from_python[:] = np.zeros(n_dof)
-
-
-xs[N_traj-1] = x_k_ndof
-us[N_traj-1] = us[N_traj-2] # simply use previous value for display (does not exist)
-
-sol_time = measureSolver.print_time(additional_text='Total Solver time')
-tot_time = measureTotal.print_time(additional_text='Total MPC time')
-
-
-#########################################################################################################
-############################################# Plot Results ##############################################
-#########################################################################################################
-
-if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
-    us = us[:, 3::]
-    xs = xs[:, 6::]
-
 try:
+    if err_state:
+        print("Error Occured, output zero torque:", hasConverged)
+        if use_data_from_simulink:
+            data_from_python[:] = np.zeros(n_dof)
+
+
+    xs[N_traj-1] = x_k_ndof
+    us[N_traj-1] = us[N_traj-2] # simply use previous value for display (does not exist)
+
+    sol_time = measureSolver.print_time(additional_text='Total Solver time')
+    tot_time = measureTotal.print_time(additional_text='Total MPC time')
+
+
+    #########################################################################################################
+    ############################################# Plot Results ##############################################
+    #########################################################################################################
+
+    if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
+        us = us[:, 3::]
+        xs = xs[:, 6::]
+
+
     if plot_sol == True:# and err_state == False:
         subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
         plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
@@ -756,10 +767,7 @@ try:
         visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
                         q_sol, transient_traj, Ts,
                         frame_skip=1, create_html = True, html_name = visualize_file_path)
-except KeyboardInterrupt:
-    print("Plotting was interrupted by user. Quitting...")
 
-try:
     if use_data_from_simulink:
         user_input = input("Do you want to clear the shared memory? (y/n): ").lower()
         if user_input == 'y':

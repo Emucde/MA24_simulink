@@ -329,7 +329,7 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
     if ~exist(output_file_fin, 'file') || ~isequal(fileread(output_file), fileread(output_file_fin))
         % Rename the temporary file to the final file
         movefile(output_file, output_file_fin);
-        fprintf(['Header file ', addressdef_header_name, ' created.\n']);
+        fprintf(2, ['Header file ', addressdef_header_name, ' created.\n']);
     else
         % Delete the temporary file
         delete(output_file);

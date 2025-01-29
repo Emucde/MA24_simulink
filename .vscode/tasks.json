@@ -4,13 +4,10 @@
         {
             "type": "cppbuild",
             "label": "C/C++: g++-11 build active file (default)",
-            "command": "./build.sh",
-            "args": [
-                "-d",
-                "${env:masterdir}/main_ros2/casadi_mpc/cpp_class_files"
-            ],
+            "command": "bash",
+            "args": ["-ic", "./main_ros2/casadi_mpc/build.sh -d"],
             "options": {
-                "cwd": "${workspaceFolder}/main_ros2/casadi_mpc"
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": [
                 "$gcc"
@@ -22,10 +19,30 @@
             }
         },
         {
+            "label": "Run MATLAB Commander",
+            "type": "process",
+            "command": "/media/daten/Anwendungen/MATLAB/R2022b/bin/matlab",
+            "args": ["-nosplash", "-nodesktop", "-r", "run('./utils/utils_bash/matlab_file_commander.m')"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "Python run main_crocoddyl_7DOF.py",
             "type": "shell",
-            "command": "./main_python/run_python_main.sh",
-            "args": [],
+            "command": "bash",
+            "args": ["-ic", "./main_python/run_python_main.sh"],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -40,13 +57,13 @@
             "detail": "run main_crocoddyl_7DOF.py",
             "icon": {
                 "id": "octoface"
-            },
+            }
         },
         {
             "label": "NodeJS run ROS2 GUI",
             "type": "shell",
-            "command": "./main_ros2/nodejs_ros2_gui/run_nodejs.sh",
-            "args": [],
+            "command": "bash",
+            "args": ["-ic", "./main_ros2/nodejs_ros2_gui/run_nodejs.sh"],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -66,24 +83,19 @@
         {
             "label": "C++ Build and Run (-O3)",
             "type": "shell",
-            "command": "./build.sh",
-            "args": [
-                "-r",
-                "${env:masterdir}/main_ros2/casadi_mpc/cpp_class_files"
-            ],
+            "command": "bash",
+            "args": ["-ic", "./main_ros2/casadi_mpc/build.sh -r"],
             "options": {
-                "cwd": "${workspaceFolder}/main_ros2/casadi_mpc"
+                "cwd": "${workspaceFolder}/"
             },
             "problemMatcher": [
                 "$gcc"
             ],
             "group": {
                 "kind": "build",
-                "isDefault": false
+                "isDefault": true
             },
-            "dependsOn": [
-                "Run Build (No Debug Info)"
-            ],
+            "dependsOn": [],
             "detail": "Build and run the project without debug info.",
             "icon": {
                 "id": "play"
@@ -92,12 +104,12 @@
         {
             "label": "Create cmake files (Debug and Release)",
             "type": "shell",
-            "command": "../build.sh",
+            "command": "bash",
             "args": [
-                "-c"
+                "-ic", "./main_ros2/casadi_mpc/build.sh -c"
             ],
             "options": {
-                "cwd": "${workspaceFolder}/main_ros2/casadi_mpc/cpp_class_files"
+                "cwd": "${workspaceFolder}"
             },
             "group": {
                 "kind": "none",
@@ -108,13 +120,10 @@
         {
             "label": "Build ALL (ROS2 Release)",
             "type": "shell",
-            "command": "./build.sh",
-            "args": [
-                "-r",
-                "all"
-            ],
+            "command": "bash",
+            "args": ["-ic", "./main_ros2/casadi_mpc/build.sh -r all"],
             "options": {
-                "cwd": "${workspaceFolder}/main_ros2/casadi_mpc"
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": [
                 "$gcc"
@@ -131,13 +140,10 @@
         {
             "label": "Build ALL (ROS2 Debug)",
             "type": "shell",
-            "command": "./build.sh",
-            "args": [
-                "-d",
-                "all"
-            ],
+            "command": "bash",
+            "args": ["-ic", "./main_ros2/casadi_mpc/build.sh -d all"],
             "options": {
-                "cwd": "${workspaceFolder}/main_ros2/casadi_mpc"
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": [
                 "$gcc"
@@ -150,6 +156,66 @@
                 "Run Build (No Debug Info)"
             ],
             "detail": "Build and run the project without debug info."
+        },
+        {
+            "type": "cppbuild",
+            "label": "C/C++: gcc build active file",
+            "command": "/usr/bin/gcc",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                "${file}",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+            "detail": "Task generated by Debugger."
+        },
+        {
+            "type": "cppbuild",
+            "label": "C/C++: g++ build active file",
+            "command": "/usr/bin/g++",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                "${file}",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+            "detail": "Task generated by Debugger."
+        },
+        {
+            "type": "cppbuild",
+            "label": "C/C++: g++-11 build active file",
+            "command": "/usr/bin/g++-11",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                "${file}",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+            "detail": "Task generated by Debugger."
         }
     ]
 }

@@ -7,8 +7,10 @@ function z_MX = sx_to_mx(z_SX, mode_str)
     if(isa(z_SX, 'casadi.MX'))
         error(['Error: input ', str(z_SX), ' is already MX']);
     end
-
-    if numel(z_SX) == 1 % Scalar case
+    
+    if(numel(z_SX) == 0) % special case, i.e. if g=[] is passed
+        z_name = '';
+    elseif numel(z_SX) == 1 % Scalar case
         z_name = z_SX.name;
     else % Matrix case
         %z0 = z_SX(1, 1);  % Access first element

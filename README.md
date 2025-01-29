@@ -1,8 +1,8 @@
 # MA24_simulink
 <details>
-  <summary>Group: plugin_OSQP</summary>
+  <summary>Group: plugin_OSQP: opts.qpsol_options.osqp</summary>
 <a name='options' href='https://osqp.org/docs/interfaces/solver_settings.html'>https://osqp.org/docs/interfaces/solver_settings.html</a><br>
-<a name='options' href='https://github.com/casadi/casadi/blob/main/casadi/interfaces/osqp/osqp_interface.cpp'>Supported Settings by CasADI</a><br><table>
+<a name='options' href='https://github.com/casadi/casadi/blob/main/casadi/interfaces/osqp/osqp_interface.cpp'>Supported Settings by CasADI: opts.qpsol_options.osqp</a><br><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -11,18 +11,7 @@
 <th>Allowed Values</th>
 </tr>
 </thead>
-<tbody><tr>
-<td><code>warm_start_primal</code></td>
-<td>Use x0 input to warmstart</td>
-<td>true</td>
-<td>True/False</td>
-</tr>
-<tr>
-<td><code>warm_start_dual</code></td>
-<td>Use lam_a0 and lam_x0 input to warmstart</td>
-<td>true</td>
-<td>True/False</td>
-</tr>
+<tbody>
 <tr>
 <td><code>rho</code></td>
 <td>ADMM rho step</td>
@@ -132,6 +121,72 @@
 <td>0 (disabled) or 0 &lt; check_termination (integer)</td>
 </tr>
 </tbody></table></details>
+
+<details>
+  <summary>Group: proxqp: opts.qpsol_options.proxqp</summary>
+  <a name='options' href='https://simple-robotics.github.io/proxsuite/md_doc_23-ProxQP__solve.html'>https://simple-robotics.github.io/proxsuite/md_doc_23-ProxQP__solve.html</a><br>
+<a name='options' href='https://github.com/casadi/casadi/blob/main/casadi/interfaces/proxqp/proxqp_interface.cpp'>Supported Settings by CasADI: opts.qpsol_options.proxqp</a><br><table>
+    <thead>
+      <tr>
+        <th>Argument</th>
+        <th>Description</th>
+        <th>Allowed Values</th>
+        <th>Default Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>default_rho</code></td>
+        <td>Regularization parameter</td>
+        <td>0 < code>default_rho</td>
+        <td>1.0</td>
+      </tr>
+      <tr>
+        <td><code>default_mu_eq</code></td>
+        <td>Default value for dual variable associated with equality constraints</td>
+        <td>0 <= <code>default_mu_eq</code></td>
+        <td>1.0</td>
+      </tr>
+      <tr>
+        <td><code>default_mu_in</code></td>
+        <td>Default value for dual variable associated with inequality constraints</td>
+        <td>0 <= <code>default_mu_in</code></td>
+        <td>1.0</td>
+      </tr>
+      <tr>
+        <td><code>eps_abs</code></td>
+        <td>Absolute stopping criterion</td>
+        <td>0 <= <code>eps_abs</code></td>
+        <td>1e-06</td>
+      </tr>
+      <tr>
+        <td><code>eps_rel</code></td>
+        <td>Relative stopping criterion</td>
+        <td>0 <= <code>eps_rel</code></td>
+        <td>1e-06</td>
+      </tr>
+      <tr>
+        <td><code>max_iter</code></td>
+        <td>Maximum number of iterations</td>
+        <td>0 < code>max_iter</td>
+        <td>1000</td>
+      </tr>
+      <tr>
+        <td><code>verbose</code></td>
+        <td>Print output</td>
+        <td>True/False</td>
+        <td>true</td>
+      </tr>
+      <tr>
+        <td><code>backend</code></td>
+        <td>The solver backend to use</td>
+        <td>'sparse' or 'dense'</td>
+        <td>'sparse'</td>
+      </tr>
+    </tbody>
+  </table>
+</details>
+
 <details>
   <summary>class casadi::Qrqp</summary>
 <a name='options'></a><table>

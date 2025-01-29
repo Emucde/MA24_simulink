@@ -16,10 +16,10 @@ hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_ende
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
 J = Function.load([input_dir, 'geo_jacobian_endeffector_py.casadi']);
 
-N = 1; % OCP horizon
-ng = [1,0]; % Number of non-dynamic constraints, length N+1
-nu = [13,0]; % Number of controls, length N+1
-nx = [0,0]; % Number of states, length N+1
+% N = 1; % OCP horizon
+% ng = [1,0]; % Number of non-dynamic constraints, length N+1
+% nu = [13,0]; % Number of controls, length N+1
+% nx = [0,0]; % Number of states, length N+1
 
 % build reduced model (fixed joint q3=0)
 n_x_indices = param_robot.n_x_indices;
@@ -40,15 +40,17 @@ y_d_0 = [p_d_0; q_d_0];
 x_init_guess_0 = [q_0(n_indices) q_1(n_indices)];
 
 lam_x_init_guess_0 = zeros(numel(x_init_guess_0)+1, 1);
-lam_g_init_guess_0 = zeros(1, 1);
+% lam_g_init_guess_0 = zeros(1, 1);
+lam_g_init_guess_0 = [];
 
-init_guess_0 = [x_init_guess_0(:); 1; lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+epsilon_min = 0.1;
+epsilon_max = norm( param_robot.q_limit_upper - param_robot.q_limit_lower, 2);
+
+init_guess_0 = [x_init_guess_0(:); epsilon_max; lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 % Optimization Variables:
 x      = SX.sym( 'x',  n_red, 2 );
 epsilon = SX.sym( 'epsilon', 1, 1 );
-epsilon_min = 0.1;
-epsilon_max = norm( param_robot.q_limit_upper - param_robot.q_limit_lower, 2);
 
 mpc_opt_var_inputs = {x, epsilon};
 
@@ -71,6 +73,8 @@ Q4 = SX.sym( 'Q4',  n_red, n_red );
 Q5 = SX.sym( 'Q5',  n_red, n_red );
 q1_manip = SX.sym( 'q1_manip', 1, 1 );
 q2_manip = SX.sym( 'q2_manip', 1, 1 );
+dq_eps = SX.sym( 'dq_eps', 1, 1 );
+q_eps = SX.sym( 'q_eps', 1, 1 );
 
 Qt_1_ref = 1e2*diag([1, 1, 1]);
 Qr_1_ref = 1e0*diag([1, 1, 1]);
@@ -82,16 +86,20 @@ Q4_ref = 1e1*eye(n_red);
 Q5_ref = 1e1*eye(n_red);
 q1_manip_ref = 1e4;
 q2_manip_ref = 1e4;
-q_eps = 1e2;
+dq_eps_ref = 1e2;
+q_eps_ref = 1e4;
 
-mpc_parameter_inputs = {y_d, Qt_1, Qr_1, Qt_2, Qr_2, Qt_3, Qr_3, Q4, Q5, q1_manip, q2_manip};
-mpc_init_reference_values = [y_d_0(:); Qt_1_ref(:); Qr_1_ref(:); Qt_2_ref(:); Qr_2_ref(:); Qt_3_ref(:); Qr_3_ref(:); Q4_ref(:); Q5_ref(:); q1_manip_ref; q2_manip_ref];
+mpc_parameter_inputs = {y_d, Qt_1, Qr_1, Qt_2, Qr_2, Qt_3, Qr_3, Q4, Q5, q1_manip, q2_manip, dq_eps, q_eps};
+mpc_init_reference_values = [y_d_0(:); Qt_1_ref(:); Qr_1_ref(:); Qt_2_ref(:); Qr_2_ref(:); Qt_3_ref(:); Qr_3_ref(:); Q4_ref(:); Q5_ref(:); q1_manip_ref; q2_manip_ref; dq_eps_ref; q_eps_ref];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
 
-lbg = epsilon;
-ubg = SX(inf);
+% lbg = epsilon;
+% ubg = SX(inf);
+
+lbg = [];
+ubg = [];
 
 % lambda_x0, lambda_g0 initial guess
 lambda_x0 = SX.sym('lambda_x0', size(w));
@@ -117,7 +125,8 @@ q_d_0 = quat_fun_red(q_0(n_indices));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Total number of equation conditions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-g = {norm_2(x(:, 1) - x(:, 2))};
+% g = {norm_2(x(:, 1) - x(:, 2))};
+g = {[]};
 
 pp = struct;
 
@@ -147,16 +156,16 @@ J4 = Q_norm_square(x(:, 1), Q4);
 J5 = Q_norm_square(x(:, 2), Q5);
 
 J6 = q1_manip*sqrt(det(J_red(x(:, 1))*J_red(x(:, 1))'));
-J7 = q2_manip*sqrt(det(J_red(x(:, 2))*J_red(x(:, 2))'));
 
 % R_y_yr = R_e_arr{1 + (0)}' * R_e_arr{1 + (1)} - R_e_arr{1 + (1)}' * R_e_arr{1 + (0)};
 % % q_y1_y2_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];
 % q_y1_y2_err = [1; R_y_yr(3,2); R_y_yr(1,3); R_y_yr(2,1)];
 % J3_r = Q_norm_square(q_y1_y2_err(2:4), Qr_3);
 
+dJ_eps = dq_eps*(norm_2(x(:, 1) - x(:, 2)) - epsilon)^2;
 J_eps = q_eps*(epsilon_max - epsilon)^2;
 
-cost_vars_names = '{J1_t, J1_r, J2_t, J2_r, J3_t, J3_r, J4, J5, J6, J7, J_eps}';
+cost_vars_names = '{J1_t, J1_r, J2_t, J2_r, J3_t, J3_r, J4, J5, J6, dJ_eps, J_eps}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

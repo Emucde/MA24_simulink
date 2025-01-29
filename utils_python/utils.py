@@ -1354,8 +1354,8 @@ def next_init_guess_mpc_v1(ddp, nq, nx, robot_model, robot_data, mpc_settings, p
     # die MPC dazu verleitet viel zu stark von der momentanen Lösung abzuweichen.
 
     # simply use the last value as initial guess
-    xs_init_guess = ddp.xs
-    us_init_guess = ddp.us
+    xs_init_guess = ddp.xs.copy()
+    us_init_guess = ddp.us.copy()
 
     return xs_init_guess, us_init_guess
 
@@ -1436,7 +1436,10 @@ def first_init_guess_mpc_v3(tau_init_robot, x_0_red, N_traj, N_horizon, param_ro
     return xk, xs, us, xs_init_guess, us_init_guess
 
 ###################################################################################################################
-
+def add_noise(data, gain=1e-3, mean=0, std=0.01):
+    arr = np.array(data)
+    noisy_data = arr + gain*np.random.normal(mean, std, arr.shape)
+    return [np.array(row) for row in noisy_data]
 
 def check_solver_status(warn_cnt, hasConverged, ddp, i, dt, conv_max_limit=5):
     error = 0
@@ -2170,14 +2173,23 @@ def get_autoscale_script():
 
 def get_reload_tab_script(reload_message = 'reload_plotly'):
     return '''
-            const ws = new WebSocket('ws://localhost:8765');
+            function connectWebSocket() {
+                const ws = new WebSocket('ws://localhost:8765');
 
-            ws.onmessage = function(event) {
-                console.log(event.data);
-                if (event.data === "'''+reload_message+'''") {
-                    location.reload();
-                }
-            };
+                ws.onmessage = function(event) {
+                    console.log(event.data);
+                    if (event.data === "''' + reload_message + '''") {
+                        location.reload();
+                    }
+                };
+
+                ws.onclose = function() {
+                    console.log('WebSocket disconnected, retrying in 5 seconds...');
+                    setTimeout(connectWebSocket, 5000);
+                };
+            }
+
+            connectWebSocket();
         '''
 
 # returns the script for a custom download button in plotly

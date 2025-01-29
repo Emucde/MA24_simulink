@@ -1,86 +1,138 @@
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Attach",
-      "port": 9229,
-      "request": "attach",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
-      "type": "node"
-    },
-    {
-      "name": "ROS: Attach",
-      "type": "ros",
-      "request": "attach"
-    },
-    {
-      "name": "Python: Current File",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${file}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"
-      }
-    },
-    {
-      "name": "(gdb) Launch",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${env:masterdir}/main_ros2/casadi_mpc/cpp_class_files/build_debug/bin/main",
-      "args": [],
-      "stopAtEntry": false,
-      "cwd": "${env:masterdir}/main_ros2/casadi_mpc/cpp_class_files",
-      "environment": [],
-      "externalConsole": false,
-      "MIMode": "gdb",
-      "preLaunchTask": "C/C++: g++-11 build active file (default)",
-      "setupCommands": [
+    "version": "0.2.0",
+    "configurations": [
         {
-          "description": "Enable pretty-printing for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
-        }
-      ]
-    },
-    {
-      "name": "Build and Run C++ Program",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${fileDirname}/main",
-      "args": [],
-      "stopAtEntry": false,
-      "cwd": "${fileDirname}",
-      "environment": [],
-      "externalConsole": false,
-      "MIMode": "gdb",
-      "preLaunchTask": "Run Program"
-    },
-    {
-      "name": "ROS2: Launch",
-      "type": "node",
-      "request": "launch",
-      "program": "franka_bringup mpc_casadi_controller.launch.py arm_id:=fr3 robot_ip:=${env:robot_ip}"
-    },
-    {
-      "name": "C/C++ Runner: Debug Session",
-      "type": "cppdbg",
-      "request": "launch",
-      "args": [],
-      "stopAtEntry": false,
-      "externalConsole": false,
-      "cwd": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files",
-      "program": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/build/Debug/outDebug",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb",
-      "setupCommands": [
+            "name": "Attach",
+            "port": 9229,
+            "request": "attach",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node"
+        },
         {
-          "description": "Enable pretty-printing for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
+            "name": "ROS: Attach",
+            "type": "ros",
+            "request": "attach"
+        },
+        {
+            "name": "Python: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"
+            }
+        },
+        {
+            "name": "(gdb) Launch (build_debug)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${env:masterdir}/main_ros2/casadi_mpc/cpp_class_files/build_debug/bin/main",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${env:masterdir}/main_ros2/casadi_mpc/cpp_class_files",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "preLaunchTask": "C/C++: g++-11 build active file (default)",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "Build and Run C++ Program",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}/main",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "preLaunchTask": "Run Program"
+        },
+        {
+            "name": "ROS2: Launch",
+            "type": "node",
+            "request": "launch",
+            "program": "franka_bringup mpc_casadi_controller.launch.py arm_id:=fr3 robot_ip:=${env:robot_ip}"
+        },
+        {
+            "name": "C/C++ Runner: Debug Session",
+            "type": "cppdbg",
+            "request": "launch",
+            "args": [],
+            "stopAtEntry": false,
+            "externalConsole": false,
+            "cwd": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files",
+            "program": "/home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/build/Debug/outDebug",
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "C/C++: g++ build and debug active file",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "C/C++: g++ build active file",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "C/C++: g++-11 build and debug active file",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "C/C++: g++-11 build active file",
+            "miDebuggerPath": "/usr/bin/gdb"
         }
-      ]
-    }
-  ]
+    ]
 }
