@@ -172,9 +172,9 @@
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "terminal.integrated.inheritEnv": true,
   "debug.runConfiguration": "Run Without Debugging",
-  "files.exclude": {
-    "**/MPC*.c": true
-  },
+  // "files.exclude": {
+  //   "**/MPC*.c": true
+  // },
   "C_Cpp.files.exclude": {
     "**/MPC*.c": true
   },
@@ -209,5 +209,6 @@
   "C_Cpp.intelliSenseEngine": "default",
   "C_Cpp.autocomplete": "default",
   "C_Cpp.intelliSenseCacheSize": 0,
-  "C_Cpp.intelliSenseMemoryLimit": 512
+  "C_Cpp.intelliSenseMemoryLimit": 512,
+  "workbench.editor.enablePreview": false
 }
