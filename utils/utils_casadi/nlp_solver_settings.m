@@ -106,7 +106,7 @@ end
 
 tic;
 fprintf('\nStarting execution of solver = nlpsol(''solver'', ''%s'', prob, opts)\n', MPC_solver)
-if(strcmp(MPC_solver, 'qrqp') || strcmp(MPC_solver, 'osqp') || strcmp(MPC_solver, 'ooqp') || strcmp(MPC_solver, 'proxqp') || strcmp(MPC_solver, 'daqp') || strcmp(MPC_solver, 'fatrop') || strcmp(MPC_solver, 'highs') || strcmp(MPC_solver, 'test'))
+if(strcmp(MPC_solver, 'qrqp') || strcmp(MPC_solver, 'osqp') || strcmp(MPC_solver, 'ooqp') || strcmp(MPC_solver, 'proxqp') || strcmp(MPC_solver, 'daqp') || strcmp(MPC_solver, 'highs') || strcmp(MPC_solver, 'test'))
     % DOKU: https://web.casadi.org/api/html/d4/d89/group__nlpsol.html
     opts.qpsol_options = struct;
     opts.print_header = false; % Disable printing of solver header
@@ -261,7 +261,7 @@ if(strcmp(MPC_solver, 'qrqp') || strcmp(MPC_solver, 'osqp') || strcmp(MPC_solver
         opts.qpsol_options.highs.qp_nullspace_limit = 4000; % [Default: 4000], [Allowed: {0, 2147483647}]
     elseif(strcmp(MPC_solver, 'test'))
         % https://darnstrom.github.io/daqp/parameters/
-        opts.qpsol = 'nlpsol'; % Set the QP solver to 'qrqp'
+        opts.qpsol = 'gurobi'; % Set the QP solver to 'qrqp'
            % Print iterations [Default: true], [Allowed: true/false]
         opts.qpsol_options.verbose = false; % Print output 
         opts.qpsol_options.error_on_fail = false; % Throw exceptions when function evaluation fails

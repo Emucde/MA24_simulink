@@ -7,7 +7,7 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
       n_indices(ConstIntVectorMap(robot_config.n_indices, nq_red)),
       n_x_indices(ConstIntVectorMap(robot_config.n_x_indices, nx_red)),
       torque_mapper(urdf_path, tcp_frame_name, robot_config, use_gravity, true),
-      trajectory_generator(torque_mapper, get_MPC8_config()->dt)
+      trajectory_generator(torque_mapper, robot_config.dt)
 {
     // Initialize MPC objects
     for (int i = 0; i < static_cast<int>(MPCType::COUNT); ++i)
@@ -103,14 +103,14 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
 void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
                                        double T_start, double T_poly, double T_end)
 {
-    ParamInitTrajectory param_init_traj = calc_param_init(x_k_ndof_ptr, T_start, T_poly, T_end);
+    ParamInitTrajectory param_init_traj = trajectory_generator.calc_param_init(x_k_ndof_ptr, T_start, T_poly, T_end);
     trajectory_generator.init_trajectory(traj_select, param_init_traj);
     update_trajectory_data(x_k_ndof_ptr);
 }
 
 void CasadiController::init_trajectory_custom_target(ParamTargetTrajectory param_target, const casadi_real *x_k_ndof_ptr, double T_start, double T_poly, double T_end, double T_horizon_max)
 {
-    ParamInitTrajectory param_init = calc_param_init(x_k_ndof_ptr, T_start, T_poly, T_end);
+    ParamInitTrajectory param_init = trajectory_generator.calc_param_init(x_k_ndof_ptr, T_start, T_poly, T_end);
     trajectory_generator.init_trajectory_custom_target(param_init, param_target, T_horizon_max);
     update_trajectory_data(x_k_ndof_ptr);
 }
@@ -138,20 +138,6 @@ void CasadiController::update_trajectory_data(const casadi_real *const x_k_ndof_
             casadi_mpcs[i].switch_traj(trajectory_generator.get_traj_data(), x_k, trajectory_generator.get_traj_data_real_len());
         }
     }
-}
-
-ParamInitTrajectory CasadiController::calc_param_init(const casadi_real *x_k_ndof_ptr, double T_start, double T_poly, double T_end)
-{
-    Eigen::Vector3d p_init;
-    Eigen::Matrix3d R_init;
-    Eigen::Map<const Eigen::VectorXd> q_init_nq(x_k_ndof_ptr, nq);
-    Eigen::Map<const Eigen::VectorXd> x_init_nq(x_k_ndof_ptr, nx);
-
-    torque_mapper.calcPose(q_init_nq, p_init, R_init);
-
-    ParamInitTrajectory param_init_traj = {T_start, T_poly, T_end, x_init_nq, p_init, R_init};
-
-    return param_init_traj;
 }
 
 // set the active MPC
@@ -262,192 +248,3 @@ std::string CasadiController::mpcToString(MPCType mpc)
         return "INVALID";
     }
 }
-
-// Eigen::Vector4d CasadiController::trajectory_poly(double t, const Eigen::Vector4d &y0, const Eigen::Vector4d &yT, double T)
-// {
-//     Eigen::Vector4d y_d;
-
-//     // y_d = y0 + (6.0 / (T * T * T * T * T) * t * t * t * t * t -
-//     //              15.0 / (T * T * T * T) * t * t * t * t +
-//     //              10.0 * t * t * t / (T * T * T)) * (yT - y0);
-
-//     double t_T = t / T;
-//     double t_T2 = t_T * t_T;
-//     double t_T3 = t_T2 * t_T;
-//     double t_T4 = t_T3 * t_T;
-//     double t_T5 = t_T4 * t_T;
-
-//     y_d = y0 + (6.0 * t_T5 - 15.0 * t_T4 + 10.0 * t_T3) * (yT - y0);
-//     return y_d;
-// }
-
-// Eigen::VectorXd CasadiController::create_poly_traj(const Eigen::Vector3d &yT, const Eigen::Vector3d &y0, double t,
-//                                                    const Eigen::Matrix3d &R_init, const Eigen::Vector3d &rot_ax,
-//                                                    double rot_alpha_scale, const std::map<std::string, double> &param_traj_poly)
-// {
-//     double T_start = param_traj_poly.at("T_start");
-//     double T_poly = param_traj_poly.at("T_poly");
-//     Eigen::Vector4d p_d;
-
-//     if (t - T_start < 0)
-//     {
-//         p_d << y0[0], y0[1], y0[2], 0.0;
-//     }
-//     else if (t - T_start > T_poly)
-//     {
-//         p_d << yT[0], yT[1], yT[2], rot_alpha_scale;
-//     }
-//     else
-//     {
-//         p_d = trajectory_poly(t - T_start,
-//                               Eigen::Vector4d(y0[0], y0[1], y0[2], 0.0),
-//                               Eigen::Vector4d(yT[0], yT[1], yT[2], rot_alpha_scale),
-//                               T_poly);
-//     }
-
-//     double alpha = p_d[3];
-
-//     Eigen::Matrix3d skew_ew;
-//     skew_ew << 0, -rot_ax[2], rot_ax[1],
-//         rot_ax[2], 0, -rot_ax[0],
-//         -rot_ax[1], rot_ax[0], 0;
-
-//     Eigen::Matrix3d R_act = (Eigen::Matrix3d::Identity() + sin(alpha) * skew_ew +
-//                              (1 - cos(alpha)) * skew_ew * skew_ew) *
-//                             R_init;
-
-//     Eigen::Quaterniond q_d(R_act);
-
-//     // Create the final vector to hold both position and quaternion
-//     Eigen::VectorXd result(7);
-//     result << p_d.head<3>(), q_d.w(), q_d.x(), q_d.y(), q_d.z(); // important: q_d.coeffs() returns the quaternion in the form {x, y, z, w}
-
-//     return result;
-// }
-
-// Eigen::MatrixXd CasadiController::generate_trajectory(double dt, const Eigen::Vector3d &xe0, const Eigen::Vector3d &xeT,
-//                                                       const Eigen::Matrix3d &R_init, const Eigen::Matrix3d &R_target,
-//                                                       const std::map<std::string, double> &param_traj_poly)
-// {
-//     double T_end = param_traj_poly.at("T_end");
-
-//     int N = static_cast<int>(T_end / dt);
-//     Eigen::MatrixXd traj_data(7, N);
-
-//     Eigen::Matrix3d RR = R_target * R_init.transpose();
-//     Eigen::Quaterniond rot_quat(RR);
-
-//     // Convert quaternion to rotation matrix, then get axis and angle
-//     Eigen::Vector3d rot_vec = rot_quat.vec(); // The vector part (x, y, z)
-//     double rot_rho = rot_quat.w();            // The scalar part (w)
-
-//     double rot_alpha_scale = 2 * acos(rot_rho); // Angle from the quaternion
-//     Eigen::Vector3d rot_ax;
-
-//     if (rot_alpha_scale == 0)
-//     {
-//         rot_ax = Eigen::Vector3d(0, 0, 0); // Random axis because rotation angle is 0
-//     }
-//     else
-//     {
-//         rot_ax = rot_vec / sin(rot_alpha_scale / 2); // Normalize the axis
-//     }
-
-//     if (rot_alpha_scale > M_PI)
-//     {
-//         rot_alpha_scale = 2 * M_PI - rot_alpha_scale;
-//         rot_ax = -rot_ax;
-//     }
-
-//     double current_time = 0.0;
-
-//     for (int i = 0; i < N; i++)
-//     {
-//         current_time = i * dt;
-//         Eigen::VectorXd x_d = create_poly_traj(xeT, xe0, current_time, R_init, rot_ax, rot_alpha_scale, param_traj_poly);
-//         traj_data.col(i) = x_d;
-//     }
-
-//     return traj_data;
-// }
-
-// std::vector<Eigen::MatrixXd> CasadiController::readTrajectoryData(const std::string &traj_file)
-// {
-//     std::ifstream file(traj_file, std::ios::binary);
-//     if (!file)
-//     {
-//         throw std::runtime_error("Error opening file: " + traj_file);
-//     }
-
-//     // Read dimensions
-//     uint32_t rows, cols, traj_amount;
-//     file.read(reinterpret_cast<char *>(&rows), sizeof(rows));
-//     file.read(reinterpret_cast<char *>(&cols), sizeof(cols));
-//     file.read(reinterpret_cast<char *>(&traj_amount), sizeof(traj_amount));
-
-// #ifdef DEBUG
-//     std::cout << "Rows: " << rows << ", Cols: " << cols << ", Trajectory Amount: " << traj_amount << std::endl;
-// #endif
-
-//     // Create a vector to hold all trajectories
-//     std::vector<Eigen::MatrixXd> trajectories(traj_amount, Eigen::MatrixXd(rows, cols));
-
-//     // Read the trajectory data
-//     for (size_t i = 0; i < traj_amount; ++i)
-//     {
-//         file.read(reinterpret_cast<char *>(trajectories[i].data()), rows * cols * sizeof(double));
-//         if (!file)
-//         {
-//             throw std::runtime_error("Error reading trajectory data from file: " + traj_file);
-//         }
-//     }
-
-// #ifdef DEBUG
-//     // Debug: Print first trajectory as an example
-//     std::cout << "First trajectory:\n"
-//               << trajectories[0] << std::endl;
-// #endif
-
-//     return trajectories;
-// }
-
-// std::vector<Eigen::VectorXd> CasadiController::read_x0_init(const std::string &x0_init_file)
-// {
-//     std::ifstream file(x0_init_file, std::ios::binary);
-//     if (!file)
-//     {
-//         throw std::runtime_error("Error opening file: " + x0_init_file);
-//     }
-
-//     // Read dimensions
-//     uint32_t rows, cols;
-//     file.read(reinterpret_cast<char *>(&rows), sizeof(rows));
-//     file.read(reinterpret_cast<char *>(&cols), sizeof(cols));
-
-// #ifdef DEBUG
-//     std::cout << "Rows: " << rows << ", Cols: " << cols << std::endl;
-// #endif
-
-//     // Create a vector to hold all initial conditions
-//     std::vector<Eigen::VectorXd> all_x0_init;
-    
-//     // Read the initial condition data
-//     for (size_t i = 0; i < cols; ++i) // Assuming each column represents an initial condition
-//     {
-//         Eigen::VectorXd x0(rows);
-//         file.read(reinterpret_cast<char *>(x0.data()), rows * sizeof(double));
-//         if (!file)
-//         {
-//             throw std::runtime_error("Error reading initial condition data from file: " + x0_init_file);
-//         }
-//         all_x0_init.push_back(x0);
-//     }
-
-// #ifdef DEBUG
-//     // Debug: Print first initial condition as an example
-//     std::cout << "First initial condition:\n"
-//               << all_x0_init[0].transpose() << std::endl;
-// #endif
-
-//     return all_x0_init;
-// }

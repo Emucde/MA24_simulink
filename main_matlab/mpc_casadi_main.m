@@ -18,29 +18,27 @@ fprintf('Start Execution of ''mpc_casadi_main.m''\n\n');
 
 % show plot functions
 if(~use_extern_flags)
-
-print_init_guess_cost_functions = true;
-plot_init_guess                 = false; % plot init guess
-plot_null_simu                  = false; % plot system simulation for x0 = 0, u0 = ID(x0)
-convert_maple_to_casadi         = false; % convert maple functions into casadi functions
-fullsimu                        = false; % make full mpc simulation and plot results
-traj_select_mpc                 = 1; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
-create_init_guess_for_all_traj  = ~true; % create init guess for all trajectories
-create_test_solve               = ~true; % create init guess for all trajectories
-compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
-compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
-compile_all_mpc_sfunctions      = false;
-use_jit                         = true; % use jit for compilation (precompiles before each RUN!!! 
-                                         % ~10-20% faster execution, but only for simulink useful)
-generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
-reload_parameters_m             = ~true; % reload parameters.m at the end (clears all variables!)
-remove_sourcefiles              = false; % remove source files after compilation
-
+    
+    print_init_guess_cost_functions = true;
+    plot_init_guess                 = false; % plot init guess
+    plot_null_simu                  = false; % plot system simulation for x0 = 0, u0 = ID(x0)
+    convert_maple_to_casadi         = false; % convert maple functions into casadi functions
+    fullsimu                        = false; % make full mpc simulation and plot results
+    traj_select_mpc                 = 1; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
+    create_init_guess_for_all_traj  = ~true; % create init guess for all trajectories
+    create_test_solve               = ~true; % create init guess for all trajectories
+    compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
+    compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
+    compile_all_mpc_sfunctions      = false;
+    coptimflags                     = '-Ofast -march=native -flto'; % Optimization flag for compilation
+    use_jit                         = false; % use jit for compilation (precompiles before each RUN!!!
+    generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
+    reload_parameters_m             = ~true; % reload parameters.m at the end (clears all variables!)
+    remove_sourcefiles              = false; % remove source files after compilation
 end
-% TESTING:
-%compile_sfun = false;
-%create_init_guess_for_all_traj = false;
-%reload_parameters_m = false;
+
+% MPC TO COMPILE:
+SELECTED_MPC_NAME = 'MPC01';
 
 % Compile Mode:
 % compile_mode = 1 | nlpsol-sfun | fast compile time | very accurate,          | sometimes slower exec
@@ -74,7 +72,7 @@ MPC='MPC7';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'opt_problem_ineq_feasible_traj_MPC_v3_rpy'; % see nlpso_generate_opt_problem.m
+param_casadi_fun_name.(MPC).version = 'opt_problem_ineq_feasible_traj_MPC_v3_rpy'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -86,7 +84,7 @@ MPC='MPC8';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v4_kin_int'; % see nlpso_generate_opt_problem.m
+param_casadi_fun_name.(MPC).version = 'opt_problem_MPC_v4_kin_int'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 15;
@@ -98,7 +96,7 @@ MPC='MPC9';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v4_kin_int_refsys'; % see nlpso_generate_opt_problem.m
+param_casadi_fun_name.(MPC).version = 'opt_problem_MPC_v4_kin_int_refsys'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -110,7 +108,7 @@ MPC='MPC10'; % TODO: qp wird nicht geprüft, ob limits eingehalten werden
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v5_kin_dev'; % see nlpso_generate_opt_problem.m
+param_casadi_fun_name.(MPC).version = 'opt_problem_MPC_v5_kin_dev'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -122,7 +120,7 @@ MPC='MPC11';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v6_kin_int_path_following'; % see nlpso_generate_opt_problem.m
+param_casadi_fun_name.(MPC).version = 'opt_problem_MPC_v6_kin_int_path_following'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -134,7 +132,7 @@ MPC='MPC12';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v7_kin_int_planner'; % see nlpso_generate_opt_problem.m
+param_casadi_fun_name.(MPC).version = 'opt_problem_MPC_v7_kin_int_planner'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -146,7 +144,7 @@ MPC='MPC13';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v8_kin_dev_planner'; % see nlpso_generate_opt_problem.m
+param_casadi_fun_name.(MPC).version = 'opt_problem_MPC_v8_kin_dev_planner'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -158,7 +156,7 @@ MPC='MPC14';
 param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
-param_casadi_fun_name.(MPC).version  = 'opt_problem_MPC_v6_kin_dev_path_following'; % see nlpso_generate_opt_problem.m
+param_casadi_fun_name.(MPC).version = 'opt_problem_MPC_v6_kin_dev_path_following'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;
@@ -167,7 +165,7 @@ param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true:
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC01;
+param_casadi_fun_struct = param_casadi_fun_name.(SELECTED_MPC_NAME);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if(compile_all_mpc_sfunctions)
@@ -178,7 +176,7 @@ end
 
 for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     param_casadi_fun_struct = param_casadi_fun_struct_list{mpc_idx};
-
+    
     casadi_func_name = param_casadi_fun_struct.name;
     Ts_MPC           = param_casadi_fun_struct.Ts     ; % MUSS TRAJEKTORIE OFFLINE BERECHNEN DAMIT DAS von param_global.Ta ABWEICHEN DARF
     rk_iter          = param_casadi_fun_struct.rk_iter; % intermediate steps for runge kutta (rk_iter = 1 means no intermediate steps): DT = T_horizon_MPC/N_MPC/rk_iter;
@@ -192,15 +190,15 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     int_method       = param_casadi_fun_struct.int_method;
     fixed_parameter  = param_casadi_fun_struct.fixed_parameter;
     weights_and_limits_as_parameter = ~fixed_parameter; %[todo, replace]
-
+    
     disp(['mpc_casadi_main.m: Selected MPC: ', casadi_func_name]);
     fprintf('--------------------------------------------------------------------\n\n');
-
+    
     % checks
     if mod(Ts_MPC, param_global.Ta) ~= 0
         error('mpc_casadi_main.m: Error: Result is not an integer.');
     end
-
+    
     %% Convert Maple Functions to casadi functions
     if(convert_maple_to_casadi)
         %rmpath('./maple/maple_generated/fr3_7dof');
@@ -209,7 +207,7 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         %    "gravitational_forces.m", "forward_kinematics_endeffector.m"...
         %    "hom_transform_endeffector.m", "geo_jacobian_endeffector.m", ...
         %    "geo_jacobian_endeffector_p.m", "coriolis_rnea.m"};
-
+        
         maple_fun_arr = {"Gamma_kin.m", "Gamma_kin_aperiod.m", "Phi_kin.m", "Phi_kin_aperiod.m"};
         maple_path = "maple/maple_generated/fr3_7dof/";
         %maple_path = "maple/maple_generated/7_dof_system_fr3_MW19/";
@@ -219,9 +217,9 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     %% path for init guess
     mpc_settings_path                = [s_fun_path, '/mpc_settings/'];%todo:  UP
     mpc_settings_struct_name         = "param_"+casadi_func_name;
-
+    
     param_trajectory = param_traj_data_fun(traj_settings, 'get', traj_select_mpc, param_traj_data);
-
+    
     %% OPT PROBLEM
     %[TODO: oben init]
     input_dir = [s_fun_path, '/casadi_functions/'];
@@ -232,10 +230,10 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     s_fun_c_file_path        = [s_fun_path, '/', s_func_name];
     casadi_fun_h_header_path = [s_fun_path, '/', casadi_func_name, '.h'];
     casadi_fun_c_header_path = [s_fun_path, '/', casadi_func_name, '.c'];
-
+    
     substr = '_matlab';
     MPC_matlab_name = [casadi_func_name, substr];
-
+    
     %% DEFINE OPTIMIZATION PROBLEM
     if(strcmp(MPC_variant, 'opti'))
         error('mpc_casadi_main.m: Error: opti stack version currently not working!');
@@ -246,14 +244,14 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     else
         error(['mpc_casadi_main.m: Error: Variant = ', MPC_variant, ' is not valid. Should be (opti | nlpsol)']);
     end
-
+    
     %% Test MPC (fast)
-
+    
     if(plot_init_guess)
         HH_e_test = arrayfun(@(u) hom_transform_endeffector(x_init_guess(1:n,u), param_robot), 1:N_MPC+1, UniformOutput=false);
         HH_e_test_arr = cell2mat(HH_e_test);
         p_e_test_arr = HH_e_test_arr(1:2,4:4:(N_MPC+1)*4)';
-
+        
         subplot(3,1,1)
         plot((0:N_MPC-1)*Ts_MPC, u_init_guess)
         xlabel('time (s)');
@@ -269,13 +267,13 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         xlabel('time (s)');
         ylabel('y pos (m)')
     end
-
+    
     %% Pre Simulation
     % TODO: S-funktion slx file und inputs und outputs angeben. Wird aber nicht
     % viel schneller als die eigentliche Simulation sein.
     %disp(['Bevor "if(fullsimu)" Rechenzeit: ', sprintf('%f', toc), ' s']);
     if(fullsimu)
-
+        
         if(exist(MPC_matlab_name, 'file') == 3)
             matlab_sfun = str2func(MPC_matlab_name);
         else
@@ -285,7 +283,7 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         %load("./s_functions/trajectory_data/"+"param_"+casadi_func_name+"_traj_data.mat")
         %param_trajectory = eval("param_"+casadi_func_name+"_traj_data");
         %load('traj_data.mat');
-
+        
         N_traj          = length(param_trajectory.t);
         N_traj_original = N_traj - N_MPC*N_step_MPC;
         p_e_act_arr     = zeros(m, N_traj_original);
@@ -293,22 +291,22 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         x_k_new_arr     = zeros(2*n, N_traj_original);
         x_k_new         = x_0_0;
         u_k_act         = u_k_0;
-
+        
         % set additional needed N samples as last sample of trajectory
         % already done (see "parameter.m"):
         % traj_data = [param_trajectory.p_d; repmat(param_trajectory.p_d(end,:), N,1)];
         % MPC01_matlab(full(mpc_init_reference_values), full(init_guess_0), param_weight_init_cell);
-
+        
         if(weights_and_limits_as_parameter)
             f_opt2 = @(mpc_init_reference_values, init_guess_0) f_opt(mpc_init_reference_values, init_guess_0, param_weight_init_cell);
         else
             f_opt2 = f_opt;
         end
-
+        
         yt_d    = param_trajectory.p_d(:, :, traj_select_mpc);
         yt_d_p  = param_trajectory.p_d_p(:, :, traj_select_mpc);
         yt_d_pp = param_trajectory.p_d_pp(:, :, traj_select_mpc);
-
+        
         if(strcmp(MPC_version, 'v3_rpy'))
             yr_d    = param_trajectory.Phi_d(:, :, traj_select_mpc);
             yr_d_p  = param_trajectory.Phi_d_p(:, :, traj_select_mpc);
@@ -325,13 +323,13 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         for i=1:1:N_traj_original
             xk = x_k_new;
             zk = zeros(n,1);
-
+            
             idx = i : N_step_MPC : i + (N_MPC) * N_step_MPC;
-
+            
             y_d_0   = [yt_d(   :,idx); yr_d(   :,idx)];
             y_d_p_0 = [yt_d_p( :,idx); yr_d_p( :,idx)];
             y_d_pp_0= [yt_d_pp(:,idx); yr_d_pp(:,idx)];
-
+            
             mpc_init_reference_values = [xk(:); zk(:); y_d_0(:); y_d_p_0(:); y_d_pp_0(:)];
             try
                 [u_opt, xx_full_opt_sol] = f_opt(mpc_init_reference_values, init_guess_0);
@@ -345,21 +343,21 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
                 disp("error at " + (i-1)*param_global.Ta + " s ( i="+i+")")
                 disp(ME.message);
             end
-        
+            
             HH_e_act = hom_transform_endeffector_py(x_k_new);
             p_e_act  = HH_e_act(1:2,4);
-
+            
             u_k_new     = full(u_opt);
             x_k_new_sim = full(sim(x_init_guess(:,1), u_k_new));
             x_k_new     = x_k_new_sim(:,1);
             %x_k_new = x_init_guess(:,2); % ist nicht gleich wie obere zeile???? Fehler 10^-6
-
+            
             p_e_act_arr(:, i) = p_e_act;
             u_k_new_arr(:, i) = u_k_new;
             x_k_new_arr(:, i) = x_k_new;
         end
         disp(['mpc_casadi_main.m: full simu execution time: ', num2str(toc), ' s'])
-
+        
         figure;
         subplot(3,1,1);
         plot(Ts_MPC*(1:N_traj_original), u_k_new_arr);
@@ -372,48 +370,48 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         title('p_e');
         
     end
-
+    
     % save mpc param: it is important to do it here because it is important for the trajectory
     % and init guess calculation!
     param_MPC = struct( ...
-    'dt',                    param_global.Ta, ...
-    'N',                     N_MPC, ...
-    'N_step',                N_step_MPC, ...
-    'Ts',                    Ts_MPC, ...
-    'T_horizon',             T_horizon_MPC, ...
-    'rk_iter',               rk_iter, ...
-    'variant',               MPC_variant, ...
-    'solver',                MPC_solver, ...
-    'version',               MPC_version, ...
-    'name',                  param_casadi_fun_struct.name, ...
-    'kinematic_mpc',         kinematic_mpc, ...
-    'int_method',            int_method, ...
-    'fixed_parameter',       fixed_parameter, ...
-    'traj_data_per_horizon', N_MPC+1, ...
-    'traj_indices',          MPC_traj_indices, ...
-    'int_times',             (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*param_global.Ta ...
-    );
-
+        'dt',                    param_global.Ta, ...
+        'N',                     N_MPC, ...
+        'N_step',                N_step_MPC, ...
+        'Ts',                    Ts_MPC, ...
+        'T_horizon',             T_horizon_MPC, ...
+        'rk_iter',               rk_iter, ...
+        'variant',               MPC_variant, ...
+        'solver',                MPC_solver, ...
+        'version',               MPC_version, ...
+        'name',                  param_casadi_fun_struct.name, ...
+        'kinematic_mpc',         kinematic_mpc, ...
+        'int_method',            int_method, ...
+        'fixed_parameter',       fixed_parameter, ...
+        'traj_data_per_horizon', N_MPC+1, ...
+        'traj_indices',          MPC_traj_indices, ...
+        'int_times',             (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*param_global.Ta ...
+        );
+    
     param_MPC_settings = param_MPC;
-
+    
     mergestructs = @(x,y) cell2struct([struct2cell(x);struct2cell(y)],[fieldnames(x);fieldnames(y)]);
     param_MPC = mergestructs(param_MPC, sol_indices); % wird in create_init_guess ueberschrieben... [TODO]
-
+    
     % sauberes firststart-init [TODO]
     % create mpc_settings folder if not exist
     if ~exist(mpc_settings_path, 'dir')
         mkdir(mpc_settings_path);
     end
-
+    
     eval(mpc_settings_struct_name+"=param_MPC;"); % set new struct name
     save(""+mpc_settings_path+mpc_settings_struct_name+'.mat', mpc_settings_struct_name);
-
+    
     % Im unterschied zu 'overwrite_offline_traj_forced' in parameters_7dof.m werden hier nur
     % die init guess für die gerade zu kompilierende MPC erstellt. Update: Wenn der neue Prädiktionshorizont
     % länger ist als die Trajektorie, dann muss die Trajektorie verlängert werden und auch alle init guess
     % erstellt werden. Es müssen aber nur die Init guess für die aktuelle MPC erstellt werden, da alle anderen
     % Init guess für die anderen MPCS ja durch eine Trajektorienverlängerung unverändert bleiben.
-
+    
     if(ceil(1 + (T_horizon_MPC + param_global.T_sim) / param_global.Ta) > traj_settings.N_data )
         overwrite_offline_traj_forced = true;
         create_trajectories;
@@ -424,42 +422,42 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         overwrite_init_guess = true;
         create_mpc_init_guess;
     end
-
+    
     %% Create c and header file for external usage of mpcs in c
     if(generate_realtime_udp_c_fun)
         mpc_c_sourcefile_path = [s_fun_path, '/mpc_c_sourcefiles/'];
         casadi_opt_problem_paths = ['./utils/utils_casadi/casadi_mpc_definitions/'];
         current_mpc_mfile = [casadi_opt_problem_paths, MPC_version, '.m'];
-
+        
         % they are only generated if a file in casadi_opt_problem_paths changed
-        generate_mpc_sourefiles(f_opt, casadi_opt_problem_paths, current_mpc_mfile, s_fun_path);
+        generate_mpc_sourcefiles(f_opt, casadi_opt_problem_paths, current_mpc_mfile, s_fun_path);
         
         fprintf(['mpc_casadi_main.m: Creating local headers for C: \n\nOutput folder for headers: ', mpc_c_sourcefile_path, '\n\n']);
         calc_udp_cfun_addresses(f_opt, f_opt_input_cell, f_opt_output_cell, mpc_c_sourcefile_path);
         generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC_settings, f_opt_input_cell, f_opt_output_cell, casadi_func_name, mpc_c_sourcefile_path, s_fun_path)
         fprintf('--------------------------------------------------------------------\n\n');
     end
-
+    
     %% COMPILE matlab s_function (can be used as normal function in matlab)
     if(compile_matlab_sfunction)
         if(~generate_realtime_udp_c_fun)
             warning('mpc_casadi_main.m: Warning: generate_realtime_udp_c_fun is false. This is needed for the matlab s-function!');
         end
         % re-define same casadi function with new name
-        % Da der Name von f_opt der matlab name ist und im Objekt gespeichert ist verwendet 
+        % Da der Name von f_opt der matlab name ist und im Objekt gespeichert ist verwendet
         % die Funktion casadi_fun_to_mex ebenfalls diesen Namen und er muss daher nicht
         % übergeben werden.
         %f_opt = Function(MPC_matlab_name, input_vars_MX, output_vars_MX);
-        casadi_fun_to_mex(f_opt, [output_dir, 'mpc_c_sourcefiles'], [s_fun_path, '/matlab_functions'], MPC_matlab_name, '-O3');
+        casadi_fun_to_mex(f_opt, [output_dir, 'mpc_c_sourcefiles'], [s_fun_path, '/matlab_functions'], MPC_matlab_name, coptimflags);
         disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
     end
-
+    
 end
 
 if(generate_realtime_udp_c_fun)
     mpc_c_sourcefile_path = [s_fun_path, '/mpc_c_sourcefiles/'];
     casadi_opt_problem_paths = ['./utils/utils_casadi/casadi_mpc_definitions/'];
-
+    
     fprintf(['mpc_casadi_main.m: Creating global headers for C: \n\nOutput folder for headers: ', mpc_c_sourcefile_path, '\n\n']);
     generate_param_robot_header(s_fun_path, param_robot, traj_settings, 'param_robot');
     generate_casadi_types([mpc_c_sourcefile_path, 'casadi_types.h']);

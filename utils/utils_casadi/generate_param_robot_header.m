@@ -113,6 +113,7 @@ function generate_param_robot_header(s_fun_path, param_robot, traj_settings, fun
     fprintf(fid_h, '    const char* traj_data_path;\n');
     fprintf(fid_h, '    const char* x0_init_path;\n');
     fprintf(fid_h, '    const casadi_uint traj_data_real_len;\n');
+    fprintf(fid_h, '    const casadi_real dt;\n');
     fprintf(fid_h, '} %s_t;\n\n', structName);
 
     % declare function that returns a robot_config_t struct
@@ -151,6 +152,7 @@ function generate_param_robot_header(s_fun_path, param_robot, traj_settings, fun
     fprintf(fid_c, '       .traj_data_path = TRAJ_DATA_PATH,\n');
     fprintf(fid_c, '       .x0_init_path = X0_INIT_PATH, // Default path to init configuration of trajectories\n');
     fprintf(fid_c, '       .traj_data_real_len = TRAJ_DATA_REAL_LEN, // Real length of trajectory data (without last prediction horizon)\n');
+    fprintf(fid_c, '       .dt = PARAM_ROBOT_DT, // Sensor and motor update frequency\n');
     fprintf(fid_c, '   };\n');
     fprintf(fid_c, '   return Config;\n');
     fprintf(fid_c, '}\n\n');

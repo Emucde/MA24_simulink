@@ -23,5 +23,7 @@ import casadi.*
 %end
 %cd(path_of_file);
 
+setenv('GUROBI_VERSION', '120'); % Gurobi mag keine Singularitäten...
+
 lib_path = GlobalOptions.getCasadiPath();
 inc_path = GlobalOptions.getCasadiIncludePath();

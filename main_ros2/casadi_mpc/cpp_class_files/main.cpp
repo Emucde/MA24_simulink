@@ -116,7 +116,7 @@ int main()
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
     Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
 
-    #define TRAJ_SELECT 5
+    #define TRAJ_SELECT 1
     x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (controller.get_traj_x0_init(TRAJ_SELECT), nx);
     // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);

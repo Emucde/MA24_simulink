@@ -46,7 +46,8 @@ function generate_casadi_types(filename)
 
     % create function pointer
     % typedef int (*CasadiFunPtr_t)(const casadi_real **arg, casadi_real **res, casadi_int *iw, casadi_real *w, int mem);
-    fprintf(fid, '\ntypedef int (*CasadiFunPtr_t)(const casadi_real **arg, casadi_real **res, casadi_int *iw, casadi_real *w, int mem);\n\n');
+    fprintf(fid, '\ntypedef int (*CasadiFunPtr_t)(const casadi_real **arg, casadi_real **res, casadi_int *iw, casadi_real *w, int mem);\n');
+    fprintf(fid, '\ntypedef void (*CasadiRefPtr_t)(casadi_real *const w, casadi_real *const data);\n\n');
 
     fprintf(fid, '#ifdef __cplusplus\n');
     fprintf(fid, '}\n');

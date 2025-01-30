@@ -29,4 +29,16 @@ struct ControllerSettings {
     RegularizationSettings regularization_settings; // Regularization settings
 };
 
+enum class SingularityRobustnessMode {
+    None = 0,                            // No singularity robustness
+    Damping,                             // Add damping to the matrix
+    CompleteOrthogonalDecomposition,     // Complete orthogonal decomposition method
+    JacobiSVD,                           // Jacobi SVD method
+    ThresholdSmallSingularValues,        // Remove small singular values
+    TikhonovRegularization,              // Tikhonov regularization (adding epsilon^2)
+    SimpleCollinearity,                  // Simple collinearity check
+    SteinboeckCollinearity,              // Steinboeck's collinearity approach
+    RegularizationBySingularValues       // Regularization by singular values (handle small singular values)
+};;
+
 #endif // WORKSPACE_CONTROLLER_CONFIG_HPP

@@ -61,6 +61,7 @@ n_indices = param_robot.n_indices;
 n_x_indices = param_robot.n_x_indices;
 n_indices_fixed = setdiff(1:n, n_indices);
 n_x_indices_fixed = setdiff(1:2*n, n_x_indices);
+param_robot.dt = param_global.Ta;
 
 if(max(n_indices_fixed) > n)
     error('Fixed joint index exceeds number of joints!');

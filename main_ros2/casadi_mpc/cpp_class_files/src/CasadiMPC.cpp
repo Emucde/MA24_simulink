@@ -311,6 +311,8 @@ void CasadiMPC::set_references(casadi_real *x_k_in)
     }
 }
 
+
+
 // Destructor to clean up allocated memory
 CasadiMPC::~CasadiMPC()
 {

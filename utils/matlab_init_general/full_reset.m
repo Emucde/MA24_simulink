@@ -77,6 +77,8 @@ if(full_reset_flag)
             compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
             compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
             compile_all_mpc_sfunctions      = true;
+            coptimflags                     = '-Ofast -march=native -flto'; % Optimization flag for compilation
+            use_jit                         = false; % use jit for compilation (precompiles before each RUN!!! 
             generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
             reload_parameters_m             = true; % reload parameters.m at the end (clears all variables!)
             remove_sourcefiles              = false; % remove source files after compilation

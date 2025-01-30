@@ -29,7 +29,8 @@ robot_name = 'fr3_no_hand_6dof';
 % robot_name = 'ur5e_6dof';
 
 compile_mode = 2; % Compile mode: 1 - nlpsol, 2 - opti
-opt_flag = '-O3'; % Optimization flag for compilation
+% coptimflags = '-O3'; % Optimization flag for compilation
+coptimflags = '-Ofast -march=native -flto'; % Optimization flag for compilation
 
 output_dir = ['./s_functions/', robot_name, '/'];
 input_dir = [output_dir, 'casadi_functions/'];
@@ -79,11 +80,11 @@ fun_arr_matlab = { ...
 
 try
     disp('Compile casadi functions to s-functions for simulink:');
-    compile_multiple_cfun(fun_arr_sfun, s_fun_path, input_dir, output_dir, opt_flag, compile_mode, false);
+    compile_multiple_cfun(fun_arr_sfun, s_fun_path, input_dir, output_dir, coptimflags, compile_mode, false);
     fprintf('\n--------------------------------------------------------------------\n\n');
 
     disp('Compile casadi functions to s-functions for realtime simulink:');
-    compile_multiple_cfun(fun_arr_sfun_realtime, s_fun_path, input_dir, output_dir_realtime, opt_flag, compile_mode, false);
+    compile_multiple_cfun(fun_arr_sfun_realtime, s_fun_path, input_dir, output_dir_realtime, coptimflags, compile_mode, false);
     fprintf('\n--------------------------------------------------------------------\n\n');
 catch ME
     disp('Error in compile_py_cfun_to_sfun.m')
@@ -105,7 +106,7 @@ if compile_matlab_sfun
             disp(['Compile casadi functions to matlab functions (mex files): ', fun_name]);
             
             tic;
-            casadi_fun_to_mex(casadi_fun, output_dir, [s_fun_path, '/matlab_functions'], fun_name, opt_flag);
+            casadi_fun_to_mex(casadi_fun, output_dir, [s_fun_path, '/matlab_functions'], fun_name, coptimflags);
             disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
         end
         fprintf('\n--------------------------------------------------------------------\n\n');
@@ -118,7 +119,7 @@ end
 
 %% 3. Compile casadi functions to s-functions for simulink (with sources)
 
-function compile_multiple_cfun(cfun_arr, s_fun_path, input_dir, output_dir, opt_flag, compile_mode, remove_sourcefiles)
+function compile_multiple_cfun(cfun_arr, s_fun_path, input_dir, output_dir, coptimflags, compile_mode, remove_sourcefiles)
 %COMPILE_MULTIPLE_CFUN Compiles multiple CasADi functions to S-functions
 %
 %   This function compiles a list of CasADi functions to S-functions for use in Simulink.
@@ -128,7 +129,7 @@ function compile_multiple_cfun(cfun_arr, s_fun_path, input_dir, output_dir, opt_
 %       s_fun_path - Path to the S-function template
 %       input_dir - Directory containing the .casadi files
 %       output_dir - Directory where compiled S-functions will be saved
-%       opt_flag - Optimization flag for compilation (e.g., '-O2', '-O3')
+%       coptimflags - Optimization flag for compilation (e.g., '-O2', '-O3')
 %       compile_mode - Compilation mode (1 for nlpsol, 2 for opti)
 %       remove_sourcefiles - Boolean flag to remove source files after compilation
 %
@@ -152,7 +153,7 @@ function compile_multiple_cfun(cfun_arr, s_fun_path, input_dir, output_dir, opt_
         end
 
         tic;
-        compile_casadi_sfunction(casadi_fun, s_fun_path, output_dir, fun_name, opt_flag, compile_mode, remove_sourcefiles);
+        compile_casadi_sfunction(casadi_fun, s_fun_path, output_dir, fun_name, coptimflags, compile_mode, remove_sourcefiles);
         disp([out_string, num2str(toc), ' s']);
     end
 end

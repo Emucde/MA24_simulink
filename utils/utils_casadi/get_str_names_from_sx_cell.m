@@ -25,7 +25,7 @@ for i=1:n_optval
 end
 g_dim1 = size(g, 1);
 g_dim2 = size(g, 2);
-init_guess_str_cell{end} = struct('name', 'g', 'dim_str', ['(',g_dim1,'x',g_dim2,')'], 'dim', [g_dim1 g_dim2]);
+init_guess_str_cell{end} = struct('name', 'g', 'dim_str', ['{',num2str(g_dim1),'x',num2str(g_dim2),'}'], 'dim', [g_dim1 g_dim2]);
 
 xx_dims = cell(1, n_optval);
 icnt = 0;
@@ -64,7 +64,7 @@ for i=1:n_u_opt
     end
     indx_start = num2str(u_opt_indices_new(1,i)-1-icnt);
     indx_end = num2str(u_opt_indices_new(end,i)-1-icnt);
-    u_opt_str_cell{i}.name = [u_opt_str_cell{i}.name, '[',indx_start,':', indx_end, ']'];
+    u_opt_str_cell{i}.name = u_opt_str_cell{i}.name;
 end
 
 init_guess_out_str_cell = init_guess_str_cell;

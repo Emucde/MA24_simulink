@@ -205,6 +205,5 @@ private:
     std::string mpcToString(MPCType mpc);
 
     void update_trajectory_data(const casadi_real *const x_k_ndof_ptr);
-    ParamInitTrajectory calc_param_init(const casadi_real *x_k_ndof_ptr, double T_start, double T_poly, double T_end);
 };
 #endif // CASADICONTROLLER_HPP

@@ -99,9 +99,12 @@ R_d_0 = H_0(1:3, 1:3);
 q_d_0 = rotm2quat_v4(H_0(1:3, 1:3));
 
 MPC_solver = 'fatrop';
+use_jit = false;
 opt_problem_find_multiple_singular_solutions;
 gen_opt_problem_test;
-% casadi_fun_to_mex(f_opt, [s_fun_path, '/mpc_c_sourcefiles'], [s_fun_path, '/matlab_functions'], casadi_func_name, '-O3', MPC_solver, false);
+
+coptimflags = '-Ofast -march=native -flto'; % Optimization flag for compilation
+% casadi_fun_to_mex(f_opt, [s_fun_path, '/mpc_c_sourcefiles'], [s_fun_path, '/matlab_functions'], casadi_func_name, coptimflags, MPC_solver, false);
 
 
 N_min = 10;
@@ -132,8 +135,8 @@ q_min = zeros(n, 1);
 min_idx=1;
 tic
 for i=1:20000
-    q_0 = q_min + 0*rand(n, 1);
-    q_1 = q_0 + rand(n, 1);
+    q_0 = q_min + pi*rand(n, 1);
+    q_1 = q_0 + pi*rand(n, 1);
     q_0 = min(max(q_0, param_robot.q_limit_lower*0.5), param_robot.q_limit_upper*0.5);
     q_1 = min(max(q_1, param_robot.q_limit_lower*0.5), param_robot.q_limit_upper*0.5);
     q_0(param_robot.n_indices_fixed) = 0;
@@ -174,9 +177,28 @@ for i=1:20000
         krit_min(max_idx) = krit_min_new;
         [~, min_idx] = min(krit_min);
         q_min(n_indices) = qq_min{min_idx}(n_indices,1+round(rand(1)));
+        disp(['Iteration: ', num2str(i), ', krit_min: ', num2str(krit_min_new), ', w: ', num2str(w), ', delta_H: ', num2str(delta_H), ', delta_q: ', num2str(delta_q)]);
     end
 end
 toc;
+
+% display all solutions
+for i=1:N_min
+    fprintf('Solution %d:\n\n', i);
+    disp('H1:');
+    disp(hom_transform_endeffector_py(qq_min{i}(:,1)));
+    disp('H2:');
+    disp(hom_transform_endeffector_py(qq_min{i}(:,2)));
+    JJ1 = geo_jacobian_endeffector_py(qq_min{i}(:,1));
+    JJ2 = geo_jacobian_endeffector_py(qq_min{i}(:,2));
+    w1 = sqrt(det(JJ1 * JJ1'));
+    w2 = sqrt(det(JJ2 * JJ2'));
+    fprintf('q1=[');fprintf('%f, ', qq_min{i}(1:end-1,1));fprintf('%f];\n\n', qq_min{i}(end,1));
+    fprintf('q2=[');fprintf('%f, ', qq_min{i}(1:end-1,2));fprintf('%f];\n\n', qq_min{i}(end,2));
+    fprintf('w1 = %f, w2 = %f\n\n', w1, w2);
+    fprintf('||q1 - q2|| = %f\n\n', norm(qq_min{i}(:,1) - qq_min{i}(:,2), 2));
+    fprintf('------------------------------------------------------------------------------------\n\n');
+end
 
 function f = f_cost(x, param)
     n = param.n;

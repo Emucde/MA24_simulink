@@ -213,6 +213,20 @@ private:
 
     void set_row_vector(casadi_uint local_address, casadi_real *row_data, casadi_uint rows, casadi_uint length);
     void set_references(casadi_real *x_k_in);
+
+    void set_x_k_reference();
+    void set_t_k_reference();
+    void set_z_k_reference();
+    void set_y_d_reference();
+    void set_y_d_p_reference();
+    void set_y_d_pp_reference();
+    void set_x_prev_reference();
+    void set_z_prev_reference();
+    void set_u_prev_reference();
+    void set_alpha_prev_reference();
+    void set_theta_prev_reference();
+    void set_traj_select_reference();
+
     void set_coldstart_init_guess(const casadi_real *const x_k_ptr);
 
     ///////////////////////////////////////////////////////////////////////////////////////

@@ -62,25 +62,25 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
 
     fprintf(fid, '\n');
 
-    % % define setter functions
-    % for i = 1:length(casadi_fun_input_cell)
-    %     input_cell = casadi_fun_input_cell{i};
-    %     for j = 1:length(input_cell)
-    %         dim = input_cell{j}.dim;
-    %         name = input_cell{j}.name;
+    % define setter functions
+    for i = 1:length(casadi_fun_input_cell)
+        input_cell = casadi_fun_input_cell{i};
+        for j = 1:length(input_cell)
+            dim = input_cell{j}.dim;
+            name = input_cell{j}.name;
 
-    %         fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, name, name);
+            fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, name, name);
 
-    %         if length(dim) == 2 && all(dim > 1)
-    %             % It's a matrix
-    %             fprintf(fid, '        /*set %s: %dx%d matrix values */\n', name, dim(1), dim(2));
-    %         else
-    %             % It's a vector or higher dimensional array
-    %             fprintf(fid, '        /*set %s: %s array values */\n', name, mat2str(dim));
-    %         end
-    %     end
-    % end
-    % fprintf(fid, '\n');
+            if length(dim) == 2 && all(dim > 1)
+                % It's a matrix
+                fprintf(fid, '        /*set %s: %dx%d matrix values */\n', name, dim(1), dim(2));
+            else
+                % It's a vector or higher dimensional array
+                fprintf(fid, '        /*set %s: %s array values */\n', name, mat2str(dim));
+            end
+        end
+    end
+    fprintf(fid, '\n');
 
     % Declare the function to get the MPC config
     fprintf(fid, 'mpc_config_t const* get_%s_config();\n\n', func_name);
@@ -137,28 +137,28 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '#include "casadi_types.h"\n');
     fprintf(fid, '#include "param_robot.h"\n\n');
 
-    % % define setter functions
-    % for i = 1:length(casadi_fun_input_cell)
-    %     input_cell = casadi_fun_input_cell{i};
-    %     for j = 1:length(input_cell)
-    %         dim = input_cell{j}.dim;
-    %         name = input_cell{j}.name;
+    % define setter functions
+    for i = 1:length(casadi_fun_input_cell)
+        input_cell = casadi_fun_input_cell{i};
+        for j = 1:length(input_cell)
+            dim = input_cell{j}.dim;
+            name = input_cell{j}.name;
 
-    %         fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s)\n', func_name, name, name);
-    %         fprintf(fid, '{\n');
-    %         fprintf(fid, '    memcpy(w + %s_%s_ADDR, %s, %s_%s_LEN * sizeof(casadi_real));', func_name, upper(name), name, func_name, upper(name));
+            fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s)\n', func_name, name, name);
+            fprintf(fid, '{\n');
+            fprintf(fid, '    memcpy(w + %s_%s_ADDR, %s, %s_%s_LEN * sizeof(casadi_real));', func_name, upper(name), name, func_name, upper(name));
 
-    %         if length(dim) == 2 && all(dim > 1)
-    %             % It's a matrix
-    %             fprintf(fid, '        /*%s: %dx%d matrix values */\n', name, dim(1), dim(2));
-    %         else
-    %             % It's a vector or higher dimensional array
-    %             fprintf(fid, '        /*%s: %s array values */\n', name, mat2str(dim));
-    %         end
+            if length(dim) == 2 && all(dim > 1)
+                % It's a matrix
+                fprintf(fid, '        /*%s: %dx%d matrix values */\n', name, dim(1), dim(2));
+            else
+                % It's a vector or higher dimensional array
+                fprintf(fid, '        /*%s: %s array values */\n', name, mat2str(dim));
+            end
             
-    %         fprintf(fid, '}\n\n');
-    %     end
-    % end
+            fprintf(fid, '}\n\n');
+        end
+    end
 
     % create function that returns a mpc_config_t struct
     fprintf(fid, '// Function to get the MPC config\n');

@@ -28,25 +28,6 @@ public:
     // Update state with joint positions and velocities
     void updateState(const Eigen::VectorXd &x);
 
-    // Getter functions to access joint, kinematics, and dynamics data
-    const JointData &getJointData() const
-    {
-        return jointData;
-    }
-
-    // Retrieve kinematics robot_data
-    const KinematicsData &getKinematicsData() const
-    {
-        return kinematicsData;
-    }
-
-    // Retrieve dynamics robot_data
-    const DynamicsData &getDynamicsData() const
-    {
-        return dynamicsData;
-    }
-
-private:
     // Member variables
     pinocchio::Model robot_model;            // Pinocchio model
     pinocchio::Data robot_data;              // Pinocchio data

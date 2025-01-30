@@ -67,11 +67,11 @@ echo "JUST_CREATE_CMAKE: $JUST_CREATE_CMAKE"
 echo ""
 
 if [ "$JUST_CREATE_CMAKE" = true ]; then
-    cmake -B build_debug -S ./main_ros2/casadi_mpc/cpp_class_files/ -DCMAKE_BUILD_TYPE=Debug
+    cmake -B ./main_ros2/casadi_mpc/cpp_class_files/build_debug -S ./main_ros2/casadi_mpc/cpp_class_files/ -DCMAKE_BUILD_TYPE=Debug
     echo ""
     echo "----------------------------------"
     
-    cmake -B build_release -S ./main_ros2/casadi_mpc/cpp_class_files/ -DCMAKE_BUILD_TYPE=Release
+    cmake -B ./main_ros2/casadi_mpc/cpp_class_files/build_release -S ./main_ros2/casadi_mpc/cpp_class_files/ -DCMAKE_BUILD_TYPE=Release
     echo ""
     echo "----------------------------------"
     exit 0

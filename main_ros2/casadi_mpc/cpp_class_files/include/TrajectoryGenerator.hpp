@@ -49,11 +49,20 @@ class TrajectoryGenerator
 public:
     TrajectoryGenerator(FullSystemTorqueMapper &torque_mapper, double dt);
 
+    Eigen::MatrixXd p_d;       // Target position
+    Eigen::MatrixXd p_d_p;     // Target velocity
+    Eigen::MatrixXd p_d_pp;    // Target acceleration
+    Eigen::MatrixXd R_d;       // Target rotation matrix
+    Eigen::MatrixXd q_d;       // Target quaternion
+    Eigen::MatrixXd omega_d;   // Target angular velocity
+    Eigen::MatrixXd omega_d_p; // Target angular acceleration
+
     void init_trajectory_custom_target(ParamInitTrajectory param_init_traj_poly,
                                        ParamTargetTrajectory param_target,
                                        double T_horizon_max = 2);
     void init_trajectory(uint traj_select, ParamInitTrajectory param_init_traj_poly);
     void init_trajectory(uint traj_select);
+    ParamInitTrajectory calc_param_init(const casadi_real *x_k_ndof_ptr, double T_start, double T_poly, double T_end);
     void switch_traj(uint traj_select);
 
     // Setters
@@ -76,7 +85,6 @@ public:
     int get_traj_data_len() const
     {
         return traj_data_out_len;
-        ;
     }
     int get_traj_file_real_len() const { return robot_config.traj_data_real_len; }
     int get_traj_data_real_len() const { return traj_data_file_real_len; }
@@ -85,10 +93,12 @@ public:
     // Setters
 
 private:
-    Eigen::Vector4d trajectory_poly(double t, const Eigen::Vector4d &y0, const Eigen::Vector4d &yT, double T);
+    Eigen::MatrixXd trajectory_poly(double t, const Eigen::Vector4d &y0, const Eigen::Vector4d &yT, double T);
     Eigen::VectorXd create_poly_traj(double t, const Eigen::Vector3d &rot_ax, double rot_alpha_scale);
-    std::vector<Eigen::MatrixXd> readTrajectoryData(const std::string &traj_file);
+    std::vector<Eigen::MatrixXd> read_trajectory_data(const std::string &traj_file);
     std::vector<Eigen::VectorXd> read_x0_init(const std::string &x0_init_file);
+    void update_traj_data(uint traj_select);
+    void update_traj_data();
 
     // Member variables
     FullSystemTorqueMapper &torque_mapper;

@@ -35,7 +35,7 @@ arguments
     s_fun_path char
     output_dir char
     MPC_solver char
-    opt_flag char = '-O2'
+    opt_flag char = '-O2' % -fdiagnostics-color=always -O3 -ffast-math -march=native -flto or -Ofast -march=native -flto
     mode (1,1) {mustBeInteger, mustBeInRange(mode, 1, 2)} = 1
     remove_sourcefiles logical = true
     use_jit logical = false
