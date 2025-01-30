@@ -1,4 +1,4 @@
-function generate_mpc_config_typedef(filename, structName)
+function generate_mpc_config_typedef(filename, structName, unique_f_opt_input_map, unique_f_opt_output_map)
     % Default filename if not provided
     if nargin < 1 || isempty(filename)
         filename = 'mpc_config.h';
@@ -34,185 +34,207 @@ function generate_mpc_config_typedef(filename, structName)
     % Write necessary includes
     fprintf(fid, '#include "casadi_types.h"\n\n');
 
-    % mpc input config struct
-    fprintf(fid, 'typedef struct {\n');
-    fprintf(fid, '    const casadi_uint x_k_addr;\n');
-    fprintf(fid, '    const casadi_uint x_k_len;\n');
-    fprintf(fid, '    const casadi_uint t_k_addr;\n');
-    fprintf(fid, '    const casadi_uint t_k_len;\n');
-    fprintf(fid, '    const casadi_uint z_k_addr;\n');
-    fprintf(fid, '    const casadi_uint z_k_len;\n');
-    fprintf(fid, '    const casadi_uint y_d_addr;\n');
-    fprintf(fid, '    const casadi_uint y_d_len;\n');
-    fprintf(fid, '    const casadi_uint y_d_p_addr;\n');
-    fprintf(fid, '    const casadi_uint y_d_p_len;\n');
-    fprintf(fid, '    const casadi_uint y_d_pp_addr;\n');
-    fprintf(fid, '    const casadi_uint y_d_pp_len;\n');
-    fprintf(fid, '    const casadi_uint x_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint x_prev_len;\n');
-    fprintf(fid, '    const casadi_uint z_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint z_prev_len;\n');
-    fprintf(fid, '    const casadi_uint u_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint u_prev_len;\n');
-    fprintf(fid, '    const casadi_uint alpha_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint alpha_prev_len;\n');
-    fprintf(fid, '    const casadi_uint theta_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint theta_prev_len;\n');
-    fprintf(fid, '    const casadi_uint traj_select_addr;\n');
-    fprintf(fid, '    const casadi_uint traj_select_len;\n');
-    fprintf(fid, '    const casadi_uint u_addr;\n');
-    fprintf(fid, '    const casadi_uint u_len;\n');
-    fprintf(fid, '    const casadi_uint v_addr;\n');
-    fprintf(fid, '    const casadi_uint v_len;\n');
-    fprintf(fid, '    const casadi_uint x_addr;\n');
-    fprintf(fid, '    const casadi_uint x_len;\n');
-    fprintf(fid, '    const casadi_uint z_addr;\n');
-    fprintf(fid, '    const casadi_uint z_len;\n');
-    fprintf(fid, '    const casadi_uint alpha_addr;\n');
-    fprintf(fid, '    const casadi_uint alpha_len;\n');
-    fprintf(fid, '    const casadi_uint theta_addr;\n');
-    fprintf(fid, '    const casadi_uint theta_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_u_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_u_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_v_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_v_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_x_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_x_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_z_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_z_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_alpha_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_alpha_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_theta_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_theta_len;\n');
-    fprintf(fid, '    const casadi_uint g_addr;\n');
-    fprintf(fid, '    const casadi_uint g_len;\n');
-    fprintf(fid, '    const casadi_uint N_step_addr;\n');
-    fprintf(fid, '    const casadi_uint N_step_len;\n');
-    fprintf(fid, '    const casadi_uint Q_y_addr;\n');
-    fprintf(fid, '    const casadi_uint Q_y_len;\n');
-    fprintf(fid, '    const casadi_uint Q_yN_addr;\n');
-    fprintf(fid, '    const casadi_uint Q_yN_len;\n');
-    fprintf(fid, '    const casadi_uint epsilon_t_addr;\n');
-    fprintf(fid, '    const casadi_uint epsilon_t_len;\n');
-    fprintf(fid, '    const casadi_uint epsilon_r_addr;\n');
-    fprintf(fid, '    const casadi_uint epsilon_r_len;\n');
-    fprintf(fid, '    const casadi_uint Q_y_ref_addr;\n');
-    fprintf(fid, '    const casadi_uint Q_y_ref_len;\n');
-    fprintf(fid, '    const casadi_uint Q_y_p_ref_addr;\n');
-    fprintf(fid, '    const casadi_uint Q_y_p_ref_len;\n');
-    fprintf(fid, '    const casadi_uint Q_theta_addr;\n');
-    fprintf(fid, '    const casadi_uint Q_theta_len;\n');
-    fprintf(fid, '    const casadi_uint Q_thetaN_addr;\n');
-    fprintf(fid, '    const casadi_uint Q_thetaN_len;\n');
-    fprintf(fid, '    const casadi_uint R_q_ref_addr;\n');
-    fprintf(fid, '    const casadi_uint R_q_ref_len;\n');
-    fprintf(fid, '    const casadi_uint R_q_p_addr;\n');
-    fprintf(fid, '    const casadi_uint R_q_p_len;\n');
-    fprintf(fid, '    const casadi_uint R_u_addr;\n');
-    fprintf(fid, '    const casadi_uint R_u_len;\n');
-    fprintf(fid, '    const casadi_uint R_alpha_addr;\n');
-    fprintf(fid, '    const casadi_uint R_alpha_len;\n');
-    fprintf(fid, '    const casadi_uint R_v_addr;\n');
-    fprintf(fid, '    const casadi_uint R_v_len;\n');
-    fprintf(fid, '    const casadi_uint R_x_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint R_x_prev_len;\n');
-    fprintf(fid, '    const casadi_uint R_z_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint R_z_prev_len;\n');
-    fprintf(fid, '    const casadi_uint R_alpha_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint R_alpha_prev_len;\n');
-    fprintf(fid, '    const casadi_uint R_u0_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint R_u0_prev_len;\n');
-    fprintf(fid, '    const casadi_uint R_theta_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint R_theta_prev_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_u_ew_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_u_ew_len;\n');
-    fprintf(fid, '    const casadi_uint max_du_addr;\n');
-    fprintf(fid, '    const casadi_uint max_du_len;\n');
-    fprintf(fid, '    const casadi_uint q_ref_addr;\n');
-    fprintf(fid, '    const casadi_uint q_ref_len;\n');
-    fprintf(fid, '    const casadi_uint x_min_addr;\n');
-    fprintf(fid, '    const casadi_uint x_min_len;\n');
-    fprintf(fid, '    const casadi_uint x_max_addr;\n');
-    fprintf(fid, '    const casadi_uint x_max_len;\n');
-    fprintf(fid, '    const casadi_uint u_min_addr;\n');
-    fprintf(fid, '    const casadi_uint u_min_len;\n');
-    fprintf(fid, '    const casadi_uint u_max_addr;\n');
-    fprintf(fid, '    const casadi_uint u_max_len;\n');
-    fprintf(fid, '    const casadi_uint v_min_addr;\n');
-    fprintf(fid, '    const casadi_uint v_min_len;\n');
-    fprintf(fid, '    const casadi_uint v_max_addr;\n');
-    fprintf(fid, '    const casadi_uint v_max_len;\n');
-    fprintf(fid, '    const casadi_uint reference_values_addr;\n');
-    fprintf(fid, '    const casadi_uint reference_values_len;\n');
-    fprintf(fid, '    const casadi_uint init_guess_addr;\n');
-    fprintf(fid, '    const casadi_uint init_guess_len;\n');
-    fprintf(fid, '    const casadi_uint param_weight_addr;\n');
-    fprintf(fid, '    const casadi_uint param_weight_len;\n');
-    fprintf(fid, '} mpc_input_config_t;\n\n');
+    extraEntries = {
+        'reference_values', ...
+        'init_guess', ...
+        'param_weight', ...
+    };
 
-    % % mpc output config struct
-    fprintf(fid, 'typedef struct {\n');
-    fprintf(fid, '    const casadi_uint u_opt_addr;\n');
-    fprintf(fid, '    const casadi_uint u_opt_len;\n');
-    fprintf(fid, '    const casadi_uint u_out_addr;\n');
-    fprintf(fid, '    const casadi_uint u_out_len;\n');
-    fprintf(fid, '    const casadi_uint v_out_addr;\n');
-    fprintf(fid, '    const casadi_uint v_out_len;\n');
-    fprintf(fid, '    const casadi_uint x_out_addr;\n');
-    fprintf(fid, '    const casadi_uint x_out_len;\n');
-    fprintf(fid, '    const casadi_uint z_out_addr;\n');
-    fprintf(fid, '    const casadi_uint z_out_len;\n');
-    fprintf(fid, '    const casadi_uint alpha_out_addr;\n');
-    fprintf(fid, '    const casadi_uint alpha_out_len;\n');
-    fprintf(fid, '    const casadi_uint theta_out_addr;\n');
-    fprintf(fid, '    const casadi_uint theta_out_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_u_out_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_u_out_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_v_out_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_v_out_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_x_out_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_x_out_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_theta_out_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_theta_out_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_z_out_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_z_out_len;\n');
-    fprintf(fid, '    const casadi_uint lambda_alpha_out_addr;\n');
-    fprintf(fid, '    const casadi_uint lambda_alpha_out_len;\n');
-    fprintf(fid, '    const casadi_uint g_out_addr;\n');
-    fprintf(fid, '    const casadi_uint g_out_len;\n');
-    fprintf(fid, '    const casadi_uint J_yt_addr;\n');
-    fprintf(fid, '    const casadi_uint J_yt_len;\n');
-    fprintf(fid, '    const casadi_uint J_yt_N_addr;\n');
-    fprintf(fid, '    const casadi_uint J_yt_N_len;\n');
-    fprintf(fid, '    const casadi_uint J_yr_addr;\n');
-    fprintf(fid, '    const casadi_uint J_yr_len;\n');
-    fprintf(fid, '    const casadi_uint J_yr_N_addr;\n');
-    fprintf(fid, '    const casadi_uint J_yr_N_len;\n');
-    fprintf(fid, '    const casadi_uint J_u_addr;\n');
-    fprintf(fid, '    const casadi_uint J_u_len;\n');
-    fprintf(fid, '    const casadi_uint J_v_addr;\n');
-    fprintf(fid, '    const casadi_uint J_v_len;\n');
-    fprintf(fid, '    const casadi_uint J_q_ref_addr;\n');
-    fprintf(fid, '    const casadi_uint J_q_ref_len;\n');
-    fprintf(fid, '    const casadi_uint J_q_p_addr;\n');
-    fprintf(fid, '    const casadi_uint J_q_p_len;\n');
-    fprintf(fid, '    const casadi_uint J_theta_addr;\n');
-    fprintf(fid, '    const casadi_uint J_theta_len;\n');
-    fprintf(fid, '    const casadi_uint J_thetaN_addr;\n');
-    fprintf(fid, '    const casadi_uint J_thetaN_len;\n');
-    fprintf(fid, '    const casadi_uint J_alpha_addr;\n');
-    fprintf(fid, '    const casadi_uint J_alpha_len;\n');
-    fprintf(fid, '    const casadi_uint J_x_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint J_x_prev_len;\n');
-    fprintf(fid, '    const casadi_uint J_theta_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint J_theta_prev_len;\n');
-    fprintf(fid, '    const casadi_uint J_z_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint J_z_prev_len;\n');
-    fprintf(fid, '    const casadi_uint J_alpha_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint J_alpha_prev_len;\n');
-    fprintf(fid, '    const casadi_uint J_u0_prev_addr;\n');
-    fprintf(fid, '    const casadi_uint J_u0_prev_len;\n');
-    fprintf(fid, '} mpc_output_config_t;\n\n');
+    for i = 1:length(extraEntries)
+        key = extraEntries{i};
+        if ~isKey(unique_f_opt_input_map, key)
+            unique_f_opt_input_map(key) = true;
+        end
+    end
+
+    % Convert map keys to cell array
+    unique_f_opt_input_cell = sort(keys(unique_f_opt_input_map));
+    unique_f_opt_output_cell = sort(keys(unique_f_opt_output_map));
+
+    write_struct(fid, 'mpc_input_config_t', unique_f_opt_input_cell);
+    
+    % Process outputs
+    write_struct(fid, 'mpc_output_config_t', unique_f_opt_output_cell);
+
+    % % mpc input config struct
+    % fprintf(fid, 'typedef struct {\n');
+    % fprintf(fid, '    const casadi_uint x_k_addr;\n');
+    % fprintf(fid, '    const casadi_uint x_k_len;\n');
+    % fprintf(fid, '    const casadi_uint t_k_addr;\n');
+    % fprintf(fid, '    const casadi_uint t_k_len;\n');
+    % fprintf(fid, '    const casadi_uint z_k_addr;\n');
+    % fprintf(fid, '    const casadi_uint z_k_len;\n');
+    % fprintf(fid, '    const casadi_uint y_d_addr;\n');
+    % fprintf(fid, '    const casadi_uint y_d_len;\n');
+    % fprintf(fid, '    const casadi_uint y_d_p_addr;\n');
+    % fprintf(fid, '    const casadi_uint y_d_p_len;\n');
+    % fprintf(fid, '    const casadi_uint y_d_pp_addr;\n');
+    % fprintf(fid, '    const casadi_uint y_d_pp_len;\n');
+    % fprintf(fid, '    const casadi_uint x_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint x_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint z_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint z_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint u_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint u_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint alpha_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint alpha_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint theta_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint theta_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint traj_select_addr;\n');
+    % fprintf(fid, '    const casadi_uint traj_select_len;\n');
+    % fprintf(fid, '    const casadi_uint u_addr;\n');
+    % fprintf(fid, '    const casadi_uint u_len;\n');
+    % fprintf(fid, '    const casadi_uint v_addr;\n');
+    % fprintf(fid, '    const casadi_uint v_len;\n');
+    % fprintf(fid, '    const casadi_uint x_addr;\n');
+    % fprintf(fid, '    const casadi_uint x_len;\n');
+    % fprintf(fid, '    const casadi_uint z_addr;\n');
+    % fprintf(fid, '    const casadi_uint z_len;\n');
+    % fprintf(fid, '    const casadi_uint alpha_addr;\n');
+    % fprintf(fid, '    const casadi_uint alpha_len;\n');
+    % fprintf(fid, '    const casadi_uint theta_addr;\n');
+    % fprintf(fid, '    const casadi_uint theta_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_u_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_u_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_v_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_v_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_x_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_x_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_z_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_z_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_alpha_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_alpha_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_theta_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_theta_len;\n');
+    % fprintf(fid, '    const casadi_uint g_addr;\n');
+    % fprintf(fid, '    const casadi_uint g_len;\n');
+    % fprintf(fid, '    const casadi_uint N_step_addr;\n');
+    % fprintf(fid, '    const casadi_uint N_step_len;\n');
+    % fprintf(fid, '    const casadi_uint Q_y_addr;\n');
+    % fprintf(fid, '    const casadi_uint Q_y_len;\n');
+    % fprintf(fid, '    const casadi_uint Q_yN_addr;\n');
+    % fprintf(fid, '    const casadi_uint Q_yN_len;\n');
+    % fprintf(fid, '    const casadi_uint epsilon_t_addr;\n');
+    % fprintf(fid, '    const casadi_uint epsilon_t_len;\n');
+    % fprintf(fid, '    const casadi_uint epsilon_r_addr;\n');
+    % fprintf(fid, '    const casadi_uint epsilon_r_len;\n');
+    % fprintf(fid, '    const casadi_uint Q_y_ref_addr;\n');
+    % fprintf(fid, '    const casadi_uint Q_y_ref_len;\n');
+    % fprintf(fid, '    const casadi_uint Q_y_p_ref_addr;\n');
+    % fprintf(fid, '    const casadi_uint Q_y_p_ref_len;\n');
+    % fprintf(fid, '    const casadi_uint Q_theta_addr;\n');
+    % fprintf(fid, '    const casadi_uint Q_theta_len;\n');
+    % fprintf(fid, '    const casadi_uint Q_thetaN_addr;\n');
+    % fprintf(fid, '    const casadi_uint Q_thetaN_len;\n');
+    % fprintf(fid, '    const casadi_uint R_q_ref_addr;\n');
+    % fprintf(fid, '    const casadi_uint R_q_ref_len;\n');
+    % fprintf(fid, '    const casadi_uint R_q_p_addr;\n');
+    % fprintf(fid, '    const casadi_uint R_q_p_len;\n');
+    % fprintf(fid, '    const casadi_uint R_u_addr;\n');
+    % fprintf(fid, '    const casadi_uint R_u_len;\n');
+    % fprintf(fid, '    const casadi_uint R_alpha_addr;\n');
+    % fprintf(fid, '    const casadi_uint R_alpha_len;\n');
+    % fprintf(fid, '    const casadi_uint R_v_addr;\n');
+    % fprintf(fid, '    const casadi_uint R_v_len;\n');
+    % fprintf(fid, '    const casadi_uint R_x_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint R_x_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint R_z_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint R_z_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint R_alpha_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint R_alpha_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint R_u0_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint R_u0_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint R_theta_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint R_theta_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_u_ew_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_u_ew_len;\n');
+    % fprintf(fid, '    const casadi_uint max_du_addr;\n');
+    % fprintf(fid, '    const casadi_uint max_du_len;\n');
+    % fprintf(fid, '    const casadi_uint q_ref_addr;\n');
+    % fprintf(fid, '    const casadi_uint q_ref_len;\n');
+    % fprintf(fid, '    const casadi_uint x_min_addr;\n');
+    % fprintf(fid, '    const casadi_uint x_min_len;\n');
+    % fprintf(fid, '    const casadi_uint x_max_addr;\n');
+    % fprintf(fid, '    const casadi_uint x_max_len;\n');
+    % fprintf(fid, '    const casadi_uint u_min_addr;\n');
+    % fprintf(fid, '    const casadi_uint u_min_len;\n');
+    % fprintf(fid, '    const casadi_uint u_max_addr;\n');
+    % fprintf(fid, '    const casadi_uint u_max_len;\n');
+    % fprintf(fid, '    const casadi_uint v_min_addr;\n');
+    % fprintf(fid, '    const casadi_uint v_min_len;\n');
+    % fprintf(fid, '    const casadi_uint v_max_addr;\n');
+    % fprintf(fid, '    const casadi_uint v_max_len;\n');
+    % fprintf(fid, '    const casadi_uint reference_values_addr;\n');
+    % fprintf(fid, '    const casadi_uint reference_values_len;\n');
+    % fprintf(fid, '    const casadi_uint init_guess_addr;\n');
+    % fprintf(fid, '    const casadi_uint init_guess_len;\n');
+    % fprintf(fid, '    const casadi_uint param_weight_addr;\n');
+    % fprintf(fid, '    const casadi_uint param_weight_len;\n');
+    % fprintf(fid, '} mpc_input_config_t;\n\n');
+
+    % % % mpc output config struct
+    % fprintf(fid, 'typedef struct {\n');
+    % fprintf(fid, '    const casadi_uint u_opt_addr;\n');
+    % fprintf(fid, '    const casadi_uint u_opt_len;\n');
+    % fprintf(fid, '    const casadi_uint u_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint u_out_len;\n');
+    % fprintf(fid, '    const casadi_uint v_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint v_out_len;\n');
+    % fprintf(fid, '    const casadi_uint x_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint x_out_len;\n');
+    % fprintf(fid, '    const casadi_uint z_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint z_out_len;\n');
+    % fprintf(fid, '    const casadi_uint alpha_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint alpha_out_len;\n');
+    % fprintf(fid, '    const casadi_uint theta_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint theta_out_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_u_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_u_out_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_v_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_v_out_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_x_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_x_out_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_theta_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_theta_out_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_z_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_z_out_len;\n');
+    % fprintf(fid, '    const casadi_uint lambda_alpha_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint lambda_alpha_out_len;\n');
+    % fprintf(fid, '    const casadi_uint g_out_addr;\n');
+    % fprintf(fid, '    const casadi_uint g_out_len;\n');
+    % fprintf(fid, '    const casadi_uint J_yt_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_yt_len;\n');
+    % fprintf(fid, '    const casadi_uint J_yt_N_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_yt_N_len;\n');
+    % fprintf(fid, '    const casadi_uint J_yr_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_yr_len;\n');
+    % fprintf(fid, '    const casadi_uint J_yr_N_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_yr_N_len;\n');
+    % fprintf(fid, '    const casadi_uint J_u_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_u_len;\n');
+    % fprintf(fid, '    const casadi_uint J_v_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_v_len;\n');
+    % fprintf(fid, '    const casadi_uint J_q_ref_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_q_ref_len;\n');
+    % fprintf(fid, '    const casadi_uint J_q_p_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_q_p_len;\n');
+    % fprintf(fid, '    const casadi_uint J_theta_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_theta_len;\n');
+    % fprintf(fid, '    const casadi_uint J_thetaN_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_thetaN_len;\n');
+    % fprintf(fid, '    const casadi_uint J_alpha_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_alpha_len;\n');
+    % fprintf(fid, '    const casadi_uint J_x_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_x_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint J_theta_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_theta_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint J_z_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_z_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint J_alpha_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_alpha_prev_len;\n');
+    % fprintf(fid, '    const casadi_uint J_u0_prev_addr;\n');
+    % fprintf(fid, '    const casadi_uint J_u0_prev_len;\n');
+    % fprintf(fid, '} mpc_output_config_t;\n\n');
 
 
     % Write the struct definition with typedef
@@ -265,4 +287,20 @@ function generate_mpc_config_typedef(filename, structName)
         fprintf('Header file %s unchanged.\n', filename_fin);
         delete(filename);
     end
+end
+
+
+function write_struct(fid, structName, casadi_fun_cell, existing_entries)
+    fprintf(fid, 'typedef struct {\n');
+    
+    for i = 1:length(casadi_fun_cell)
+        entry_name = casadi_fun_cell{i};
+        % Add the address
+        fprintf(fid, '    const casadi_uint %s_addr;\n', entry_name);
+        % Add the length
+        fprintf(fid, '    const casadi_uint %s_len;\n', entry_name);
+        existing_entries(entry_name) = true; % Mark this entry as seen
+    end
+    
+    fprintf(fid, '} %s;\n\n', structName);
 end
