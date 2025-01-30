@@ -1,4 +1,4 @@
-function generate_mpc_sourefiles(casadi_fun, casadi_opt_problem_paths, current_mpc_mfile, s_fun_path)
+function generate_mpc_sourcefiles(casadi_fun, casadi_opt_problem_paths, current_mpc_mfile, s_fun_path)
     % Generate C code (compare "compile_casadi_sfunction.m")
     % Disable Mex Compile and create only .h and .c files for including in main.c with udp communication (gcc)
 
