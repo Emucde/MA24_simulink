@@ -86,6 +86,8 @@ function generate_mpc_config_typedef(filename, structName)
     fprintf(fid, '    const casadi_uint lambda_theta_len;\n');
     fprintf(fid, '    const casadi_uint g_addr;\n');
     fprintf(fid, '    const casadi_uint g_len;\n');
+    fprintf(fid, '    const casadi_uint N_step_addr;\n');
+    fprintf(fid, '    const casadi_uint N_step_len;\n');
     fprintf(fid, '    const casadi_uint Q_y_addr;\n');
     fprintf(fid, '    const casadi_uint Q_y_len;\n');
     fprintf(fid, '    const casadi_uint Q_yN_addr;\n');

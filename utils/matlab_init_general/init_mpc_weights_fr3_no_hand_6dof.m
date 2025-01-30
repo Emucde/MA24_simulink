@@ -92,6 +92,8 @@ A = [zeros(n_p), eye(n_p); -eye(n_p)*lambda^2, 2*eye(n_p)*lambda]; % = d/dt x = 
 Q = 1e5*eye(2*n_p); % d/dt V = -x'Qx
 P = lyap(A, Q); % V = x'Px => Idea: Use V as end cost term
 
+param_weight.(MPC).N_step = 5;
+
 param_weight.(MPC).Q_y      = 1e2*diag([1*ones(3,1); 1e-3*ones(3,1)]);
 param_weight.(MPC).Q_yN     = 1e5*diag([1*ones(3,1); 1e-3*ones(3,1)]);
 

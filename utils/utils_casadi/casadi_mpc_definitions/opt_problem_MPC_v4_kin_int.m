@@ -2,6 +2,16 @@
 
 import casadi.*
 
+% get weights from "init_MPC_weight.m"
+param_weight_init = param_weight.(casadi_func_name);
+
+% weights as parameter (~inputs)
+if(weights_and_limits_as_parameter)
+    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
+else % hardcoded weights
+    pp = param_weight_init;
+end
+
 % if you have n_red < 6 it is much faster to neglect some positions - but it works also full poses.
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;
@@ -32,14 +42,18 @@ f = Function('f', {x, u}, {[x(n+1:2*n); u]});
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
+
+N_step = pp.N_step;
+
 DT_ctl = param_global.Ta/M;
-if(N_step_MPC <= 3)
-    DT = DT_ctl; % special case if Ts_MPC = Ta
-    DT2 = DT_ctl; % special case if Ts_MPC = Ta
-else
-    DT = N_step_MPC * DT_ctl; % = Ts_MPC
-    DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
-end
+
+% if(N_step <= 3)
+%     DT = DT_ctl; % special case if Ts_MPC = Ta
+%     DT2 = DT_ctl; % special case if Ts_MPC = Ta
+% else
+    DT = N_step * DT_ctl; % = Ts_MPC
+    DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
+% end
 
 F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
 F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-Ta
@@ -80,16 +94,6 @@ init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); lam_x_init_guess_0(:); lam
 
 if(any(isnan(full(init_guess_0))))
     error('115: init_guess_0 contains NaN values!');
-end
-
-% get weights from "init_MPC_weight.m"
-param_weight_init = param_weight.(casadi_func_name);
-
-% weights as parameter (~inputs)
-if(weights_and_limits_as_parameter)
-    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
-else % hardcoded weights
-    pp = param_weight_init;
 end
 
 % Optimization Variables:

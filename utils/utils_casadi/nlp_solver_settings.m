@@ -12,15 +12,102 @@
 %| qrsqp             |
 %| scpgen            |
 %| sqpmethod         |
+%| qpoases           |
+%| qrqp              |
+%| osqp              |
+%| ooqp              |
+%| proxqp            |
+%| daqp              |
+%| fatrop            |
+%| highs             |
 %|-------------------|
 
+% Interface to the JIT compiler SHELL
+% See sourcecode: ./casadi/solvers/shell_compiler.cpp
+%                 ./swig/doc_merged.i
+
+% Extra doc: https://github.com/casadi/casadi/wiki/L_22w
+
+% >List of available options
+
+% +----------------------+-----------------+---------------------------------+
+% |          Id          |      Type       |           Description           |
+% +======================+=================+=================================+
+% | cleanup              | OT_BOOL         | Cleanup temporary files when    |
+% |                      |                 | unloading. Default: true        |
+% +----------------------+-----------------+---------------------------------+
+% | compiler             | OT_STRING       | Compiler command                |
+% +----------------------+-----------------+---------------------------------+
+% | compiler_flags       | OT_STRINGVECTOR | Alias for 'compiler_flags'      |
+% +----------------------+-----------------+---------------------------------+
+% | compiler_output_flag | OT_STRING       | Compiler flag to denote object  |
+% |                      |                 | output. Default: '-o '          |
+% +----------------------+-----------------+---------------------------------+
+% | compiler_setup       | OT_STRING       | Compiler setup command.         |
+% |                      |                 | Intended to be fixed. The       |
+% |                      |                 | 'flag' option is the prefered   |
+% |                      |                 | way to set custom flags.        |
+% +----------------------+-----------------+---------------------------------+
+% | directory            | OT_STRING       | Directory to put temporary      |
+% |                      |                 | objects in. Must end with a     |
+% |                      |                 | file separator.                 |
+% +----------------------+-----------------+---------------------------------+
+% | extra_suffixes       | OT_STRINGVECTOR | List of suffixes for extra      |
+% |                      |                 | files that the compiler may     |
+% |                      |                 | generate. Default: None         |
+% +----------------------+-----------------+---------------------------------+
+% | flags                | OT_STRINGVECTOR | Compile flags for the JIT       |
+% |                      |                 | compiler. Default: None         |
+% +----------------------+-----------------+---------------------------------+
+% | linker               | OT_STRING       | Linker command                  |
+% +----------------------+-----------------+---------------------------------+
+% | linker_flags         | OT_STRINGVECTOR | Linker flags for the JIT        |
+% |                      |                 | compiler. Default: None         |
+% +----------------------+-----------------+---------------------------------+
+% | linker_output_flag   | OT_STRING       | Linker flag to denote shared    |
+% |                      |                 | library output. Default: '-o '  |
+% +----------------------+-----------------+---------------------------------+
+% | linker_setup         | OT_STRING       | Linker setup command. Intended  |
+% |                      |                 | to be fixed. The 'flag' option  |
+% |                      |                 | is the prefered way to set      |
+% |                      |                 | custom flags.                   |
+% +----------------------+-----------------+---------------------------------+
+% | name                 | OT_STRING       | The file name used to write out |
+% |                      |                 | compiled objects/libraries. The |
+% |                      |                 | actual file names used depend   |
+% |                      |                 | on 'temp_suffix' and include    |
+% |                      |                 | extensions. Default:            |
+% |                      |                 | 'tmp_casadi_compiler_shell'     |
+% +----------------------+-----------------+---------------------------------+
+% | temp_suffix          | OT_BOOL         | Use a temporary (seemingly      |
+% |                      |                 | random) filename suffix for     |
+% |                      |                 | file names. This is desired for |
+% |                      |                 | thread-safety. This behaviour   |
+% |                      |                 | may defeat caching compiler     |
+% |                      |                 | wrappers. Default: true         |
+% +----------------------+-----------------+---------------------------------+
+
 import casadi.*;
+
+opts=struct;
+
+if(use_jit)
+    opts.jit = true;
+    opts.jit_cleanup = false;
+    opts.jit_temp_suffix = false;
+    opts.jit_name = 'test';
+    opts.compiler = 'shell';
+    opts.jit_options.flags = {'-O3'};
+    opts.jit_options.temp_suffix = false;
+    opts.jit_options.verbose = true;
+    opts.jit_options.name = ['lib', casadi_func_name, '_jit'];
+    opts.jit_options.directory = [s_fun_path, '/mpc_c_sourcefiles/'];
+end
 
 tic;
 fprintf('\nStarting execution of solver = nlpsol(''solver'', ''%s'', prob, opts)\n', MPC_solver)
 if(strcmp(MPC_solver, 'qrqp') || strcmp(MPC_solver, 'osqp') || strcmp(MPC_solver, 'ooqp') || strcmp(MPC_solver, 'proxqp') || strcmp(MPC_solver, 'daqp') || strcmp(MPC_solver, 'fatrop') || strcmp(MPC_solver, 'highs') || strcmp(MPC_solver, 'test'))
     % DOKU: https://web.casadi.org/api/html/d4/d89/group__nlpsol.html
-    opts = struct; % Create a new structure
     opts.qpsol_options = struct;
     opts.print_header = false; % Disable printing of solver header
     opts.print_iteration = false; % Disable printing of solver iterations
@@ -220,7 +307,6 @@ if(strcmp(MPC_solver, 'qrqp') || strcmp(MPC_solver, 'osqp') || strcmp(MPC_solver
 
     % solver.print_options();
 elseif(strcmp(MPC_solver, 'fatrop'))
-    opts = struct;
     
     % General options to control the solver behavior
     opts.print_time = false; % Enable printing solver execution time for debugging
@@ -260,7 +346,6 @@ elseif(strcmp(MPC_solver, 'fatrop'))
     solver = nlpsol('solver', 'fatrop', prob, opts);
 
 elseif(strcmp(MPC_solver, 'feasiblesqpmethod'))
-    opts = struct; % Create a new structure
     opts.qpsol_options = struct;
     opts.qpsol = 'qrqp'; % Set the QP solver to 'qrqp'
     opts.qpsol_options.max_iter = 100;                % Maximum number of iterations [Default: 1000], [Allowed: > 0]
@@ -329,7 +414,6 @@ elseif(strcmp(MPC_solver, 'feasiblesqpmethod'))
     % solver.print_options();
 elseif(strcmp(MPC_solver, 'qpoases'))
     % DOKU: https://casadi.sourceforge.net/api/internal/d5/d43/classcasadi_1_1QpoasesInterface.html
-    opts = struct; % Create a new structure
     opts.qpsol = 'qpoases'; % Set the QP solver to 'qrqp'
     opts.qpsol_options.error_on_fail = false;
     opts.qpsol_options.printLevel = 'none';
@@ -351,7 +435,6 @@ elseif(strcmp(MPC_solver, 'qpoases'))
     % solver.print_options();
 elseif(strcmp(MPC_solver, 'ipopt'))
     % DOKU: https://casadi.sourceforge.net/v2.0.0/api/html/d6/d07/classcasadi_1_1NlpSolver.html#plugin_NlpSolver_ipopt
-    opts = struct;
     opts.show_eval_warnings = false;
     opts.error_on_fail = false;
     opts.print_time = 0;
@@ -367,7 +450,6 @@ elseif(strcmp(MPC_solver, 'ipopt'))
     solver = nlpsol('solver', 'ipopt', prob, opts);
 elseif(strcmp(MPC_solver, 'snopt'))
     % DOKU: https://casadi.sourceforge.net/v2.0.0/api/html/d6/d07/classcasadi_1_1NlpSolver.html#plugin_NlpSolver_ipopt
-    opts = struct;
     opts.show_eval_warnings = false;
     opts.error_on_fail = false;
     opts.print_time = 0;

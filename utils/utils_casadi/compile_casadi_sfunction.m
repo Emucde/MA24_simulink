@@ -1,4 +1,4 @@
-function compile_casadi_sfunction(casadi_fun, s_fun_path, output_dir, MPC_solver, opt_flag, mode, remove_sourcefiles)
+function compile_casadi_sfunction(casadi_fun, s_fun_path, output_dir, MPC_solver, opt_flag, mode, remove_sourcefiles, use_jit)
 % COMPILE_CASADI_SFUNCTION Compiles a CasADi S-function for use in Simulink.
 %
 % Inputs:
@@ -38,6 +38,7 @@ arguments
     opt_flag char = '-O2'
     mode (1,1) {mustBeInteger, mustBeInRange(mode, 1, 2)} = 1
     remove_sourcefiles logical = true
+    use_jit logical = false
 end
 
 
@@ -110,6 +111,14 @@ end
         copyfile(s_fun_file, s_fun_file_new, 'f');
         replace_strings_in_casadi_file(s_fun_file_new, casadi_fun_name);
         replace_s_function_string(s_fun_file_new, ['s_function_', casadi_fun_name], ['s_function_opti_', casadi_fun_name])
+
+        if(use_jit)
+            jit_library_path = ['-L', pwd, output_dir(2:end), '/mpc_c_sourcefiles'];
+            jit_library = ['-l', casadi_fun_name, '_jit'];
+        else
+            jit_library_path = '';
+            jit_library = '';
+        end
         
         %mex(s_func_matlab_file, casadi_fun_c_header_path, '-outdir', s_fun_path);
         disp(['Compiling s-function ', s_fun_file_new, ' with ', opt_flag, ' (nlpsol-opti method)'])
@@ -134,7 +143,7 @@ end
             sudo make install
             % PS: it does not run in simulink, crashes instant.
             %}
-            mex(s_fun_file_new, casadi_fun_c_header_path, '-lipopt', '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
+            mex(s_fun_file_new, casadi_fun_c_header_path, '-lipopt', '-largeArrayDims', jit_library_path, jit_library, ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
         elseif((strcmp(MPC_solver, 'fatrop')))
             % for codegenerating fatrop install (not tested in simulink but might not work)
             %{
@@ -153,9 +162,9 @@ end
             make -j
             sudo make install
             %}
-            mex(s_fun_file_new, casadi_fun_c_header_path, '-I/opt/blasfeo/include/', '-lblasfeo', '-lfatrop', '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
+            mex(s_fun_file_new, casadi_fun_c_header_path, '-I/opt/blasfeo/include/', '-lblasfeo', '-lfatrop', jit_library_path, jit_library, '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
         else
-            mex(s_fun_file_new, casadi_fun_c_header_path, '-largeArrayDims', ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
+            mex(s_fun_file_new, casadi_fun_c_header_path, '-largeArrayDims', jit_library_path, jit_library, ['COPTIMFLAGS="',opt_flag,'"'], '-outdir', output_dir)
         end
 
         if(remove_sourcefiles)

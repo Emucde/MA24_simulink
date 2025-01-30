@@ -30,6 +30,8 @@ create_test_solve               = ~true; % create init guess for all trajectorie
 compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
 compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
 compile_all_mpc_sfunctions      = false;
+use_jit                         = true; % use jit for compilation (precompiles before each RUN!!! 
+                                         % ~10-20% faster execution, but only for simulink useful)
 generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
 reload_parameters_m             = ~true; % reload parameters.m at the end (clears all variables!)
 remove_sourcefiles              = false; % remove source files after compilation
@@ -165,7 +167,7 @@ param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true:
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-param_casadi_fun_struct = param_casadi_fun_name.MPC8;
+param_casadi_fun_struct = param_casadi_fun_name.MPC01;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if(compile_all_mpc_sfunctions)

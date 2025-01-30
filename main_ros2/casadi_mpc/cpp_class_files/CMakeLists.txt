@@ -9,9 +9,19 @@ endif()
 
 # Add optimization flags
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(OPT_FLAG "-O3")
+    # -fdiagnostics-color=always: Always print diagnostics (warnings, errors) in color.
+    # -O3: Optimize code for maximum speed and performance.
+    # -ffast-math: Enable fast math optimizations that may violate strict IEEE or ANSI standards.
+    # -march=native: Generate code optimized for the host machine's CPU.
+    # -flto: Enable link-time optimization for better performance.
+    # -Ofast: Optimize code for maximum speed and performance, disregarding strict standards compliance. (= -O3 -ffast-math + other optimizations)
+
+    set(OPT_FLAG "-fdiagnostics-color=always;-O3;-ffast-math;-march=native;-flto")
+    # set(OPT_FLAG "-fdiagnostics-color=always;-Ofast;-march=native;-flto")
+    set(MPC_OPT_FLAG ${OPT_FLAG})
 elseif(CMAKE_BUILD_TYPE STREQUAL "DebugSpecial")
     set(OPT_FLAG "-O0")
+    set(MPC_OPT_FLAG "-O3")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")  # Ensure debug information is generated
 endif()
 
@@ -41,6 +51,8 @@ set(CASADI_PATH "/media/daten/Anwendungen/casadi-3.6.7-linux64-matlab2018b")
 set(CASADI_INCLUDE_DIRS "${CASADI_PATH}/include")
 set(HIGHS_INCLUDE_DIRS_2 "${CASADI_PATH}/include/highs")
 set(CASADI_LIBRARY_DIRS "${CASADI_PATH}")
+
+file(GLOB JIT_LIBRARY_DIRS "${MPC_SOURCE_DIR}/*jit.so")
 
 message(STATUS "HIGHS_INCLUDE_DIRS_2: ${HIGHS_INCLUDE_DIRS_2}")
 
@@ -77,9 +89,10 @@ foreach(SOURCE_FILE ${MPC_SOURCES})
         ${CASADI_LIBRARY_DIRS}/libosqp.so
         ${CASADI_LIBRARY_DIRS}/libdaqp.so
         ${CASADI_LIBRARY_DIRS}/libhighs.so
+        ${JIT_LIBRARY_DIRS}
         )
 
-    target_compile_options(${FILE_NAME} PRIVATE -fdiagnostics-color=always -O3) # it makes sense to optimize the MPC library also in debug mode
+    target_compile_options(${FILE_NAME} PRIVATE -fdiagnostics-color=always ${MPC_OPT_FLAG}) # it makes sense to optimize the MPC library also in debug mode
 
     # Collect the libraries for installation
     list(APPEND MPC_ALL_LIBRARIES ${FILE_NAME})
