@@ -106,7 +106,7 @@ end
 
 tic;
 fprintf('\nStarting execution of solver = nlpsol(''solver'', ''%s'', prob, opts)\n', MPC_solver)
-if(strcmp(MPC_solver, 'qrqp') || strcmp(MPC_solver, 'osqp') || strcmp(MPC_solver, 'ooqp') || strcmp(MPC_solver, 'proxqp') || strcmp(MPC_solver, 'daqp') || strcmp(MPC_solver, 'highs') || strcmp(MPC_solver, 'test'))
+if(strcmp(MPC_solver, 'qrqp') || strcmp(MPC_solver, 'osqp') || strcmp(MPC_solver, 'proxqp') || strcmp(MPC_solver, 'daqp') || strcmp(MPC_solver, 'highs') || strcmp(MPC_solver, 'gurobi') || strcmp(MPC_solver, 'test'))
     % DOKU: https://web.casadi.org/api/html/d4/d89/group__nlpsol.html
     opts.qpsol_options = struct;
     opts.print_header = false; % Disable printing of solver header
@@ -259,28 +259,22 @@ if(strcmp(MPC_solver, 'qrqp') || strcmp(MPC_solver, 'osqp') || strcmp(MPC_solver
         opts.qpsol_options.highs.pdlp_d_gap_tol = 0.0001; % [Default: 0.0001], [Allowed: [1e-12, inf]]
         opts.qpsol_options.highs.qp_iteration_limit = 100; % [Default: 2147483647], [Allowed: {0, 2147483647}]
         opts.qpsol_options.highs.qp_nullspace_limit = 4000; % [Default: 4000], [Allowed: {0, 2147483647}]
-    elseif(strcmp(MPC_solver, 'test'))
+    elseif(strcmp(MPC_solver, 'gurobi'))
         % https://darnstrom.github.io/daqp/parameters/
         opts.qpsol = 'gurobi'; % Set the QP solver to 'qrqp'
-           % Print iterations [Default: true], [Allowed: true/false]
+        all_gurobi_options;
         opts.qpsol_options.verbose = false; % Print output 
         opts.qpsol_options.error_on_fail = false; % Throw exceptions when function evaluation fails
         opts.error_on_fail=false;
-        
-    % elseif(strcmp(MPC_solver, 'ooqp'))
-    %     .../casadi/core/function_internal.cpp:146: Error calling Sqpmethod::init for 'solver':
-    %     .../casadi/core/plugin_interface.hpp:292: Plugin 'ooqp' is not found.
-    %     % DOKU: https://github.com/casadi/casadi/blob/main/casadi/interfaces/ooqp/ooqp_interface.cpp
-    %     opts.qpsol = 'ooqp'; % Set the QP solver to 'ooqp'
-    %     opts.qpsol_options.print_iter = false; % Disable printing of QP solver iterations
-    %     opts.qpsol_options.print_header = false; % Disable printing of QP solver header
-    %     opts.qpsol_options.print_info = false; % Disable printing of QP solver info
-    %     opts.qpsol_options.error_on_fail = false;
-    %     opts.qpsol_options.print_level = 0; % Print level
-    %     opts.qpsol_options.mutol = 1e-08; % Tolerance for setting MuTol
-    %     opts.qpsol_options.artol = 1e-08; % Tolerance for setting ArTol
+    elseif(strcmp(MPC_solver, 'test'))
+        % https://darnstrom.github.io/daqp/parameters/
+        opts.qpsol = 'gurobi'; % Set the QP solver to 'qrqp'
+        all_gurobi_options;
+        opts.qpsol_options.verbose = false; % Print output 
+        opts.qpsol_options.error_on_fail = false; % Throw exceptions when function evaluation fails
+        opts.error_on_fail=false;
     end
-%     % opts.hessian_approximation = 'limited-memory';
+%     % opts.hessian_approximation = 'limited-memory'; % slow!!!
 %     % opts.iteration_callback_ignore_errors = true;
 %     % opts.elastic_mode = true;
 %     % opts.regularity_check = true;
