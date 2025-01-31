@@ -8,10 +8,10 @@
 
 // #define DEBUG 1
 
-mpc_config_t const* invalid_config(const std::string &mpc_name)
+mpc_config_t invalid_config(const std::string &mpc_name)
 {
     throw std::runtime_error("CasadiMPC.cpp: \"" + mpc_name + "\" is not a valid MPC name. Use one of the following: MPC01, MPC6, MPC7, MPC8, MPC9, MPC10, MPC11, MPC12, MPC13, MPC14");
-    return nullptr;
+    return {};
 }
 
 // Constructor implementation
@@ -32,45 +32,32 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
                                                      robot_config(robot_config),
                                                      traj_data(traj_data),
                                                      traj_data_real_len(traj_data_real_len),
-                                                     is_kinematic_mpc(mpc_config->kinematic_mpc == 1),
+                                                     is_kinematic_mpc(mpc_config.kinematic_mpc == 1),
                                                      nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
-                                                     casadi_fun(mpc_config->casadi_fun),
-                                                     arg(mpc_config->arg), res(mpc_config->res), iw(mpc_config->iw), w(mpc_config->w),
-                                                     u_opt(w + mpc_config->u_opt_addr), w_end(w + mpc_config->w_end_addr),
-                                                     in_init_guess(w + mpc_config->in_init_guess_addr),
-                                                     out_init_guess(w + mpc_config->out_init_guess_addr),
-                                                     x_out(w + mpc_config->output_config.x_out_addr),
-                                                     u_out(w + mpc_config->output_config.u_out_addr),
-                                                     x_k(w + mpc_config->x_k_addr),
-                                                     y_d(w + mpc_config->y_d_addr),
-                                                     x_prev(w + mpc_config->input_config.x_prev_addr),
-                                                     u_prev(w + mpc_config->input_config.u_prev_addr),
-                                                     param_weight(w + mpc_config->in_param_weight_addr),
-                                                     horizon_len(mpc_config->traj_data_per_horizon),
-                                                     mpc_traj_indices(ConstIntVectorMap(mpc_config->traj_indices, horizon_len)),
-                                                     init_guess_len(mpc_config->init_guess_len),
-                                                     x_prev_len(mpc_config->input_config.x_prev_len),
-                                                     u_prev_len(mpc_config->input_config.u_prev_len),
-                                                     traj_data_per_horizon(mpc_config->traj_data_per_horizon),
+                                                     casadi_fun(mpc_config.casadi_fun),
+                                                     arg(mpc_config.arg), res(mpc_config.res), iw(mpc_config.iw), w(mpc_config.w),
+                                                     horizon_len(mpc_config.traj_data_per_horizon),
+                                                     mpc_traj_indices(ConstIntVectorMap(mpc_config.traj_indices, horizon_len)),
+                                                     traj_data_per_horizon(mpc_config.traj_data_per_horizon),
                                                      traj_count(0), traj_select(1),
-                                                     mem(mpc_config->mem), dt(mpc_config->dt)
+                                                     mem(mpc_config.mem), dt(robot_config.dt)
 {
     // Check if the configuration is valid
-    if (mpc_config->casadi_fun == nullptr)
+    if (mpc_config.casadi_fun == nullptr)
     {
         throw std::runtime_error("CasadiMPC::CasadiMPC(): " + mpc_name + "is not a valid MPC name. Use one of the following: MPC01, MPC6, MPC7, MPC8, MPC9, MPC10, MPC11, MPC12, MPC13, MPC14");
     }
 
     // Initialize arg with pointers based on provided indices
-    for (casadi_uint i = 0; i < mpc_config->arg_in_len; i++)
+    for (casadi_uint i = 0; i < mpc_config.arg_in_len; i++)
     {
-        arg[i] = w + mpc_config->arg_indices[i]; // Use each index from arg_indices
+        arg[i] = w + mpc_config.arg_indices[i]; // Use each index from arg_indices
     }
 
     // Initialize res with pointers based on provided indices
-    for (casadi_uint i = 0; i < mpc_config->res_out_len; i++)
+    for (casadi_uint i = 0; i < mpc_config.res_out_len; i++)
     {
-        res[i] = w + mpc_config->res_indices[i]; // Use each index from res_indices
+        res[i] = w + mpc_config.res_indices[i]; // Use each index from res_indices
     }
 
     // Check trajectory pointer
@@ -93,11 +80,11 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
     }
 
     // Copy the parameter weights
-    memcpy(param_weight, mpc_config->param_weight, mpc_config->param_weight_len * sizeof(casadi_real));
+    memcpy(mpc_config.in.param_weight.ptr, mpc_config.param_weight, mpc_config.param_weight_len * sizeof(casadi_real));
 
 #ifdef DEBUG
     std::cout << "w: ";
-    for (int i = 0; i < mpc_config->u_opt_addr; i++)
+    for (int i = 0; i < mpc_config.u_opt_addr; i++)
     {
         std::cout << w[i] << " ";
     }
@@ -130,7 +117,7 @@ int CasadiMPC::solve(casadi_real *x_k_in)
 
     #ifdef DEBUG
     std::cout << "int CasadiMPC::solve()\nw:\n";
-    for (int i = 0; i < mpc_config->u_opt_addr; i++)
+    for (int i = 0; i < mpc_config.u_opt_addr; i++)
     {
         std::cout << w[i] << " ";
     }
@@ -144,9 +131,9 @@ int CasadiMPC::solve(casadi_real *x_k_in)
     // Set initial guess and prev ref values
     if (!flag)
     {
-        memcpy(x_prev, x_out, x_prev_len * sizeof(casadi_real));
-        memcpy(u_prev, u_out, u_prev_len * sizeof(casadi_real));
-        memcpy(in_init_guess, out_init_guess, init_guess_len * sizeof(casadi_real));
+        mpc_config.in.x_prev.set(w, mpc_config.out.x_out.ptr);
+        mpc_config.in.u_prev.set(w, mpc_config.out.u_out.ptr);
+        mpc_config.in.init_guess.set(w, mpc_config.out.init_guess_out.ptr);
     }
     else
     {
@@ -173,11 +160,11 @@ int CasadiMPC::solve_planner()
     if (!flag)
     {
         // read_trajectory_block();
-        memcpy(in_init_guess, out_init_guess, init_guess_len * sizeof(casadi_real));
+        mpc_config.in.init_guess.set(w, mpc_config.out.init_guess_out.ptr);
         
         // mpc planner: use x_k+1 as x_k for next iteration - not the measurement!
-        set_references(w + mpc_config->output_config.x_out_addr + nx_red);
-        // memcpy(x_k, w + mpc_config->output_config.x_out_addr + nx_red, nx_red * sizeof(casadi_real));
+        set_references(mpc_config.out.x_out.ptr + nx_red);
+        // memcpy(x_k, w + mpc_config.out.x_out.ptr + nx_red, nx_red * sizeof(casadi_real));
 #ifdef DEBUG
         if (traj_count % 100 == 0)
         {
@@ -229,13 +216,13 @@ void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_k_ptr)
 {
     set_x_k(x_k_ptr);
 
-    memset(in_init_guess, 0, init_guess_len * sizeof(double));
+    memset(mpc_config.in.init_guess.ptr, 0, mpc_config.in.init_guess.len * sizeof(double));
 
     // set all x input values to the current state
-    set_row_vector(mpc_config->input_config.x_addr, x_k, nx_red, mpc_config->input_config.x_len);
+    set_row_vector(mpc_config.in.x.ptr, mpc_config.in.x_k.ptr, nx_red, mpc_config.in.x.len);
 
     // set all x_prev reference values to the current state
-    set_row_vector(mpc_config->input_config.x_prev_addr, x_k, nx_red, mpc_config->input_config.x_prev_len);
+    set_row_vector(mpc_config.in.x_prev.ptr, mpc_config.in.x_k.ptr, nx_red, mpc_config.in.x_prev.len);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -268,7 +255,33 @@ void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_k_ptr)
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 
+/*
+Ideen:
+Ziel: Pointer von Referenzen erstellen dazu Pointer von Funktionen. In Schleife schreiben.
+Dazu muss erkannt werden, welche Referenze zu welchen Daten gehört.
+Also könnte man
+- Enums welche angeben was was ist
+- Array aus Pointern auf die Referenzen
+- Array aus Pointern auf die Daten
+- Array aus Pointern auf die Funktionen
 
+Damit erstellt man ein Struct für die Setter der Referenzen und ein Struct für die Setter der Parameter.
+*/
+
+// Method to get the reference function pointer list
+// void CasadiMPC::get_ref_fun_ptr_list()
+// {
+//     for (int i = 0; i < static_cast<int>(MPCInput::COUNT); ++i)
+//     {
+//         casadi_ref
+//         MPCInput mpc_input = static_cast<MPCInput>(i);
+//         if (mpc_input != MPCInput::INVALID)
+//         {
+//             std::string mpcInputName = mpcinput_to_string(mpc_input);
+//             std::cout << mpcInputName << " = " << mpc_config.in.ref_fun_ptrs[i] << std::endl;
+//         }
+//     }
+// }
 
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -283,10 +296,9 @@ void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_k_ptr)
 ///////////////////////////////////////////////////////////////////////////////////////
 
 // Method for setting all rows of matrix_data (rows x cols) to the (rows x 1) vector row_data. (length = rows * cols)
-void CasadiMPC::set_row_vector(casadi_uint local_address, casadi_real *row_data, casadi_uint rows, casadi_uint length)
+void CasadiMPC::set_row_vector(casadi_real* matrix_data, casadi_real *row_data, casadi_uint rows, casadi_uint length)
 {
     casadi_uint cols = length / rows;
-    casadi_real *matrix_data = w + local_address;
     for (casadi_uint i = 0; i < cols; i++)
     {
         memcpy(matrix_data + i * rows, row_data, rows * sizeof(casadi_real));
@@ -300,7 +312,7 @@ void CasadiMPC::set_references(casadi_real *x_k_in)
     {
         for (casadi_uint j = 0; j < traj_data_per_horizon; j++)
         {
-            memcpy(y_d + j * traj_rows,
+            memcpy(mpc_config.in.y_d.ptr + j * traj_rows,
                    traj_data->col(traj_count + mpc_traj_indices[j]).data(),
                    traj_rows * sizeof(double));
         }

@@ -6,7 +6,7 @@
 #include "include/FullSystemTorqueMapper.hpp"
 #include "include/CasadiMPC.hpp"
 #include "include/CasadiController.hpp"
-#include "include/casadi_controller_types.hpp"
+#include "mpc_config.h"
 #include "param_robot.h"
 #include "casadi_types.h"
 #include <Eigen/Dense>

@@ -1,4 +1,4 @@
-function generate_mpc_sourcefiles(casadi_fun, casadi_opt_problem_paths, current_mpc_mfile, s_fun_path)
+function [files_changed_out] = generate_mpc_sourcefiles(casadi_fun, casadi_opt_problem_paths, current_mpc_mfile, s_fun_path, files_changed)
     % Generate C code (compare "compile_casadi_sfunction.m")
     % Disable Mex Compile and create only .h and .c files for including in main.c with udp communication (gcc)
 
@@ -41,8 +41,17 @@ function generate_mpc_sourcefiles(casadi_fun, casadi_opt_problem_paths, current_
     end
 
     checksum_settings_data = readtable(checksum_settings_change_file, 'Delimiter', '  ', 'ReadVariableNames', true, 'FileType', 'text');
-    settings_change_flags = ~arrayfun(@(i) compare_checksum_table(checksum_settings_data, checksum_settings_filelist{i}), 1:length(checksum_settings_filelist));
+    
+    if(any(files_changed))
+        settings_change_flags = files_changed;
+    else
+        settings_change_flags = ~arrayfun(@(i) compare_checksum_table(checksum_settings_data, checksum_settings_filelist{i}), 1:length(checksum_settings_filelist));
+    end
+
+    
     settings_changed = any(settings_change_flags);
+
+
 
     if strcmp(checksum_opt_prob_data.Checksum{index}, current_checksum) && exists_current_mpc_c_file && exists_current_mpc_h_file && ~settings_changed
         fprintf('%s did not changed. Skipping creating casadi c sources.\n', current_mpc_mfile);
@@ -50,6 +59,7 @@ function generate_mpc_sourcefiles(casadi_fun, casadi_opt_problem_paths, current_
         for i = 1:length(settings_change_flags)
             if settings_change_flags(i)
                 fprintf(2, '%s changed. Recreating casadi c sources.\n', checksum_settings_filelist{i});
+                files_changed(i) = true;
             end
         end
         cg_options = struct;
@@ -103,6 +113,8 @@ function generate_mpc_sourcefiles(casadi_fun, casadi_opt_problem_paths, current_
         end
         update_checksumfile(checksum_settings_data, checksum_settings_change_file);
     end
+
+    files_changed_out = files_changed;
 end
 
 

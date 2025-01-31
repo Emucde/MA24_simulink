@@ -23,8 +23,10 @@ for i=1:n_optval
     tmp.name = ['lambda_', tmp.name];
     init_guess_str_cell(i+n_optval) = {tmp};
 end
-g_dim1 = size(g, 1);
-g_dim2 = size(g, 2);
+
+g_cell = merge_cell_arrays(g, 'vector');
+g_dim1 = length(g_cell);
+g_dim2 = 1;
 init_guess_str_cell{end} = struct('name', 'g', 'dim_str', ['{',num2str(g_dim1),'x',num2str(g_dim2),'}'], 'dim', [g_dim1 g_dim2]);
 
 xx_dims = cell(1, n_optval);
@@ -50,6 +52,7 @@ u_opt_str_cell = sxcell2str(u_opt_sx_cell);
 
 n_u_opt = length(u_opt_str_cell);
 
+% glaub es kann eh nur 1 sein... [TODO]
 icnt = 0;
 for i=1:n_u_opt
     tmp = u_opt_str_cell{i};
@@ -64,7 +67,7 @@ for i=1:n_u_opt
     end
     indx_start = num2str(u_opt_indices_new(1,i)-1-icnt);
     indx_end = num2str(u_opt_indices_new(end,i)-1-icnt);
-    u_opt_str_cell{i}.name = u_opt_str_cell{i}.name;
+    u_opt_str_cell{i}.name = 'u_opt';
 end
 
 init_guess_out_str_cell = init_guess_str_cell;
@@ -88,12 +91,13 @@ f_opt_input_cell = {refval_str_cell, init_guess_str_cell, param_weight_str_cell}
 f_opt_input_str = {refval_str, init_guess_str, param_weight_str};
 
 % OUTPUTS
+% u_opt_str_cell{1}.name = [u_opt_str_cell{1}.name, '_opt'];
 u_opt_str = str_cell2str(u_opt_str_cell, 'u_opt =');
-init_guess_out_str = str_cell2str(init_guess_out_str_cell, 'init_guess_out =');
+init_guess_out_str = str_cell2str(init_guess_out_str_cell, 'init_guess =');
 
 costfun_str_cell_new =  cell(1, n_costfun);
 for i=1:n_costfun
-    costfun_str_cell_new{i} = str_cell2str(costfun_str_cell(i), ['cost_fun_', num2str(i), ' =']);
+    costfun_str_cell_new{i} = str_cell2str(costfun_str_cell(i), [costfun_str_cell{i}.name, ' =']);
 end
 
 f_opt_output_cell = {u_opt_str_cell, init_guess_out_str_cell, costfun_str_cell};

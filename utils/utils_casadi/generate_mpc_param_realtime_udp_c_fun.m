@@ -1,5 +1,11 @@
-function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_fun_input_cell, casadi_fun_output_cell, func_name, output_dir, s_fun_path)
+function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_fun_input_cell, casadi_fun_output_cell, casadi_fun, output_dir, s_fun_path)
     % Open the header file for writing
+    func_name = casadi_fun.name;
+
+    extra_input_entries = struct;
+    extra_input_entries.names = extractBefore(cellstr(casadi_fun.name_in), ' ');
+    extra_input_entries.dim_text = extractAfter(cellstr(casadi_fun.name_in), '= ');
+
     param_weight_header_name = [func_name, '_param.h'];
     output_file = [output_dir, param_weight_header_name, '_tmp'];
     output_file_fin = [output_dir, param_weight_header_name];
@@ -80,10 +86,39 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
             end
         end
     end
+
+    % Extra setter functions for reference_values, init_guess, and param_weight
+    for i = 1:length(extra_input_entries.names)
+        fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, extra_input_entries.names{i}, extra_input_entries.names{i});
+        fprintf(fid, '        /*set %s: %s array values */\n', extra_input_entries.names{i}, extra_input_entries.dim_text{i});
+    end
+
     fprintf(fid, '\n');
 
+    % define getter functions
+    for i = 1:length(casadi_fun_output_cell)
+        output_cell = casadi_fun_output_cell{i};
+        for j = 1:length(output_cell)
+            dim = output_cell{j}.dim;
+            name = output_cell{j}.name;
+
+            fprintf(fid, 'void get_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, name, name);
+
+            if length(dim) == 2 && all(dim > 1)
+                % It's a matrix
+                fprintf(fid, '        /*get %s: %dx%d matrix values */\n', name, dim(1), dim(2));
+            else
+                % It's a vector or higher dimensional array
+                fprintf(fid, '        /*get %s: %s array values */\n', name, mat2str(dim));
+            end
+        end
+    end
+
+    % extra getter for init_guess_out
+    fprintf(fid, 'void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out);', func_name);
+
     % Declare the function to get the MPC config
-    fprintf(fid, 'mpc_config_t const* get_%s_config();\n\n', func_name);
+    fprintf(fid, 'mpc_config_t get_%s_config();\n\n', func_name);
 
     fprintf(fid, '#ifdef __cplusplus\n');
     fprintf(fid, '}\n');
@@ -160,9 +195,47 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
         end
     end
 
+    % Extra setter functions for reference_values, init_guess, and param_weight
+    for i = 1:length(extra_input_entries.names)
+        fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s)\n', func_name, extra_input_entries.names{i}, extra_input_entries.names{i});
+        fprintf(fid, '{\n');
+        fprintf(fid, '    memcpy(w + %s_%s_ADDR, %s, %s_%s_LEN * sizeof(casadi_real));', func_name, upper(extra_input_entries.names{i}), extra_input_entries.names{i}, func_name, upper(extra_input_entries.names{i}));
+        fprintf(fid, '        /*%s: %s array values */\n', extra_input_entries.names{i}, extra_input_entries.dim_text{i});
+        fprintf(fid, '}\n\n');
+    end
+
+    % define getter functions
+    for i = 1:length(casadi_fun_output_cell)
+        output_cell = casadi_fun_output_cell{i};
+        for j = 1:length(output_cell)
+            dim = output_cell{j}.dim;
+            name = output_cell{j}.name;
+
+            fprintf(fid, 'void get_%s_%s(casadi_real *const w, casadi_real *const %s)\n', func_name, name, name);
+            fprintf(fid, '{\n');
+            fprintf(fid, '    memcpy(%s, w + %s_%s_ADDR, %s_%s_LEN * sizeof(casadi_real));', name, func_name, upper(name), func_name, upper(name));
+
+            if length(dim) == 2 && all(dim > 1)
+                % It's a matrix
+                fprintf(fid, '        /*%s: %dx%d matrix values */\n', name, dim(1), dim(2));
+            else
+                % It's a vector or higher dimensional array
+                fprintf(fid, '        /*%s: %s array values */\n', name, mat2str(dim));
+            end
+            
+            fprintf(fid, '}\n\n');
+        end
+    end
+    
+    % extra getter for init_guess_out
+    fprintf(fid, 'void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out)\n', func_name);
+    fprintf(fid, '{\n');
+    fprintf(fid, '    memcpy(init_guess_out, w + %s_INIT_GUESS_OUT_ADDR, %s_INIT_GUESS_LEN * sizeof(casadi_real));\n', func_name, func_name);
+    fprintf(fid, '}\n\n');
+
     % create function that returns a mpc_config_t struct
     fprintf(fid, '// Function to get the MPC config\n');
-    fprintf(fid, 'mpc_config_t const* get_%s_config()\n', func_name);
+    fprintf(fid, 'mpc_config_t get_%s_config()\n', func_name);
     fprintf(fid, '{\n');
     fprintf(fid, '    // Allocate memory at compile time\n');
     fprintf(fid, '    static const casadi_real* arg[%s_ARG_LEN];\n', func_name);
@@ -223,43 +296,25 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
 
     % set the default parameter values
     fprintf(fid, '    // Set the MPC config\n');
-    fprintf(fid, ['   static mpc_config_t ', func_name, 'Config = {\n']);
-    fprintf(fid, '       .dt = %s_DT, // Sampling time of the measured data, control frequency\n', func_name);
-    fprintf(fid, '       .kinematic_mpc = %s_KINEMATIC_MPC, // Kinematic MPC (u_opt=q0_pp, x1, q1pp) or dynamic MPC (u_opt=tau0)\n', func_name);
-    fprintf(fid, '       .traj_data_per_horizon = %s_TRAJ_DATA_PER_HORIZON, // Number of trajectory data points per horizon\n', func_name);
-    fprintf(fid, '       .traj_indices = %s_TRAJ_INDICES, // Local indices of the trajectory per horizon\n', func_name);
-    if(strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_int_path_following') || strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_dev_path_following'))
-        fprintf(fid, '       .y_d_len = %s_T_K_LEN, // Length of the desired time points (=desired path parameter) for path following\n', func_name);
-    else
-        fprintf(fid, '       .y_d_len = %s_Y_D_LEN, // Length of the desired trajectory per horizon\n', func_name);
-    end
-    fprintf(fid, '       .init_guess_len = %s_INIT_GUESS_LEN, // Length of the initial guess (warm start)\n', func_name);
-    fprintf(fid, '       .x_k_addr = %s_X_K_ADDR, // Relative address of the state vector\n', func_name);
-    if(strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_int_path_following') || strcmp(param_MPC.version, 'opt_problem_MPC_v6_kin_dev_path_following'))
-        fprintf(fid, '       .y_d_addr = %s_T_K_ADDR, // Relative address of the desired trajectory for path following\n', func_name);
-    else
-        fprintf(fid, '       .y_d_addr = %s_Y_D_ADDR, // Relative address of the desired trajectory\n', func_name);
-    end
-    fprintf(fid, '       .in_init_guess_addr = %s_IN_INIT_GUESS_ADDR, // Relative address of the input initial guess\n', func_name);
-    fprintf(fid, '       .out_init_guess_addr = %s_OUT_INIT_GUESS_OUT_ADDR, // Relative address of the output initial guess\n', func_name);
-    fprintf(fid, '       .in_param_weight_addr = %s_IN_PARAM_WEIGHT_ADDR, // Relative address of the input parameter weights\n', func_name);
-    fprintf(fid, '       .param_weight = %s_param_weight, // Parameter weights\n', func_name);
-    fprintf(fid, '       .param_weight_len = %s_PARAM_WEIGHT_LEN, // Length of the parameter weights\n', func_name);
-    fprintf(fid, '       .casadi_fun = &%s, // CasADi function\n', func_name);
-    fprintf(fid, '       .arg = arg, // Arguments for the CasADi function\n');
-    fprintf(fid, '       .res = res, // Results from the CasADi function\n');
-    fprintf(fid, '       .iw = iw, // Integer workspace for the CasADi function\n');
-    fprintf(fid, '       .w = w, // Real workspace for the CasADi function\n');
-    fprintf(fid, '       .arg_indices = %s_ARG, // Argument indices for the CasADi function\n', func_name);
-    fprintf(fid, '       .res_indices = %s_RES, // Result indices for the CasADi function\n', func_name);
-    fprintf(fid, '       .arg_in_len = %s_ARG_IN_LEN, // Length of the input arguments\n', func_name);
-    fprintf(fid, '       .res_out_len = %s_RES_OUT_LEN, // Length of the output results\n', func_name);
-    fprintf(fid, '       .u_opt_len = %s_U_OPT_LEN, // Length of the optimal control input\n', func_name);
-    fprintf(fid, '       .w_end_addr = %s_W_END_ADDR, // Relative address of the end of the workspace\n', func_name);
-    fprintf(fid, '       .u_opt_addr = %s_U_OPT_ADDR, // Relative address of the optimal control input\n', func_name);
-    fprintf(fid, '       .mem = 0, // Memory\n');
+    fprintf(fid, ['    mpc_config_t ', func_name, 'Config = {\n']);
+    fprintf(fid, '        .kinematic_mpc = %s_KINEMATIC_MPC, // Kinematic MPC (u_opt=q0_pp, x1, q1pp) or dynamic MPC (u_opt=tau0)\n', func_name);
+    fprintf(fid, '        .traj_data_per_horizon = %s_TRAJ_DATA_PER_HORIZON, // Number of trajectory data points per horizon\n', func_name);
+    fprintf(fid, '        .traj_indices = %s_TRAJ_INDICES, // Local indices of the trajectory per horizon\n', func_name);
+    fprintf(fid, '        .param_weight = %s_param_weight, // Parameter weights\n', func_name);
+    fprintf(fid, '        .param_weight_len = %s_PARAM_WEIGHT_LEN, // Length of the parameter weights\n', func_name);
+    fprintf(fid, '        .casadi_fun = &%s, // CasADi function\n', func_name);
+    fprintf(fid, '        .arg = arg, // Arguments for the CasADi function\n');
+    fprintf(fid, '        .res = res, // Results from the CasADi function\n');
+    fprintf(fid, '        .iw = iw, // Integer workspace for the CasADi function\n');
+    fprintf(fid, '        .w = w, // Real workspace for the CasADi function\n');
+    fprintf(fid, '        .arg_indices = %s_ARG, // Argument indices for the CasADi function\n', func_name);
+    fprintf(fid, '        .res_indices = %s_RES, // Result indices for the CasADi function\n', func_name);
+    fprintf(fid, '        .arg_in_len = %s_ARG_IN_LEN, // Length of the input arguments\n', func_name);
+    fprintf(fid, '        .res_out_len = %s_RES_OUT_LEN, // Length of the output results\n', func_name);
+    fprintf(fid, '        .w_end_addr = %s_W_END_ADDR, // Relative address of the end of the workspace\n', func_name);
+    fprintf(fid, '        .mem = 0, // Memory\n');
     % create the mpc_input_config struct
-    fprintf(fid, '       .input_config = {\n');
+    fprintf(fid, '        .in = {\n');
     
     for i = 1:length(casadi_fun_input_cell)
         input_cell = casadi_fun_input_cell{i};
@@ -267,49 +322,47 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
             dim = input_cell{j}.dim;
             name = input_cell{j}.name;
 
-            fprintf(fid, '              .%s_addr = %s_%s_ADDR,\n', name, func_name, upper(name));
-            fprintf(fid, '              .%s_len = %s_%s_LEN,', name, func_name, upper(name));
+            % .x_k = {
+            %         .ptr = w+MPC6_X_K_ADDR,
+            %         .len = MPC6_X_K_LEN,
+            %         .fun = &set_MPC6_x_k,
+            %         .id = MPC_x_k,
+            %   }
 
-            if length(dim) == 2 && all(dim > 1)
-                % It's a matrix
-                fprintf(fid, '        /*%s: %dx%d matrix values */\n', name, dim(1), dim(2));
-            else
-                % It's a vector or higher dimensional array
-                fprintf(fid, '        /*%s: %s array values */\n', name, mat2str(dim));
-            end
+            create_mpc_inout_entry(fid, func_name, name, dim, 'set', false);
         end
     end
-    % set the rest of the mpc_input_config struct
-    fprintf(fid, '              .reference_values_addr = %s_IN_REFERENCE_VALUES_ADDR,\n', func_name);
-    fprintf(fid, '              .reference_values_len = %s_REFERENCE_VALUES_LEN,\n', func_name);
-    fprintf(fid, '              .init_guess_addr = %s_IN_INIT_GUESS_ADDR,\n', func_name);
-    fprintf(fid, '              .init_guess_len = %s_INIT_GUESS_LEN,\n', func_name);
-    fprintf(fid, '              .param_weight_addr = %s_IN_PARAM_WEIGHT_ADDR,\n', func_name);
-    fprintf(fid, '              .param_weight_len = %s_PARAM_WEIGHT_LEN\n', func_name);
+
+    % Extra setter functions for reference_values, init_guess, and param_weight
+    for i = 1:length(extra_input_entries.names)
+        create_mpc_inout_entry(fid, func_name, extra_input_entries.names{i}, extra_input_entries.dim_text{i}, 'set', i == length(extra_input_entries.names));
+    end
+    
     fprintf(fid, '       },\n');
 
-    fprintf(fid, '       .output_config = {\n');
-    for i = 2:length(casadi_fun_output_cell)
+    fprintf(fid, '       .out = {\n');
+    for i = 1:length(casadi_fun_output_cell)
         output_cell = casadi_fun_output_cell{i};
         for j = 1:length(output_cell)
             dim = output_cell{j}.dim;
             name = output_cell{j}.name;
 
-            fprintf(fid, '              .%s_addr = %s_%s_ADDR,\n', name, func_name, upper(name));
-            fprintf(fid, '              .%s_len = %s_%s_LEN,', name, func_name, upper(name));
-
-            if length(dim) == 2 && all(dim > 1)
-                % It's a matrix
-                fprintf(fid, '        /*%s: %dx%d matrix values */\n', name, dim(1), dim(2));
-            else
-                % It's a vector or higher dimensional array
-                fprintf(fid, '        /*%s: %s array values */\n', name, mat2str(dim));
-            end
+            % .u_out_addr = {
+            %     .ptr = MPC6_U_OUT_ADDR,
+            %     .len = MPC6_U_OUT_LEN,
+            %     .fun = &get_MPC6_u_out,
+            %     .id = MPC_u_out,
+            % }
+            create_mpc_inout_entry(fid, func_name, name, dim, 'get', false);
         end
     end
+
+    % extra getter for init_guess_out
+    create_mpc_inout_entry(fid, func_name, 'init_guess_out', "", 'get', true);
+
     fprintf(fid, '       }\n');
     fprintf(fid, '   };\n');
-    fprintf(fid, '   return &%sConfig;\n', func_name);
+    fprintf(fid, '   return %sConfig;\n', func_name);
     fprintf(fid, '}\n');
 
     % Close the file
@@ -327,4 +380,39 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     end
 
     
+end
+
+function create_mpc_inout_entry(fid, func_name, name, dim, funstr, last)
+    arguments
+        fid;
+        func_name;
+        name;
+        dim = "";
+        funstr = 'set';
+        last = false;
+    end
+
+    fprintf(fid, '            .%s = {', name);
+
+    if(size(dim, 2) > 0)
+        if length(dim) == 2 && all(dim > 1)
+            % It's a matrix
+            fprintf(fid, '        /*%s: %dx%d matrix values */\n', name, dim(1), dim(2));
+        else
+            % It's a vector or higher dimensional array
+            fprintf(fid, '        /*%s: %s array values */\n', name, mat2str(dim));
+        end
+    elseif(ischar(dim))
+        fprintf(fid, '        /*%s: %s */\n', name, dim);
+    end
+
+    fprintf(fid, '                .ptr = w+%s_%s_ADDR,\n', func_name, upper(name));
+    fprintf(fid, '                .len = %s_%s_LEN,\n', func_name, upper(name));
+    fprintf(fid, '                .%s = &%s_%s_%s,\n', funstr, funstr, func_name, name);
+    fprintf(fid, '                .id = (casadi_uint) MPC_%s,\n', name);
+    if last
+        fprintf(fid, '            }\n');
+    else
+        fprintf(fid, '            },\n');
+    end
 end

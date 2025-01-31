@@ -110,7 +110,10 @@
     "charconv": "cpp",
     "source_location": "cpp",
     "cerrno": "cpp",
-    "ipstdcinterface.h": "c"
+    "ipstdcinterface.h": "c",
+    "mpc6_addressdef.h": "c",
+    "memory.h": "c",
+    "mpc01_param.h": "c"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",

@@ -14,8 +14,14 @@
 #include "TrajectoryGenerator.hpp"
 #include "FullSystemTorqueMapper.hpp"
 #include "CasadiMPC.hpp"
-#include "casadi_controller_types.hpp"
 #include "trajectory_settings.hpp"
+
+enum ErrorFlag {
+    NO_ERROR = 0,           // 0: no error
+    JUMP_DETECTED = 1,      // 1: jump in torque detected
+    NAN_DETECTED = 2,       // 2: NaN in torque detected
+    CASADI_ERROR = 3        // 3: error in Casadi function call
+};
 
 class CasadiController// : public TrajectoryGenerator
 {
@@ -202,8 +208,6 @@ public:
 
 private:
     // Private methods
-    std::string mpcToString(MPCType mpc);
-
     void update_trajectory_data(const casadi_real *const x_k_ndof_ptr);
 };
 #endif // CASADICONTROLLER_HPP

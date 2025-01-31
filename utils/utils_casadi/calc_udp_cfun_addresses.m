@@ -208,6 +208,10 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
         input_ref_addr_arr(ii_cnt) = var_len;
         input_name_cells = strsplit(casadi_fun.name_in(i-1),' = ');
         fprintf(fid, '#define %s_%s_LEN %d', casadi_fun_name, upper(input_name_cells{1}), current_len);
+        if(strcmp(input_name_cells{1}, 'init_guess'))
+            init_guess_out_len = current_len;
+            init_guess_out_comment = sprintf('        /* %s*/\n', casadi_fun.name_in(i-1));
+        end
         fprintf(fid, '        /* %s*/\n', casadi_fun.name_in(i-1));
         var_len = var_len + current_len;
         ii_cnt = ii_cnt + 1;
@@ -240,7 +244,7 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
     ii_cnt = 1;
     for i=1:casadi_fun.n_in
         input_name_cells = strsplit(casadi_fun.name_in(i-1),' = ');
-        fprintf(fid, '#define %s_IN_%s_ADDR %d', casadi_fun_name, upper(input_name_cells{1}), input_ref_addr_arr(ii_cnt));
+        fprintf(fid, '#define %s_%s_ADDR %d', casadi_fun_name, upper(input_name_cells{1}), input_ref_addr_arr(ii_cnt));
         fprintf(fid, '        /* %s*/\n', casadi_fun.name_in(i-1));
         ii_cnt = ii_cnt + 1;
     end
@@ -278,6 +282,12 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
         end
     end
 
+    % init guess out len
+    if(~exist('init_guess_out_len', 'var'))
+        error('init_guess_out_len not defined');
+    end
+    fprintf(fid, '\n#define %s_INIT_GUESS_OUT_LEN %d%s\n', casadi_fun_name, init_guess_out_len, init_guess_out_comment);
+
     fprintf(fid, '\n');
     fprintf(fid, '// OUTPUT ADDRESSES:\n');
 
@@ -311,7 +321,7 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
     for i=1:casadi_fun.n_out
         current_len = length(casadi_fun.sx_out{i});
         output_name_cells = strsplit(casadi_fun.name_out(i-1),' = ');
-        fprintf(fid, '#define %s_OUT_%s_ADDR %d', casadi_fun_name, upper(output_name_cells{1}), var_len);
+        fprintf(fid, '#define %s_%s_OUT_ADDR %d', casadi_fun_name, upper(output_name_cells{1}), var_len);
         fprintf(fid, '        /* %s*/\n', casadi_fun.name_out(i-1));
         var_len = var_len + current_len;
     end

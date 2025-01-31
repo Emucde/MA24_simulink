@@ -15,7 +15,7 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
         MPCType mpc = static_cast<MPCType>(i);
         if (mpc != MPCType::INVALID)
         { // Ensures we are within valid enum range
-            std::string mpcName = mpcToString(mpc);
+            std::string mpcName = mpctype_to_string(mpc);
             casadi_mpcs.push_back(CasadiMPC(mpcName, robot_config, trajectory_generator.get_traj_data(), trajectory_generator.get_traj_data_real_len())); // Initialize all MPCs
         }
     }
@@ -148,7 +148,7 @@ void CasadiController::setActiveMPC(MPCType mpc_type)
         selected_mpc_type = mpc_type;
         active_mpc = &casadi_mpcs[static_cast<int>(selected_mpc_type)];
         active_mpc_config = const_cast<mpc_config_t *>(active_mpc->get_mpc_config());
-        active_mpc_input_config = &active_mpc_config->input_config;
+        active_mpc_input_config = &active_mpc_config->in;
 
         torque_mapper.set_kinematic_mpc_flag(active_mpc->is_kinematic_mpc);
         x_k_ptr = active_mpc->get_x_k();
@@ -164,27 +164,6 @@ void CasadiController::setActiveMPC(MPCType mpc_type)
         std::cerr << "Invalid MPC type." << std::endl;
     }
 }
-
-// // set the transient trajectory parameters
-// void CasadiController::setTransientTrajParams(double T_start, double T_poly, double T_end)
-// {
-//     if (T_start < 0)
-//     {
-//         throw std::invalid_argument("T_start must be greater than or equal to 0 (start time of the transient trajectory)");
-//     }
-//     if (T_start > T_poly)
-//     {
-//         throw std::invalid_argument("T_start must be less than or equal to T_poly (total time of the polynomial trajectory)");
-//     }
-//     if (T_poly > T_end)
-//     {
-//         throw std::invalid_argument("T_poly must be less than or equal to T_end (total time of the transient trajectory)");
-//     }
-
-//     param_transient_traj_poly["T_start"] = T_start;
-//     param_transient_traj_poly["T_poly"] = T_poly;
-//     param_transient_traj_poly["T_end"] = T_end;
-// }
 
 // Method to simulate the robot model
 void CasadiController::simulateModel(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt)
@@ -219,32 +198,3 @@ void CasadiController::switch_traj(casadi_uint traj_select)
 /////                                                                             /////
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
-
-std::string CasadiController::mpcToString(MPCType mpc)
-{
-    switch (mpc)
-    {
-    case MPCType::MPC01:
-        return "MPC01";
-    case MPCType::MPC6:
-        return "MPC6";
-    case MPCType::MPC7:
-        return "MPC7";
-    case MPCType::MPC8:
-        return "MPC8";
-    case MPCType::MPC9:
-        return "MPC9";
-    case MPCType::MPC10:
-        return "MPC10";
-    case MPCType::MPC11:
-        return "MPC11";
-    case MPCType::MPC12:
-        return "MPC12";
-    case MPCType::MPC13:
-        return "MPC13";
-    case MPCType::MPC14:
-        return "MPC14";
-    default:
-        return "INVALID";
-    }
-}

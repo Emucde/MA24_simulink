@@ -1,40 +1,27 @@
-function generate_mpc_config_typedef(filename, structName, unique_f_opt_input_map, unique_f_opt_output_map)
+function generate_mpc_config_typedef(filename, structName, unique_f_opt_input_map, unique_f_opt_output_map, param_casadi_fun_name)
     % Default filename if not provided
     if nargin < 1 || isempty(filename)
         filename = 'mpc_config.h';
     end
 
-    extraEntries = {
-        'reference_values', ...
-        'init_guess', ...
-        'param_weight', ...
-    };
-
-    for i = 1:length(extraEntries)
-        key = extraEntries{i};
-        if ~isKey(unique_f_opt_input_map, key)
-            unique_f_opt_input_map(key) = true;
-        end
-    end
-
     % Convert map keys to cell array
-    unique_f_opt_input_cell = sort(keys(unique_f_opt_input_map));
-    unique_f_opt_output_cell = sort(keys(unique_f_opt_output_map));
+    unique_f_opt_input_cell_check = sort(keys(unique_f_opt_input_map));
+    unique_f_opt_output_cell_check = sort(keys(unique_f_opt_output_map));
 
     if exist(filename, 'file')
         [existing_inputs_map, existing_outputs_map] = parse_existing_header(filename);
 
         sets_are_equal = true;
-        for i = 1:length(unique_f_opt_input_cell)
-            key = unique_f_opt_input_cell{i};
+        for i = 1:length(unique_f_opt_input_cell_check)
+            key = unique_f_opt_input_cell_check{i};
             if ~isKey(existing_inputs_map, key)
                 sets_are_equal = false;
                 break;
             end
         end
 
-        for i = 1:length(unique_f_opt_output_cell)
-            key = unique_f_opt_output_cell{i};
+        for i = 1:length(unique_f_opt_output_cell_check)
+            key = unique_f_opt_output_cell_check{i};
             if ~isKey(existing_outputs_map, key)
                 sets_are_equal = false;
                 break;
@@ -46,6 +33,36 @@ function generate_mpc_config_typedef(filename, structName, unique_f_opt_input_ma
             return;
         end
     end
+
+
+    extraInputEntries = {
+        'reference_values', ...
+        'init_guess', ...
+        'param_weight', ...
+    };
+
+    extraOutputEntries = {
+        'init_guess_out', ...
+    };
+
+    % Add extra input entries to the map
+    for i = 1:length(extraInputEntries)
+        key = extraInputEntries{i};
+        if ~isKey(unique_f_opt_input_map, key)
+            unique_f_opt_input_map(key) = true;
+        end
+    end
+
+    % Add extra output entries to the map
+    for i = 1:length(extraOutputEntries)
+        key = extraOutputEntries{i};
+        if ~isKey(unique_f_opt_output_map, key)
+            unique_f_opt_output_map(key) = true;
+        end
+    end
+
+    unique_f_opt_input_cell = sort(keys(unique_f_opt_input_map));
+    unique_f_opt_output_cell = sort(keys(unique_f_opt_output_map));
 
     filename_fin = filename;
     filename = [filename_fin, '_tmp'];
@@ -70,31 +87,124 @@ function generate_mpc_config_typedef(filename, structName, unique_f_opt_input_ma
     fprintf(fid, '#ifndef %s_H\n', upper(structName));
     fprintf(fid, '#define %s_H\n\n', upper(structName));
 
-    fprintf(fid, '#ifdef __cplusplus\n');
+    fprintf(fid, '#ifdef __cplusplus\n\n');
+
+    % enum class MPCType
+    % {
+    %     MPC01,
+    %     MPC6,
+    %     MPC7,
+    %     MPC8,
+    %     MPC9,
+    %     MPC10,
+    %     MPC11,
+    %     MPC12,
+    %     MPC13,
+    %     MPC14,
+    %     INVALID, // Consider using INVALID for out-of-bounds
+    %     COUNT    // This can denote the number of valid enum values
+    % };
+    mpc_names = cellfun(@(param) param_casadi_fun_name.(param).name, fieldnames(param_casadi_fun_name), 'UniformOutput', false);
+    mpc_comments = cellfun(@(param) sprintf('Version: %s,\tSolver: %s,\tTs: %s,\tN: %s,\tint: %s', ...
+                                     param_casadi_fun_name.(param).version, ...
+                                     param_casadi_fun_name.(param).solver, ...
+                                     num2str(param_casadi_fun_name.(param).Ts), ...
+                                     num2str(param_casadi_fun_name.(param).N_MPC), ...
+                                     num2str(param_casadi_fun_name.(param).int_method)), ...
+                                     fieldnames(param_casadi_fun_name), 'UniformOutput', false);
+    create_enum(fid, 'enum class MPCType', mpc_names, '', '', mpc_comments, true, true);
+    
+    % inline std::string mpctype_to_string(MPCType mpc)
+    % {
+    %     switch (mpc)
+    %     {
+    %     case MPCType::MPC01:
+    %         return "MPC01";
+    %     case MPCType::MPC6:
+    %         return "MPC6";
+    %     case MPCType::MPC7:
+    %         return "MPC7";
+    %     case MPCType::MPC8:
+    %         return "MPC8";
+    %     case MPCType::MPC9:
+    %         return "MPC9";
+    %     case MPCType::MPC10:
+    %         return "MPC10";
+    %     case MPCType::MPC11:
+    %         return "MPC11";
+    %     case MPCType::MPC12:
+    %         return "MPC12";
+    %     case MPCType::MPC13:
+    %         return "MPC13";
+    %     case MPCType::MPC14:
+    %         return "MPC14";
+    %     default:
+    %         return "INVALID";
+    %     }
+    % }
+
+    fprintf(fid, 'inline std::string mpctype_to_string(MPCType mpc)\n');
+    fprintf(fid, '{\n');
+    fprintf(fid, '    switch (mpc)\n');
+    fprintf(fid, '    {\n');
+    for i = 1:length(mpc_names)
+        fprintf(fid, '    case MPCType::%s:\n', param_casadi_fun_name.(mpc_names{i}).name);
+        fprintf(fid, '        return "%s";\n', param_casadi_fun_name.(mpc_names{i}).name);
+    end
+    fprintf(fid, '    default:\n');
+    fprintf(fid, '        return "INVALID";\n');
+    fprintf(fid, '    }\n');
+    fprintf(fid, '}\n\n');
+
+    % Create Enum for inputs
+    create_enum(fid, 'enum class MPCInput', unique_f_opt_input_cell, '', '', '', true, false);
+
+    % Create Enum for outputs
+    create_enum(fid, 'enum class MPCOutput', unique_f_opt_output_cell, '', '', '', true, false);
+
     fprintf(fid, 'extern "C" {\n');
     fprintf(fid, '#endif\n\n');
 
     % Write necessary includes
     fprintf(fid, '#include "casadi_types.h"\n\n');
 
-    write_struct(fid, 'mpc_input_config_t', unique_f_opt_input_cell);
+    % Create Enum for inputs for C
+    create_enum(fid, 'typedef enum', unique_f_opt_input_cell, 'MPC_', 'mpc_input_config_id_t', '', false, false);
+
+    % Create Enum for outputs for C
+    create_enum(fid, 'typedef enum', unique_f_opt_output_cell, 'MPC_', 'mpc_output_config_id_t', '', false, false);
+
+    % typedef struct {
+    %     const casadi_uint ptr;
+    %     const casadi_uint len;
+    %     CasadiRefPtr_t setter_ptr;
+    %     mpc_input_config_id_t id; // MPCInput enum value
+    % } mpc_inout_entry_t;
+    
+    fprintf(fid, 'typedef struct {\n');
+    fprintf(fid, '    double* const ptr;\n');
+    fprintf(fid, '    const casadi_uint len;\n');
+    fprintf(fid, '    const CasadiIOPtr_t set;\n');
+    fprintf(fid, '    const casadi_uint id;\n');
+    fprintf(fid, '} mpc_input_entry_t;\n\n');
+    
+    fprintf(fid, 'typedef struct {\n');
+    fprintf(fid, '    double* const ptr;\n');
+    fprintf(fid, '    const casadi_uint len;\n');
+    fprintf(fid, '    const CasadiIOPtr_t get;\n');
+    fprintf(fid, '    const casadi_uint id;\n');
+    fprintf(fid, '} mpc_output_entry_t;\n\n');
+
+    write_struct(fid, 'mpc_input_config_t', 'const mpc_input_entry_t', unique_f_opt_input_cell);
     
     % Process outputs
-    write_struct(fid, 'mpc_output_config_t', unique_f_opt_output_cell);
+    write_struct(fid, 'mpc_output_config_t', 'const mpc_output_entry_t', unique_f_opt_output_cell);
 
     % Write the struct definition with typedef
     fprintf(fid, 'typedef struct {\n');
-    fprintf(fid, '    const casadi_real dt;\n');
     fprintf(fid, '    const casadi_uint kinematic_mpc;\n');
     fprintf(fid, '    const casadi_uint traj_data_per_horizon;\n');
     fprintf(fid, '    const casadi_uint* traj_indices;\n');
-    fprintf(fid, '    casadi_uint y_d_len;\n');
-    fprintf(fid, '    casadi_uint init_guess_len;\n');
-    fprintf(fid, '    casadi_uint x_k_addr;\n');
-    fprintf(fid, '    casadi_uint y_d_addr;\n');
-    fprintf(fid, '    casadi_uint in_init_guess_addr;\n');
-    fprintf(fid, '    casadi_uint out_init_guess_addr;\n');
-    fprintf(fid, '    casadi_uint in_param_weight_addr;\n');
     fprintf(fid, '    const casadi_real* param_weight;\n');
     fprintf(fid, '    casadi_uint param_weight_len;\n');
     fprintf(fid, '    CasadiFunPtr_t casadi_fun;\n');
@@ -106,12 +216,10 @@ function generate_mpc_config_typedef(filename, structName, unique_f_opt_input_ma
     fprintf(fid, '    const casadi_uint* res_indices;\n');
     fprintf(fid, '    casadi_uint arg_in_len;\n');
     fprintf(fid, '    casadi_uint res_out_len;\n');
-    fprintf(fid, '    casadi_uint u_opt_len;\n');
     fprintf(fid, '    casadi_uint w_end_addr;\n');
-    fprintf(fid, '    casadi_uint u_opt_addr;\n');
     fprintf(fid, '    int mem;\n');
-    fprintf(fid, '    const mpc_input_config_t input_config;\n');
-    fprintf(fid, '    const mpc_output_config_t output_config;\n');
+    fprintf(fid, '    const mpc_input_config_t in;\n');
+    fprintf(fid, '    const mpc_output_config_t out;\n');
     fprintf(fid, '} %s_t;\n\n', structName);
 
     fprintf(fid, '#ifdef __cplusplus\n');
@@ -134,16 +242,12 @@ function generate_mpc_config_typedef(filename, structName, unique_f_opt_input_ma
     end
 end
 
-
-function write_struct(fid, structName, casadi_fun_cell, existing_entries)
+function write_struct(fid, structName, typename, casadi_fun_cell, existing_entries)
     fprintf(fid, 'typedef struct {\n');
     
     for i = 1:length(casadi_fun_cell)
         entry_name = casadi_fun_cell{i};
-        % Add the address
-        fprintf(fid, '    const casadi_uint %s_addr;\n', entry_name);
-        % Add the length
-        fprintf(fid, '    const casadi_uint %s_len;\n', entry_name);
+        fprintf(fid, '    %s %s;\n',typename, entry_name);
         existing_entries(entry_name) = true; % Mark this entry as seen
     end
     
@@ -186,17 +290,46 @@ function extract_variables(vars_section, container)
         line = strtrim(lines{i});
         if ~isempty(line)
             % Extract variable name (assuming the format `const casadi_uint VARIABLE_name;`)
-            var_pattern = 'const\s+casadi_uint\s+(\w+);\s*';
+            var_pattern = 'const\s+mpc_inout_entry_t\s+(\w+);\s*';
             var_match = regexp(line, var_pattern, 'tokens');
             if ~isempty(var_match)
                 var_name = var_match{1}{1};  % Get the variable name from the match
-                % remove _len from the variable name
-                var_name = strrep(var_name, '_len', '');
-                % remove _addr from the variable name
-                var_name = strrep(var_name, '_addr', '');
-
                 container(var_name) = true;  % Add to the container
             end
         end
     end
+end
+
+function create_enum(fid, enum_name, enum_values, pre_string, post_string, comment, use_count, use_invald)
+    arguments
+        fid
+        enum_name
+        enum_values
+        pre_string = ''
+        post_string = ''
+        comment = {}
+        use_count = true
+        use_invald = true
+    end
+
+    if(length(comment) == 1)
+        comment = repmat(comment, length(enum_values), 1);
+    end
+
+    fprintf(fid, '%s\n', enum_name);
+    fprintf(fid, '{\n');
+    for i = 1:length(enum_values)
+        fprintf(fid, '    %s%s,', pre_string, enum_values{i});
+        if ~isempty(comment)
+            fprintf(fid, '\t\t// %s', comment{i});
+        end
+        fprintf(fid, '\n');
+    end
+    if use_invald
+        fprintf(fid, '    INVALID,\n');
+    end
+    if use_count
+        fprintf(fid, '    COUNT\n');
+    end
+    fprintf(fid, '} %s;\n\n', post_string);
 end
