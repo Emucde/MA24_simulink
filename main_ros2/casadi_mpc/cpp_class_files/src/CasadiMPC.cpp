@@ -35,7 +35,7 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
                                                      is_kinematic_mpc(mpc_config.kinematic_mpc == 1),
                                                      nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
                                                      casadi_fun(mpc_config.casadi_fun),
-                                                     arg(mpc_config.arg), res(mpc_config.res), iw(mpc_config.iw), w(mpc_config.w),
+                                                     arg(mpc_config.arg), res(mpc_config.res), iw(mpc_config.iw), w(mpc_config.w), w_end(mpc_config.w_end),
                                                      horizon_len(mpc_config.traj_data_per_horizon),
                                                      mpc_traj_indices(ConstIntVectorMap(mpc_config.traj_indices, horizon_len)),
                                                      traj_data_per_horizon(mpc_config.traj_data_per_horizon),
@@ -82,15 +82,15 @@ CasadiMPC::CasadiMPC(const std::string &mpc_name,
     // Copy the parameter weights
     memcpy(mpc_config.in.param_weight.ptr, mpc_config.param_weight, mpc_config.param_weight_len * sizeof(casadi_real));
 
-#ifdef DEBUG
+    #ifdef DEBUG
     std::cout << "w: ";
-    for (int i = 0; i < mpc_config.u_opt_addr; i++)
+    for (int i = 0; i < int (mpc_config.in.init_guess.len + mpc_config.in.reference_values.len + mpc_config.in.param_weight.len); i++)
     {
         std::cout << w[i] << " ";
     }
     std::cout << std::endl;
     std::cout << "MPC object created." << std::endl;
-#endif
+    #endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -117,7 +117,7 @@ int CasadiMPC::solve(casadi_real *x_k_in)
 
     #ifdef DEBUG
     std::cout << "int CasadiMPC::solve()\nw:\n";
-    for (int i = 0; i < mpc_config.u_opt_addr; i++)
+    for (int i = 0; i < int (mpc_config.in.init_guess.len + mpc_config.in.reference_values.len + mpc_config.in.param_weight.len); i++)
     {
         std::cout << w[i] << " ";
     }
@@ -168,6 +168,8 @@ int CasadiMPC::solve_planner()
 #ifdef DEBUG
         if (traj_count % 100 == 0)
         {
+            double* x_k = mpc_config.in.x_k.ptr;
+            double* u_opt = mpc_config.out.u_opt.ptr;
             std::cout << "x_k: " << x_k[0] << " " << x_k[1] << " " << x_k[2] << " " << x_k[3] << " " << x_k[4] << " " << x_k[5] << " " << x_k[6] << std::endl;
 
             for (int i = 0; i < 24; i++)
@@ -310,15 +312,21 @@ void CasadiMPC::set_references(casadi_real *x_k_in)
     set_x_k(x_k_in); // set x_k to the reference pose
     if (traj_count < traj_data_real_len - 1)
     {
-        for (casadi_uint j = 0; j < traj_data_per_horizon; j++)
-        {
-            memcpy(mpc_config.in.y_d.ptr + j * traj_rows,
-                   traj_data->col(traj_count + mpc_traj_indices[j]).data(),
-                   traj_rows * sizeof(double));
-        }
+        // for (casadi_uint j = 0; j < traj_data_per_horizon; j++)
+        // {
+        //     memcpy(mpc_config.in.y_d.ptr + j * traj_rows,
+        //            traj_data->col(traj_count + mpc_traj_indices[j]).data(),
+        //            traj_rows * sizeof(double));
+        // }
         
         // this loop would be replaceable by the following line (1% slower)
-        // Eigen::Map<Eigen::MatrixXd> (y_d, traj_rows, traj_data_per_horizon) = (*traj_data)(Eigen::all, mpc_traj_indices.array() + traj_count);
+
+        Eigen::VectorXi selected_rows(7);
+        selected_rows << 0, 1, 2, 9, 10, 11, 12;  // Selecting p_d (0-2) and q_d (9-11)
+
+        Eigen::Map<Eigen::MatrixXd> (mpc_config.in.y_d.ptr, 7, traj_data_per_horizon) = (*traj_data)(selected_rows, mpc_traj_indices.array() + traj_count);
+
+        // Eigen::Map<Eigen::MatrixXd> (mpc_config.in.y_d.ptr, traj_rows, traj_data_per_horizon) = (*traj_data)(Eigen::all, mpc_traj_indices.array() + traj_count);
         traj_count++;
     }
 }

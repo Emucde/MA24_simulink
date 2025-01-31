@@ -44,7 +44,6 @@ private:
     casadi_real **res;                        // Pointer to results
     casadi_int *iw;                           // Workspace integer
     casadi_real *w;                           // Workspace real
-    casadi_real *u_opt;                       // Optimal control result
     casadi_real *w_end;                       // End address for w
     std::streamoff traj_data_startbyte;       // Trajectory data start byte
     casadi_uint traj_rows;                    // Trajectory rows (normally 7, xyzquat)
@@ -106,7 +105,7 @@ public:
     // Method to output the optimal control
     casadi_real *get_optimal_control()
     {
-        return u_opt;
+        return mpc_config.out.u_opt.ptr;
     }
 
     // Method to get the initial state address at the begin of the prediction horizon

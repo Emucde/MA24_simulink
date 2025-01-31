@@ -212,11 +212,11 @@ function generate_mpc_config_typedef(filename, structName, unique_f_opt_input_ma
     fprintf(fid, '    casadi_real** res;\n');
     fprintf(fid, '    casadi_int* iw;\n');
     fprintf(fid, '    casadi_real* w;\n');
+    fprintf(fid, '    casadi_real* w_end;\n');
     fprintf(fid, '    const casadi_uint* arg_indices;\n');
     fprintf(fid, '    const casadi_uint* res_indices;\n');
     fprintf(fid, '    casadi_uint arg_in_len;\n');
     fprintf(fid, '    casadi_uint res_out_len;\n');
-    fprintf(fid, '    casadi_uint w_end_addr;\n');
     fprintf(fid, '    int mem;\n');
     fprintf(fid, '    const mpc_input_config_t in;\n');
     fprintf(fid, '    const mpc_output_config_t out;\n');

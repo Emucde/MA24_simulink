@@ -75,7 +75,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
             dim = input_cell{j}.dim;
             name = input_cell{j}.name;
 
-            fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, name, name);
+            fprintf(fid, 'inline void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, name, name);
 
             if length(dim) == 2 && all(dim > 1)
                 % It's a matrix
@@ -89,7 +89,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
 
     % Extra setter functions for reference_values, init_guess, and param_weight
     for i = 1:length(extra_input_entries.names)
-        fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, extra_input_entries.names{i}, extra_input_entries.names{i});
+        fprintf(fid, 'inline void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, extra_input_entries.names{i}, extra_input_entries.names{i});
         fprintf(fid, '        /*set %s: %s array values */\n', extra_input_entries.names{i}, extra_input_entries.dim_text{i});
     end
 
@@ -102,7 +102,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
             dim = output_cell{j}.dim;
             name = output_cell{j}.name;
 
-            fprintf(fid, 'void get_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, name, name);
+            fprintf(fid, 'inline void get_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, name, name);
 
             if length(dim) == 2 && all(dim > 1)
                 % It's a matrix
@@ -115,7 +115,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     end
 
     % extra getter for init_guess_out
-    fprintf(fid, 'void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out);', func_name);
+    fprintf(fid, 'inline void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out);', func_name);
 
     % Declare the function to get the MPC config
     fprintf(fid, 'mpc_config_t get_%s_config();\n\n', func_name);
@@ -307,11 +307,11 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '        .res = res, // Results from the CasADi function\n');
     fprintf(fid, '        .iw = iw, // Integer workspace for the CasADi function\n');
     fprintf(fid, '        .w = w, // Real workspace for the CasADi function\n');
+    fprintf(fid, '        .w_end = w+%s_W_END_ADDR, // Address of the end of the workspace\n', func_name);
     fprintf(fid, '        .arg_indices = %s_ARG, // Argument indices for the CasADi function\n', func_name);
     fprintf(fid, '        .res_indices = %s_RES, // Result indices for the CasADi function\n', func_name);
     fprintf(fid, '        .arg_in_len = %s_ARG_IN_LEN, // Length of the input arguments\n', func_name);
     fprintf(fid, '        .res_out_len = %s_RES_OUT_LEN, // Length of the output results\n', func_name);
-    fprintf(fid, '        .w_end_addr = %s_W_END_ADDR, // Relative address of the end of the workspace\n', func_name);
     fprintf(fid, '        .mem = 0, // Memory\n');
     % create the mpc_input_config struct
     fprintf(fid, '        .in = {\n');
