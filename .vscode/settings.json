@@ -207,7 +207,7 @@
   "editor.insertSpaces": true,
   "editor.tabSize": 4,
   "ros.distro": "humble",
-  "MATLAB.startDebuggerAutomatically": true,
+  "MATLAB.startDebuggerAutomatically": false,
   "terminal.integrated.scrollback": 10000,
   "C_Cpp.intelliSenseEngine": "default",
   "C_Cpp.autocomplete": "default",

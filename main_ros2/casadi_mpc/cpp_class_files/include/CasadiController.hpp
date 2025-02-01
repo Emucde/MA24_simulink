@@ -81,14 +81,11 @@ public:
     Eigen::VectorXd solveMPC(const casadi_real *const x_k_ndof_ptr);
 
     // Initialize trajectory data
-    void init_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
+    void init_file_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
                                        double T_start, double T_poly, double T_end);
 
-    // Initialize trajectory data use T_start, T_poly and T_end from current stored values
-    void init_trajectory(casadi_uint traj_select);
-
     // Method for creating a custom trajectory with extra samples for the last prediction horizon
-    void init_trajectory_custom_target(ParamTargetTrajectory param_target, const casadi_real *x_k_ndof_ptr, double T_start, double T_poly, double T_end, double T_horizon_max=2);
+    void init_custom_trajectory(ParamPolyTrajectory param);
 
     // Method to simulate the robot model
     void simulateModel(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
@@ -188,6 +185,11 @@ public:
     const casadi_real *get_q_ref_nq()
     {
         return robot_config.q_0_ref;
+    }
+
+    const Eigen::MatrixXd* get_trajectory()
+    {
+        return trajectory_generator.get_traj_data();
     }
 
     const casadi_real* get_act_traj_data()

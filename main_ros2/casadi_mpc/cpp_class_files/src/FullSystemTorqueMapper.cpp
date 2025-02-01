@@ -127,6 +127,12 @@ Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &
     return tau_full;
 }
 
+void FullSystemTorqueMapper::calcPose(const casadi_real* x, Eigen::Vector3d &p, Eigen::Matrix3d &R)
+{
+    Eigen::Map<const Eigen::VectorXd> q(x, nq);
+    calcPose(q, p, R);
+}
+
 // Method for calculating a pose by a given state
 void FullSystemTorqueMapper::calcPose(const Eigen::VectorXd &q, Eigen::Vector3d &p, Eigen::Matrix3d &R)
 {

@@ -59,6 +59,7 @@ public:
     Eigen::VectorXd calc_full_torque(const Eigen::VectorXd &u, const Eigen::VectorXd &x_k_ndof);
 
     // Method to calculate the pose (p, R) by a given state
+    void calcPose(const casadi_real* x, Eigen::Vector3d &p, Eigen::Matrix3d &R);
     void calcPose(const Eigen::VectorXd &q, Eigen::Vector3d &p, Eigen::Matrix3d &R);
 
     // Method to simulate the robot model

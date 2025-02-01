@@ -165,7 +165,7 @@ public:
     // Method to get the current trajectory data
     const casadi_real *get_act_traj_data()
     {
-        return traj_data->col(traj_count).data();
+        return mpc_config.in.y_d.ptr;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////

@@ -326,6 +326,9 @@ void CasadiMPC::set_references(casadi_real *x_k_in)
 
         Eigen::Map<Eigen::MatrixXd> (mpc_config.in.y_d.ptr, 7, traj_data_per_horizon) = (*traj_data)(selected_rows, mpc_traj_indices.array() + traj_count);
 
+        // plot trajectory data
+        // std::cout << "traj_data->col(traj_count + mpc_traj_indices[0]): " << (*traj_data)(selected_rows, mpc_traj_indices.array() + traj_count).transpose() << std::endl;
+
         // Eigen::Map<Eigen::MatrixXd> (mpc_config.in.y_d.ptr, traj_rows, traj_data_per_horizon) = (*traj_data)(Eigen::all, mpc_traj_indices.array() + traj_count);
         traj_count++;
     }

@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#define EIGEN_QUATERNION_PLUGIN "CustomQuaternionPlugin.h"
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
@@ -16,29 +17,30 @@
 // p_d    ... Target Position (Initial Pose of the Trajectory from file)
 //
 //        Position
-//            ^
+//            ^     5th order Polynomial     |          Trajectory from File           |Extra Samples|
+//            |                              |                                         |             |
 //            |                 |            |                        ________         |             |
 //            |                 |            |                 _______        _________|_____________|
-// p_d........|           ______|____________|_________________                        |             |
+// p_target...|...........______|____________|_________________                        |             |
 //            |       ___/      |            |                                         |             |
 // p_init.....|______/          |            |                                         |             |
 //            |                 |            |                                         |             |
 //            |-----------------|------------|-----------------------------------------|-------------|--------> Time
-//          T_start           T_poly       T_end                               T_end+T_true     T_end+T_true+T_max_horizon_length
+//          T_start           T_poly       T_end                               T_end+T_true     T_end+T_true+T_horizon_max
 //            |<--------------->|<---------->|<--------------------------------------->|<----------->|
-//            |    Polynomial   |  Constant  | Trajectory from File without            | Last Prediction Horizon
-//            |    transient    |  trajectory| extra samples at end                    | Horizon Trajectory
-//            |    trajectory   |  at end    | Member: None                            | Length: Default: 2000 (set in 'create_trajectories.m'
-//            |    from current |  of traj   | Length: robot_config.traj_data_real_len | Member: None|          with Variable T_horizon_max
-//            |<---------------------------->| <---------------------------------------------------->|          (e.g. T_horizon_max = 2s means
-//            |   Transient Trajectory       |       Full Trajectory from File                       |           2000 samples at Ts=1ms))
-//            |   Member: traj_data_transient|       Member: all_traj_data_file, traj_file_data      |
-//            |   Length:                    |       Length: robot_config.traj_data_real_len+2000    |
-//            |   traj_data_transient_len    |                                                       |
-//            |<---------------------------------------------------------------------->|             |
-//            |          Total Trajectory without extra samples at end                 |             |
-//            |          Member: None                                                  |             |
-//            |          Length: traj_data_file_real_len (only for checks and plotting)|             |
+//            |   Polynomial    | Constant   | Trajectory from File without            | Last Prediction Horizon
+//            |   transient     | trajectory | extra samples at end                    | Horizon Trajectory
+//            |   trajectory    | at end     | Member: None                            | Length: Default: T_horizon_max = 2s
+//            |   from current  | of traj    | Length: robot_config.traj_data_real_len | Member: None|    - By using trajectory from
+//            |<---------------------------->| <---------------------------------------------------->|      file T_horizon_max is set
+//            |  Transient Trajectory        | Full Trajectory from File                             |      in "create_trajectories.m"
+//            |  Member: traj_data_transient | Member: all_traj_data_file, traj_file_data            |    - By using custom trajectory
+//            |  Length:                     | Length: robot_config.traj_data_real_len+T_horizon_max |      init_custom_trajectory(..)
+//            |  traj_data_transient.cols()  | or      traj_data_file_real_len+T_horizon_max         |      T_horizon_max can be
+//            |<---------------------------------------------------------------------->|             |      directly set.
+//            |     Total Trajectory without extra samples at end                      |             |
+//            |     Member: None                                                       |             |
+//            |     Length: traj_data_file_real_len (only for checks and plotting)     |             |
 //            |<------------------------------------------------------------------------------------>|
 //                                                Total Trajectory for MPC
 //                                                Member: traj_data_out
@@ -57,25 +59,40 @@ public:
     Eigen::MatrixXd omega_d;   // Target angular velocity
     Eigen::MatrixXd omega_d_p; // Target angular acceleration
 
-    void init_trajectory_custom_target(ParamInitTrajectory param_init_traj_poly,
-                                       ParamTargetTrajectory param_target,
-                                       double T_horizon_max = 2);
-    void init_trajectory(uint traj_select, ParamInitTrajectory param_init_traj_poly);
-    void init_trajectory(uint traj_select);
-    ParamInitTrajectory calc_param_init(const casadi_real *x_k_ndof_ptr, double T_start, double T_poly, double T_end);
-    void switch_traj(uint traj_select);
+    const Eigen::Vector3i p_d_rows{0, 1, 2};
+    const Eigen::Vector3i p_d_p_rows{3, 4, 5};
+    const Eigen::Vector3i p_d_pp_rows{6, 7, 8};
+    const Eigen::Vector4i q_d_rows{9, 10, 11, 12};
+    const Eigen::Vector3i omega_d_rows{13, 14, 15};
+    const Eigen::Vector3i omega_d_p_rows{16, 17, 18};
+    const Eigen::VectorXi pq_d_rows = (Eigen::VectorXi(7) << 0, 1, 2, 9, 10, 11, 12).finished();
+
+    void init_custom_trajectory(ParamPolyTrajectory param);
+    void init_file_trajectory(int traj_select, const casadi_real *x_k_ndof_ptr, double T_start, double T_poly, double T_end);
+
+    void switch_traj(int traj_select);
+
+    Eigen::Quaterniond vec2quat(const Eigen::Vector4d &quat_vec)
+    {
+        return Eigen::Quaterniond(quat_vec[1], quat_vec[2], quat_vec[3], quat_vec[0]);
+    }
+
+    Eigen::Vector4d quat2vec(const Eigen::Quaterniond &quat)
+    {
+        return Eigen::Vector4d(quat.w(), quat.x(), quat.y(), quat.z());
+    }
 
     // Setters
-    void setTransientTrajParams(ParamInitTrajectory param_init_traj_poly);
+    void check_param_poly_traj(ParamPolyTrajectory param);
 
     // Getters
     const Eigen::MatrixXd *get_traj_data() const { return &traj_data_out; }
     const Eigen::VectorXd *get_traj_x0_init() const { return &traj_data_out_x0_init; }
     const Eigen::MatrixXd *get_transient_traj_data() const { return &traj_data_transient; }
     const Eigen::VectorXd *get_act_traj_x0_init() const { return &traj_data_file_x0_init; }
-    const Eigen::VectorXd *get_traj_file_x0_init(uint traj_select) const
+    const Eigen::VectorXd *get_traj_file_x0_init(int traj_select) const
     {
-        if (traj_select < 1 || traj_select > all_traj_data_x0_init.size())
+        if (traj_select < 1 || traj_select > static_cast<int>(all_traj_data_x0_init.size()))
         {
             std::cerr << "Invalid trajectory selection. Selecting Trajectory 1" << std::endl;
             traj_select = 1;
@@ -87,25 +104,22 @@ public:
         return traj_data_out_len;
     }
     int get_traj_file_real_len() const { return robot_config.traj_data_real_len; }
-    int get_traj_data_real_len() const { return traj_data_file_real_len; }
-    int get_transient_traj_len() const { return traj_data_transient_len; }
+    int get_traj_data_real_len() const { return traj_data_file_real_len; } // without extra samples for last prediction horizon
+    int get_transient_traj_len() const { return traj_data_transient.cols(); }
 
     // Setters
 
 private:
-    Eigen::MatrixXd trajectory_poly(double t, const Eigen::Vector4d &y0, const Eigen::Vector4d &yT, double T);
-    Eigen::VectorXd create_poly_traj(double t, const Eigen::Vector3d &rot_ax, double rot_alpha_scale);
     std::vector<Eigen::MatrixXd> read_trajectory_data(const std::string &traj_file);
     std::vector<Eigen::VectorXd> read_x0_init(const std::string &x0_init_file);
-    void update_traj_data(uint traj_select);
-    void update_traj_data();
+
+    void update_traj_values();
 
     // Member variables
     FullSystemTorqueMapper &torque_mapper;
     robot_config_t &robot_config;
     int nq, nx, nq_red, nx_red;
-    ParamInitTrajectory param_init_traj_poly;
-    ParamTargetTrajectory param_target_traj_poly;
+    ParamPolyTrajectory param_poly_traj;
     std::string traj_file, x0_init_file;
 
     std::vector<Eigen::MatrixXd> all_traj_data_file;
@@ -122,11 +136,11 @@ private:
     int traj_rows;
     int traj_data_out_len;
     int traj_data_file_real_len;
-    int traj_data_transient_len;
     double dt;
 
-    Eigen::MatrixXd generate_transient_trajectory(double T_horizon_max = 0);
-    void init_trajectory(bool custom_traj = false, double T_horizon_max = 0);
+    Eigen::VectorXd poly_5th_order(double t, const Eigen::Vector4d &y0, const Eigen::Vector4d &yT, double T);
+    Eigen::VectorXd get_poly_traj_point(double t, const Eigen::Vector3d &rot_ax, double rot_alpha_scale);
+    Eigen::MatrixXd generate_poly_trajectory();
 };
 
 #endif // TRAJECTORY_GENERATOR_HPP

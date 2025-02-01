@@ -12,6 +12,7 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
     // Initialize MPC objects
     for (int i = 0; i < static_cast<int>(MPCType::COUNT); ++i)
     {
+        
         MPCType mpc = static_cast<MPCType>(i);
         if (mpc != MPCType::INVALID)
         { // Ensures we are within valid enum range
@@ -100,25 +101,17 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
     return tau_full;
 }
 
-void CasadiController::init_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
-                                       double T_start, double T_poly, double T_end)
+void CasadiController::init_file_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
+                                            double T_start, double T_poly, double T_end)
 {
-    ParamInitTrajectory param_init_traj = trajectory_generator.calc_param_init(x_k_ndof_ptr, T_start, T_poly, T_end);
-    trajectory_generator.init_trajectory(traj_select, param_init_traj);
+    trajectory_generator.init_file_trajectory(traj_select, x_k_ndof_ptr, T_start, T_poly, T_end);
     update_trajectory_data(x_k_ndof_ptr);
 }
 
-void CasadiController::init_trajectory_custom_target(ParamTargetTrajectory param_target, const casadi_real *x_k_ndof_ptr, double T_start, double T_poly, double T_end, double T_horizon_max)
+void CasadiController::init_custom_trajectory(ParamPolyTrajectory param)
 {
-    ParamInitTrajectory param_init = trajectory_generator.calc_param_init(x_k_ndof_ptr, T_start, T_poly, T_end);
-    trajectory_generator.init_trajectory_custom_target(param_init, param_target, T_horizon_max);
-    update_trajectory_data(x_k_ndof_ptr);
-}
-
-void CasadiController::init_trajectory(casadi_uint traj_select)
-{
-    trajectory_generator.init_trajectory(traj_select);
-    update_trajectory_data(trajectory_generator.get_traj_x0_init()->data());
+    trajectory_generator.init_custom_trajectory(param);
+    update_trajectory_data(param.x_init.data());
 }
 
 void CasadiController::update_trajectory_data(const casadi_real *const x_k_ndof_ptr)

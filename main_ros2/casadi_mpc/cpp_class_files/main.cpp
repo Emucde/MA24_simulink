@@ -118,7 +118,7 @@ int main()
 
     #define TRAJ_SELECT 1
     x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (controller.get_traj_x0_init(TRAJ_SELECT), nx);
-    // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
+    q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
 
     // initialize the filter
@@ -127,12 +127,20 @@ int main()
     double* x_measured_ptr = x_k_ndof;
 
     // initialize the trajectory
-    controller.init_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
+    controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
+
+    const Eigen::MatrixXd* trajectory = controller.get_trajectory();
+    int traj_count = 0;
+    Eigen::VectorXi selected_rows(7);
+    selected_rows << 0, 1, 2, 9, 10, 11, 12;  // Selecting p_d (0-2) and q_d (9-11)
+    Eigen::VectorXd y_d = Eigen::VectorXd::Zero(7);
     
-    // ParamTargetTrajectory param_target;
+    // ParamPolyTrajectory param_target;
     // param_target.p_target = Eigen::Vector3d(0.5, 0.0, 0.6);
     // param_target.R_target = Eigen::Matrix3d::Identity();
-    // controller.init_trajectory_custom_target(param_target, x_k_ndof, 0.0, 10.0, 10.0, 2.0);
+    // param_target.T_horizon_max = 2.0
+    // param_target.x_init = x_k_ndof_eig;
+    // controller.init_trajectory_custom_target(param_target);
 
     casadi_uint transient_traj_len = controller.get_transient_traj_len();
     
@@ -160,9 +168,12 @@ int main()
         filter.run(x_measured_ptr); // updates data from x_filtered_ptr
 
         timer_mpc_solver.tic();
-        tau_full = controller.solveMPC(x_filtered_ptr);
+        // tau_full = controller.solveMPC(x_filtered_ptr);
+        tau_full = Eigen::VectorXd::Zero(nq);
         error_flag = controller.get_error_flag();
         timer_mpc_solver.toc();
+
+        y_d << (*trajectory)(selected_rows, traj_count++);
 
         if (i % 100 == 0)
         {
@@ -183,7 +194,8 @@ int main()
         // Write data to shm:
         shm.write("read_state_data", x_k_ndof, nx * sizeof(casadi_real));
         shm.write("read_control_data", tau_full.data(), nq * sizeof(casadi_real));
-        shm.write("read_traj_data", controller.get_act_traj_data(), 7 * sizeof(casadi_real));
+        // shm.write("read_traj_data", controller.get_act_traj_data(), 7 * sizeof(casadi_real));
+        shm.write("read_traj_data", y_d.data(), 7 * sizeof(casadi_real));
         shm.write("read_frequency", &current_frequency, sizeof(double));
         shm.post_semaphore("shm_changed_semaphore");
 

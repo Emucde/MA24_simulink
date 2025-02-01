@@ -103,13 +103,10 @@ private:
     InverseDynamicsController inverse_dyn_controller; // Instance of InverseDynamicsController
 
     // Initialize trajectory data
-    void init_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
+    void init_file_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
                                        double T_start, double T_poly, double T_end);
 
-    // Initialize trajectory data use T_start, T_poly and T_end from current stored values
-    void init_trajectory(casadi_uint traj_select);
-
     // Method for creating a custom trajectory with extra samples for the last prediction horizon
-    void init_trajectory_custom_target(ParamTargetTrajectory param_target, const casadi_real *x_k_ndof_ptr, double T_start, double T_poly, double T_end, double T_horizon_max=2);
+    void init_custom_trajectory(ParamPolyTrajectory param_target);
 
 };
