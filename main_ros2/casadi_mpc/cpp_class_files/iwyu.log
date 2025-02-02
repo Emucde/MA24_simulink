@@ -1,0 +1,1 @@
+error: failed to parse compilation database: [Errno 2] No such file or directory: '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/build_debug/compile_commands.json'

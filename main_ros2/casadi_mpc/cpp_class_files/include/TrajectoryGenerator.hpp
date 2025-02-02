@@ -1,6 +1,6 @@
 #ifndef TRAJECTORY_GENERATOR_HPP
 #define TRAJECTORY_GENERATOR_HPP
-
+#include "TrajectoryGenerator.hpp"
 #include "param_robot.h"
 #include "eigen_templates.hpp"
 #include "FullSystemTorqueMapper.hpp"
@@ -8,7 +8,6 @@
 #include <vector>
 #include <map>
 #include <string>
-#define EIGEN_QUATERNION_PLUGIN "CustomQuaternionPlugin.h"
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
@@ -72,18 +71,10 @@ public:
 
     void switch_traj(int traj_select);
 
-    Eigen::Quaterniond vec2quat(const Eigen::Vector4d &quat_vec)
-    {
-        return Eigen::Quaterniond(quat_vec[1], quat_vec[2], quat_vec[3], quat_vec[0]);
-    }
-
-    Eigen::Vector4d quat2vec(const Eigen::Quaterniond &quat)
-    {
-        return Eigen::Vector4d(quat.w(), quat.x(), quat.y(), quat.z());
-    }
-
     // Setters
     void check_param_poly_traj(ParamPolyTrajectory param);
+
+    Eigen::Matrix3d quat2rotm(const Eigen::Vector4d& q);
 
     // Getters
     const Eigen::MatrixXd *get_traj_data() const { return &traj_data_out; }

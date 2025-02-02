@@ -16,15 +16,29 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     # -flto: Enable link-time optimization for better performance.
     # -Ofast: Optimize code for maximum speed and performance, disregarding strict standards compliance. (= -O3 -ffast-math + other optimizations)
 
-    # set(OPT_FLAG "-fdiagnostics-color=always;-O3;-ffast-math;-march=native;-flto")
-    # set(OPT_FLAG "-fdiagnostics-color=always;-O3;-ffast-math;-march=native;")
-    set(OPT_FLAG "-fdiagnostics-color=always;-Ofast;")
+    # set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE) # more modern method to enable LTO (-flto)
+    # set(OPT_FLAG "-fdiagnostics-color=always;-O3;-ffast-math;-march=x86-64;-mtune=generic;-flto")
+    set(OPT_FLAG "-fdiagnostics-color=always;-O3;-ffast-math;-march=x86-64;-mtune=generic;")
+    # set(OPT_FLAG "-fdiagnostics-color=always;-Ofast;")
     set(MPC_OPT_FLAG ${OPT_FLAG})
 elseif(CMAKE_BUILD_TYPE STREQUAL "DebugSpecial")
     set(OPT_FLAG "-O0")
     set(MPC_OPT_FLAG "-O3")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")  # Ensure debug information is generated
 endif()
+
+# Enable IWYU only if the tool is available
+# option(USE_IWYU "Run include-what-you-use" ON)
+
+# if(USE_IWYU)
+#     # Find the IWYU executable
+#     find_program(IWYU_EXE NAMES include-what-you-use REQUIRED)
+
+#     # Set IWYU for C++ targets
+#     set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+#     set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_EXE})
+# endif()
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set output directory for libraries
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -47,15 +61,16 @@ set(MPC_ALL_LIBRARIES "")
 set(MPC_PARAM_LIBRARIES "")
 set(MPC_LIBRARIES "")
 
+set(Boost_NO_BOOST_CMAKE ON)
 set(CASADI_PATH "/media/daten/Anwendungen/casadi-3.6.7-linux64-matlab2018b")
-
 set(CASADI_INCLUDE_DIRS "${CASADI_PATH}/include")
-set(HIGHS_INCLUDE_DIRS_2 "${CASADI_PATH}/include/highs")
+set(HIGHS_INCLUDE_DIRS "${CASADI_PATH}/include/highs")
 set(CASADI_LIBRARY_DIRS "${CASADI_PATH}")
+set(CMATH_INCLUDE_DIRS "/usr/include/c++/11" "/usr/include/x86_64-linux-gnu/c++/11")
 
 # file(GLOB JIT_LIBRARY_DIRS "${MPC_SOURCE_DIR}/*jit.so")
 
-message(STATUS "HIGHS_INCLUDE_DIRS_2: ${HIGHS_INCLUDE_DIRS_2}")
+message(STATUS "HIGHS_INCLUDE_DIRS: ${HIGHS_INCLUDE_DIRS}")
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(HIGHS REQUIRED highs)
@@ -80,7 +95,7 @@ foreach(SOURCE_FILE ${MPC_SOURCES})
         ${MPC_SOURCE_DIR}
         ${CASADI_INCLUDE_DIRS}
         ${HIGHS_INCLUDE_DIRS}
-        ${HIGHS_INCLUDE_DIRS_2}
+        ${CMATH_INCLUDE_DIRS}
         )
 
     target_link_libraries(${FILE_NAME} PRIVATE 
@@ -142,6 +157,7 @@ foreach(SOURCE_FILE ${SRC_FILES})
         ${rclcpp_INCLUDE_DIRS}
         ${MPC_SOURCE_DIR} 
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMATH_INCLUDE_DIRS}
     )
 
     target_link_libraries(${FILE_NAME} PRIVATE
@@ -188,6 +204,7 @@ target_include_directories(main PRIVATE
     ${rclcpp_INCLUDE_DIRS}
     ${MPC_SOURCE_DIR} 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMATH_INCLUDE_DIRS}
 )
 
 # Link libraries to the main executable

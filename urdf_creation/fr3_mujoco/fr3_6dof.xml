@@ -1,0 +1,47 @@
+<mujoco model="fr3_6dof">
+  <compiler angle="radian" meshdir="../../stl_files/Meshes_FR3/" autolimits="true"/>
+  <option integrator="implicitfast"/>
+  <statistic center="0.3 0 0.4" extent="1"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="120" elevation="-20"/>
+  </visual>
+
+  <default>
+    <include file="./fr3_default.xml"/>
+  </default>
+
+  <asset>
+    <include file="./fr3_assets.xml"/>
+  </asset>
+
+  <worldbody>
+    <light name="top" pos="0 0 2" mode="trackcom"/>
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
+    <include file="./fr3_body_6dof.xml"/>
+  </worldbody>
+
+  <include file="./fr3_motors_6dof.xml"/>
+
+  <keyframe>
+    <key name="home" qpos="0 0 0 -1.57079 0 1.57079 -0.7853 0.04 0.04" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853 255"/>
+  </keyframe>
+  <keyframe>
+    <key name="q1" qpos="2.309197 -0.279178 0.000000 -0.451027 -2.441787 2.389008 -0.739536 0.04 0.04" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853 255"/>
+  </keyframe>
+  <keyframe>
+    <key name="q2" qpos="-2.309197 -0.298834 0.000000 -0.489334 2.475612 2.371630 -1.127623 0.04 0.04" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853 255"/>
+  </keyframe>
+  <keyframe>
+    <key name="q3" qpos="1.010253 -0.315629 0.000000 -0.842987 1.825731 3.545050 -2.497338 0.04 0.04" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853 255"/>
+  </keyframe>
+  <keyframe>
+    <key name="q4" qpos="-0.025420 -0.143356 0.000000 -0.446724 -2.479783 3.610428 2.689292 0.04 0.04" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853 255"/>
+  </keyframe>
+
+
+</mujoco>
+
+  

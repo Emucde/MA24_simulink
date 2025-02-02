@@ -113,7 +113,8 @@
     "ipstdcinterface.h": "c",
     "mpc6_addressdef.h": "c",
     "memory.h": "c",
-    "mpc01_param.h": "c"
+    "mpc01_param.h": "c",
+    "stdint.h": "c"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",
@@ -207,7 +208,7 @@
   "editor.insertSpaces": true,
   "editor.tabSize": 4,
   "ros.distro": "humble",
-  "MATLAB.startDebuggerAutomatically": false,
+  "MATLAB.startDebuggerAutomatically": true,
   "terminal.integrated.scrollback": 10000,
   "C_Cpp.intelliSenseEngine": "default",
   "C_Cpp.autocomplete": "default",

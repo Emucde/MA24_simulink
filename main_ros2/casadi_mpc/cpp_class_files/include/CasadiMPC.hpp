@@ -18,6 +18,7 @@
 #include "MPC12_param.h" // version: 'v7_kin_int_planner'
 #include "MPC13_param.h" // version: 'v8_kin_dev_planner'
 #include "MPC14_param.h" // version: 'v6_kin_dev_path_following'
+#include "FullSystemTorqueMapper.hpp"
 
 // #define DEBUG 1
 

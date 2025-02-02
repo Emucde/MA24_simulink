@@ -33,10 +33,10 @@ TrajectoryGenerator::TrajectoryGenerator(FullSystemTorqueMapper &torque_mapper, 
     param_poly_traj.T_end = 0.0;
 
     param_poly_traj.p_init = traj_data_file(p_d_rows, 0);
-    param_poly_traj.R_init = Eigen::Quaterniond(traj_data_file(q_d_rows, 0)).toRotationMatrix();
+    param_poly_traj.R_init = quat2rotm(traj_data_file(q_d_rows, 0));
 
     param_poly_traj.p_target = traj_data_file(p_d_rows, 0);
-    param_poly_traj.R_target = Eigen::Quaterniond(traj_data_file(q_d_rows, 0)).toRotationMatrix();
+    param_poly_traj.R_target = quat2rotm(traj_data_file(q_d_rows, 0));
 }
 
 void TrajectoryGenerator::switch_traj(int traj_select)
@@ -73,6 +73,24 @@ void TrajectoryGenerator::check_param_poly_traj(ParamPolyTrajectory param)
     {
         throw std::invalid_argument("T_poly must be less than or equal to T_end (total time of the transient trajectory)");
     }
+}
+
+Eigen::Matrix3d TrajectoryGenerator::quat2rotm(const Eigen::Vector4d& q) {
+    // Extract quaternion components
+    const double q0 = q(0), q1 = q(1), q2 = q(2), q3 = q(3);
+
+    // Precompute reusable terms
+    const double q0q0 = q0 * q0, q1q1 = q1 * q1, q2q2 = q2 * q2, q3q3 = q3 * q3;
+    const double q0q1 = q0 * q1, q0q2 = q0 * q2, q0q3 = q0 * q3;
+    const double q1q2 = q1 * q2, q1q3 = q1 * q3, q2q3 = q2 * q3;
+
+    // Directly initialize the rotation matrix using Eigen's comma initializer
+    Eigen::Matrix3d R;
+    R << (q0q0 + q1q1 - q2q2 - q3q3), 2.0 * (q1q2 - q0q3),       2.0 * (q1q3 + q0q2),
+        2.0 * (q1q2 + q0q3),         (q0q0 - q1q1 + q2q2 - q3q3), 2.0 * (q2q3 - q0q1),
+        2.0 * (q1q3 - q0q2),         2.0 * (q2q3 + q0q1),       (q0q0 - q1q1 - q2q2 + q3q3);
+
+    return R;
 }
 
 // In this case only a transient trajectory to a custom target is generated
@@ -119,7 +137,11 @@ void TrajectoryGenerator::init_file_trajectory(int traj_select,
     param_poly_traj.R_init = R_init;
 
     param_poly_traj.p_target = traj_data_file(p_d_rows, 0);
-    param_poly_traj.R_target = Eigen::Quaterniond(traj_data_file(q_d_rows, 0)).toRotationMatrix();
+    param_poly_traj.R_target = quat2rotm(traj_data_file(q_d_rows, 0));
+    // prints
+    std::cout << "traj_data_file(q_d_rows, 0)\n" << traj_data_file(q_d_rows, 0) << std::endl;
+    std::cout << "R_init\n" << R_init << std::endl;
+    std::cout << "param_poly_traj.R_target\n" << param_poly_traj.R_target << std::endl;
 
     check_param_poly_traj(param_poly_traj);
 
@@ -150,6 +172,9 @@ Eigen::MatrixXd TrajectoryGenerator::generate_poly_trajectory()
     Eigen::Map<const Eigen::Matrix3d> R_init(param_poly_traj.R_init.data());
     Eigen::Map<const Eigen::Matrix3d> R_target(param_poly_traj.R_target.data());
 
+    std::cout << "R_init" << R_init << std::endl;
+    std::cout << "R_target" << R_target << std::endl;
+
     double T_end = param_poly_traj.T_end;
 
     // Per default param_poly_traj.T_horizon_max is already considered in the trajectory from file, see 'create_trajectories.m'
@@ -167,6 +192,12 @@ Eigen::MatrixXd TrajectoryGenerator::generate_poly_trajectory()
     double rot_alpha_scale = 2 * acos(rot_rho);
     Eigen::Vector3d rot_ax;
 
+    if (rot_alpha_scale > M_PI)
+    {
+        rot_alpha_scale = 2 * M_PI - rot_alpha_scale;
+        rot_ax = -rot_ax;
+    }
+
     if (rot_alpha_scale == 0)
     {
         rot_ax = Eigen::Vector3d(0, 0, 0);
@@ -174,12 +205,6 @@ Eigen::MatrixXd TrajectoryGenerator::generate_poly_trajectory()
     else
     {
         rot_ax = rot_vec / sin(rot_alpha_scale / 2);
-    }
-
-    if (rot_alpha_scale > M_PI)
-    {
-        rot_alpha_scale = 2 * M_PI - rot_alpha_scale;
-        rot_ax = -rot_ax;
     }
 
     double current_time = 0.0;
@@ -263,7 +288,7 @@ Eigen::VectorXd TrajectoryGenerator::get_poly_traj_point(double t, const Eigen::
     Eigen::Quaterniond q_d(R_act);
 
     // std::cout << "q_d: " << q_d.w() << " " << q_d.x() << " " << q_d.y() << " " << q_d.z() << std::endl;
-    std::cout << "alpha: " << alpha << std::endl;
+    // std::cout << "alpha: " << alpha << std::endl;
 
     omega_d = alpha_p * rot_ax;
     omega_d_p = alpha_pp * rot_ax;

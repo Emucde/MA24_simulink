@@ -51,6 +51,11 @@ if [[ $# -gt 0 ]]; then
         JUST_CREATE_CMAKE=true
         shift
         ;;
+        -iwyu|--include-what-you-use)
+        INCLUDE_WHAT_YOU_USE=true
+        RUN_FILE=false
+        shift
+        ;;
         *)
         echo "Unknown option: $key"
         exit 1
@@ -64,6 +69,7 @@ echo "BUILD_TYPE: $BUILD_TYPE"
 echo "RUN_MAKE_INSTALL: $RUN_MAKE_INSTALL"
 echo "BUILD_ROS2_MPCS: $BUILD_ROS2_MPCS"
 echo "JUST_CREATE_CMAKE: $JUST_CREATE_CMAKE"
+echo "Check includes with includes-what-you-use (iwyu): $INCLUDE_WHAT_YOU_USE"
 echo ""
 
 if [ "$JUST_CREATE_CMAKE" = true ]; then
@@ -74,6 +80,14 @@ if [ "$JUST_CREATE_CMAKE" = true ]; then
     cmake -B ./main_ros2/casadi_mpc/cpp_class_files/build_release -S ./main_ros2/casadi_mpc/cpp_class_files/ -DCMAKE_BUILD_TYPE=Release
     echo ""
     echo "----------------------------------"
+    exit 0
+fi
+
+if [ "$INCLUDE_WHAT_YOU_USE" = true ]; then
+    # Run include-what-you-use
+    iwyu_tool -p ./main_ros2/casadi_mpc/cpp_class_files/build_debug/ --jobs=8 -- -I$(gcc -print-file-name=include) -I/usr/include > ./main_ros2/casadi_mpc/cpp_class_files/build_debug/iwyu_output.txt
+    echo "Successfully created ./main_ros2/casadi_mpc/cpp_class_files/build_debug/iwyu_output.txt"
+    cat ./main_ros2/casadi_mpc/cpp_class_files/build_debug/iwyu_output.txt
     exit 0
 fi
 

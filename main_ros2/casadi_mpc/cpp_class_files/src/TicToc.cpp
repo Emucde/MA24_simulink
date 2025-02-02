@@ -1,9 +1,8 @@
 #include "TicToc.hpp"
 
-#include <chrono>  // for time measurement
-#include <iostream>
-#include <sstream> // for std::ostringstream
-#include <iomanip> // for std::setprecision
+#include <chrono>    // for time_point, duration, high_resolution_clock, ope...
+#include <iomanip>   // for operator<<, setprecision
+#include <iostream>  // for operator<<, basic_ostream, char_traits, basic_os...
 
 TicToc::TicToc() : start_time(), elapsed_time(0), elapsed_total_time(0), running(false) {}
 

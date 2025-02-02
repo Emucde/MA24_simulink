@@ -1,0 +1,11 @@
+<mujoco model="fr3_motors_6dof"> 
+    <actuator>
+        <motor class="fr3" name="actuator1" joint="joint1" ctrlrange="-87 87" forcerange="-87 87"/>
+        <motor class="fr3" name="actuator2" joint="joint2" ctrlrange="-87 87" forcerange="-87 87"/>
+        <motor class="fr3" name="actuator3" joint=" " ctrlrange="-87 87" forcerange="-87 87"/>
+        <motor class="fr3" name="actuator4" joint="joint3" ctrlrange="-87 87" forcerange="-87 87"/>
+        <motor class="fr3" name="actuator5" joint="joint4" ctrlrange="-12 12" forcerange="-12 12"/>
+        <motor class="fr3" name="actuator6" joint="joint5" ctrlrange="-12 12" forcerange="-12 12"/>
+        <motor class="fr3" name="actuator7" joint="joint6" ctrlrange="-12 12" forcerange="-12 12"/>
+    </actuator>
+</mujoco>

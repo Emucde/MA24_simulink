@@ -1,10 +1,8 @@
 #ifndef TIC_TOC_HPP
 #define TIC_TOC_HPP
 
-#include <chrono>  // for time measurement
-#include <iostream>
-#include <sstream> // for std::ostringstream
-#include <iomanip> // for std::setprecision
+#include <chrono>  // for high_resolution_clock, time_point
+#include <string>  // for string, allocator
 
 class TicToc
 {

@@ -1,12 +1,17 @@
 #ifndef SHARED_MEMORY_HPP
 #define SHARED_MEMORY_HPP
 
-#include <cstddef>
-#include <stdexcept>
-#include <cstring>
-#include <semaphore.h>
-#include "rclcpp/rclcpp.hpp"
-#include <unordered_map>
+#include <semaphore.h>         // for sem_post, sem_t
+#include <stdint.h>            // for int8_t
+#include <cstddef>             // for size_t
+#include <cstring>             // for strerror
+#include <iostream>            // for operator<<, basic_ostream, endl, cerr
+#include <memory>              // for make_unique, unique_ptr
+#include <string>              // for string, basic_string, hash, operator==
+#include <unordered_map>       // for unordered_map
+#include <vector>              // for vector
+#include "rclcpp/logger.hpp"   // for Logger
+#include "rclcpp/logging.hpp"  // for RCLCPP_ERROR
 
 class BaseLogger
 {

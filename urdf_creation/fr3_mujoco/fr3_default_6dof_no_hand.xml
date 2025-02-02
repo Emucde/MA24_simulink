@@ -1,0 +1,10 @@
+<mujoco model="fr3_default">
+    <default class="fr3">
+        <material specular="0.5" shininess="0.25"/>
+        <joint armature="0.1" damping="1" axis="0 0 1" range="-2.8973 2.8973"/>
+
+        <default class="visual">
+            <geom type="mesh" contype="0" conaffinity="0" group="2"/>
+        </default>
+    </default>
+</mujoco>

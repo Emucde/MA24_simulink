@@ -29,10 +29,8 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '#endif\n\n');
 
     % Include necessary headers
-    fprintf(fid, '#include <math.h>\n');
     fprintf(fid, '#include "casadi_types.h"\n');
     fprintf(fid, '#include "mpc_config.h"\n');
-    fprintf(fid, '#include "param_robot.h"\n\n');
 
     % Add MPC Param
 
@@ -165,12 +163,11 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
 
     % Include the header file
     fprintf(fid, ['#include "', param_weight_header_name, '"\n']);
-    fprintf(fid, '#include <memory.h>\n');
     fprintf(fid, '#include "mpc_config.h"\n');
     fprintf(fid, ['#include "', func_name, '_addressdef.h"\n']);
     fprintf(fid, '#include "%s.h"\n', func_name);
     fprintf(fid, '#include "casadi_types.h"\n');
-    fprintf(fid, '#include "param_robot.h"\n\n');
+    fprintf(fid, '#include "string.h"\n\n');
 
     % define setter functions
     for i = 1:length(casadi_fun_input_cell)

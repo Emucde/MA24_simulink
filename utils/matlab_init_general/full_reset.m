@@ -46,6 +46,16 @@ if(full_reset_flag)
 
             % regenerate casadi functions: run './urdf_creation/7dof_sys_pinocchio3_to_casadi.py'
             disp('Please run the file ./urdf_creation/7dof_sys_pinocchio3_to_casadi.py to regenerate the casadi functions.');
+            %{
+                % search current anaconda version from https://repo.anaconda.com/archive/
+                wget https://repo.anaconda.com/archive/Anaconda3-2024.10-1-Linux-x86_64.sh
+                bash Anaconda3-2024.10-1-Linux-x86_64.sh
+                conda create -n mpc python=3.12
+                conda config --add channels conda-forge
+                conda config --set channel_priority strict
+                conda install pinocchio crocoddyl nodejs casadi numpy
+            %}
+            
             disp('If done, press any key to continue...');
             input('');
 
@@ -62,7 +72,8 @@ if(full_reset_flag)
 
             % regenerate trajectory
             overwrite_offline_traj_forced_extern = true;
-            run(parameter_str);
+            %run(parameter_str);
+            parameters_7dof;
             overwrite_offline_traj_forced_extern = false;
 
             % compile s_functions and generate sources for mpcs

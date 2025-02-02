@@ -1,0 +1,6 @@
+Sun Feb  2 12:24:46 2025
+WARNING: mju_openResource: unknown file '2dof_sys.xml'
+
+Sun Feb  2 12:52:18 2025
+WARNING: mju_openResource: unknown file './ur5e_robot_dedfault.xml'
+

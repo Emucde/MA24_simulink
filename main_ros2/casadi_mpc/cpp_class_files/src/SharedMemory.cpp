@@ -1,10 +1,9 @@
 #include "SharedMemory.hpp"
-#include <iostream>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <cerrno>
+#include <fcntl.h>     // for O_RDWR, O_RDONLY, O_WRONLY
+#include <sys/mman.h>  // for mmap, munmap, shm_open, MAP_FAILED, MAP_SHARED
+#include <unistd.h>    // for close
+#include <cerrno>      // for errno
+#include <stdexcept>   // for runtime_error
 
 // Destructor to ensure closures
 SharedMemory::~SharedMemory() {

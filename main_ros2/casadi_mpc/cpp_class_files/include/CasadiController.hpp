@@ -14,7 +14,6 @@
 #include "TrajectoryGenerator.hpp"
 #include "FullSystemTorqueMapper.hpp"
 #include "CasadiMPC.hpp"
-#include "trajectory_settings.hpp"
 
 enum ErrorFlag {
     NO_ERROR = 0,           // 0: no error

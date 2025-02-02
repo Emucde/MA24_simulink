@@ -1,0 +1,13 @@
+<mujoco model="ur5e_robot_default">
+    <default class="fr3">
+        <material specular="0.5" shininess="0.25"/>
+
+        <default class="visual">
+            <geom type="mesh" contype="0" conaffinity="0" group="2"/>
+        </default>
+
+        <default class="collision">
+            <geom type="mesh" group="3"/>
+        </default>
+    </default>
+</mujoco>

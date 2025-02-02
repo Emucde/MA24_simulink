@@ -29,6 +29,7 @@ function generate_casadi_types(filename)
 
     % Write the content to the header file
     fprintf(fid, '#ifndef Inf\n');
+    fprintf(fid, '#include <math.h>\n\n');
     fprintf(fid, '#define Inf INFINITY\n');
     fprintf(fid, '#endif\n\n');
 
