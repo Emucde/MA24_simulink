@@ -30,7 +30,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
 
     % Include necessary headers
     fprintf(fid, '#include "casadi_types.h"\n');
-    fprintf(fid, '#include "mpc_config.h"\n');
+    fprintf(fid, '#include "mpc_config_types.h"\n');
 
     % Add MPC Param
 
@@ -113,7 +113,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     end
 
     % extra getter for init_guess_out
-    fprintf(fid, 'inline void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out);', func_name);
+    fprintf(fid, 'inline void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out);\n', func_name);
 
     % Declare the function to get the MPC config
     fprintf(fid, 'mpc_config_t get_%s_config();\n\n', func_name);
@@ -163,7 +163,6 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
 
     % Include the header file
     fprintf(fid, ['#include "', param_weight_header_name, '"\n']);
-    fprintf(fid, '#include "mpc_config.h"\n');
     fprintf(fid, ['#include "', func_name, '_addressdef.h"\n']);
     fprintf(fid, '#include "%s.h"\n', func_name);
     fprintf(fid, '#include "casadi_types.h"\n');

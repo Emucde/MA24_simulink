@@ -10,7 +10,7 @@
 #include <Eigen/Geometry> // For rotations and quaternions
 #include "casadi_types.h"
 #include "param_robot.h"
-#include "mpc_config.h"
+#include "mpc_config_types.h"
 #include "TrajectoryGenerator.hpp"
 #include "FullSystemTorqueMapper.hpp"
 #include "CasadiMPC.hpp"

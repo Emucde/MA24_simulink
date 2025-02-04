@@ -2,22 +2,13 @@
 #define CASADIMPC_HPP
 
 #include <iostream>
-#include "mpc_config.h"
+#include "mpc_config_types.h"
 #include "casadi_types.h" // Include for casadi types
 #include <vector>
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include "param_robot.h"
-#include "MPC01_param.h" // version: 'v1'
-#include "MPC6_param.h"  // version: 'v3_quat'
-#include "MPC7_param.h"  // version: 'v3_rpy'
-#include "MPC8_param.h"  // version: 'v4_kin_int'
-#include "MPC9_param.h"  // version: 'v4_kin_int_refsys'
-#include "MPC10_param.h" // version: 'v5_kin_dev'
-#include "MPC11_param.h" // version: 'v6_kin_int_path_following'
-#include "MPC12_param.h" // version: 'v7_kin_int_planner'
-#include "MPC13_param.h" // version: 'v8_kin_dev_planner'
-#include "MPC14_param.h" // version: 'v6_kin_dev_path_following'
+#include "mpc_configs.h"
 #include "FullSystemTorqueMapper.hpp"
 
 // #define DEBUG 1
@@ -75,10 +66,10 @@ private:
 
 public:
     // Constructor that accepts parameters for configuration
-    CasadiMPC(const std::string &mpc_name,
+    CasadiMPC(MPCType mpc,
               robot_config_t &robot_config,
               const Eigen::MatrixXd *traj_data,
-              const casadi_uint traj_real_len);
+              const casadi_uint traj_data_real_len);
 
     // Method to run the MPC
     int solve(casadi_real *x_k_in); // closed loop mpc with copying x_k_in to x_k

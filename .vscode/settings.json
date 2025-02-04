@@ -114,7 +114,10 @@
     "mpc6_addressdef.h": "c",
     "memory.h": "c",
     "mpc01_param.h": "c",
-    "stdint.h": "c"
+    "stdint.h": "c",
+    "format": "cpp",
+    "text_encoding": "cpp",
+    "mpc01_addressdef.h": "c"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",
@@ -214,5 +217,7 @@
   "C_Cpp.autocomplete": "default",
   "C_Cpp.intelliSenseCacheSize": 0,
   "C_Cpp.intelliSenseMemoryLimit": 512,
-  "workbench.editor.enablePreview": false
+  "workbench.editor.enablePreview": false,
+  "python.terminal.activateEnvironment": false,
+  "C_Cpp.dimInactiveRegions": false
 }

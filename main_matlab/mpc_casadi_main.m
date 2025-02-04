@@ -33,12 +33,13 @@ if(~use_extern_flags)
     coptimflags                     = '-Ofast -march=native -flto'; % Optimization flag for compilation
     use_jit                         = false; % use jit for compilation (precompiles before each RUN!!!
     generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
+    sourcecode_list_select          = 1; % 1: current mpc, 2: all mpcs, 3: custom list 1
     reload_parameters_m             = ~true; % reload parameters.m at the end (clears all variables!)
     remove_sourcefiles              = false; % remove source files after compilation
 end
 
 % MPC TO COMPILE:
-SELECTED_MPC_NAME = 'MPC12';
+SELECTED_MPC_NAME = 'MPC8';
 
 % Compile Mode:
 % compile_mode = 1 | nlpsol-sfun | fast compile time | very accurate,          | sometimes slower exec
@@ -51,7 +52,7 @@ param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version = 'opt_problem_y_u_MPC_v1'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).N_MPC   = 3;
 param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
@@ -163,6 +164,31 @@ param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 2; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
+
+MPC='MPC15LL';
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).version = 'opt_problem_y_u_MPC_v1'; % see nlpso_generate_opt_problem.m
+param_casadi_fun_name.(MPC).Ts      = 5e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 3;
+param_casadi_fun_name.(MPC).compile_mode = 2; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
+param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
+
+MPC='MPC15HL';
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).version = 'opt_problem_MPC_v4_kin_int'; % see nlpso_generate_opt_problem.m
+param_casadi_fun_name.(MPC).Ts      = 5e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 15;
+param_casadi_fun_name.(MPC).compile_mode = 2; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
+param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 param_casadi_fun_struct = param_casadi_fun_name.(SELECTED_MPC_NAME);
@@ -467,7 +493,7 @@ if(generate_realtime_udp_c_fun)
     fprintf(['mpc_casadi_main.m: Creating global headers for C: \n\nOutput folder for headers: ', mpc_c_sourcefile_path, '\n\n']);
     generate_param_robot_header(s_fun_path, param_robot, traj_settings, 'param_robot');
     generate_casadi_types([mpc_c_sourcefile_path, 'casadi_types.h']);
-    generate_mpc_config_typedef([mpc_c_sourcefile_path, 'mpc_config.h'], 'mpc_config', unique_f_opt_input_map, unique_f_opt_output_map, param_casadi_fun_name);
+    generate_mpc_config_typedef(mpc_c_sourcefile_path, unique_f_opt_input_map, unique_f_opt_output_map, param_casadi_fun_name);
     fprintf('--------------------------------------------------------------------\n\n');
 end
 

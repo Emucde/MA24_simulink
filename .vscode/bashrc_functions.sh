@@ -1,9 +1,10 @@
-export casadi_path=/media/daten/Anwendungen/casadi-3.6.6-linux64-matlab2018b
+export casadi_path=/media/daten/Anwendungen/casadi-3.6.7-linux64-matlab2018b
 export eigen_path=/usr/include/eigen3
 export MATLAB_ROOT=/media/daten/Anwendungen/MATLAB/R2022b
 
 export _colcon_cd_root=/opt/ros/humble/
 export PKG_CONFIG_PATH=/opt/ros/humble/lib/x86_64-linux-gnu/pkgconfig/
+export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$MAMBA_ROOT_PREFIX/envs/ros_env/lib/pkgconfig/:$MAMBA_ROOT_PREFIX/pkgs/hpp-fcl-2.4.4-py311h04f086a_0/lib/pkgconfig/"
 export PIN_LIBS=$(pkg-config --cflags --libs pinocchio)
 
 
@@ -83,4 +84,5 @@ function runnodejs()
 	node $masterdir/main_ros2/nodejs_ros2_gui/src/app.js
 }
 
-export LD_PRELOAD=/lib/x86_64-linux-gnu/libstdc++.so.6
+# kann matlab crashen..
+#export LD_PRELOAD=/lib/x86_64-linux-gnu/libstdc++.so.6

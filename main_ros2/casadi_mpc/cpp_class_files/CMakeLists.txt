@@ -127,6 +127,12 @@ else()
   message(STATUS "MPC libraries: ${MPC_ALL_LIBRARIES}")
 endif()
 
+list(APPEND CMAKE_PREFIX_PATH "$ENV{MAMBA_ROOT_PREFIX}/envs/ros_env/")
+
+set(Python_EXECUTABLE "/media/daten/Anwendungen/micromamba/envs/ros_env/bin/python")
+set(Python3_EXECUTABLE "/media/daten/Anwendungen/micromamba/envs/ros_env/bin/python3")
+
+message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 list(APPEND CMAKE_PREFIX_PATH "/opt/ros/humble")
 list(APPEND CMAKE_PREFIX_PATH "${MPC_SOURCE_DIR}")
 link_directories("${MPC_SOURCE_DIR}")

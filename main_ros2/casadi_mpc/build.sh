@@ -12,6 +12,7 @@ if [ ! -d "/opt/ros/humble" ]; then
     source $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
     mamba activate ros_env
     source $MAMBA_ROOT_PREFIX/envs/ros_env/setup.bash
+    echo $PYTHONPATH
 else
     source /opt/ros/humble/setup.bash
 fi

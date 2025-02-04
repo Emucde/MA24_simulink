@@ -6,7 +6,7 @@
 #include "include/FullSystemTorqueMapper.hpp"
 #include "include/CasadiMPC.hpp"
 #include "include/CasadiController.hpp"
-#include "mpc_config.h"
+#include "mpc_config_typedefs.h"
 #include "param_robot.h"
 #include "casadi_types.h"
 #include <Eigen/Dense>
@@ -116,9 +116,9 @@ int main()
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
     Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
 
-    #define TRAJ_SELECT 3
+    #define TRAJ_SELECT 1
     x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (controller.get_traj_x0_init(TRAJ_SELECT), nx);
-    q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
+    // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
 
     // initialize the filter
@@ -131,9 +131,7 @@ int main()
 
     const Eigen::MatrixXd* trajectory = controller.get_trajectory();
     int traj_count = 0;
-    Eigen::VectorXi selected_rows(7);
-    selected_rows << 0, 1, 2, 9, 10, 11, 12;  // Selecting p_d (0-2) and q_d (9-11)
-    Eigen::VectorXd y_d = Eigen::VectorXd::Zero(7);
+    Eigen::VectorXd y_d = Eigen::VectorXd::Zero(19);
     
     // ParamPolyTrajectory param_target;
     // param_target.p_target = Eigen::Vector3d(0.5, 0.0, 0.6);
@@ -192,10 +190,10 @@ int main()
         // Write data to shm:
         shm.write("read_state_data", x_k_ndof, nx * sizeof(casadi_real));
         shm.write("read_control_data", tau_full.data(), nq * sizeof(casadi_real));
-        shm.write("read_traj_data", controller.get_act_traj_data(), 7 * sizeof(casadi_real));
+        // shm.write("read_traj_data", controller.get_act_traj_data(), 7 * sizeof(casadi_real));
 
-        // y_d << (*trajectory)(selected_rows, traj_count++);
-        // shm.write("read_traj_data", y_d.data(), 7 * sizeof(casadi_real));
+        y_d << (*trajectory)(Eigen::all, traj_count++);
+        shm.write("read_traj_data", y_d.data(), 19 * sizeof(casadi_real));
         shm.write("read_frequency", &current_frequency, sizeof(double));
         shm.post_semaphore("shm_changed_semaphore");
 

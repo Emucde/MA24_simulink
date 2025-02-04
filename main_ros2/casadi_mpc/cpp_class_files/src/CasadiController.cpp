@@ -16,8 +16,7 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
         MPCType mpc = static_cast<MPCType>(i);
         if (mpc != MPCType::INVALID)
         { // Ensures we are within valid enum range
-            std::string mpcName = mpctype_to_string(mpc);
-            casadi_mpcs.push_back(CasadiMPC(mpcName, robot_config, trajectory_generator.get_traj_data(), trajectory_generator.get_traj_data_real_len())); // Initialize all MPCs
+            casadi_mpcs.push_back(CasadiMPC(mpc, robot_config, trajectory_generator.get_traj_data(), trajectory_generator.get_traj_data_real_len())); // Initialize all MPCs
         }
     }
 

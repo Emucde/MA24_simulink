@@ -36,7 +36,7 @@ fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 %trajectory_out_of_workspace = false; % TODO: einfach offset 0 setzten
 %x_traj_out_of_workspace_value = 0.1;
 
-full_reset_flag = ~false; % Please set this flag true after cloning or if a full reset should be  done.
+full_reset_flag = false; % Please set this flag true after cloning or if a full reset should be  done.
 plot_trajectory               = ~true;
 overwrite_offline_traj_forced = false; % if true then init guess is also created
 warm_start = true;

@@ -192,12 +192,6 @@ Eigen::MatrixXd TrajectoryGenerator::generate_poly_trajectory()
     double rot_alpha_scale = 2 * acos(rot_rho);
     Eigen::Vector3d rot_ax;
 
-    if (rot_alpha_scale > M_PI)
-    {
-        rot_alpha_scale = 2 * M_PI - rot_alpha_scale;
-        rot_ax = -rot_ax;
-    }
-
     if (rot_alpha_scale == 0)
     {
         rot_ax = Eigen::Vector3d(0, 0, 0);
@@ -205,6 +199,12 @@ Eigen::MatrixXd TrajectoryGenerator::generate_poly_trajectory()
     else
     {
         rot_ax = rot_vec / sin(rot_alpha_scale / 2);
+    }
+
+    if (rot_alpha_scale > M_PI)
+    {
+        rot_alpha_scale = 2 * M_PI - rot_alpha_scale;
+        rot_ax = -rot_ax;
     }
 
     double current_time = 0.0;
