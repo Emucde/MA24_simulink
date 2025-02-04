@@ -18,8 +18,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 
     # set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE) # more modern method to enable LTO (-flto)
     # set(OPT_FLAG "-fdiagnostics-color=always;-O3;-ffast-math;-march=x86-64;-mtune=generic;-flto")
-    set(OPT_FLAG "-fdiagnostics-color=always;-O3;-ffast-math;-march=x86-64;-mtune=generic;")
-    # set(OPT_FLAG "-fdiagnostics-color=always;-Ofast;")
+    # set(OPT_FLAG "-fdiagnostics-color=always;-O3;-ffast-math;-march=x86-64;-mtune=generic;")
+    set(OPT_FLAG "-Ofast;-march=x86-64;-mtune=generic;-flto")
     set(MPC_OPT_FLAG ${OPT_FLAG})
 elseif(CMAKE_BUILD_TYPE STREQUAL "DebugSpecial")
     set(OPT_FLAG "-O0")
@@ -66,7 +66,6 @@ set(CASADI_PATH "/media/daten/Anwendungen/casadi-3.6.7-linux64-matlab2018b")
 set(CASADI_INCLUDE_DIRS "${CASADI_PATH}/include")
 set(HIGHS_INCLUDE_DIRS "${CASADI_PATH}/include/highs")
 set(CASADI_LIBRARY_DIRS "${CASADI_PATH}")
-set(CMATH_INCLUDE_DIRS "/usr/include/c++/11" "/usr/include/x86_64-linux-gnu/c++/11")
 
 # file(GLOB JIT_LIBRARY_DIRS "${MPC_SOURCE_DIR}/*jit.so")
 
@@ -80,6 +79,58 @@ add_definitions(-DMASTERDIR="$ENV{masterdir}")
 # Set up compile time measurement
 set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
 
+
+message(STATUS "CMAKE_C_COMPILER_ID: ${CMAKE_C_COMPILER_ID}")
+message(STATUS "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
+
+if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    # Get the compiler version
+    string(REPLACE "." ";" GCC_VERSION_LIST "${CMAKE_CXX_COMPILER_VERSION}")
+    list(GET GCC_VERSION_LIST 0 GCC_VERSION_MAJOR)
+
+    # Initialize base path
+    set(BASE_PATH "/media/daten/Anwendungen/cpp_compiler")
+
+    message(STATUS "GCC version: ${GCC_VERSION_MAJOR}")
+
+    # Set specific version names for GCC-13 and GCC-14
+    if(GCC_VERSION_MAJOR EQUAL 13)
+        set(VERSION_NAME "xpack-gcc-13.3.0-1")
+    elseif(GCC_VERSION_MAJOR EQUAL 14)
+        set(VERSION_NAME "xpack-gcc-14.2.0-1")
+    endif()
+
+    # If VERSION_NAME is set, construct paths and check for existence
+    if(VERSION_NAME)
+        set(INCLUDE_PATH "${BASE_PATH}/${VERSION_NAME}/include/c++")
+        set(LIBRARY_PATH "${BASE_PATH}/${VERSION_NAME}/lib64")
+
+        # Check if the include directory exists
+        if(EXISTS "${INCLUDE_PATH}")
+            include_directories(${INCLUDE_PATH})
+            message(STATUS "Using custom include path: ${INCLUDE_PATH}")
+        else()
+            message(WARNING "Specified path for ${VERSION_NAME} does not exist. Using default include paths.")
+        endif()
+
+        # Check if the library directory exists
+        if(EXISTS "${LIBRARY_PATH}")
+            link_directories(${LIBRARY_PATH})
+            message(STATUS "Using custom library path: ${LIBRARY_PATH}")
+        else()
+            message(WARNING "Library path for ${VERSION_NAME} does not exist. Using default library paths.")
+        endif()
+    else()
+        set(LIBRARY_PATH "")
+        message(STATUS "Using default include paths for GCC-${GCC_VERSION_MAJOR}")
+    endif()
+
+endif()
+
+message(STATUS "LIBRARY_PATH: ${LIBRARY_PATH}")
+
+
+
 # Create a shared library for each MPC*.c file
 foreach(SOURCE_FILE ${MPC_SOURCES})
     get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)  # Get the filename without extension
@@ -88,14 +139,13 @@ foreach(SOURCE_FILE ${MPC_SOURCES})
     add_library(${FILE_NAME} SHARED ${SOURCE_FILE})
 
     # Set the output library name to 'lib<NAME>.so'
-    set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}")
+    set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}" INSTALL_RPATH "${LIBRARY_PATH}")
 
     # Include directories
     target_include_directories(${FILE_NAME} PRIVATE
         ${MPC_SOURCE_DIR}
         ${CASADI_INCLUDE_DIRS}
         ${HIGHS_INCLUDE_DIRS}
-        ${CMATH_INCLUDE_DIRS}
         )
 
     target_link_libraries(${FILE_NAME} PRIVATE 
@@ -154,7 +204,7 @@ foreach(SOURCE_FILE ${SRC_FILES})
     add_library(${FILE_NAME} SHARED ${SOURCE_FILE})
 
     # Set the output library name to 'lib<NAME>.so'
-    set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}" INSTALL_RPATH "${MPC_SOURCE_DIR}")
+    set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}" INSTALL_RPATH "${MPC_SOURCE_DIR};${LIBRARY_PATH}")
 
     # Include directories
     target_include_directories(${FILE_NAME} PRIVATE 
@@ -163,7 +213,6 @@ foreach(SOURCE_FILE ${SRC_FILES})
         ${rclcpp_INCLUDE_DIRS}
         ${MPC_SOURCE_DIR} 
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMATH_INCLUDE_DIRS}
     )
 
     target_link_libraries(${FILE_NAME} PRIVATE
@@ -203,6 +252,11 @@ else()
     message(FATAL_ERROR "Main source file not found: ${MAIN_SOURCE_FILE}. Please check the path.")
 endif()
 
+set_target_properties(main PROPERTIES 
+    BUILD_RPATH "${LIBRARY_PATH}"
+    INSTALL_RPATH "${LIBRARY_PATH}"
+)
+
 # Specify include directories for the main executable
 target_include_directories(main PRIVATE 
     ${pinocchio_INCLUDE_DIRS} 
@@ -210,7 +264,6 @@ target_include_directories(main PRIVATE
     ${rclcpp_INCLUDE_DIRS}
     ${MPC_SOURCE_DIR} 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMATH_INCLUDE_DIRS}
 )
 
 # Link libraries to the main executable

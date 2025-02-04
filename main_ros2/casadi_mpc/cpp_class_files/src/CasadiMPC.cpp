@@ -74,6 +74,9 @@ CasadiMPC::CasadiMPC(MPCType mpc,
     // Copy the parameter weights
     memcpy(mpc_config.in.param_weight.ptr, mpc_config.param_weight, mpc_config.param_weight_len * sizeof(casadi_real));
 
+    // init the reference values vector
+    init_fixed_references();
+
 #ifdef DEBUG
     std::cout << "w: ";
     for (int i = 0; i < int(mpc_config.in.init_guess.len + mpc_config.in.reference_values.len + mpc_config.in.param_weight.len); i++)
@@ -261,19 +264,38 @@ Damit erstellt man ein Struct für die Setter der Referenzen und ein Struct für
 */
 
 // Method to get the reference function pointer list
-// void CasadiMPC::get_ref_fun_ptr_list()
-// {
-//     for (int i = 0; i < static_cast<int>(MPCInput::COUNT); ++i)
-//     {
-//         casadi_ref
-//         MPCInput mpc_input = static_cast<MPCInput>(i);
-//         if (mpc_input != MPCInput::INVALID)
-//         {
-//             std::string mpcInputName = mpcinput_to_string(mpc_input);
-//             std::cout << mpcInputName << " = " << mpc_config.in.ref_fun_ptrs[i] << std::endl;
-//         }
-//     }
-// }
+void CasadiMPC::init_fixed_references()
+{
+    for (int i = 0; i < static_cast<int>(MPCInput::COUNT); ++i)
+    {
+        MPCInput mpc_input = static_cast<MPCInput>(i);
+
+        if(mpc_input == MPCInput::x_k && mpc_config.in.x_k.len != 0) // if x_prev is a reference
+        {
+            input_references.push_back(mpc_input);
+        }
+        else if(mpc_input == MPCInput::z_k && mpc_config.in.z_k.len != 0)
+        {
+            input_references.push_back(mpc_input);
+        }
+        else if(mpc_input == MPCInput::t_k && mpc_config.in.t_k.len != 0)
+        {
+            input_references.push_back(mpc_input);
+        }
+        else if(mpc_input == MPCInput::y_d && mpc_config.in.y_d.len != 0)
+        {
+            input_references.push_back(mpc_input);
+        }
+        else if(mpc_input == MPCInput::y_d_p && mpc_config.in.y_d_p.len != 0)
+        {
+            input_references.push_back(mpc_input);
+        }
+        else if(mpc_input == MPCInput::y_d_pp && mpc_config.in.y_d_pp.len != 0)
+        {
+            input_references.push_back(mpc_input);
+        }
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////

@@ -193,10 +193,26 @@ void WorkspaceController::switchController(ControllerType type)
     }
 }
 
-//  void WorkspaceController::update(double* x) {
-// 	calculateRobotData(double* x);
-//     active_controller->control();
-//  }
+ void WorkspaceController::update(const double *const x) {
+	// calculateRobotData(x);
+    // active_controller->control();
+    return;
+ }
+
+void WorkspaceController::CTController::control()
+{
+    return;
+}
+
+void WorkspaceController::PDPlusController::control()
+{
+    return;
+}
+
+void WorkspaceController::InverseDynamicsController::control()
+{
+    return;
+}
 
 // void PDPlusController::control(double *x)
 // {

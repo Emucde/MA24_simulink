@@ -16,6 +16,8 @@ sys.path.append(os.path.dirname(os.path.abspath('./utils_python')))
 from utils_python.utils import *
 
 # set nice priority to highest value
+    # if error do the command, after that logout login
+    # sudo sed -i '/# End of file/i @realtime soft nice -20\n@realtime hard nice -20' /etc/security/limits.d/realtime.conf
 os.nice(0)
 start_server() # start plotting update server
 

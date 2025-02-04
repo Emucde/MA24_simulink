@@ -211,7 +211,6 @@
   "editor.insertSpaces": true,
   "editor.tabSize": 4,
   "ros.distro": "humble",
-  "MATLAB.startDebuggerAutomatically": true,
   "terminal.integrated.scrollback": 10000,
   "C_Cpp.intelliSenseEngine": "default",
   "C_Cpp.autocomplete": "default",
@@ -219,5 +218,6 @@
   "C_Cpp.intelliSenseMemoryLimit": 512,
   "workbench.editor.enablePreview": false,
   "python.terminal.activateEnvironment": false,
-  "C_Cpp.dimInactiveRegions": false
+  "C_Cpp.dimInactiveRegions": false,
+  "MATLAB.startDebuggerAutomatically": false
 }

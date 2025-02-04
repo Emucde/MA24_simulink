@@ -12,10 +12,10 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
     // Initialize MPC objects
     for (int i = 0; i < static_cast<int>(MPCType::COUNT); ++i)
     {
-        
+
         MPCType mpc = static_cast<MPCType>(i);
         if (mpc != MPCType::INVALID)
-        { // Ensures we are within valid enum range
+        {                                                                                                                                             // Ensures we are within valid enum range
             casadi_mpcs.push_back(CasadiMPC(mpc, robot_config, trajectory_generator.get_traj_data(), trajectory_generator.get_traj_data_real_len())); // Initialize all MPCs
         }
     }
@@ -139,6 +139,9 @@ void CasadiController::setActiveMPC(MPCType mpc_type)
     {
         selected_mpc_type = mpc_type;
         active_mpc = &casadi_mpcs[static_cast<int>(selected_mpc_type)];
+        active_input_references = active_mpc->get_input_references();
+        init_active_references_and_pointers();
+
         active_mpc_config = const_cast<mpc_config_t *>(active_mpc->get_mpc_config());
         active_mpc_input_config = &active_mpc_config->in;
 
@@ -146,6 +149,7 @@ void CasadiController::setActiveMPC(MPCType mpc_type)
         x_k_ptr = active_mpc->get_x_k();
         u_k_ptr = active_mpc->get_optimal_control();
         y_d_ptr = active_mpc->get_y_d();
+
         w_ptr = active_mpc->get_w();
         traj_data_per_horizon = active_mpc->get_traj_data_per_horizon_len();
         mpc_traj_indices = const_cast<casadi_uint *>(active_mpc->get_mpc_traj_indices());
@@ -154,6 +158,56 @@ void CasadiController::setActiveMPC(MPCType mpc_type)
     else
     {
         std::cerr << "Invalid MPC type." << std::endl;
+    }
+}
+
+void CasadiController::init_active_references_and_pointers()
+{
+    // Iterate through all input references
+    for (auto &input : *active_input_references)
+    {
+        /*
+            std::vector<double *> active_refs; // - Array of pointers to the references
+    std::vector<double *> active_data; // - Array of pointers to the data
+    std::vector<CasadiIOPtr_t> active_funcs; // - Array of pointers to the functions
+        */
+        switch (input)
+        {
+        case MPCInput::x_k:
+            active_data.push_back(x_k_ptr);
+            //active_funcs.push_back(active_mpc_input_config->x_k.set);
+            break;
+        case MPCInput::z_k:
+            active_data.push_back(z_k_ptr);
+            //active_funcs.push_back(active_mpc_input_config->z_k.set);
+            break;
+        case MPCInput::t_k:
+            active_data.push_back(t_k_ptr);
+            //active_funcs.push_back(active_mpc_input_config->t_k.set);
+            break;
+        case MPCInput::y_d:
+            active_data.push_back(y_d_ptr);
+            //active_funcs.push_back(active_mpc_input_config->y_d.set);
+            break;
+        case MPCInput::y_d_p:
+            active_data.push_back(y_d_p_ptr);
+            //active_funcs.push_back(active_mpc_input_config->y_d_p.set);
+            break;
+        case MPCInput::y_d_pp:
+            active_data.push_back(y_d_pp_ptr);
+            //active_funcs.push_back(active_mpc_input_config->y_d_pp.set);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void CasadiController::set_input_references()
+{
+    for (casadi_uint i = 0; i < active_data.size(); i++)
+    {
+        active_funcs[i](w_ptr, active_data[i]);
     }
 }
 

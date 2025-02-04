@@ -160,6 +160,12 @@ public:
         return mpc_config.in.y_d.ptr;
     }
 
+    // Method to get the input references
+    std::vector<MPCInput>* get_input_references()
+    {
+        return &input_references;
+    }
+
     ///////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////// PUBLIC SETTER METHODS ////////////////////////////////
@@ -190,8 +196,12 @@ private:
     // void read_x0_init(const std::string &q0_init_file, casadi_real *x0_arr);
     // std::streamoff get_traj_dims();
 
+    // Vector for selecting input references
+    std::vector<MPCInput> input_references;
+
     void set_row_vector(casadi_real *matrix_data, casadi_real *row_data, casadi_uint rows, casadi_uint length);
     void set_references(casadi_real *x_k_in);
+    void init_fixed_references();
 
     void set_coldstart_init_guess(const casadi_real *const x_k_ptr);
 

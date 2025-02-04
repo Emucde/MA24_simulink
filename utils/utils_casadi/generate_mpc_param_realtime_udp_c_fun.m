@@ -1,4 +1,4 @@
-function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_fun_input_cell, casadi_fun_output_cell, casadi_fun, output_dir, s_fun_path)
+function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_fun_input_cell, casadi_fun_output_cell, refval_str_cell, casadi_fun, output_dir, s_fun_path)
     % Open the header file for writing
     func_name = casadi_fun.name;
 
@@ -6,9 +6,25 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     extra_input_entries.names = extractBefore(cellstr(casadi_fun.name_in), ' ');
     extra_input_entries.dim_text = extractAfter(cellstr(casadi_fun.name_in), '= ');
 
+    setter_prestring = 'set';
+    getter_prestring = 'get';
+
+    input_ref_names = cellfun(@(value) value.name,refval_str_cell, 'UniformOutput', false);
+    prev_input_indices = find(contains(input_ref_names, 'prev'));
+    prev_input_names = input_ref_names(prev_input_indices);
+    prev_output_names = cellfun(@(name) strrep(name, 'prev', 'out'), prev_input_names, 'UniformOutput', false);
+    input_prev_cell = {refval_str_cell(prev_input_indices)};
+    output_prev_cell = cell(1, length(prev_input_names));
+    for i = 1:length(prev_input_names)
+        output_prev_cell{i} = refval_str_cell{prev_input_indices(i)};
+        output_prev_cell{i}.name = strrep(output_prev_cell{i}.name, 'prev', 'out');
+    end
+    output_prev_cell = {output_prev_cell};
+
     param_weight_header_name = [func_name, '_param.h'];
     output_file = [output_dir, param_weight_header_name, '_tmp'];
     output_file_fin = [output_dir, param_weight_header_name];
+
 
     fid = fopen(output_file, 'w');
 
@@ -67,53 +83,25 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '\n');
 
     % define setter functions
-    for i = 1:length(casadi_fun_input_cell)
-        input_cell = casadi_fun_input_cell{i};
-        for j = 1:length(input_cell)
-            dim = input_cell{j}.dim;
-            name = input_cell{j}.name;
-
-            fprintf(fid, 'inline void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, name, name);
-
-            if length(dim) == 2 && all(dim > 1)
-                % It's a matrix
-                fprintf(fid, '        /*set %s: %dx%d matrix values */\n', name, dim(1), dim(2));
-            else
-                % It's a vector or higher dimensional array
-                fprintf(fid, '        /*set %s: %s array values */\n', name, mat2str(dim));
-            end
-        end
-    end
+    generate_function_declarations(fid, setter_prestring, casadi_fun_input_cell, func_name);
 
     % Extra setter functions for reference_values, init_guess, and param_weight
     for i = 1:length(extra_input_entries.names)
-        fprintf(fid, 'inline void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, extra_input_entries.names{i}, extra_input_entries.names{i});
+        fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, extra_input_entries.names{i}, extra_input_entries.names{i});
         fprintf(fid, '        /*set %s: %s array values */\n', extra_input_entries.names{i}, extra_input_entries.dim_text{i});
     end
 
     fprintf(fid, '\n');
 
-    % define getter functions
-    for i = 1:length(casadi_fun_output_cell)
-        output_cell = casadi_fun_output_cell{i};
-        for j = 1:length(output_cell)
-            dim = output_cell{j}.dim;
-            name = output_cell{j}.name;
-
-            fprintf(fid, 'inline void get_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, name, name);
-
-            if length(dim) == 2 && all(dim > 1)
-                % It's a matrix
-                fprintf(fid, '        /*get %s: %dx%d matrix values */\n', name, dim(1), dim(2));
-            else
-                % It's a vector or higher dimensional array
-                fprintf(fid, '        /*get %s: %s array values */\n', name, mat2str(dim));
-            end
-        end
-    end
+    generate_function_declarations(fid, getter_prestring, casadi_fun_output_cell, func_name);
 
     % extra getter for init_guess_out
-    fprintf(fid, 'inline void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out);\n', func_name);
+    fprintf(fid, 'void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out);\n', func_name);
+
+    % getter for prev_to_out functions
+
+    generate_prev_to_out_declarations(fid, setter_prestring, input_prev_cell, output_prev_cell, func_name);
+    fprintf(fid, 'void set_prev_to_out_%s(casadi_real *const w);\n\n', func_name);
 
     % Declare the function to get the MPC config
     fprintf(fid, 'mpc_config_t get_%s_config();\n\n', func_name);
@@ -168,60 +156,53 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '#include "casadi_types.h"\n');
     fprintf(fid, '#include "string.h"\n\n');
 
+    fprintf(fid, '\n');
+    fprintf(fid, '////////////////////////////////////////////////////////////////////////////////\n');
+    fprintf(fid, '/////////////////////////////////////    SETTER    /////////////////////////////\n');
+    fprintf(fid, '////////////////////////////////////////////////////////////////////////////////\n');
+    fprintf(fid, '\n');
+
     % define setter functions
-    for i = 1:length(casadi_fun_input_cell)
-        input_cell = casadi_fun_input_cell{i};
-        for j = 1:length(input_cell)
-            dim = input_cell{j}.dim;
-            name = input_cell{j}.name;
-
-            fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s)\n', func_name, name, name);
-            fprintf(fid, '{\n');
-            fprintf(fid, '    memcpy(w + %s_%s_ADDR, %s, %s_%s_LEN * sizeof(casadi_real));', func_name, upper(name), name, func_name, upper(name));
-
-            if length(dim) == 2 && all(dim > 1)
-                % It's a matrix
-                fprintf(fid, '        /*%s: %dx%d matrix values */\n', name, dim(1), dim(2));
-            else
-                % It's a vector or higher dimensional array
-                fprintf(fid, '        /*%s: %s array values */\n', name, mat2str(dim));
-            end
-            
-            fprintf(fid, '}\n\n');
-        end
-    end
+    is_setter=true;
+    generate_set_get_functions(fid, func_name, setter_prestring, casadi_fun_input_cell, is_setter)
 
     % Extra setter functions for reference_values, init_guess, and param_weight
     for i = 1:length(extra_input_entries.names)
-        fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s)\n', func_name, extra_input_entries.names{i}, extra_input_entries.names{i});
-        fprintf(fid, '{\n');
+        fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s) {\n', func_name, extra_input_entries.names{i}, extra_input_entries.names{i});
         fprintf(fid, '    memcpy(w + %s_%s_ADDR, %s, %s_%s_LEN * sizeof(casadi_real));', func_name, upper(extra_input_entries.names{i}), extra_input_entries.names{i}, func_name, upper(extra_input_entries.names{i}));
         fprintf(fid, '        /*%s: %s array values */\n', extra_input_entries.names{i}, extra_input_entries.dim_text{i});
-        fprintf(fid, '}\n\n');
+        fprintf(fid, '}\n');
     end
+
+    fprintf(fid, '\n');
+    fprintf(fid, '////////////////////////////////////////////////////////////////////////////////\n');
+    fprintf(fid, '/////////////////////////////////////   PREV SETTER    /////////////////////////\n');
+    fprintf(fid, '////////////////////////////////////////////////////////////////////////////////\n');
+    fprintf(fid, '\n');
+
+    % define set prev to out setter functions
+    
+    generate_prev_to_out_functions(fid, 'set', input_prev_cell, output_prev_cell, func_name);
+
+
+    % common prev to out function
+    fprintf(fid, 'void set_prev_to_out_%s(casadi_real *const w) {\n', func_name);
+    for i = 1:length(prev_input_names)
+        fprintf(fid, '    memcpy(w + %s_%s_ADDR, w + %s_%s_ADDR, %s_%s_LEN * sizeof(casadi_real));\n', ...
+            func_name, upper(prev_input_names{i}), func_name, upper(prev_output_names{i}), ...
+            func_name, upper(prev_output_names{i}));
+    end
+    fprintf(fid, '}\n');
+
+    fprintf(fid, '\n');
+    fprintf(fid, '////////////////////////////////////////////////////////////////////////////////\n');
+    fprintf(fid, '/////////////////////////////////////    GETTER    /////////////////////////////\n');
+    fprintf(fid, '////////////////////////////////////////////////////////////////////////////////\n');
+    fprintf(fid, '\n');
 
     % define getter functions
-    for i = 1:length(casadi_fun_output_cell)
-        output_cell = casadi_fun_output_cell{i};
-        for j = 1:length(output_cell)
-            dim = output_cell{j}.dim;
-            name = output_cell{j}.name;
-
-            fprintf(fid, 'void get_%s_%s(casadi_real *const w, casadi_real *const %s)\n', func_name, name, name);
-            fprintf(fid, '{\n');
-            fprintf(fid, '    memcpy(%s, w + %s_%s_ADDR, %s_%s_LEN * sizeof(casadi_real));', name, func_name, upper(name), func_name, upper(name));
-
-            if length(dim) == 2 && all(dim > 1)
-                % It's a matrix
-                fprintf(fid, '        /*%s: %dx%d matrix values */\n', name, dim(1), dim(2));
-            else
-                % It's a vector or higher dimensional array
-                fprintf(fid, '        /*%s: %s array values */\n', name, mat2str(dim));
-            end
-            
-            fprintf(fid, '}\n\n');
-        end
-    end
+    is_setter=false;
+    generate_set_get_functions(fid, func_name, getter_prestring, casadi_fun_output_cell, is_setter)
     
     % extra getter for init_guess_out
     fprintf(fid, 'void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out)\n', func_name);
@@ -230,6 +211,10 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '}\n\n');
 
     % create function that returns a mpc_config_t struct
+    fprintf(fid, '////////////////////////////////////////////////////////////////////////////////\n');
+    fprintf(fid, '/////////////////////////////////////    CONFIG    /////////////////////////////\n');
+    fprintf(fid, '////////////////////////////////////////////////////////////////////////////////\n');
+    fprintf(fid, '\n');
     fprintf(fid, '// Function to get the MPC config\n');
     fprintf(fid, 'mpc_config_t get_%s_config()\n', func_name);
     fprintf(fid, '{\n');
@@ -292,7 +277,8 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
 
     % set the default parameter values
     fprintf(fid, '    // Set the MPC config\n');
-    fprintf(fid, ['    mpc_config_t ', func_name, 'Config = {\n']);
+    fprintf(fid, '    // It have to be static because only then all other values and pointer are set to zero!\n');
+    fprintf(fid, ['    static mpc_config_t ', func_name, 'Config = {\n']);
     fprintf(fid, '        .kinematic_mpc = %s_KINEMATIC_MPC, // Kinematic MPC (u_opt=q0_pp, x1, q1pp) or dynamic MPC (u_opt=tau0)\n', func_name);
     fprintf(fid, '        .traj_data_per_horizon = %s_TRAJ_DATA_PER_HORIZON, // Number of trajectory data points per horizon\n', func_name);
     fprintf(fid, '        .traj_indices = %s_TRAJ_INDICES, // Local indices of the trajectory per horizon\n', func_name);
@@ -309,6 +295,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '        .arg_in_len = %s_ARG_IN_LEN, // Length of the input arguments\n', func_name);
     fprintf(fid, '        .res_out_len = %s_RES_OUT_LEN, // Length of the output results\n', func_name);
     fprintf(fid, '        .mem = 0, // Memory\n');
+    fprintf(fid, '        .set_prev_to_out = &set_prev_to_out_%s, // Setter function for previous to output\n', func_name);
     % create the mpc_input_config struct
     fprintf(fid, '        .in = {\n');
     
@@ -410,5 +397,135 @@ function create_mpc_inout_entry(fid, func_name, name, dim, funstr, last)
         fprintf(fid, '            }\n');
     else
         fprintf(fid, '            },\n');
+    end
+end
+
+function generate_set_get_functions(fid, func_name, prestring, casadi_fun_cell, set)
+    for i = 1:length(casadi_fun_cell)
+        input_cell = casadi_fun_cell{i};
+        
+        for j = 1:length(input_cell)
+            dim = input_cell{j}.dim;
+            name = input_cell{j}.name;
+            
+            % Write the function definition
+            fprintf(fid, 'void %s_%s_%s(casadi_real *const w, casadi_real *const %s) {\n', prestring, func_name, name, name);
+            
+            if(set)
+                % Write the memcpy statement
+                fprintf(fid, '    memcpy(w + %s_%s_ADDR, %s, %s_%s_LEN * sizeof(casadi_real));', ...
+                        func_name, upper(name), name, func_name, upper(name));
+            else
+                % Write the memcpy statement
+                fprintf(fid, '    memcpy(%s, w + %s_%s_ADDR, %s_%s_LEN * sizeof(casadi_real));', ...
+                    name, func_name, upper(name), func_name, upper(name));
+            end
+            
+            if length(dim) == 2 && all(dim > 1)
+                % It's a matrix
+                fprintf(fid, '\t/* %s: %dx%d matrix values */\n', name, dim(1), dim(2));
+            else
+                % It's a vector or higher dimensional array
+                fprintf(fid, '\t/* %s: %s array values */\n', name, mat2str(dim));
+            end
+            
+            fprintf(fid, '}\n');
+        end
+    end
+end
+
+function generate_prev_to_out_functions(fid, prestring, casadi_fun_input_cell, casadi_fun_output_cell, func_name)
+    for i = 1:length(casadi_fun_input_cell)
+        input_cell = casadi_fun_input_cell{i};
+        output_cell = casadi_fun_output_cell{i};
+        for j = 1:length(input_cell)
+            dim = input_cell{j}.dim;
+            name_in = input_cell{j}.name;
+            name_out = output_cell{j}.name;
+                
+            % Write the function definition
+            fprintf(fid, 'void %s_%s_to_%s_%s(casadi_real *const w) { \n', prestring, name_in, name_out, func_name);
+            
+            % Write the memcpy statement
+            fprintf(fid, '    memcpy(w + %s_%s_ADDR, w + %s_%s_ADDR, %s_%s_LEN * sizeof(casadi_real));', ...
+                    func_name, upper(name_in), func_name, upper(name_out), func_name, upper(name_out));
+            
+            if length(dim) == 2 && all(dim > 1)
+                % It's a matrix
+                fprintf(fid, '\t/* %s: %dx%d matrix values */\n', name_in, dim(1), dim(2));
+            else
+                % It's a vector or higher dimensional array
+                fprintf(fid, '\t/* %s: %s array values */\n', name_in, mat2str(dim));
+            end
+            
+            fprintf(fid, '}\n');
+        end
+    end
+end
+
+function generate_function_declarations(fid, prestring, casadi_fun_input_cell, func_name)
+    % Generates C-style function declarations for CasADi functions
+    %
+    % Inputs:
+    %   fid - File identifier (use fopen to create or open a file)
+    %   casadi_fun_input_cell - Cell array containing input data structures
+    %                           Each structure must have fields:
+    %                           - dim: Dimensions of the variable (e.g., [3, 3])
+    %                           - name: Name of the variable (e.g., 'A')
+    %   func_name - Name of the function to use in the generated declarations
+    %
+    % Example usage:
+    %   fid = fopen('output.c', 'w');
+    %   casadi_fun_input_cell = {
+    %       {struct('dim', [3, 3], 'name', 'A'), struct('dim', [4, 1], 'name', 'B')}, ...
+    %       {struct('dim', [2, 2], 'name', 'C')}
+    %   };
+    %   func_name = 'my_function';
+    %   generate_function_declarations(fid, casadi_fun_input_cell, func_name);
+    %   fclose(fid);
+
+    for i = 1:length(casadi_fun_input_cell)
+        input_cell = casadi_fun_input_cell{i};
+        for j = 1:length(input_cell)
+            dim = input_cell{j}.dim;
+            name = input_cell{j}.name;
+
+            % Write the function declaration
+            fprintf(fid, 'void %s_%s_%s(casadi_real *const w, casadi_real *const %s);', prestring, func_name, name, name);
+
+            % Add a comment describing the dimensions
+            if length(dim) == 2 && all(dim > 1)
+                % It's a matrix
+                fprintf(fid, '        /* %s %s: %dx%d matrix values */\n', prestring, name, dim(1), dim(2));
+            else
+                % It's a vector or higher-dimensional array
+                fprintf(fid, '        /* %s %s: %s array values */\n', prestring, name, mat2str(dim));
+            end
+        end
+    end
+end
+
+
+function generate_prev_to_out_declarations(fid, prestring, casadi_fun_input_cell, casadi_fun_output_cell, func_name)
+    for i = 1:length(casadi_fun_input_cell)
+        input_cell = casadi_fun_input_cell{i};
+        output_cell = casadi_fun_output_cell{i};
+        for j = 1:length(input_cell)
+            dim = input_cell{j}.dim;
+            name_in = input_cell{j}.name;
+            name_out = output_cell{j}.name;
+
+            % Write the function declaration
+            fprintf(fid, 'void %s_%s_to_%s_%s(casadi_real *const w);', prestring, name_in, name_out, func_name);
+
+            % Add a comment describing the dimensions
+            if length(dim) == 2 && all(dim > 1)
+                % It's a matrix
+                fprintf(fid, '        /* %s %s: %dx%d matrix values */\n', prestring, name_in, dim(1), dim(2));
+            else
+                % It's a vector or higher-dimensional array
+                fprintf(fid, '        /* %s %s: %s array values */\n', prestring, name_in, mat2str(dim));
+            end
+        end
     end
 end

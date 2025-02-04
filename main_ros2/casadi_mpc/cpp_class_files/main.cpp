@@ -6,7 +6,7 @@
 #include "include/FullSystemTorqueMapper.hpp"
 #include "include/CasadiMPC.hpp"
 #include "include/CasadiController.hpp"
-#include "mpc_config_typedefs.h"
+#include "mpc_config_types.h"
 #include "param_robot.h"
 #include "casadi_types.h"
 #include <Eigen/Dense>
@@ -70,6 +70,7 @@ int main()
 
     // Configuration flags
     bool use_gravity = false;
+    // MASTERDIR defined in CMakeLists.txt (=$masterdir)
     const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
     const std::string tcp_frame_name = "fr3_link8_tcp";
 

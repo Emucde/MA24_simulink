@@ -29,11 +29,11 @@ if(~use_extern_flags)
     create_test_solve               = ~true; % create init guess for all trajectories
     compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
     compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
-    compile_all_mpc_sfunctions      = ~false;
+    iterate_all_mpc_sfunctions      = true;
+    mpc_source_selection            = 4; % (1: all MPCs, 2: only dynamic MPCs, 3: only kinematic MPCs, 4: only selected MPC)
     coptimflags                     = '-Ofast -march=native -flto'; % Optimization flag for compilation
     use_jit                         = false; % use jit for compilation (precompiles before each RUN!!!
     generate_realtime_udp_c_fun     = true; % create a c function for realtime udp communication
-    sourcecode_list_select          = 1; % 1: current mpc, 2: all mpcs, 3: custom list 1
     reload_parameters_m             = ~true; % reload parameters.m at the end (clears all variables!)
     remove_sourcefiles              = false; % remove source files after compilation
 end
@@ -194,7 +194,9 @@ param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)
 param_casadi_fun_struct = param_casadi_fun_name.(SELECTED_MPC_NAME);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-if(compile_all_mpc_sfunctions)
+[mpc_source_selection_list, param_mpc_source_selection] = get_mpc_param_list(param_casadi_fun_name, param_casadi_fun_struct, mpc_source_selection, iterate_all_mpc_sfunctions); % sets param_casadi_fun_struct_list
+
+if(iterate_all_mpc_sfunctions)
     param_casadi_fun_struct_list = struct2cell(param_casadi_fun_name);
 else
     param_casadi_fun_struct_list = {param_casadi_fun_struct};
@@ -269,29 +271,6 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         nlpsol_opt_problem_SX_v2;
     else
         error(['mpc_casadi_main.m: Error: Variant = ', MPC_variant, ' is not valid. Should be (opti | nlpsol)']);
-    end
-    
-    %% Test MPC (fast)
-    
-    if(plot_init_guess)
-        HH_e_test = arrayfun(@(u) hom_transform_endeffector(x_init_guess(1:n,u), param_robot), 1:N_MPC+1, UniformOutput=false);
-        HH_e_test_arr = cell2mat(HH_e_test);
-        p_e_test_arr = HH_e_test_arr(1:2,4:4:(N_MPC+1)*4)';
-        
-        subplot(3,1,1)
-        plot((0:N_MPC-1)*Ts_MPC, u_init_guess)
-        xlabel('time (s)');
-        ylabel('tau (Nm)')
-        
-        subplot(3,1,2);
-        plot((0:N_MPC)*Ts_MPC, p_e_test_arr(:,1))
-        xlabel('time (s)');
-        ylabel('x pos (m)')
-        
-        subplot(3,1,3);
-        plot((0:N_MPC)*Ts_MPC, p_e_test_arr(:,2))
-        xlabel('time (s)');
-        ylabel('y pos (m)')
     end
     
     %% Pre Simulation
@@ -449,7 +428,7 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         create_mpc_init_guess;
     end
     
-    %% Create c and header file for external usage of mpcs in c
+    %% Create c and header file for external usage of mpcs in c ( generate only from list )
     if(generate_realtime_udp_c_fun)
         if(~exist('files_changed', 'var'))
             files_changed = false(1, 2);
@@ -457,15 +436,18 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
 
         mpc_c_sourcefile_path = [s_fun_path, '/mpc_c_sourcefiles/'];
         casadi_opt_problem_paths = ['./utils/utils_casadi/casadi_mpc_definitions/'];
-        current_mpc_mfile = [casadi_opt_problem_paths, MPC_version, '.m'];
-
-        % they are only generated if a file in casadi_opt_problem_paths changed
-        files_changed = generate_mpc_sourcefiles(f_opt, casadi_opt_problem_paths, current_mpc_mfile, s_fun_path, files_changed);
         
-        fprintf(['mpc_casadi_main.m: Creating local headers for C: \n\nOutput folder for headers: ', mpc_c_sourcefile_path, '\n\n']);
-        calc_udp_cfun_addresses(f_opt, f_opt_input_cell, f_opt_output_cell, mpc_c_sourcefile_path);
+        if(ismember(casadi_func_name, mpc_source_selection_list))
+            current_mpc_mfile = [casadi_opt_problem_paths, MPC_version, '.m'];
 
-        generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC_settings, f_opt_input_cell, f_opt_output_cell, f_opt, mpc_c_sourcefile_path, s_fun_path)
+            % they are only generated if a file in casadi_opt_problem_paths changed
+            files_changed = generate_mpc_sourcefiles(f_opt, casadi_opt_problem_paths, current_mpc_mfile, s_fun_path, files_changed);
+            
+            fprintf(['mpc_casadi_main.m: Creating local headers for C: \n\nOutput folder for headers: ', mpc_c_sourcefile_path, '\n\n']);
+            calc_udp_cfun_addresses(f_opt, f_opt_input_cell, f_opt_output_cell, mpc_c_sourcefile_path);
+
+            generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC_settings, f_opt_input_cell, f_opt_output_cell, refval_str_cell, f_opt, mpc_c_sourcefile_path, s_fun_path)
+        end
         collect_var_names;
         fprintf('--------------------------------------------------------------------\n\n');
     end
@@ -493,7 +475,7 @@ if(generate_realtime_udp_c_fun)
     fprintf(['mpc_casadi_main.m: Creating global headers for C: \n\nOutput folder for headers: ', mpc_c_sourcefile_path, '\n\n']);
     generate_param_robot_header(s_fun_path, param_robot, traj_settings, 'param_robot');
     generate_casadi_types([mpc_c_sourcefile_path, 'casadi_types.h']);
-    generate_mpc_config_typedef(mpc_c_sourcefile_path, unique_f_opt_input_map, unique_f_opt_output_map, param_casadi_fun_name);
+    generate_mpc_config_typedef(mpc_c_sourcefile_path, unique_f_opt_input_map, unique_f_opt_output_map, param_mpc_source_selection);
     fprintf('--------------------------------------------------------------------\n\n');
 end
 

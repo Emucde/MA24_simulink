@@ -17,12 +17,20 @@ else
     source /opt/ros/humble/setup.bash
 fi
 
+# INSTALL_PATH=/media/daten/Anwendungen/cpp_compiler
+# if [ -f "$INSTALL_PATH/xpack-gcc-14.2.0-1/bin/gcc" ] && [ -f "$INSTALL_PATH/xpack-gcc-14.2.0-1/bin/g++" ]; then
+#     export CC=$HOME/xpack-gcc-14.2.0-1/bin/gcc
+#     export CXX=$HOME/xpack-gcc-14.2.0-1/bin/g++
+# fi
 # export CXX=/usr/bin/g++
 # export CC=/usr/bin/gcc
 
 BUILD_CURRENT_FILE=false
 RUN_MAKE_INSTALL=false
 BUILD_ROS2_MPCS=false
+CLEAR=false
+CLEAR_ALL=false
+CLEAR_MPC=false
 RUN_FILE=true
 
 if [[ $# -ge 2 ]]; then
@@ -48,8 +56,42 @@ if [[ $# -gt 0 ]]; then
         BUILD_TYPE="debug"
         shift
         ;;
-        -c|--cmake)
+        -cr|--cmake_release)
         JUST_CREATE_CMAKE=true
+        BUILD_TYPE="release"
+        shift
+        ;;
+        -cd|--cmake_debug)
+        JUST_CREATE_CMAKE=true
+        BUILD_TYPE="debug"
+        shift
+        ;;
+        --clear_release)
+        CLEAR=true
+        CLEAR_ALL=false
+        CLEAR_MPC=false
+        BUILD_TYPE="release"
+        shift
+        ;;
+        --clear_debug)
+        CLEAR=true
+        CLEAR_ALL=false
+        CLEAR_MPC=false
+        BUILD_TYPE="debug"
+        shift
+        ;;
+        --clear_releasempc)
+        CLEAR=true
+        CLEAR_ALL=false
+        CLEAR_MPC=true
+        BUILD_TYPE="release"
+        shift
+        ;;
+        --clear_debugmpc)
+        CLEAR=true
+        CLEAR_ALL=false
+        CLEAR_MPC=true
+        BUILD_TYPE="debug"
         shift
         ;;
         -iwyu|--include-what-you-use)
@@ -71,26 +113,11 @@ echo "RUN_MAKE_INSTALL: $RUN_MAKE_INSTALL"
 echo "BUILD_ROS2_MPCS: $BUILD_ROS2_MPCS"
 echo "JUST_CREATE_CMAKE: $JUST_CREATE_CMAKE"
 echo "Check includes with includes-what-you-use (iwyu): $INCLUDE_WHAT_YOU_USE"
+echo "CLEAR: $CLEAR"
+echo "CLEAR_ALL: $CLEAR_ALL"
+echo "CLEAR_MPC: $CLEAR_MPC"
+echo "RUN_FILE: $RUN_FILE"
 echo ""
-
-if [ "$JUST_CREATE_CMAKE" = true ]; then
-    cmake -B ./main_ros2/casadi_mpc/cpp_class_files/build_debug -S ./main_ros2/casadi_mpc/cpp_class_files/ -DCMAKE_BUILD_TYPE=Debug
-    echo ""
-    echo "----------------------------------"
-    
-    cmake -B ./main_ros2/casadi_mpc/cpp_class_files/build_release -S ./main_ros2/casadi_mpc/cpp_class_files/ -DCMAKE_BUILD_TYPE=Release
-    echo ""
-    echo "----------------------------------"
-    exit 0
-fi
-
-if [ "$INCLUDE_WHAT_YOU_USE" = true ]; then
-    # Run include-what-you-use
-    iwyu_tool -p ./main_ros2/casadi_mpc/cpp_class_files/build_debug/ --jobs=8 -- -I$(gcc -print-file-name=include) -I/usr/include > ./main_ros2/casadi_mpc/cpp_class_files/build_debug/iwyu_output.txt
-    echo "Successfully created ./main_ros2/casadi_mpc/cpp_class_files/build_debug/iwyu_output.txt"
-    cat ./main_ros2/casadi_mpc/cpp_class_files/build_debug/iwyu_output.txt
-    exit 0
-fi
 
 if [ "$BUILD_TYPE" = "release" ]; then
     OPT_FLAGS="-O3"
@@ -101,6 +128,38 @@ else
     OPT_FLAGS="-O0"
     DEBUG_FLAGS="-g"
     CMAKE_BUILD_PATH="./main_ros2/casadi_mpc/cpp_class_files/build_debug"
+fi
+
+if [ "$JUST_CREATE_CMAKE" = true ]; then
+    if [ "$BUILD_TYPE" = "release" ]; then
+        time cmake -B ./main_ros2/casadi_mpc/cpp_class_files/build_release -S ./main_ros2/casadi_mpc/cpp_class_files/ -DCMAKE_BUILD_TYPE=Release
+        echo ""
+        echo "----------------------------------"
+    else
+        time cmake -B ./main_ros2/casadi_mpc/cpp_class_files/build_debug -S ./main_ros2/casadi_mpc/cpp_class_files/ -DCMAKE_BUILD_TYPE=Debug
+        echo ""
+        echo "----------------------------------"
+    fi
+    exit 0
+fi
+
+if [ "$CLEAR" = true ]; then
+    if [ "$CLEAR_MPC" = true ]; then
+        rm -rf $masterdir/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/*
+        echo "Cleared $masterdir/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/"
+    fi
+    rm -rf $CMAKE_BUILD_PATH/*
+
+    echo "Cleared $CMAKE_BUILD_PATH/"
+    exit 0
+fi
+
+if [ "$INCLUDE_WHAT_YOU_USE" = true ]; then
+    # Run include-what-you-use
+    iwyu_tool -p ./main_ros2/casadi_mpc/cpp_class_files/build_debug/ --jobs=8 -- -I$(gcc -print-file-name=include) -I/usr/include > ./main_ros2/casadi_mpc/cpp_class_files/build_debug/iwyu_output.txt
+    echo "Successfully created ./main_ros2/casadi_mpc/cpp_class_files/build_debug/iwyu_output.txt"
+    cat ./main_ros2/casadi_mpc/cpp_class_files/build_debug/iwyu_output.txt
+    exit 0
 fi
 
 # Create the build directory if it does not exist
@@ -141,10 +200,10 @@ else
     echo "Building using makefile..."
     if [ $STANDALONE_MAKEFILE == true ]; then
         cd "cpp_class_files"
-        make BUILD_TYPE=$BUILD_TYPE -j8
+        time make BUILD_TYPE=$BUILD_TYPE -j8
         cd ..
     else
-        cmake --build $CMAKE_BUILD_PATH -j8
+        time cmake --build $CMAKE_BUILD_PATH -j8
     fi
     
     BUILD_STATUS=$?
@@ -159,9 +218,11 @@ if [ $BUILD_STATUS -eq 0 ]; then
         if [ $RUN_FILE == true ]; then
             echo -e "Running the executable...\n----------------------------------\n"
             if [ $STANDALONE_MAKEFILE == true ]; then
-                ./main_ros2/casadi_mpc/cpp_class_files/bin/$BUILD_TYPE/main
+                time nice -n 0 ./main_ros2/casadi_mpc/cpp_class_files/bin/$BUILD_TYPE/main
             else
-                ./main_ros2/casadi_mpc/cpp_class_files/build_release/bin/main
+                time nice -n 0 ./main_ros2/casadi_mpc/cpp_class_files/build_release/bin/main
+                # if error do the command, after that logout login
+                # sudo sed -i '/# End of file/i @realtime soft nice -20\n@realtime hard nice -20' /etc/security/limits.d/realtime.conf
             fi
         fi
 

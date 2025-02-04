@@ -31,6 +31,7 @@ private:
     CasadiMPC *active_mpc;                       // Active MPC object
     mpc_config_t *active_mpc_config;             // Active MPC configuration
     const mpc_input_config_t *active_mpc_input_config; // Active MPC input configuration
+    std::vector<MPCInput>* active_input_references;      // Input references
     std::string traj_file;                       // Path to trajectory data file
     std::string x0_init_file;                    // Path to initial state data of trajectories
 
@@ -45,9 +46,20 @@ private:
     const Eigen::VectorXi n_x_indices;
     FullSystemTorqueMapper torque_mapper; // Torque mapper
     TrajectoryGenerator trajectory_generator;    // Trajectory generator
-    casadi_real *x_k_ptr;                 // initial state address at the begin of the prediction horizon
-    casadi_real *u_k_ptr;                 // optimal control address
-    casadi_real *y_d_ptr;                 // desired trajectory address at the begin of the prediction horizon
+
+    // std::vector<double *> active_refs; // - Array of pointers to the references
+    std::vector<double *> active_data; // - Array of pointers to the data
+    std::vector<CasadiIOPtr_t> active_funcs; // - Array of pointers to the functions
+
+    double *x_k_ptr; // - Pointer to the current state
+    double *z_k_ptr; // - Pointer a reference trajectory [p_d, q_d] or [phi_d, phi_d_p]
+    double *t_k_ptr; // - Pointer to the current time
+    double *y_d_ptr; // - Pointer to the reference trajectory
+    double *y_d_p_ptr; // - Pointer to the reference trajectory velocity
+    double *y_d_pp_ptr; // - Pointer to the reference trajectory acceleration
+
+    double *u_k_ptr; // - Pointer to the optimal control
+
     casadi_real *w_ptr;                   // Workspace real address
     casadi_uint traj_data_per_horizon;    // Trajectory data per horizon
     casadi_uint *mpc_traj_indices;        // Trajectory indices for not equidistant sampling
@@ -210,5 +222,7 @@ public:
 private:
     // Private methods
     void update_trajectory_data(const casadi_real *const x_k_ndof_ptr);
+    void init_active_references_and_pointers();
+    void set_input_references();
 };
 #endif // CASADICONTROLLER_HPP
