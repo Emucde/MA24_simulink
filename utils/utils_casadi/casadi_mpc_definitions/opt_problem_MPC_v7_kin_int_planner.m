@@ -13,6 +13,7 @@ n_x_indices = [n_indices n_indices+n];
 
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
+quat_R_endeffector_py_fun = Function.load([input_dir, 'quat_R_endeffector_py.casadi']);
 
 q_red = SX.sym( 'q',     n_red, 1 );
 x_red = SX.sym( 'x',   2*n_red, 1 );
@@ -202,11 +203,16 @@ if isempty(yr_indices)
 else
     J_yr = 0;
     for i=1:N_MPC
-        R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
-        % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];  % am genauesten
+        % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+        % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];
 
-        q_y_yr_err = rotm2quat_v4_casadi(R_y_yr);
+        % q_y_yr_err = quat_R_endeffector_py_fun(R_y_yr); # immer nan?
+        % q_y_yr_err = rotm2quat_v4_casadi(R_y_yr);
+
         % q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
+
+        R_y_yr = R_e_arr{1 + (i)}' * quat2rotm_v2(y_d(4:7, 1 + (i))) - quat2rotm_v2(y_d(4:7, 1 + (i)))' * R_e_arr{1 + (i)};
+        q_y_yr_err = cse([1; R_y_yr(3,2); R_y_yr(1,3); R_y_yr(2,1)]);
         
         if(i < N_MPC)
             J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );

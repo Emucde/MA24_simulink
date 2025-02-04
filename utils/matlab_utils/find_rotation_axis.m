@@ -53,7 +53,7 @@ end
             rot_ax = rot_ax / (2 * sin(rot_alpha_scale));
         end
     elseif mode == "slow_from_quat"
-        quat = rotm2quat_v4(RR);
+        quat = quat_R_endeffector_py(RR);
         quat = quat/norm(quat); % avoids numerical errors
         rot_alpha_scale = 2*acos(quat(1));
         if(rot_alpha_scale == 0)

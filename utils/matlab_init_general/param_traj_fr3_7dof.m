@@ -6,13 +6,13 @@ Q_nl = 1e-1 * eye(n);  % Weight of nl_spring_force(q, ct_ctrl_param, param_robot
 q_d = param_robot.q_0_ref(n_indices);
 
 xe0 = [0.3921; 0.3921; 0.5211; 0; 1/sqrt(2); 1/sqrt(2); 0];
-xeT = [xe0(1:3,1) + [0; 0; -0.5]; rotm2quat_v4( Rz(pi/4)*quat2rotm_v2(xe0(4:7)) )]; % rotm2quat (from matlab) is very precise but slow
+xeT = [xe0(1:3,1) + [0; 0; -0.5]; quat_R_endeffector_py( Rz(pi/4)*quat2rotm_v2(xe0(4:7)) )]; % rotm2quat (from matlab) is very precise but slow
 
 options = optimoptions('fsolve', 'Algorithm', 'levenberg-marquardt', 'MaxFunctionEvaluations', 1000);
 q_0 = fsolve(@(q) kin_fun(xe0, q), q_d, options); % test if the function works
 %[q_0, ~] = inverse_kinematics(param_robot, xe0, q_d, Q_pos, Q_m, Q_q, Q_nl,  1e-2, 100, ct_ctrl_param);
 H_0 = hom_transform_endeffector_py(q_0);
-xe0 = [H_0(1:3,4); rotm2quat_v4(H_0(1:3,1:3))]; % better to exact start in point
+xe0 = [H_0(1:3,4); quat_R_endeffector_py(H_0(1:3,1:3))]; % better to exact start in point
 
 %tests;
 R_init = quat2rotm_v2(xe0(4:7));

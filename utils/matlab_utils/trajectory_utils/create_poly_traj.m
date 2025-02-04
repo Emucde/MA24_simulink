@@ -43,7 +43,7 @@ function [x_d] = create_poly_traj(traj_select, t, param_traj, init_bus_param)
     omega_d   = alpha_p*rot_ax;
     omega_d_p = alpha_pp*rot_ax;
 
-    q_d   = quat_R_endeffector_py(R_act);%rotm2quat_v4(R_act);
+    q_d   = quat_R_endeffector_py(R_act);
     [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);
 
     Phi_act = rotm2rpy(R_act);
@@ -73,5 +73,5 @@ function [x_d] = create_poly_traj(traj_select, t, param_traj, init_bus_param)
     x_d.alpha_d_pp = alpha_d_pp;
     x_d.rot_ax_d = rot_ax_d;
     x_d.alpha_d_offset = alpha_offset;
-    x_d.q_d_rel = quat_R_endeffector_py(R_init);%rotm2quat_v4(R_init);
+    x_d.q_d_rel = quat_R_endeffector_py(R_init);
 end

@@ -86,19 +86,19 @@ f_red = Function('f_red', {x_red, tau_red}, {d_dt_x(n_x_indices)});
 
 % Discrete system dynamics
 
+M = rk_iter; % RK4 steps per interval
+
 if(N_step_MPC <= 2)
-    M = 1; % RK4 steps per interval
     DT_ctl = param_global.Ta/M;
     DT = DT_ctl; % special case if Ts_MPC = Ta
     DT2 = DT_ctl; % special case if Ts_MPC = Ta
 else
-    M = rk_iter; % RK4 steps per interval
     DT_ctl = param_global.Ta/M;
     DT = N_step_MPC * DT_ctl; % = Ts_MPC
     DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 end
 
-F_kp1 = integrate_casadi(f_red, DT_ctl, 1, int_method); % runs with Ta from sensors, no finer integration needed
+F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors, no finer integration needed
 F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-Ta
 F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
 
@@ -125,15 +125,28 @@ u_k_0  = tau_fun_red(q_0_red, q_0_red_p, q_0_red_pp); % gravity compensation
 u_init_guess_0 = ones(n_red, N_MPC).*u_k_0; % fully actuated
 
 % für die S-funktion ist der Initial Guess wesentlich!
-F_kp1_sim          = F_kp1.mapaccum(1);
-F2_sim             = F2.mapaccum(1);
-F_sim              = F.mapaccum(N_MPC-2);
 
+F_kp1_sim       = F_kp1.mapaccum(1);
 x_DT_ctl_init_0 = F_kp1_sim(x_0_0,           u_init_guess_0(:, 1)    );
-x_DT2_init_0    = F2_sim(   x_DT_ctl_init_0, u_init_guess_0(:, 2)    );
-x_DT_init_0     = F_sim(    x_DT2_init_0,    u_init_guess_0(:, 3:end));
 
-x_init_guess_0     = [x_0_0 full(x_DT_ctl_init_0) full(x_DT2_init_0) full(x_DT_init_0)];
+if(N_MPC > 1)
+    F2_sim          = F2.mapaccum(1);
+    x_DT2_init_0    = F2_sim(   x_DT_ctl_init_0, u_init_guess_0(:, 2)    );
+end
+
+if(N_MPC > 2)
+    F_sim           = F.mapaccum(N_MPC-2);
+    x_DT_init_0     = F_sim(    x_DT2_init_0,    u_init_guess_0(:, 3:end));
+end
+
+if(N_MPC == 1)
+    x_init_guess_0     = [x_0_0 full(x_DT_ctl_init_0)];
+elseif(N_MPC == 2)
+    x_init_guess_0     = [x_0_0 full(x_DT_ctl_init_0) full(x_DT2_init_0)];
+elseif(N_MPC > 2)
+    x_init_guess_0     = [x_0_0 full(x_DT_ctl_init_0) full(x_DT2_init_0) full(x_DT_init_0)];
+end
+
 % x_init_guess_0     = x_0_0 * ones(1, N_MPC+1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INIT GUESS 1/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

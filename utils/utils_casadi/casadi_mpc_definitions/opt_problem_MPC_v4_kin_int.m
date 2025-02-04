@@ -24,6 +24,7 @@ n_x_indices = [n_indices n_indices+n];
 
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
+quat_R_endeffector_py_fun = Function.load([input_dir, 'quat_R_endeffector_py.casadi']);
 
 q_red = SX.sym( 'q',     n_red, 1 );
 x_red = SX.sym( 'x',   2*n_red, 1 );
@@ -32,8 +33,8 @@ u_red = SX.sym( 'u',     n_red, 1 );
 q_subs            = SX(q_0);
 q_subs(n_indices) = q_red;
 
-H_red = Function('H_red', {q_red}, {hom_transform_endeffector_py_fun(q_subs)});
-quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs)});
+H_red = Function('H_red', {q_red}, {cse(hom_transform_endeffector_py_fun(q_subs))});
+quat_fun_red = Function('quat_fun_red', {q_red}, {cse(quat_endeffector_py_fun(q_subs))});
 f_red = Function('f_red', {x_red, u_red}, {[x_red(n_red+1:2*n_red); u_red]});
 
 x = SX.sym( 'x',   2*n, 1 );
@@ -170,10 +171,10 @@ for i=0:N_MPC
     q_p(:,  1 + (i)) = x(n_red+1:2*n_red, 1 + (i));
 
     % calculate trajectory values (y_0 ... y_N)
-    H_e = cse(H_red(q));
+    H_e = H_red(q);
     R_e = H_e(1:3, 1:3);
     y(1:3,   1 + (i)) = H_e(1:3, 4);
-    y(4:7,   1 + (i)) = cse(quat_fun_red(q));
+    y(4:7,   1 + (i)) = quat_fun_red(q);
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
 
     if(i < N_MPC)
@@ -202,7 +203,7 @@ ubg(1+end-N_u:end, 1) =  max_du_arr(:);
 g = [g_x, g_u_prev];
 
 % Calculate Cost Functions and set equation constraints
-Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
+Q_norm_square = @(z, Q) cse(dot( z, mtimes(Q, z)));
 
 % e_t_tang = SX(3, N_MPC);
 % e_t_perp = SX(3, N_MPC);
@@ -244,8 +245,10 @@ if isempty(yr_indices)
 else
     J_yr = 0;
     for i=1:N_MPC
-        %R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+        % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
+        % % q_y_yr_err = quat_R_endeffector_py_fun(R_y_yr); # immer nan?
         % q_y_yr_err = rotm2quat_v4_casadi(R_y_yr);
+
         %q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
         
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));

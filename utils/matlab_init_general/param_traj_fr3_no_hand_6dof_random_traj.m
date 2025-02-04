@@ -4,7 +4,7 @@ q_0(n_indices) = rand(6,1);
 q_0 = min(max(q_0, param_robot.q_limit_lower*0.5), param_robot.q_limit_upper*0.5);
 H_0 = hom_transform_endeffector_py(q_0);
 R_init = H_0(1:3,1:3);
-xe0 = [H_0(1:3,4); rotm2quat_v4(R_init)]; % better to exact start in point
+xe0 = [H_0(1:3,4); quat_R_endeffector_py(R_init)]; % better to exact start in point
 
 mx = 5;
 
@@ -46,7 +46,7 @@ fun_list = {@hom_transform_joint_1_py, @hom_transform_joint_2_py, @hom_transform
 rsel = 1+round(5*rand(1));
 hom_transform_jointi = fun_list{rsel};
 H = hom_transform_jointi(q_0);
-xe_d = [H(1:3,4); rotm2quat_v4(H(1:3,1:3))];
+xe_d = [H(1:3,4); quat_R_endeffector_py(H(1:3,1:3))];
 
 
 param_inv_kin.xpos_joint1 = xe_d;
@@ -72,7 +72,7 @@ q_target(n_indices) = q_target_red;
 
 H_target = hom_transform_endeffector_py(q_target);
 R_target = H_target(1:3,1:3);
-xeT = [H_target(1:3,4); rotm2quat_v4(R_target)];
+xeT = [H_target(1:3,4); quat_R_endeffector_py(R_target)];
 
 J = geo_jacobian_endeffector_py(q_target);
 J_red = J(:, n_indices);

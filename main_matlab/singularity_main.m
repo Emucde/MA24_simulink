@@ -96,7 +96,7 @@ H_0 = hom_transform_endeffector_py(q_0);
 
 p_d_0 = H_0(1:3, 4);
 R_d_0 = H_0(1:3, 1:3);
-q_d_0 = rotm2quat_v4(H_0(1:3, 1:3));
+q_d_0 = quat_R_endeffector_py(H_0(1:3, 1:3));
 
 MPC_solver = 'fatrop';
 use_jit = false;

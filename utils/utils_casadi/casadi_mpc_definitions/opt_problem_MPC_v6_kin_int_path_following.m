@@ -13,6 +13,7 @@ n_x_indices = [n_indices n_indices+n];
 
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
+quat_R_endeffector_py_fun = Function.load([input_dir, 'quat_R_endeffector_py.casadi']);
 
 q_red = SX.sym( 'q',     n_red, 1 );
 x_red = SX.sym( 'x',   2*n_red, 1 );
@@ -117,7 +118,7 @@ end
 T = param_traj_time(end);
 sigma_t_fun = Function('sigma_t_fun', {theta, traj_select}, {sigma_t_all});
 sigma_r_fun = Function('sigma_r_fun', {theta, traj_select}, {sigma_r_all});
-sigma_r_quat_fun = Function('sigma_r_quat_fun', {theta}, {rotm2quat_v4_casadi(sigma_r)});
+sigma_r_quat_fun = Function('sigma_r_quat_fun', {theta}, {quat_R_endeffector_py_fun(sigma_r)});
 
 %% Calculate Initial Guess
 if(N_step_MPC <= 2)
@@ -310,11 +311,11 @@ else
         % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];  % am genauesten
         
         R_y_yr = R_e_arr{1 + (i)}' * sigma_r_fun(theta(1 + (i)), traj_select) - sigma_r_fun(theta(1 + (i)), traj_select)' * R_e_arr{1 + (i)};
-        q_y_yr_err = [1; R_y_yr(3,2); R_y_yr(1,3); R_y_yr(2,1)];
+        q_y_yr_err = cse([1; R_y_yr(3,2); R_y_yr(1,3); R_y_yr(2,1)]);
 
         % die beiden methoden weisen größere Quaternionenfehler auf:
-        % q_y_yr_err = rotm2quat_v4_casadi(R_y_yr);
-        % y_d = rotm2quat_v4_casadi(sigma_r_fun(theta(1 + (i)))');
+        % q_y_yr_err = quat_R_endeffector_py(R_y_yr);
+        % y_d = quat_R_endeffector_py(sigma_r_fun(theta(1 + (i)))');
         % q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d));
     
         if(i < N_MPC)

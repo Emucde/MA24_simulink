@@ -27,7 +27,7 @@ function y_W_E = kin_fun_reduced(q_reduced, param_robot)
     position = H(1:3, 4);
     
     % Extract rotation matrix and convert to quaternion
-    quaternion = rotm2quat_v4(H(1:3, 1:3));
+    quaternion = quat_R_endeffector_py(H(1:3, 1:3));
     
     % Combine position and orientation into a single vector
     y_W_E = [position; quaternion];

@@ -28,9 +28,9 @@ function y_W_E_err = kin_fun_err_reduced(xe, q_reduced, hom_fun, param_robot)
     p_err = H(1:3,4) - xe(1:3);
     
     % Calculate orientation error
-    %q_err = rotm2quat_v4(RR);
+    %q_err = quat_R_endeffector_py(RR);
 
-    q_err = quat_mult(rotm2quat_v4(H(1:3,1:3)), quat_inv(xe(4:7)));
+    q_err = quat_mult(quat_R_endeffector_py(H(1:3,1:3)), quat_inv(xe(4:7)));
     %r_err = q_err(2:4);
 
     % Combine position and orientation errors

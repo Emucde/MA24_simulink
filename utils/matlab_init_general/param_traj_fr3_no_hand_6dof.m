@@ -10,7 +10,7 @@ else
 q_0 = param_robot.q_0_ref;
 H_0 = hom_transform_endeffector_py(q_0);
 R_init = H_0(1:3,1:3);
-xe0 = [H_0(1:3,4); rotm2quat_v4(R_init)]; % better to exact start in point
+xe0 = [H_0(1:3,4); quat_R_endeffector_py(R_init)]; % better to exact start in point
 
 Q_pos = 1*diag([1,1e3,1e3,1e-5,1e5,1e5,1e5]);  % Weight for the position error in the cost function.
 Q_m = 1e8;             % Weight for the manipulability error in the cost function.
@@ -35,7 +35,7 @@ K_J = struct(...
 );
 
 H_d = hom_transform_endeffector_py(q_d);
-xe_d = [H_d(1:3,4); rotm2quat_v4(H_d(1:3,1:3))];
+xe_d = [H_d(1:3,4); quat_R_endeffector_py(H_d(1:3,1:3))];
 
 param_inv_kin = struct;
 param_inv_kin.xe0 = xe_d;
@@ -70,7 +70,7 @@ q_target = q_0;
 q_target(n_indices) = q_target_red;
 H_target = hom_transform_endeffector_py(q_target);
 R_target = H_target(1:3,1:3);
-xeT = [H_target(1:3,4); rotm2quat_v4(R_target)];
+xeT = [H_target(1:3,4); quat_R_endeffector_py(R_target)];
 % xeT(1) = xeT(1) + 0.2;
 
 traj_struct = struct;
@@ -112,7 +112,7 @@ cnt = cnt+1;
 q_0 = param_robot.q_0_ref;
 H_0 = hom_transform_endeffector_py(q_0);
 R_init = H_0(1:3,1:3);
-xe0 = [H_0(1:3,4); rotm2quat_v4(R_init)]; % better to exact start in point
+xe0 = [H_0(1:3,4); quat_R_endeffector_py(R_init)]; % better to exact start in point
 
 Q_pos = 1*diag([1,1,1,1,1,1,1]);  % Weight for the position error in the cost function.
 Q_m = 1e8;             % Weight for the manipulability error in the cost function.
@@ -136,7 +136,7 @@ K_J = struct(...
 
 q_d = [0.686, -0.099, 0, -2.416, 0.339, 3.312, 2.606]';
 H_d = hom_transform_endeffector_py(q_d);
-xe_d = [H_d(1:3,4); rotm2quat_v4(H_d(1:3,1:3))];
+xe_d = [H_d(1:3,4); quat_R_endeffector_py(H_d(1:3,1:3))];
 
 param_inv_kin = struct;
 param_inv_kin.xe0 = xe_d;
@@ -171,7 +171,7 @@ q_target = q_0;
 q_target(n_indices) = q_target_red;
 H_target = hom_transform_endeffector_py(q_target);
 R_target = H_target(1:3,1:3);
-xeT = [H_target(1:3,4); rotm2quat_v4(R_target)];
+xeT = [H_target(1:3,4); quat_R_endeffector_py(R_target)];
 
 spd = 0.2;
 
@@ -220,7 +220,7 @@ cnt = cnt+1;
 q_0 = param_robot.q_0_ref;
 H_0 = hom_transform_endeffector_py(q_0);
 R_init = H_0(1:3,1:3);
-xe0 = [H_0(1:3,4); rotm2quat_v4(R_init)]; % better to exact start in point
+xe0 = [H_0(1:3,4); quat_R_endeffector_py(R_init)]; % better to exact start in point
 
 Q_pos = 1*diag([1,1,1,1,1,1,1]);  % Weight for the position error in the cost function.
 Q_m = 1e8;             % Weight for the manipulability error in the cost function.
@@ -244,7 +244,7 @@ K_J = struct(...
 
 q_d = [0.686, -0.099, 0, -2.416, 0.339, 3.312, 2.606]';
 H_d = hom_transform_endeffector_py(q_d);
-xe_d = [H_d(1:3,4); rotm2quat_v4(H_d(1:3,1:3))];
+xe_d = [H_d(1:3,4); quat_R_endeffector_py(H_d(1:3,1:3))];
 
 param_inv_kin = struct;
 param_inv_kin.xe0 = xe_d;
@@ -279,7 +279,7 @@ q_target = q_0;
 q_target(n_indices) = q_target_red;
 H_target = hom_transform_endeffector_py(q_target);
 R_target = H_target(1:3,1:3);
-xeT = [H_target(1:3,4); rotm2quat_v4(R_target)];
+xeT = [H_target(1:3,4); quat_R_endeffector_py(R_target)];
 
 spd = 0.2;
 
@@ -328,7 +328,7 @@ cnt = cnt+1;
 q_0 = param_robot.q_0_ref;
 H_0 = hom_transform_endeffector_py(q_0);
 R_init = H_0(1:3,1:3);
-xe0 = [H_0(1:3,4); rotm2quat_v4(R_init)]; % better to exact start in point
+xe0 = [H_0(1:3,4); quat_R_endeffector_py(R_init)]; % better to exact start in point
 
 Q_pos = 1*diag([1,1,1,1,1,1,1]);  % Weight for the position error in the cost function.
 Q_m = 1e8;             % Weight for the manipulability error in the cost function.
@@ -352,7 +352,7 @@ K_J = struct(...
 
 q_d = [0.317, -0.244, 0, -0.446, -1.579, 3.276, 1.945]';
 H_d = hom_transform_endeffector_py(q_d);
-xe_d = [H_d(1:3,4); rotm2quat_v4(H_d(1:3,1:3))];
+xe_d = [H_d(1:3,4); quat_R_endeffector_py(H_d(1:3,1:3))];
 
 param_inv_kin = struct;
 param_inv_kin.xe0 = xe_d;
@@ -387,7 +387,7 @@ q_target = q_0;
 q_target(n_indices) = q_target_red;
 H_target = hom_transform_endeffector_py(q_target);
 R_target = H_target(1:3,1:3);
-xeT = [H_target(1:3,4); rotm2quat_v4(R_target)];
+xeT = [H_target(1:3,4); quat_R_endeffector_py(R_target)];
 
 xe2 = [xeT(1:3)-[0;0;0.3]; xeT(4:7)];
 

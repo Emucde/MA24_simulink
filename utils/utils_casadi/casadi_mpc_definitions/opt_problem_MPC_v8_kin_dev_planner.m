@@ -18,6 +18,7 @@ n_x_indices = [n_indices n_indices+n];
 
 hom_transform_endeffector_py_fun = Function.load([input_dir, 'hom_transform_endeffector_py.casadi']);
 quat_endeffector_py_fun = Function.load([input_dir, 'quat_endeffector_py.casadi']);
+quat_R_endeffector_py_fun = Function.load([input_dir, 'quat_R_endeffector_py.casadi']);
 
 q_red = SX.sym( 'q',     n_red, 1 );
 x_red = SX.sym( 'x',   2*n_red, 1 );
@@ -197,7 +198,7 @@ else
     J_yr = 0;
     for i=1:N_MPC
         %R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
-        % q_y_yr_err = rotm2quat_v4_casadi(R_y_yr);
+        % q_y_yr_err = quat_R_endeffector_py_fun(R_y_yr);
         %q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
         
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
