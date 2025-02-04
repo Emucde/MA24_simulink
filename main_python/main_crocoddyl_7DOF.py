@@ -35,6 +35,7 @@ use_gravity = False
 visualize_sol = True
 plot_sol=True
 debounce_delay = 0.1
+explicit_mpc = False
 
 # use_multisolving = False
 # n_proc = 1 # number of processes for parallel solving
@@ -60,7 +61,7 @@ else:
     param_traj_poly['T_end'] = 10
     param_traj_poly['T_max_horizon'] = 2
 
-if use_data_from_simulink:
+if use_data_from_simulink or explicit_mpc:
     # only available for franka research 3 robot (n_dof = 7)
 
     shm_objects, shm_data = initialize_shared_memory()
@@ -346,11 +347,17 @@ plot_file_path = os.path.abspath(os.path.join(folderpath, plot_name))
 visualize_name = 'robot_visualization.html'
 visualize_file_path = os.path.abspath(os.path.join(folderpath, visualize_name))
 
+if explicit_mpc:
+    explicit_flag = True
+    start_solving = True
+else:
+    explicit_flag = False
+
 new_data_flag = False
 run_loop = True
 try:
     while run_loop and err_state == False:
-        if use_data_from_simulink:
+        if use_data_from_simulink and not explicit_flag:
             # Read data
             shm_changed_semaphore.acquire()
 
@@ -462,7 +469,7 @@ try:
                             process.daemon = True # this will kill the process if the main process is killed
                             process.start()
                     i = 0
-            else:
+            elif not explicit_mpc:
                 # in this mode, all data (states and torques) are read out of the shared memory. This mode is only
                 # used by CasaDi from ROS 2 for logging the data.
                 start = start_button.debounce(data_from_simulink_start[:])
@@ -523,15 +530,13 @@ try:
                     xs[i] = read_state_data[:]
                     us[i] = read_control_data[:]
                     freq_per_Ta_step[i] = read_frequency[0]
-                    # transient_traj['p_d'][:, i] = read_traj_data[0:3]
-                    # transient_traj['p_d_p'][:, i] = read_traj_data[3:6]
-                    # transient_traj['p_d_pp'][:, i] = read_traj_data[6:9]
-                    # transient_traj['R_d'][:, :, i] = read_traj_data[9:18]
-                    # transient_traj['q_d'][:, i] = read_traj_data[18:22]
-                    # transient_traj['omega_d'][:, i] = read_traj_data[22:25]
-                    # transient_traj['omega_d_p'][:, i] = read_traj_data[25:28]
                     transient_traj['p_d'][:, i] = read_traj_data[0:3]
-                    transient_traj['q_d'][:, i] = read_traj_data[3:7]
+                    transient_traj['p_d_p'][:, i] = read_traj_data[3:6]
+                    transient_traj['p_d_pp'][:, i] = read_traj_data[6:9]
+                    transient_traj['q_d'][:, i] = read_traj_data[9:13]
+                    transient_traj['omega_d'][:, i] = read_traj_data[13:16]
+                    transient_traj['omega_d_p'][:, i] = read_traj_data[16:19]
+                    # transient_traj['R_d'][:, i] = quat2rotm(transient_traj['q_d'][:, i])
 
                     if i < N_traj-1:
                         i += 1
@@ -643,7 +648,14 @@ try:
                 i += 1 # last value of i is N_traj-1
             
             if i == N_traj-1 and not use_data_from_simulink:
-                run_loop = False
+                if explicit_flag:
+                    explicit_flag = False
+                    i = 0
+                    xs_ref = xs
+                    us_ref = us
+                    use_data_from_simulink = True
+                else:
+                    run_loop = False
 
             ##################################################################################
             ################ Set new data for the next optimization problem ##################

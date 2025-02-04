@@ -486,7 +486,7 @@ def initialize_shared_memory():
         "data_from_simulink_traj_switch": {"size": 1,             "dtype": np.int8},
         "readonly_mode":                  {"size": 1,             "dtype": np.int8},
         "read_traj_length":               {"size": 4,             "dtype": np.uint32},
-        "read_traj_data":                 {"size": 7 * 8,         "dtype": np.float64}, # pos and quaternion
+        "read_traj_data":                 {"size": 19 * 8,        "dtype": np.float64}, # pos and quaternion
         "read_frequency":                 {"size": 1 * 8,         "dtype": np.float64}, # scalar frequency (0 if skipped)
         "read_state_data":                {"size": 2 * n_dof * 8, "dtype": np.float64}, # q and qp
         "read_control_data":              {"size": n_dof * 8,     "dtype": np.float64}, # tau
@@ -494,11 +494,6 @@ def initialize_shared_memory():
 
     shm_objects = {}
     shm_data = {}
-
-    # for name, config in shm_objects.items():
-    #     # Create shared memory object
-    #     shm_objects[name].close()
-    #     shm_objects[name].unlink()
 
     for name, config in shm_configs.items():
         # Create shared memory object
@@ -514,6 +509,11 @@ def initialize_shared_memory():
         
         shm_data[name] = np.ndarray(shape, dtype=config["dtype"], buffer=shm_objects[name].buf)
         shm_data[name][:] = 0
+
+    # for name, config in shm_objects.items():
+    #     # Create shared memory object
+    #     shm_objects[name].close()
+    #     shm_objects[name].unlink()
 
     return shm_objects, shm_data
 
@@ -574,6 +574,28 @@ g
 
     return tau_full
 
+def quat2rotm(q):
+    """
+    Converts a quaternion to a 3x3 rotation matrix.
+
+    Parameters:
+        q (numpy.ndarray): A 4-element array representing the quaternion [q0, q1, q2, q3].
+
+    Returns:
+        numpy.ndarray: A 3x3 rotation matrix.
+    """
+    q0, q1, q2, q3 = q
+    # Precompute terms
+    qq = np.array([q0 * q0, q1 * q1, q2 * q2, q3 * q3])
+    q01, q02, q03 = q0 * q1, q0 * q2, q0 * q3
+    q12, q13, q23 = q1 * q2, q1 * q3, q2 * q3
+
+    # Construct the rotation matrix directly
+    return np.array([
+        [qq[0] + qq[1] - qq[2] - qq[3], 2 * (q12 - q03),       2 * (q13 + q02)],
+        [2 * (q12 + q03),               qq[0] - qq[1] + qq[2] - qq[3], 2 * (q23 - q01)],
+        [2 * (q13 - q02),               2 * (q23 + q01),       qq[0] - qq[1] - qq[2] + qq[3]]
+    ])
 ################################## MODEL TESTS ############################################
 
 
@@ -1700,7 +1722,7 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
         pinocchio.computeJointJacobians(robot_model, robot_data, q[i])
         J = pinocchio.getFrameJacobian(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED)
         pinocchio.computeJointJacobiansTimeVariation(robot_model, robot_data, q[i], q_p[i])
-        J_p = pinocchio.getFrameJacobianTimeVariation(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+        # J_p = pinocchio.getFrameJacobianTimeVariation(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED)
 
         p_e[i] = robot_data.oMf[TCP_frame_id].translation.T.copy()
         p_e_p[i] = J[0:3, :] @ q_p[i]
