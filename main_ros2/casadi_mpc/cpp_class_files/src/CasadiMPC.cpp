@@ -14,7 +14,6 @@ mpc_config_t invalid_config(const std::string &mpc_name)
     return {};
 }
 
-
 // Constructor implementation
 CasadiMPC::CasadiMPC(MPCType mpc,
                      robot_config_t &robot_config,
@@ -75,7 +74,7 @@ CasadiMPC::CasadiMPC(MPCType mpc,
     memcpy(mpc_config.in.param_weight.ptr, mpc_config.param_weight, mpc_config.param_weight_len * sizeof(casadi_real));
 
     // init the reference values vector
-    init_fixed_references();
+    init_references_and_pointers();
 
 #ifdef DEBUG
     std::cout << "w: ";
@@ -127,8 +126,7 @@ int CasadiMPC::solve(casadi_real *x_k_in)
     // Set initial guess and prev ref values
     if (!flag)
     {
-        mpc_config.in.x_prev.set(w, mpc_config.out.x_out.ptr);
-        mpc_config.in.u_prev.set(w, mpc_config.out.u_out.ptr);
+        mpc_config.set_prev_to_out(w);
         mpc_config.in.init_guess.set(w, mpc_config.out.init_guess_out.ptr);
     }
     else
@@ -264,35 +262,40 @@ Damit erstellt man ein Struct für die Setter der Referenzen und ein Struct für
 */
 
 // Method to get the reference function pointer list
-void CasadiMPC::init_fixed_references()
+void CasadiMPC::init_references_and_pointers()
 {
     for (int i = 0; i < static_cast<int>(MPCInput::COUNT); ++i)
     {
         MPCInput mpc_input = static_cast<MPCInput>(i);
 
-        if(mpc_input == MPCInput::x_k && mpc_config.in.x_k.len != 0) // if x_prev is a reference
+        switch (mpc_input)
         {
-            input_references.push_back(mpc_input);
-        }
-        else if(mpc_input == MPCInput::z_k && mpc_config.in.z_k.len != 0)
-        {
-            input_references.push_back(mpc_input);
-        }
-        else if(mpc_input == MPCInput::t_k && mpc_config.in.t_k.len != 0)
-        {
-            input_references.push_back(mpc_input);
-        }
-        else if(mpc_input == MPCInput::y_d && mpc_config.in.y_d.len != 0)
-        {
-            input_references.push_back(mpc_input);
-        }
-        else if(mpc_input == MPCInput::y_d_p && mpc_config.in.y_d_p.len != 0)
-        {
-            input_references.push_back(mpc_input);
-        }
-        else if(mpc_input == MPCInput::y_d_pp && mpc_config.in.y_d_pp.len != 0)
-        {
-            input_references.push_back(mpc_input);
+        case MPCInput::x_k:
+            active_data.push_back(&mpc_data.x_k_ptr);
+            active_funcs.push_back(mpc_config.in.x_k.set);
+            break;
+        case MPCInput::z_k:
+            active_data.push_back(&mpc_data.z_k_ptr);
+            active_funcs.push_back(mpc_config.in.z_k.set);
+            break;
+        case MPCInput::t_k:
+            active_data.push_back(&mpc_data.t_k_ptr);
+            active_funcs.push_back(mpc_config.in.t_k.set);
+            break;
+        case MPCInput::y_d:
+            active_data.push_back(&mpc_data.y_d_ptr);
+            active_funcs.push_back(mpc_config.in.y_d.set);
+            break;
+        case MPCInput::y_d_p:
+            active_data.push_back(&mpc_data.y_d_p_ptr);
+            active_funcs.push_back(mpc_config.in.y_d_p.set);
+            break;
+        case MPCInput::y_d_pp:
+            active_data.push_back(&mpc_data.y_d_pp_ptr);
+            active_funcs.push_back(mpc_config.in.y_d_pp.set);
+            break;
+        default:
+            break;
         }
     }
 }
@@ -324,20 +327,24 @@ void CasadiMPC::set_references(casadi_real *x_k_in)
     set_x_k(x_k_in); // set x_k to the reference pose
     if (traj_count < traj_data_real_len - 1)
     {
-        // for (casadi_uint j = 0; j < traj_data_per_horizon; j++)
-        // {
-        //     memcpy(mpc_config.in.y_d.ptr + j * traj_rows,
-        //            traj_data->col(traj_count + mpc_traj_indices[j]).data(),
-        //            traj_rows * sizeof(double));
-        // }
+        Eigen::MatrixXd y_d = (*traj_data)(y_d_rows, mpc_traj_indices.array() + traj_count);
+        Eigen::MatrixXd y_d_p = (*traj_data)(y_d_p_rows, mpc_traj_indices.array() + traj_count);
+        Eigen::MatrixXd y_d_pp = (*traj_data)(y_d_pp_rows, mpc_traj_indices.array() + traj_count);
 
-        // this loop would be replaceable by the following line (1% slower)
+        double t = dt*traj_count;;
 
-        Eigen::VectorXi selected_rows(7);
-        selected_rows << 0, 1, 2, 9, 10, 11, 12; // Selecting p_d (0-2) and q_d (9-11)
+        mpc_data.x_k_ptr = x_k_in;
+        mpc_data.z_k_ptr = 0;
+        mpc_data.t_k_ptr = &t;
+        mpc_data.y_d_ptr = y_d.data();
+        mpc_data.y_d_p_ptr = y_d_p.data();
+        mpc_data.y_d_pp_ptr = y_d_pp.data();
 
-        Eigen::Map<Eigen::MatrixXd>(mpc_config.in.y_d.ptr, 7, traj_data_per_horizon) = (*traj_data)(selected_rows, mpc_traj_indices.array() + traj_count);
 
+        for (casadi_uint i = 0; i < active_data.size(); i++)
+        {
+            active_funcs[i](w, *active_data[i]);
+        }
         // plot trajectory data
         // std::cout << "traj_data->col(traj_count + mpc_traj_indices[0]): " << (*traj_data)(selected_rows, mpc_traj_indices.array() + traj_count).transpose() << std::endl;
 
