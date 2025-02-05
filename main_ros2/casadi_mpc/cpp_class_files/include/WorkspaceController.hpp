@@ -22,21 +22,26 @@ class BaseController
 public:
     BaseController(RobotModel &robot_model, 
                    SingularityRobustnessMode &sing_method, 
-                   ControllerSettings &controller_settings)
+                   ControllerSettings &controller_settings,
+                   TrajectoryGenerator &trajectory_generator)
         : robot_model(robot_model), 
           sing_method(sing_method), 
           controller_settings(controller_settings), 
           regularization_settings(controller_settings.regularization_settings),
-          nq(robot_model.nq), nx(robot_model.nx) {}
-    virtual void control() = 0;                   // Pure virtual function
-    virtual void computeJacobianRegularization(); // Common method in BaseController
+          trajectory_generator(trajectory_generator),
+          nq(robot_model.nq), nx(robot_model.nx), {}
+    virtual Eigen::VectorXd control(double* x) = 0;                   // Pure virtual function
+    virtual Eigen::MatrixXd computeJacobianRegularization(); // Common method in BaseController
+    virtual void set_singularity_robustness_mode(SingularityRobustnessMode sing_method) { this->sing_method = sing_method; }
     virtual ~BaseController() = default;          // Virtual destructor
 protected:
     RobotModel &robot_model;
     SingularityRobustnessMode &sing_method;
     ControllerSettings &controller_settings;
     RegularizationSettings &regularization_settings;
-    int nq, nx;
+    TrajectoryGenerator &trajectory_generator;
+    int nq;
+    int nx;
 };
 
 class WorkspaceController
@@ -69,9 +74,10 @@ private:
     public:
         CTController(RobotModel &robot_model, 
                      SingularityRobustnessMode &sing_method, 
-                     ControllerSettings &controller_settings)
-            : BaseController(robot_model, sing_method, controller_settings) {}
-        void control() override;
+                     ControllerSettings &controller_settings,
+                     TrajectoryGenerator &trajectory_generator)
+            : BaseController(robot_model, sing_method, controller_settings, trajectory_generator) {}
+        Eigen::VectorXd control(double* x) override;
         ~CTController() override = default;
     };
 
@@ -80,9 +86,10 @@ private:
     public:
         PDPlusController(RobotModel &robot_model, 
                          SingularityRobustnessMode &sing_method, 
-                         ControllerSettings &controller_settings)
-            : BaseController(robot_model, sing_method, controller_settings) {}
-        void control() override;
+                         ControllerSettings &controller_settings,
+                         TrajectoryGenerator &trajectory_generator)
+            : BaseController(robot_model, sing_method, controller_settings, trajectory_generator) {}
+        Eigen::VectorXd control(double* x) override;
         ~PDPlusController() override = default;
     };
 
@@ -91,9 +98,10 @@ private:
     public:
         InverseDynamicsController(RobotModel &robot_model, 
                                   SingularityRobustnessMode &sing_method, 
-                                  ControllerSettings &controller_settings)
-            : BaseController(robot_model, sing_method, controller_settings) {}
-        void control() override;
+                                  ControllerSettings &controller_settings,
+                                  TrajectoryGenerator &trajectory_generator)
+            : BaseController(robot_model, sing_method, controller_settings, trajectory_generator) {}
+        Eigen::VectorXd control(double* x) override;
         ~InverseDynamicsController() override = default;
     };
 

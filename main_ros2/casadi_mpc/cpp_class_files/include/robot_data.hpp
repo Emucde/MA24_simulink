@@ -12,6 +12,9 @@ struct KinematicsData {
     Eigen::MatrixXd J; // Jacobian of forward kinematics
     Eigen::MatrixXd J_p; // Time derivative of Jacobian
     Eigen::MatrixXd H; // Homogeneous transformation 4x4 Matrix
+    Eigen::Matrix3d R; // Rotation matrix
+    Eigen::Vector3d p; // Position vector
+    Eigen::Quaterniond quat; // wxyz Quaternion
 };
 
 struct DynamicsData {

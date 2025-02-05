@@ -1,5 +1,6 @@
 #include "RobotModel.hpp"
 #include "eigen_templates.hpp"
+#include <pinocchio/spatial/se3.hpp>
 
 // Constructor
 RobotModel::RobotModel(const std::string &urdf_filename,
@@ -79,6 +80,12 @@ void RobotModel::computeKinematics()
     pinocchio::getFrameJacobianTimeVariation(robot_model, robot_data, tcp_frame_id, pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED, dJ);
     kinematicsData.J_p = dJ;
     kinematicsData.H = robot_data.oMf[tcp_frame_id].toHomogeneousMatrix();
+
+    Eigen::Quaterniond quat(kinematicsData.R);
+
+    kinematicsData.R = kinematicsData.H.topLeftCorner<3, 3>();
+    kinematicsData.p = kinematicsData.H.topRightCorner<3, 1>();
+    kinematicsData.quat = quat;
 }
 
 // Compute dynamic parameters
