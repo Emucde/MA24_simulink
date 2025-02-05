@@ -129,10 +129,6 @@ int main()
 
     // initialize the trajectory
     controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
-
-    const Eigen::MatrixXd* trajectory = controller.get_trajectory();
-    int traj_count = 0;
-    Eigen::VectorXd y_d = Eigen::VectorXd::Zero(19);
     
     // ParamPolyTrajectory param_target;
     // param_target.p_target = Eigen::Vector3d(0.5, 0.0, 0.6);
@@ -168,16 +164,14 @@ int main()
 
         timer_mpc_solver.tic();
         tau_full = controller.solveMPC(x_filtered_ptr);
-        // tau_full = Eigen::VectorXd::Zero(nq);
         error_flag = controller.get_error_flag();
         timer_mpc_solver.toc();
 
         if (i % 100 == 0)
         {
-            std::cout << "q_k: " << q_k_ndof_eig.transpose();
-            std::cout << "Full torque: " << tau_full.transpose();
-            timer_mpc_solver.print_frequency("\t");
-            std::cout << std::endl;
+            timer_mpc_solver.print_frequency("\tOUT,i=" + std::to_string(i));
+            std::cout << "q_k: " << q_k_ndof_eig.transpose() << std::endl;
+            std::cout << "\tFull torque: " << tau_full.transpose() << std::endl;
         }
         if (i == transient_traj_len)
         {
@@ -191,10 +185,7 @@ int main()
         // Write data to shm:
         shm.write("read_state_data", x_k_ndof, nx * sizeof(casadi_real));
         shm.write("read_control_data", tau_full.data(), nq * sizeof(casadi_real));
-        // shm.write("read_traj_data", controller.get_act_traj_data(), 7 * sizeof(casadi_real));
-
-        y_d << (*trajectory)(Eigen::all, traj_count++);
-        shm.write("read_traj_data", y_d.data(), 19 * sizeof(casadi_real));
+        shm.write("read_traj_data", controller.get_act_traj_data(), 19 * sizeof(casadi_real));
         shm.write("read_frequency", &current_frequency, sizeof(double));
         shm.post_semaphore("shm_changed_semaphore");
 

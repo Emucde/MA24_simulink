@@ -220,6 +220,7 @@ function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_
     fprintf(fid, '    casadi_uint res_out_len;\n');
     fprintf(fid, '    int mem;\n');
     fprintf(fid, '    const CasadiPrevOutPtr_t set_prev_to_out;\n');
+    fprintf(fid, '    const CasadiPrevOutPtr_t set_init_guess_out_to_in;\n');
     fprintf(fid, '    const mpc_input_config_t in;\n');
     fprintf(fid, '    const mpc_output_config_t out;\n');
     fprintf(fid, '} %s_t;\n\n', structName);

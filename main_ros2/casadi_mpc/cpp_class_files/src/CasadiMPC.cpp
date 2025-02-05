@@ -127,7 +127,7 @@ int CasadiMPC::solve(casadi_real *x_k_in)
     if (!flag)
     {
         mpc_config.set_prev_to_out(w);
-        mpc_config.in.init_guess.set(w, mpc_config.out.init_guess_out.ptr);
+        mpc_config.set_init_guess_out_to_in(w);
     }
     else
     {
@@ -154,7 +154,7 @@ int CasadiMPC::solve_planner()
     if (!flag)
     {
         // read_trajectory_block();
-        mpc_config.in.init_guess.set(w, mpc_config.out.init_guess_out.ptr);
+        mpc_config.set_init_guess_out_to_in(w);
 
         // mpc planner: use x_k+1 as x_k for next iteration - not the measurement!
         set_references(mpc_config.out.x_out.ptr + nx_red);
@@ -202,6 +202,8 @@ void CasadiMPC::switch_traj(const Eigen::MatrixXd *traj_data_new, const casadi_r
                                  ". Please generate new.");
     }
 
+    generate_trajectory_blocks();
+    init_references_and_pointers();
     set_coldstart_init_guess(x_k_ptr);
 
     traj_count = 0;
@@ -264,6 +266,12 @@ Damit erstellt man ein Struct für die Setter der Referenzen und ein Struct für
 // Method to get the reference function pointer list
 void CasadiMPC::init_references_and_pointers()
 {
+    // Temporary vectors to hold pointers and set functions
+    std::vector<double**> temp_mpc_data(static_cast<int>(MPCInput::COUNT), nullptr);
+    std::vector<CasadiIOPtr_t> temp_mpc_set_funcs(static_cast<int>(MPCInput::COUNT), nullptr);
+
+    size_t count = 0; // Counter for valid entries
+
     for (int i = 0; i < static_cast<int>(MPCInput::COUNT); ++i)
     {
         MPCInput mpc_input = static_cast<MPCInput>(i);
@@ -271,32 +279,89 @@ void CasadiMPC::init_references_and_pointers()
         switch (mpc_input)
         {
         case MPCInput::x_k:
-            active_data.push_back(&mpc_data.x_k_ptr);
-            active_funcs.push_back(mpc_config.in.x_k.set);
-            break;
-        case MPCInput::z_k:
-            active_data.push_back(&mpc_data.z_k_ptr);
-            active_funcs.push_back(mpc_config.in.z_k.set);
+            if (mpc_config.in.x_k.len != 0)
+            {
+                temp_mpc_data[count] = &x_k_ptr; // Store pointer
+                temp_mpc_set_funcs[count] = mpc_config.in.x_k.set; // Store set function
+                count++; // Increment count
+            }
             break;
         case MPCInput::t_k:
-            active_data.push_back(&mpc_data.t_k_ptr);
-            active_funcs.push_back(mpc_config.in.t_k.set);
+            if (mpc_config.in.t_k.len != 0)
+            {
+                temp_mpc_data[count] = &t_k_ptr;
+                temp_mpc_set_funcs[count] = mpc_config.in.t_k.set;
+                count++;
+            }
             break;
         case MPCInput::y_d:
-            active_data.push_back(&mpc_data.y_d_ptr);
-            active_funcs.push_back(mpc_config.in.y_d.set);
+            if (mpc_config.in.y_d.len != 0)
+            {
+                temp_mpc_data[count] = &y_d_ptr;
+                temp_mpc_set_funcs[count] = mpc_config.in.y_d.set;
+                count++;
+            }
             break;
         case MPCInput::y_d_p:
-            active_data.push_back(&mpc_data.y_d_p_ptr);
-            active_funcs.push_back(mpc_config.in.y_d_p.set);
+            if (mpc_config.in.y_d_p.len != 0)
+            {
+                temp_mpc_data[count] = &y_d_p_ptr;
+                temp_mpc_set_funcs[count] = mpc_config.in.y_d_p.set;
+                count++;
+            }
             break;
         case MPCInput::y_d_pp:
-            active_data.push_back(&mpc_data.y_d_pp_ptr);
-            active_funcs.push_back(mpc_config.in.y_d_pp.set);
+            if (mpc_config.in.y_d_pp.len != 0)
+            {
+                temp_mpc_data[count] = &y_d_pp_ptr;
+                temp_mpc_set_funcs[count] = mpc_config.in.y_d_pp.set;
+                count++;
+            }
             break;
         default:
             break;
         }
+    }
+
+    // Resize mpc_data and mpc_set_funcs to the count of valid entries
+    mpc_data.resize(count);
+    mpc_set_funcs.resize(count);
+
+    // Copy the valid entries from the temp vector to mpc_data and mpc_set_funcs
+    for (size_t i = 0; i < count; ++i)
+    {
+        mpc_data[i] = temp_mpc_data[i];
+        mpc_set_funcs[i] = temp_mpc_set_funcs[i];
+    }
+}
+
+
+void CasadiMPC::generate_trajectory_blocks()
+{
+    Eigen::MatrixXd y_d(7, horizon_len);
+    Eigen::MatrixXd y_d_p(6, horizon_len);
+    Eigen::MatrixXd y_d_pp(6, horizon_len);
+
+    y_d_blocks.resize(traj_cols);
+    y_d_p_blocks.resize(traj_cols);
+    y_d_pp_blocks.resize(traj_cols);
+
+    y_d_blocks_data.resize(traj_cols);
+    y_d_p_blocks_data.resize(traj_cols);
+    y_d_pp_blocks_data.resize(traj_cols);
+
+    for( uint32_t i; i < traj_cols; i++)
+    {
+        y_d << (*traj_data)(y_d_rows, mpc_traj_indices.array() + i);
+        y_d_p << (*traj_data)(y_d_p_rows, mpc_traj_indices.array() + i);
+        y_d_pp << (*traj_data)(y_d_pp_rows, mpc_traj_indices.array() + i);
+        y_d_blocks[i] = y_d;
+        y_d_p_blocks[i] = y_d_p;
+        y_d_pp_blocks[i] = y_d_pp;
+
+        y_d_blocks_data[i] = y_d_blocks[i].data();
+        y_d_p_blocks_data[i] = y_d_p_blocks[i].data();
+        y_d_pp_blocks_data[i] = y_d_pp_blocks[i].data();
     }
 }
 
@@ -324,31 +389,18 @@ void CasadiMPC::set_row_vector(casadi_real *matrix_data, casadi_real *row_data, 
 
 void CasadiMPC::set_references(casadi_real *x_k_in)
 {
-    set_x_k(x_k_in); // set x_k to the reference pose
     if (traj_count < traj_data_real_len - 1)
     {
-        Eigen::MatrixXd y_d = (*traj_data)(y_d_rows, mpc_traj_indices.array() + traj_count);
-        Eigen::MatrixXd y_d_p = (*traj_data)(y_d_p_rows, mpc_traj_indices.array() + traj_count);
-        Eigen::MatrixXd y_d_pp = (*traj_data)(y_d_pp_rows, mpc_traj_indices.array() + traj_count);
+        x_k_ptr = x_k_in;
+        t_k = dt*traj_count;
+        y_d_ptr = y_d_blocks_data[traj_count];
+        y_d_p_ptr = y_d_p_blocks_data[traj_count];
+        y_d_pp_ptr = y_d_pp_blocks_data[traj_count];
 
-        double t = dt*traj_count;;
-
-        mpc_data.x_k_ptr = x_k_in;
-        mpc_data.z_k_ptr = 0;
-        mpc_data.t_k_ptr = &t;
-        mpc_data.y_d_ptr = y_d.data();
-        mpc_data.y_d_p_ptr = y_d_p.data();
-        mpc_data.y_d_pp_ptr = y_d_pp.data();
-
-
-        for (casadi_uint i = 0; i < active_data.size(); i++)
+        for (casadi_uint i = 0; i < mpc_data.size(); i++)
         {
-            active_funcs[i](w, *active_data[i]);
+            mpc_set_funcs[i](w, *mpc_data[i]);
         }
-        // plot trajectory data
-        // std::cout << "traj_data->col(traj_count + mpc_traj_indices[0]): " << (*traj_data)(selected_rows, mpc_traj_indices.array() + traj_count).transpose() << std::endl;
-
-        // Eigen::Map<Eigen::MatrixXd> (mpc_config.in.y_d.ptr, traj_rows, traj_data_per_horizon) = (*traj_data)(Eigen::all, mpc_traj_indices.array() + traj_count);
         traj_count++;
     }
 }

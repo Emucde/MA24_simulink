@@ -91,17 +91,10 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
         fprintf(fid, '        /*set %s: %s array values */\n', extra_input_entries.names{i}, extra_input_entries.dim_text{i});
     end
 
-    fprintf(fid, '\n');
-
-    generate_function_declarations(fid, getter_prestring, casadi_fun_output_cell, func_name);
-
-    % extra getter for init_guess_out
-    fprintf(fid, 'void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out);\n', func_name);
-
-    % getter for prev_to_out functions
-
+    % setter for prev_to_out functions
     generate_prev_to_out_declarations(fid, setter_prestring, input_prev_cell, output_prev_cell, func_name);
-    fprintf(fid, 'void set_prev_to_out_%s(casadi_real *const w);\n\n', func_name);
+    fprintf(fid, 'void set_prev_to_out_%s(casadi_real *const w);\n', func_name);
+    fprintf(fid, 'void set_init_guess_out_to_in_%s(casadi_real *const w);\n\n', func_name);
 
     % Declare the function to get the MPC config
     fprintf(fid, 'mpc_config_t get_%s_config();\n\n', func_name);
@@ -109,6 +102,13 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '#ifdef __cplusplus\n');
     fprintf(fid, '}\n');
     fprintf(fid, '#endif\n\n');
+
+    fprintf(fid, '\n');
+
+    generate_function_declarations(fid, getter_prestring, casadi_fun_output_cell, func_name);
+
+    % extra getter for init_guess_out
+    fprintf(fid, 'void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out);\n', func_name);
 
     % Close the header guard
     fprintf(fid, ['#endif //', func_name, '_PARAM_H\n']);
@@ -191,8 +191,16 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
         fprintf(fid, '    memcpy(w + %s_%s_ADDR, w + %s_%s_ADDR, %s_%s_LEN * sizeof(casadi_real));\n', ...
             func_name, upper(prev_input_names{i}), func_name, upper(prev_output_names{i}), ...
             func_name, upper(prev_output_names{i}));
+            if(strcmp(prev_input_names{i}, 'z_prev')) % add increment function
+                fprintf(fid, '    memcpy(w + %s_Z_K_ADDR, w + %s_Z_K_LEN + %s_Z_OUT_ADDR, %s_Z_K_LEN * sizeof(casadi_real));\n', func_name, func_name, func_name, func_name);
+            end
     end
     fprintf(fid, '}\n');
+
+    % extra setter for init_guess_out
+    fprintf(fid, 'void set_init_guess_out_to_in_%s(casadi_real *const w) {\n', func_name);
+    fprintf(fid, '    memcpy(w + %s_INIT_GUESS_ADDR, w + %s_INIT_GUESS_OUT_ADDR, %s_INIT_GUESS_LEN * sizeof(casadi_real));\n', func_name, func_name, func_name);
+    fprintf(fid, '}\n\n');
 
     fprintf(fid, '\n');
     fprintf(fid, '////////////////////////////////////////////////////////////////////////////////\n');
@@ -295,6 +303,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '        .arg_in_len = %s_ARG_IN_LEN, // Length of the input arguments\n', func_name);
     fprintf(fid, '        .res_out_len = %s_RES_OUT_LEN, // Length of the output results\n', func_name);
     fprintf(fid, '        .mem = 0, // Memory\n');
+    fprintf(fid, '        .set_init_guess_out_to_in = &set_init_guess_out_to_in_%s, // Setter function for updating init guess\n', func_name);
     fprintf(fid, '        .set_prev_to_out = &set_prev_to_out_%s, // Setter function for previous to output\n', func_name);
     % create the mpc_input_config struct
     fprintf(fid, '        .in = {\n');
