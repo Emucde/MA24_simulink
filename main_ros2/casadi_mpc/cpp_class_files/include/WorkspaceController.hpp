@@ -13,6 +13,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry> // For rotations and quaternions
 #include <vector>
+#include "eigen_templates.hpp"
 
 #include "RobotModel.hpp"
 #include "TrajectoryGenerator.hpp"
@@ -36,12 +37,12 @@ public:
           q(Eigen::VectorXd::Zero(nq)), q_p(Eigen::VectorXd::Zero(nq)),
           x_err(Eigen::VectorXd::Zero(6)), x_err_p(Eigen::VectorXd::Zero(6)),
           x_d_p(Eigen::VectorXd::Zero(6)), x_d_pp(Eigen::VectorXd::Zero(6)),
-          dt(robot_model.robot_config.dt)
+          dt(robot_model.robot_config.dt), traj_count(0)
     {
     }
-    virtual Eigen::VectorXd control(double *x) = 0;          // Pure virtual function
+    virtual Eigen::VectorXd control(const Eigen::VectorXd& x) = 0;          // Pure virtual function
     virtual Eigen::MatrixXd computeJacobianRegularization(); // Common method in BaseController
-    virtual void calculateControlData(double *x);            // Common method in BaseController
+    virtual void calculateControlData(const Eigen::VectorXd& x);            // Common method in BaseController
     virtual void set_singularity_robustness_mode(SingularityRobustnessMode sing_method) { this->sing_method = sing_method; }
     virtual ~BaseController() = default; // Virtual destructor
 protected:
@@ -59,7 +60,8 @@ protected:
     Eigen::VectorXd x_err, x_err_p;
     Eigen::VectorXd x_d_p, x_d_pp;
     double dt;
-    bool is_initialized = false;
+public:
+    uint traj_count;
 };
 
 class WorkspaceController
@@ -69,14 +71,22 @@ public:
     WorkspaceController(const std::string &urdf_path,
                         const std::string &tcp_frame_name,
                         bool use_gravity,
-                        ControllerSettings &controller_settings);
+                        ControllerSettings controller_settings);
+
+    WorkspaceController(const std::string &urdf_path,
+                        const std::string &tcp_frame_name,
+                        bool use_gravity);
 
     void switchController(ControllerType type);
-    void update(const double *const x);
+    void init_default_config();
+    Eigen::VectorXd update(const double* const x_nq);
+    const double * get_act_traj_data()
+    {
+        uint traj_count = active_controller->traj_count;
+        return trajectory_generator.get_traj_data()->col(traj_count).data();
+    }
 
 private:
-    BaseController *active_controller; // I do not need a smart pointer because I store all instances in the class.
-
     const std::string urdf_path;
     const std::string tcp_frame_name;
     robot_config_t robot_config;
@@ -95,7 +105,7 @@ private:
                      ControllerSettings &controller_settings,
                      TrajectoryGenerator &trajectory_generator)
             : BaseController(robot_model, sing_method, controller_settings, trajectory_generator) {}
-        Eigen::VectorXd control(double *x) override;
+        Eigen::VectorXd control(const Eigen::VectorXd& x) override;
         ~CTController() override = default;
     };
 
@@ -107,7 +117,7 @@ private:
                          ControllerSettings &controller_settings,
                          TrajectoryGenerator &trajectory_generator)
             : BaseController(robot_model, sing_method, controller_settings, trajectory_generator) {}
-        Eigen::VectorXd control(double *x) override;
+        Eigen::VectorXd control(const Eigen::VectorXd& x) override;
         ~PDPlusController() override = default;
     };
 
@@ -119,8 +129,9 @@ private:
                                   ControllerSettings &controller_settings,
                                   TrajectoryGenerator &trajectory_generator)
             : BaseController(robot_model, sing_method, controller_settings, trajectory_generator) {}
-        Eigen::VectorXd control(double *x) override;
+        Eigen::VectorXd control(const Eigen::VectorXd& x) override;
         Eigen::VectorXd q_d_prev, q_p_d_prev;
+        bool init = true;
         ~InverseDynamicsController() override = default;
     };
 
@@ -128,6 +139,8 @@ private:
     CTController ct_controller;                       // Instance of CTController
     PDPlusController pd_plus_controller;              // Instance of PDPlusController
     InverseDynamicsController inverse_dyn_controller; // Instance of InverseDynamicsController
+    BaseController *active_controller; // I do not need a smart pointer because I store all instances in the class.
+    const Eigen::VectorXi n_x_indices;
 
     // Initialize trajectory data
     void init_file_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,

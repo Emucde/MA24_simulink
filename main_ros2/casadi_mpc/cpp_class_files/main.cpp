@@ -17,6 +17,7 @@
 #include "include/SharedMemory.hpp"
 #include "param_robot.h"
 #include "trajectory_settings.hpp"
+#include "WorkspaceController.hpp"
 
 casadi_real x_k_tst[12] = {0};
 
@@ -74,8 +75,9 @@ int main()
     const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
     const std::string tcp_frame_name = "fr3_link8_tcp";
 
-    CasadiController controller(urdf_filename, tcp_frame_name, use_gravity);
-    controller.setActiveMPC(MPCType::MPC8);
+    WorkspaceController classic_controller(urdf_filename, tcp_frame_name, use_gravity);
+    CasadiController mpc_controller(urdf_filename, tcp_frame_name, use_gravity);
+    mpc_controller.setActiveMPC(MPCType::MPC8);
     
     SharedMemory shm;
     const std::vector<std::string> shm_readwrite_names = {
@@ -99,18 +101,18 @@ int main()
 
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
     double Ts = 0.001;
-    const casadi_uint nq = controller.nq;
-    const casadi_uint nx = controller.nx;
-    const casadi_uint nq_red = controller.nq_red;
-    const casadi_uint nx_red = controller.nx_red;
-    const casadi_uint *n_indices_ptr = controller.get_n_indices();
-    const casadi_uint *n_x_indices_ptr = controller.get_n_x_indices();
+    const casadi_uint nq = mpc_controller.nq;
+    const casadi_uint nx = mpc_controller.nx;
+    const casadi_uint nq_red = mpc_controller.nq_red;
+    const casadi_uint nx_red = mpc_controller.nx_red;
+    const casadi_uint *n_indices_ptr = mpc_controller.get_n_indices();
+    const casadi_uint *n_x_indices_ptr = mpc_controller.get_n_x_indices();
     Eigen::VectorXi n_indices_eig = ConstIntVectorMap(n_indices_ptr, nq_red);
     Eigen::VectorXi n_x_indices_eig = ConstIntVectorMap(n_x_indices_ptr, nx_red);
     casadi_real x_k_ndof[nx] = {0};
     double current_frequency = 0.0;
 
-    const casadi_uint traj_len = controller.get_traj_data_real_len();
+    const casadi_uint traj_len = mpc_controller.get_traj_data_real_len();
 
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
 
@@ -118,7 +120,7 @@ int main()
     Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
 
     #define TRAJ_SELECT 1
-    x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (controller.get_traj_x0_init(TRAJ_SELECT), nx);
+    x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (mpc_controller.get_traj_x0_init(TRAJ_SELECT), nx);
     // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
 
@@ -128,16 +130,16 @@ int main()
     double* x_measured_ptr = x_k_ndof;
 
     // initialize the trajectory
-    controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
+    mpc_controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
     
     // ParamPolyTrajectory param_target;
     // param_target.p_target = Eigen::Vector3d(0.5, 0.0, 0.6);
     // param_target.R_target = Eigen::Matrix3d::Identity();
     // param_target.T_horizon_max = 2.0
     // param_target.x_init = x_k_ndof_eig;
-    // controller.init_trajectory_custom_target(param_target);
+    // mpc_controller.init_trajectory_custom_target(param_target);
 
-    casadi_uint transient_traj_len = controller.get_transient_traj_len();
+    casadi_uint transient_traj_len = mpc_controller.get_transient_traj_len();
     
     // Start measuring time
     timer_total.tic();
@@ -153,7 +155,7 @@ int main()
     current_frequency = 0;
     shm.write("read_state_data", x_k_ndof, nx * sizeof(casadi_real));
     shm.write("read_control_data", tau_full.data(), nq * sizeof(casadi_real));
-    shm.write("read_traj_data", controller.get_act_traj_data(), 7 * sizeof(casadi_real));
+    shm.write("read_traj_data", mpc_controller.get_act_traj_data(), 7 * sizeof(casadi_real));
     shm.write("read_frequency", &current_frequency, sizeof(double));
     shm.post_semaphore("shm_changed_semaphore");
 
@@ -163,8 +165,9 @@ int main()
         filter.run(x_measured_ptr); // updates data from x_filtered_ptr
 
         timer_mpc_solver.tic();
-        tau_full = controller.solveMPC(x_filtered_ptr);
-        error_flag = controller.get_error_flag();
+        // tau_full = mpc_controller.solveMPC(x_filtered_ptr);
+        tau_full = classic_controller.update(x_filtered_ptr);
+        error_flag = mpc_controller.get_error_flag();
         timer_mpc_solver.toc();
 
         if (i % 100 == 0)
@@ -179,13 +182,13 @@ int main()
         }
 
         // simulate the model
-        controller.simulateModel(x_k_ndof, tau_full.data(), Ts);
+        mpc_controller.simulateModel(x_k_ndof, tau_full.data(), Ts);
         current_frequency = timer_mpc_solver.get_frequency();
 
         // Write data to shm:
         shm.write("read_state_data", x_k_ndof, nx * sizeof(casadi_real));
         shm.write("read_control_data", tau_full.data(), nq * sizeof(casadi_real));
-        shm.write("read_traj_data", controller.get_act_traj_data(), 19 * sizeof(casadi_real));
+        shm.write("read_traj_data", mpc_controller.get_act_traj_data(), 19 * sizeof(casadi_real));
         shm.write("read_frequency", &current_frequency, sizeof(double));
         shm.post_semaphore("shm_changed_semaphore");
 
@@ -197,7 +200,7 @@ int main()
     }
 
     // Measure and print execution time
-    timer_mpc_solver.print_time("Total controller.solveMPC time: ");
+    timer_mpc_solver.print_time("Total mpc_controller.solveMPC time: ");
     std::cout << std::endl;
 
     timer_total.toc();

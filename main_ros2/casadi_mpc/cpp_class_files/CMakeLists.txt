@@ -195,7 +195,18 @@ find_library(RT_LIB rt)
 
 # Add source files for main executable, including CasadiMPC.cpp
 file(GLOB_RECURSE SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")  # Recursively find all .cpp files in src folder
-set(UTILS_LIBRARIES "")
+# Define utility libraries
+set(UTILS_LIBRARIES 
+    WorkspaceController
+    CasadiController
+    CasadiMPC
+    FullSystemTorqueMapper
+    RobotModel
+    SharedMemory
+    SignalFilter
+    TicToc
+    TrajectoryGenerator
+)
 
 foreach(SOURCE_FILE ${SRC_FILES})
     get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)  # Get the filename without extension
@@ -228,14 +239,7 @@ foreach(SOURCE_FILE ${SRC_FILES})
     target_compile_options(${FILE_NAME} PRIVATE -Wall -Wextra -fdiagnostics-color=always ${OPT_FLAG})
 
     # Collect the libraries for installation
-    list(APPEND UTILS_LIBRARIES ${FILE_NAME})
 endforeach()
-
-if(NOT DEFINED UTILS_LIBRARIES OR UTILS_LIBRARIES STREQUAL "")
-    message(WARNING "UTILS_LIBRARIES on path \"${CMAKE_CURRENT_SOURCE_DIR}\" is empty or not defined")
-else()
-    message(STATUS "UTILS libraries: ${UTILS_LIBRARIES}")
-endif()
 
 # Install libraries
 install(TARGETS ${UTILS_LIBRARIES} ${MPC_ALL_LIBRARIES}

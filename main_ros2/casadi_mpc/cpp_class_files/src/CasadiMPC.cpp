@@ -74,6 +74,7 @@ CasadiMPC::CasadiMPC(MPCType mpc,
     memcpy(mpc_config.in.param_weight.ptr, mpc_config.param_weight, mpc_config.param_weight_len * sizeof(casadi_real));
 
     // init the reference values vector
+    generate_trajectory_blocks();
     init_references_and_pointers();
 
 #ifdef DEBUG
@@ -350,7 +351,7 @@ void CasadiMPC::generate_trajectory_blocks()
     y_d_p_blocks_data.resize(traj_cols);
     y_d_pp_blocks_data.resize(traj_cols);
 
-    for( uint32_t i; i < traj_cols; i++)
+    for( uint32_t i = 0; i < traj_cols; i++)
     {
         y_d << (*traj_data)(y_d_rows, mpc_traj_indices.array() + i);
         y_d_p << (*traj_data)(y_d_p_rows, mpc_traj_indices.array() + i);

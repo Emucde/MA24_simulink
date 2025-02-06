@@ -15,7 +15,10 @@ TrajectoryGenerator::TrajectoryGenerator(FullSystemTorqueMapper &torque_mapper, 
     all_traj_data_file = read_trajectory_data(traj_file);
     all_traj_data_x0_init = read_x0_init(x0_init_file);
     
-    switch_traj(1);
+    selected_trajectory = 1; // Default trajectory selection
+    traj_data_file = all_traj_data_file[selected_trajectory - 1];
+    traj_data_file_x0_init = all_traj_data_x0_init[selected_trajectory - 1];
+
     traj_rows = traj_data_file.rows();
     traj_data_out_len = traj_data_file.cols();
     traj_data_out.resize(traj_rows, traj_data_out_len);
