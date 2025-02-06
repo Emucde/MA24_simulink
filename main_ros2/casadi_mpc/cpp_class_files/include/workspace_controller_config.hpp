@@ -4,13 +4,20 @@
 #include <Eigen/Dense> // Include Eigen for matrix types
 
 struct PDSettings {
-    Eigen::MatrixXd D_d;                // Damping matrix (not used)
-    Eigen::MatrixXd K_d;                // PD gain for Cartesian PD Control (not used)
+    Eigen::MatrixXd D_d;                // Damping matrix
+    Eigen::MatrixXd K_d;                // Stiffness matrix for Cartesian PD Control
 };
 
 struct CTSettings {
     Eigen::MatrixXd Kd1;                // Control gains diagonal (combined)
     Eigen::MatrixXd Kp1;                // Control gains proportional (combined)
+};
+
+struct IDSettings {
+    Eigen::MatrixXd Kd1;                // Control gains Inverse dynamics diagonal (combined)
+    Eigen::MatrixXd Kp1;                // Control gains Inverse dynamics proportional (combined)
+    Eigen::MatrixXd D_d;                // Damping matrix for Joint space PD Control
+    Eigen::MatrixXd K_d;                // Stiffness matrix for Joint space PD Control
 };
 
 struct RegularizationSettings {
@@ -26,6 +33,7 @@ struct RegularizationSettings {
 struct ControllerSettings {
     PDSettings pd_plus_settings;        // PD controller settings
     CTSettings ct_settings;              // CT controller settings
+    IDSettings id_settings;             // Inverse Dynamics controller settings
     RegularizationSettings regularization_settings; // Regularization settings
 };
 

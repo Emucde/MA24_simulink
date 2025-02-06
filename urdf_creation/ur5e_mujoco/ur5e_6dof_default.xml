@@ -1,4 +1,4 @@
-<mujoco model="ur5e_robot_default">
+<mujoco model="ur5e_6dof_default">
     <default class="fr3">
         <material specular="0.5" shininess="0.25"/>
 

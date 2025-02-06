@@ -19,11 +19,11 @@ function show_help() {
   echo "  <base_model>       Base model name (e.g., 'fr3' or 'ur5e')"
   echo "  <configuration>    Configuration of the model:"
   echo "                     - For 'fr3': '7dof', '6dof', '6dof_no_hand'"
-  echo "                     - For 'ur5e': 'robot'"
+  echo "                     - For 'ur5e': '6dof'"
   echo
   echo "Examples:"
   echo "  $0 fr3 7dof"
-  echo "  $0 ur5e robot"
+  echo "  $0 ur5e 6dof"
   echo "  $0 -p /custom/path/to/simulate fr3 6dof"
 }
 
@@ -34,7 +34,7 @@ function validate_inputs() {
 
   # Define valid configurations for each model
   local valid_fr3_configurations=("7dof" "6dof" "6dof_no_hand")
-  local valid_ur5e_configurations=("robot")
+  local valid_ur5e_configurations=("6dof")
 
   # Check if base model is valid
   if [[ "$base_model" != "fr3" && "$base_model" != "ur5e" ]]; then

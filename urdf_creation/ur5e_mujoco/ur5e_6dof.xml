@@ -1,4 +1,4 @@
-<mujoco model="ur5e_robot">
+<mujoco model="ur5e_6dof">
   <compiler angle="radian" meshdir="../../stl_files/Meshes_ur5e/" autolimits="true"/>
   <statistic meansize="0.227096" extent="1.07125" center="0.381442 0.227296 0.162489"/>
   
@@ -9,7 +9,7 @@
   </visual>
   
   <default>
-	<include file="./ur5e_robot_default.xml"/>
+	<include file="./ur5e_6dof_default.xml"/>
   </default>
   
   <asset>
