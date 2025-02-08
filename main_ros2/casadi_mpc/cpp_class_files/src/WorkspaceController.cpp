@@ -245,6 +245,7 @@ void BaseController::calculateControlData(const Eigen::VectorXd &x)
     // Get matrices and variables from the robot model
     M = robot_model.dynamicsData.M; // Inertia matrix
     C = robot_model.dynamicsData.C; // Coriolis matrix
+    C_rnea = robot_model.dynamicsData.C_rnea; // Coriolis matrix computed with RNEA
     g = robot_model.dynamicsData.g; // Gravitational forces
 
     J = robot_model.kinematicsData.J;     // Geometric Jacobian to end-effector
@@ -294,6 +295,7 @@ void BaseController::calculateControlData(const Eigen::VectorXd &x)
 
     J_pinv = computeJacobianRegularization();
     traj_count++;
+    std::cout << "cnt:" << traj_count << std::endl<< std::endl;
     std::cout << "p_d: " << p_d << std::endl<< std::endl;
     std::cout << "quat_d: " << q_d.coeffs().transpose() << std::endl<< std::endl;
 }
@@ -329,6 +331,7 @@ Eigen::VectorXd WorkspaceController::CTController::control(const Eigen::VectorXd
     std::cout << "x_d_pp: \n" << x_d_pp << std::endl << std::endl;;
     std::cout << "v: \n" << v << std::endl << std::endl;
     std::cout << "tau: \n" << tau << std::endl << std::endl;;
+    std::cout << "-----------------------------------" << std::endl << std::endl;
     return tau;
 }
 

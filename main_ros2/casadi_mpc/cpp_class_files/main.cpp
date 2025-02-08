@@ -208,9 +208,9 @@ int main()
     }
 
     // initialize the filter
-    SignalFilter filter(nq, Ts, x_k_ndof, 400, 400); // int num_joints, double Ts, double *state, double omega_c_q, double omega_c_dq
-    double* x_filtered_ptr = filter.getFilteredOutputPtr();
-    double* x_measured_ptr = x_k_ndof;
+    // SignalFilter filter(nq, Ts, x_k_ndof, 400, 400); // int num_joints, double Ts, double *state, double omega_c_q, double omega_c_dq
+    // double* x_filtered_ptr = filter.getFilteredOutputPtr();
+    // double* x_measured_ptr = x_k_ndof;
     const double* act_data;
 
     casadi_uint transient_traj_len = mpc_controller.get_transient_traj_len();
@@ -236,18 +236,18 @@ int main()
     // Main loop for trajectory processing
     for (casadi_uint i = 0; i < traj_len; i++)
     {
-        filter.run(x_measured_ptr); // updates data from x_filtered_ptr
+        // filter.run(x_measured_ptr); // updates data from x_filtered_ptr
 
         if(use_mpc)
         {
             timer_mpc_solver.tic();
-            tau_full = mpc_controller.solveMPC(x_filtered_ptr);
+            tau_full = mpc_controller.solveMPC(x_k_ndof);
             timer_mpc_solver.toc();
         }
         else
         {
             timer_mpc_solver.tic();
-            tau_full = classic_controller.update(x_filtered_ptr);
+            tau_full = classic_controller.update(x_k_ndof);
             timer_mpc_solver.toc();
         }
 
@@ -266,13 +266,11 @@ int main()
         // simulate the model
         if(use_mpc)
         {
-            mpc_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
             act_data = mpc_controller.get_act_traj_data();
             error_flag = mpc_controller.get_error_flag();
         }
         else
         {
-            classic_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
             act_data = classic_controller.get_act_traj_data();
             error_flag = classic_controller.get_error_flag();
         }
@@ -284,6 +282,15 @@ int main()
         shm.write("read_traj_data", act_data, 19 * sizeof(casadi_real));
         shm.write("read_frequency", &current_frequency, sizeof(double));
         shm.post_semaphore("shm_changed_semaphore");
+
+        if(use_mpc)
+        {
+            mpc_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
+        }
+        else
+        {
+            classic_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
+        }
 
         if (error_flag != ErrorFlag::NO_ERROR)
         {

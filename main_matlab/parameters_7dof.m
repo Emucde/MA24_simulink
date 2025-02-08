@@ -90,7 +90,7 @@ param_robot_init;
 special_comment_mode = false; % all opti mpc are commented in
 comment_in_out_mpc_blocks;
 
-activate_simulink_logs;
+% activate_simulink_logs;
 
 bus_definitions;
 
