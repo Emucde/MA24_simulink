@@ -14,13 +14,7 @@
 #include "TrajectoryGenerator.hpp"
 #include "FullSystemTorqueMapper.hpp"
 #include "CasadiMPC.hpp"
-
-enum ErrorFlag {
-    NO_ERROR = 0,           // 0: no error
-    JUMP_DETECTED = 1,      // 1: jump in torque detected
-    NAN_DETECTED = 2,       // 2: NaN in torque detected
-    CASADI_ERROR = 3        // 3: error in Casadi function call
-};
+#include "error_flags.h"
 
 class CasadiController// : public TrajectoryGenerator
 {
@@ -88,7 +82,8 @@ public:
     void init_custom_trajectory(ParamPolyTrajectory param);
 
     // Method to simulate the robot model
-    void simulateModel(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
+    void simulateModelEuler(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
+    void simulateModelRK4(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
 
     void reset();
 

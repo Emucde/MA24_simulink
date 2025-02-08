@@ -53,7 +53,6 @@ public:
     Eigen::MatrixXd p_d;       // Target position
     Eigen::MatrixXd p_d_p;     // Target velocity
     Eigen::MatrixXd p_d_pp;    // Target acceleration
-    Eigen::MatrixXd R_d;       // Target rotation matrix
     Eigen::MatrixXd q_d;       // Target quaternion
     Eigen::MatrixXd omega_d;   // Target angular velocity
     Eigen::MatrixXd omega_d_p; // Target angular acceleration
@@ -73,8 +72,6 @@ public:
 
     // Setters
     void check_param_poly_traj(ParamPolyTrajectory param);
-
-    Eigen::Matrix3d quat2rotm(const Eigen::Vector4d& q);
 
     // Getters
     const Eigen::MatrixXd *get_traj_data() const { return &traj_data_out; }

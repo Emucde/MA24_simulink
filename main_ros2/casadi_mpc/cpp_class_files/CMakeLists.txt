@@ -39,6 +39,7 @@ endif()
 #     set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_EXE})
 # endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_WARN_DEPRECATED FALSE)
 
 # Set output directory for libraries
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

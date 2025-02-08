@@ -158,15 +158,38 @@ void CasadiController::setActiveMPC(MPCType mpc_type)
 }
 
 // Method to simulate the robot model
-void CasadiController::simulateModel(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt)
+void CasadiController::simulateModelEuler(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt)
 {
     Eigen::Map<Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
     Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
-    torque_mapper.simulateModel(x_k_ndof, tau, dt);
+    torque_mapper.simulateModelEuler(x_k_ndof, tau, dt);
+
+    // Check for errors
+    if (x_k_ndof.hasNaN())
+    {
+        error_flag = ErrorFlag::NAN_DETECTED;
+        std::cerr << "NaN values detected in the joint vector!" << std::endl;
+    }
+}
+
+// Method to simulate the robot model
+void CasadiController::simulateModelRK4(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt)
+{
+    Eigen::Map<Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
+    Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
+    torque_mapper.simulateModelRK4(x_k_ndof, tau, dt);
+
+    // Check for errors
+    if (x_k_ndof.hasNaN())
+    {
+        error_flag = ErrorFlag::NAN_DETECTED;
+        std::cerr << "NaN values detected in the joint vector!" << std::endl;
+    }
 }
 
 void CasadiController::reset()
 {
+    active_mpc->reset();
     tau_full_prev = Eigen::VectorXd::Zero(nq);
 }
 

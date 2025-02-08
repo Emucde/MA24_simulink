@@ -3,6 +3,46 @@
 
 #include <Eigen/Dense> // Include Eigen for matrix types
 
+enum class RegularizationMode {
+    None = 0,                            // No singularity robustness
+    Damping,                             // Add damping to the matrix
+    CompleteOrthogonalDecomposition,     // Complete orthogonal decomposition method
+    JacobiSVD,                           // Jacobi SVD method
+    ThresholdSmallSingularValues,        // Remove small singular values
+    TikhonovRegularization,              // Tikhonov regularization (adding epsilon^2)
+    SimpleCollinearity,                  // Simple collinearity check
+    SteinboeckCollinearity,              // Steinboeck's collinearity approach
+    RegularizationBySingularValues       // Regularization by singular values (handle small singular values)
+};
+
+template <typename T>
+std::string regularizationModeToString(T mode)
+{
+    switch (mode)
+    {
+    case RegularizationMode::None:
+        return "None";
+    case RegularizationMode::Damping:
+        return "Damping";
+    case RegularizationMode::CompleteOrthogonalDecomposition:
+        return "CompleteOrthogonalDecomposition";
+    case RegularizationMode::JacobiSVD:
+        return "JacobiSVD";
+    case RegularizationMode::ThresholdSmallSingularValues:
+        return "ThresholdSmallSingularValues";
+    case RegularizationMode::TikhonovRegularization:
+        return "TikhonovRegularization";
+    case RegularizationMode::SimpleCollinearity:
+        return "SimpleCollinearity";
+    case RegularizationMode::SteinboeckCollinearity:
+        return "SteinboeckCollinearity";
+    case RegularizationMode::RegularizationBySingularValues:
+        return "RegularizationBySingularValues";
+    default:
+        return "Unknown";
+    }
+}
+
 struct PDSettings {
     Eigen::MatrixXd D_d;                // Damping matrix
     Eigen::MatrixXd K_d;                // Stiffness matrix for Cartesian PD Control
@@ -21,7 +61,7 @@ struct IDSettings {
 };
 
 struct RegularizationSettings {
-    int mode;                           // Regularization mode
+    RegularizationMode mode;            // Regularization mode
     double k;                           // Regularization parameter J_pinv = (J^T J + k I)^-1 J^T
     Eigen::MatrixXd W_bar_N;            // Parameter for singularity robustness (sugihara)
     Eigen::MatrixXd W_E;                // Weight matrix for the error (sugihara)
@@ -36,17 +76,5 @@ struct ControllerSettings {
     IDSettings id_settings;             // Inverse Dynamics controller settings
     RegularizationSettings regularization_settings; // Regularization settings
 };
-
-enum class SingularityRobustnessMode {
-    None = 0,                            // No singularity robustness
-    Damping,                             // Add damping to the matrix
-    CompleteOrthogonalDecomposition,     // Complete orthogonal decomposition method
-    JacobiSVD,                           // Jacobi SVD method
-    ThresholdSmallSingularValues,        // Remove small singular values
-    TikhonovRegularization,              // Tikhonov regularization (adding epsilon^2)
-    SimpleCollinearity,                  // Simple collinearity check
-    SteinboeckCollinearity,              // Steinboeck's collinearity approach
-    RegularizationBySingularValues       // Regularization by singular values (handle small singular values)
-};;
 
 #endif // WORKSPACE_CONTROLLER_CONFIG_HPP

@@ -105,8 +105,7 @@ public:
         traj_count++;
     }
 
-    // Method to read the next trajectory block
-    // void read_trajectory_block();
+    void reset();
 
     ///////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////
@@ -177,7 +176,7 @@ public:
     // Method to get the current trajectory data
     const casadi_real *get_act_traj_data()
     {
-        return traj_data->data();
+        return traj_data->col((traj_count > 0 ? traj_count-1 : traj_count)).data();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////

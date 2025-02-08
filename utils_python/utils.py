@@ -1653,6 +1653,14 @@ def plot_trajectory(traj_data):
     plt.show()
 
 def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, frep_per_Ta_step, param_robot):
+    # detect nan in us and xs and set them to zero
+    if np.isnan(us).any():
+        print('Warning: NaN values detected in us array, set to zero!')
+        us = np.nan_to_num(us)
+    if np.isnan(xs).any():
+        print('Warning: NaN values detected in xs array, set to zero!')
+        xs = np.nan_to_num(xs)
+
     N = len(xs)
     n = robot_model.nq
     n_indices = param_robot['n_indices']
@@ -2656,6 +2664,11 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
                     style_settings = {'N_traj_KOS': 10, 'traj_KOS_len': 0.05, 'traj_KOS_linewidth': 1,
                                       'TCP_KOS_len': 0.1, 'TCP_KOS_linewidth': 2, 
                                       'traj_color': [255, 165, 0], 'traj_linewidth': 1, 'traj_linestyle': 'solid'}):
+    
+    if np.isnan(q_sol).any():
+        print('Warning: NaN values detected in xs array, set to zero!')
+        q_sol = np.nan_to_num(q_sol)
+
     # Meshcat Visualize
     robot_display = MeshcatVisualizer(robot_model)
     robot_display.initViewer(open=False)

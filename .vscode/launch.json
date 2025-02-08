@@ -30,7 +30,7 @@
             "request": "launch",
             "program": "${env:masterdir}/main_ros2/casadi_mpc/cpp_class_files/build_debug/bin/main",
             "args": [],
-            "stopAtEntry": false,
+            "stopAtEntry": false, // stop at exception in my code
             "cwd": "${env:masterdir}/main_ros2/casadi_mpc/cpp_class_files",
             "environment": [],
             "externalConsole": false,

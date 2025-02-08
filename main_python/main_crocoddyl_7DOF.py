@@ -538,7 +538,7 @@ try:
                     transient_traj['q_d'][:, i] = read_traj_data[9:13]
                     transient_traj['omega_d'][:, i] = read_traj_data[13:16]
                     transient_traj['omega_d_p'][:, i] = read_traj_data[16:19]
-                    # transient_traj['R_d'][:, i] = quat2rotm(transient_traj['q_d'][:, i])
+                    transient_traj['R_d'][:, :, i] = quat2rotm(transient_traj['q_d'][:, i])
 
                     if i < N_traj-1:
                         i += 1

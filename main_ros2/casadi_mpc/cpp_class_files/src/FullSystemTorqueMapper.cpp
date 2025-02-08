@@ -81,7 +81,9 @@ Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueDynamic(
     Eigen::VectorXd tau_red = u; // Define reduced input vector
 
     // Calculate inertia matrix and Coriolis forces
-    Eigen::MatrixXd M = pinocchio::crba(robot_model_full, robot_data_full, q);
+    pinocchio::crba(robot_model_full, robot_data_full, q);
+    robot_data_full.M.triangularView<Eigen::StrictlyLower>() = robot_data_full.M.transpose().triangularView<Eigen::StrictlyLower>();
+    Eigen::MatrixXd M = robot_data_full.M;
     Eigen::VectorXd C_rnea = pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, Eigen::VectorXd::Zero(nq));
 
     // Slice the inertia matrix and Coriolis forces
@@ -118,8 +120,8 @@ Eigen::VectorXd FullSystemTorqueMapper::enforceTorqueLimits(const Eigen::VectorX
 
 Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &u, const Eigen::VectorXd &x_k_ndof)
 {
-    Eigen::VectorXd q = x_k_ndof.head(nq);
-    Eigen::VectorXd q_p = x_k_ndof.segment(nq, nq);
+    Eigen::Ref<const Eigen::VectorXd> q = x_k_ndof.head(nq);
+    Eigen::Ref<const Eigen::VectorXd> q_p = x_k_ndof.tail(nq);
     tau_full = (this->*calcFeedforwardTorqueFunPtr)(u, q, q_p);
     tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed));
 
@@ -143,15 +145,53 @@ void FullSystemTorqueMapper::calcPose(const Eigen::VectorXd &q, Eigen::Vector3d 
 }
 
 // Method for simulating the robot model
-void FullSystemTorqueMapper::simulateModel(Eigen::Map<Eigen::VectorXd> &x_k_ndof, Eigen::Map<const Eigen::VectorXd> &tau, double dt)
+void FullSystemTorqueMapper::simulateModelEuler(Eigen::Map<Eigen::VectorXd> &x_k_ndof, Eigen::Map<const Eigen::VectorXd> &tau, double dt)
 {
     Eigen::Ref<const Eigen::VectorXd> q = x_k_ndof.head(nq);
     Eigen::Ref<const Eigen::VectorXd> q_p = x_k_ndof.tail(nq);
 
     Eigen::VectorXd q_pp = pinocchio::aba(robot_model_full, robot_data_full, q, q_p, tau);
 
-    x_k_ndof.head(nq) += q_p * dt; // q_next = q + q_p * dt
-    x_k_ndof.tail(nq) += q_pp * dt; // q_p_next = q_p + q_pp * dt
+    x_k_ndof.head(nq) = q + q_p * dt; // q_next = q + q_p * dt
+    x_k_ndof.tail(nq) = q_p + q_pp * dt; // q_p_next = q_p + q_pp * dt
+}
+
+void FullSystemTorqueMapper::simulateModelRK4(Eigen::Map<Eigen::VectorXd> &x_k_ndof, Eigen::Map<const Eigen::VectorXd> &tau, double dt)
+{
+    // Define lambda for computing f(x, u) = [q_p, q_pp] = [x2, u]
+    auto f = [&](const Eigen::VectorXd& state) -> Eigen::VectorXd {
+        // Extract positions and velocities from the state vector
+        Eigen::Ref<const Eigen::VectorXd> q = state.head(nq);
+        Eigen::Ref<const Eigen::VectorXd> q_p = state.tail(nq);
+
+        // Compute joint accelerations using Pinocchio's ABA
+        Eigen::VectorXd q_pp = pinocchio::aba(robot_model_full, robot_data_full, q, q_p, tau);
+
+        // Combine derivatives: [q_p; q_pp]
+        Eigen::VectorXd derivative(2 * nq);
+        derivative.head(nq) = q_p;    // dq/dt = q_p
+        derivative.tail(nq) = q_pp;  // dq_p/dt = q_pp
+
+        return derivative;
+    };
+    x_k_ndof = RK4(x_k_ndof, dt, f);
+}
+
+Eigen::VectorXd FullSystemTorqueMapper::RK4(const Eigen::VectorXd& state, double dt, const std::function<Eigen::VectorXd(const Eigen::VectorXd&)>& f) {
+    // Compute k1
+    Eigen::VectorXd k1 = f(state);
+
+    // Compute k2
+    Eigen::VectorXd k2 = f(state + 0.5 * dt * k1);
+
+    // Compute k3
+    Eigen::VectorXd k3 = f(state + 0.5 * dt * k2);
+
+    // Compute k4
+    Eigen::VectorXd k4 = f(state + dt * k3);
+
+    // Update state using weighted sum of derivatives
+    return state + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////

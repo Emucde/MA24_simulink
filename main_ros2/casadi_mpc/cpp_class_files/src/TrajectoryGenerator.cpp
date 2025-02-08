@@ -36,10 +36,10 @@ TrajectoryGenerator::TrajectoryGenerator(FullSystemTorqueMapper &torque_mapper, 
     param_poly_traj.T_end = 0.0;
 
     param_poly_traj.p_init = traj_data_file(p_d_rows, 0);
-    param_poly_traj.R_init = quat2rotm(traj_data_file(q_d_rows, 0));
+    param_poly_traj.R_init = quat2rotm<double>(traj_data_file(q_d_rows, 0));;
 
     param_poly_traj.p_target = traj_data_file(p_d_rows, 0);
-    param_poly_traj.R_target = quat2rotm(traj_data_file(q_d_rows, 0));
+    param_poly_traj.R_target = quat2rotm<double>(traj_data_file(q_d_rows, 0));;
 }
 
 void TrajectoryGenerator::switch_traj(int traj_select)
@@ -76,24 +76,6 @@ void TrajectoryGenerator::check_param_poly_traj(ParamPolyTrajectory param)
     {
         throw std::invalid_argument("T_poly must be less than or equal to T_end (total time of the transient trajectory)");
     }
-}
-
-Eigen::Matrix3d TrajectoryGenerator::quat2rotm(const Eigen::Vector4d& q) {
-    // Extract quaternion components
-    const double q0 = q(0), q1 = q(1), q2 = q(2), q3 = q(3);
-
-    // Precompute reusable terms
-    const double q0q0 = q0 * q0, q1q1 = q1 * q1, q2q2 = q2 * q2, q3q3 = q3 * q3;
-    const double q0q1 = q0 * q1, q0q2 = q0 * q2, q0q3 = q0 * q3;
-    const double q1q2 = q1 * q2, q1q3 = q1 * q3, q2q3 = q2 * q3;
-
-    // Directly initialize the rotation matrix using Eigen's comma initializer
-    Eigen::Matrix3d R;
-    R << (q0q0 + q1q1 - q2q2 - q3q3), 2.0 * (q1q2 - q0q3),       2.0 * (q1q3 + q0q2),
-        2.0 * (q1q2 + q0q3),         (q0q0 - q1q1 + q2q2 - q3q3), 2.0 * (q2q3 - q0q1),
-        2.0 * (q1q3 - q0q2),         2.0 * (q2q3 + q0q1),       (q0q0 - q1q1 - q2q2 + q3q3);
-
-    return R;
 }
 
 // In this case only a transient trajectory to a custom target is generated
@@ -140,7 +122,7 @@ void TrajectoryGenerator::init_file_trajectory(int traj_select,
     param_poly_traj.R_init = R_init;
 
     param_poly_traj.p_target = traj_data_file(p_d_rows, 0);
-    param_poly_traj.R_target = quat2rotm(traj_data_file(q_d_rows, 0));
+    param_poly_traj.R_target = quat2rotm<double>(traj_data_file(q_d_rows, 0));
     // prints
     std::cout << "traj_data_file(q_d_rows, 0)\n" << traj_data_file(q_d_rows, 0) << std::endl;
     std::cout << "R_init\n" << R_init << std::endl;

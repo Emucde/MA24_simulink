@@ -41,7 +41,7 @@ ctrl_param.pd.K_d_jointspace = ctrl_param.pd.D_d_jointspace^2/4; % (NOT USED)
 % 4: set sing values sigma_i < eps to sqrt(sigma_i^2 + eps^2)
 % 5: collinearity approach 1: only works if joint is exact replaceable (linear dependent) by one other joint (but not by multiple joints!!)
 % 6: collinearity approach after steinböck: works for all joints
-ctrl_param.regularization.mode = 2;
+ctrl_param.regularization.mode = 0;
 
 % 1:
 ctrl_param.regularization.k = 1e-5;

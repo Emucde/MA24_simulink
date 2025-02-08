@@ -2,6 +2,7 @@
 #define ROBOT_MODEL_HPP
 
 #include <Eigen/Dense>
+// #include "eigen_templates.hpp"
 #include "robot_data.hpp" // Include the previously defined structs
 #include "param_robot.h"
 #include <pinocchio/algorithm/crba.hpp>

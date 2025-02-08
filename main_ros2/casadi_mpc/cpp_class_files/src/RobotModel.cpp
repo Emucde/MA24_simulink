@@ -22,9 +22,16 @@ RobotModel::RobotModel(const std::string &urdf_filename,
         nx = robot_config.nx_red;
         nq = robot_config.nq_red;
         const Eigen::VectorXd q_ref_nq = ConstDoubleVectorMap(robot_config.q_0_ref, robot_config.nq);
-        const Eigen::VectorXi joint_id_fixed = ConstIntVectorMap(robot_config.n_indices_fixed, robot_config.nq_fixed) + Eigen::VectorXi::Ones(robot_config.nq_fixed);
-        const std::vector<pinocchio::JointIndex> joints_to_lock(robot_config.n_indices_fixed, robot_config.n_indices_fixed + robot_config.nq_fixed);
-        
+
+        //iterate all joints and lock the ones that are fixed
+        // Joint 0 is universe joint, so we add 1 to indices
+        std::vector<pinocchio::JointIndex> joints_to_lock;
+        for (uint32_t i = 0; i < robot_config.nq_fixed; i++)
+        {
+            const std::string & joint_name = robot_model_full.names[robot_config.n_indices_fixed[i]+1];
+            joints_to_lock.push_back(robot_model_full.getJointId(joint_name));
+        }
+
         robot_model = pinocchio::buildReducedModel(robot_model_full, joints_to_lock, q_ref_nq);
     }
     else
@@ -57,10 +64,6 @@ void RobotModel::updateState(const Eigen::VectorXd &x)
     jointData.q = x.head(nq);
     jointData.q_p = x.tail(nq);
 
-    // Update Pinocchio robot_data
-    pinocchio::forwardKinematics(robot_model, robot_data, jointData.q, jointData.q_p);
-    pinocchio::updateFramePlacements(robot_model, robot_data);
-
     // Compute Kinematics
     computeKinematics();
 
@@ -71,6 +74,10 @@ void RobotModel::updateState(const Eigen::VectorXd &x)
 // Compute kinematic parameters
 void RobotModel::computeKinematics()
 {
+    // Update Pinocchio Kinematics
+    pinocchio::forwardKinematics(robot_model, robot_data, jointData.q, jointData.q_p);
+    pinocchio::updateFramePlacements(robot_model, robot_data);
+
     // Compute the Jacobian
     pinocchio::computeJointJacobians(robot_model, robot_data, jointData.q);
 
@@ -81,18 +88,19 @@ void RobotModel::computeKinematics()
     kinematicsData.J_p = dJ;
     kinematicsData.H = robot_data.oMf[tcp_frame_id].toHomogeneousMatrix();
 
-    Eigen::Quaterniond quat(kinematicsData.R);
-
     kinematicsData.R = kinematicsData.H.topLeftCorner<3, 3>();
     kinematicsData.p = kinematicsData.H.topRightCorner<3, 1>();
+    Eigen::Quaterniond quat(kinematicsData.R);
     kinematicsData.quat = quat;
 }
 
 // Compute dynamic parameters
 void RobotModel::computeDynamics()
 {
-    // Compute Mass Matrix
-    dynamicsData.M = pinocchio::crba(robot_model, robot_data, jointData.q);
+     // Compute upper triangular part of M using CRBA
+    pinocchio::crba(robot_model, robot_data, jointData.q);
+    robot_data.M.triangularView<Eigen::StrictlyLower>() = robot_data.M.transpose().triangularView<Eigen::StrictlyLower>();
+    dynamicsData.M = robot_data.M;
 
     // Compute Coriolis forces
     dynamicsData.C = pinocchio::computeCoriolisMatrix(robot_model, robot_data, jointData.q, jointData.q_p);
@@ -102,5 +110,5 @@ void RobotModel::computeDynamics()
 
     // Get gravitational forces (assuming a gravity vector)
     dynamicsData.g = pinocchio::computeGeneralizedGravity(robot_model, robot_data, jointData.q);
-    // equivalent to inocchio::rnea(robot_model, robot_data, q, Eigen::VectorXd::Zero(nq), Eigen::VectorXd::Zero(nq));
+    // equivalent to pinocchio::rnea(robot_model, robot_data, q, Eigen::VectorXd::Zero(nq), Eigen::VectorXd::Zero(nq));
 }

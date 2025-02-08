@@ -63,7 +63,8 @@ public:
     void calcPose(const Eigen::VectorXd &q, Eigen::Vector3d &p, Eigen::Matrix3d &R);
 
     // Method to simulate the robot model
-    void simulateModel(Eigen::Map<Eigen::VectorXd> &x_k_ndof, Eigen::Map<const Eigen::VectorXd> &tau, double dt);
+    void simulateModelEuler(Eigen::Map<Eigen::VectorXd> &x_k_ndof, Eigen::Map<const Eigen::VectorXd> &tau, double dt);
+    void simulateModelRK4(Eigen::Map<Eigen::VectorXd> &x_k_ndof, Eigen::Map<const Eigen::VectorXd> &tau, double dt);
 
     // Getters and setters
     const Eigen::VectorXd &getTauFull() const { return tau_full; }
@@ -111,6 +112,7 @@ private:
                    pinocchio::Data &robot_data,
                    bool use_gravity);
     Eigen::VectorXd enforceTorqueLimits(const Eigen::VectorXd &tau);
+    Eigen::VectorXd RK4(const Eigen::VectorXd& state, double dt, const std::function<Eigen::VectorXd(const Eigen::VectorXd&)>& f);
 };
 
 #endif // FULLSYSTEMTORQUEMAPPER_HPP
