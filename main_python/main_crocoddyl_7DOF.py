@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
 from scipy.optimize import minimize
 import scipy.io as sio
+import meshcat as mc
 from multiprocessing import shared_memory
 import posix_ipc
 import multiprocessing
@@ -81,6 +82,10 @@ if use_data_from_simulink or explicit_mpc:
     read_frequency = shm_data['read_frequency']
     read_state_data = shm_data['read_state_data']
     read_control_data = shm_data['read_control_data']
+    read_traj_data_full = shm_data['read_traj_data_full']
+    read_frequency_full = shm_data['read_frequency_full']
+    read_state_data_full = shm_data['read_state_data_full']
+    read_control_data_full = shm_data['read_control_data_full']
     shm_changed_semaphore = posix_ipc.Semaphore("/shm_changed_semaphore", posix_ipc.O_CREAT, initial_value=0)
 
     # create objects for debouncing the simulink buttons:
@@ -463,9 +468,8 @@ try:
 
                         if visualize_sol:
                             def vis_sol_act():
-                                q_sol = xs[:, :n_dof]
                                 visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
-                                                    q_sol, transient_traj, Ts,
+                                                    xs[:, :n_dof], transient_traj, Ts,
                                                     frame_skip=1, create_html = True, html_name = visualize_file_path)
                             process = multiprocessing.Process(target=vis_sol_act)
                             process.daemon = True # this will kill the process if the main process is killed
@@ -487,23 +491,43 @@ try:
                     data_from_simulink_reset[:] = 0
                     run_flag = False
                     print('Reset MPC (data logging mode).')
-                    if i > 0:
-                        if plot_sol:
-                            # def plot_sol_act():
+
+                    # read data from shared memory
+                    xs = read_state_data_full.reshape(-1, 2*n_dof)
+                    us = read_control_data_full.reshape(-1, n_dof)
+                    freq_per_Ta_step = read_frequency_full
+                    indices = np.arange(0, 19 * N_traj, 19)
+                    q_d_temp = read_traj_data_full[indices[:, None] + np.arange(9, 13)].T
+                    R_d_temp = quat2rotm_vec(q_d_temp)
+                    
+                    transient_traj = {
+                        't': np.linspace(0, N_traj*Ts, N_traj),
+                        'N_traj': N_traj,
+                        'p_d': read_traj_data_full[indices[:, None] + np.arange(3)].T,
+                        'p_d_p': read_traj_data_full[indices[:, None] + np.arange(3, 6)].T,
+                        'p_d_pp': read_traj_data_full[indices[:, None] + np.arange(6, 9)].T,
+                        'R_d': R_d_temp,
+                        'q_d': q_d_temp,
+                        'omega_d': read_traj_data_full[indices[:, None] + np.arange(13, 16)].T,
+                        'omega_d_p': read_traj_data_full[indices[:, None] + np.arange(16, 19)].T
+                    }
+
+                    if plot_sol:
+                        def plot_sol_act():
                             subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
                             plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
-                            # process = multiprocessing.Process(target=plot_sol_act)
-                            # process.start()
+                        process = multiprocessing.Process(target=plot_sol_act)
+                        process.daemon = True # this will kill the process if the main process is killed
+                        process.start()
 
-                        if visualize_sol:
-                            def vis_sol_act():
-                                q_sol = xs[:, :n_dof]
-                                visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
-                                                    q_sol, transient_traj, Ts,
-                                                    frame_skip=1, create_html = True, html_name = visualize_file_path)
-                            process = multiprocessing.Process(target=vis_sol_act)
-                            process.start()
-                    i = 0
+                    if visualize_sol:
+                        def vis_sol_act():
+                            visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
+                                                xs[:, :n_dof], transient_traj, Ts,
+                                                frame_skip=1, create_html = True, html_name = visualize_file_path)
+                        process = multiprocessing.Process(target=vis_sol_act)
+                        process.daemon = True # this will kill the process if the main process is killed
+                        process.start()
 
                 if stop == 1:
                     data_from_simulink_stop[:] = 0
@@ -529,16 +553,7 @@ try:
                     }
 
                 if run_flag is True:
-                    xs[i] = read_state_data[:]
-                    us[i] = read_control_data[:]
-                    freq_per_Ta_step[i] = read_frequency[0]
-                    transient_traj['p_d'][:, i] = read_traj_data[0:3]
-                    transient_traj['p_d_p'][:, i] = read_traj_data[3:6]
-                    transient_traj['p_d_pp'][:, i] = read_traj_data[6:9]
-                    transient_traj['q_d'][:, i] = read_traj_data[9:13]
-                    transient_traj['omega_d'][:, i] = read_traj_data[13:16]
-                    transient_traj['omega_d_p'][:, i] = read_traj_data[16:19]
-                    transient_traj['R_d'][:, :, i] = quat2rotm(transient_traj['q_d'][:, i])
+                    freq_per_Ta_step[i] = read_frequency_full[i]
 
                     if i < N_traj-1:
                         i += 1
@@ -547,7 +562,6 @@ try:
 
                     if (i+1) % update_interval == 0:
                         print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()} | {format_freq(freq_per_Ta_step[i-1], 2)}     ", end='\r')
-
 
 
         if start_solving:

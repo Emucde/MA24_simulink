@@ -175,7 +175,7 @@ if(strcmp(MPC_solver, 'qrqp') || strcmp(MPC_solver, 'osqp') || strcmp(MPC_solver
         opts.qpsol_options.proxqp.backend = 'sparse'; % The solver backend to use
     elseif(strcmp(MPC_solver, 'daqp'))
         % https://darnstrom.github.io/daqp/parameters/
-        opts.qpsol = 'daqp'; % Set the QP solver to 'qrqp'
+        opts.qpsol = 'daqp'; % Set the QP solver to 'daqp'
         opts.qpsol_options.daqp.primal_tol = 1e-6;     % Tolerance for primal infeasibility [Default: 1e-6], [Allowed: > 0]
         opts.qpsol_options.daqp.dual_tol = 1e-12;      % Tolerance for dual infeasibility [Default: 1e-12], [Allowed: > 0]
         opts.qpsol_options.daqp.zero_tol = 1e-11;      % Values below are regarded as zero [Default: 1e-11], [Allowed: > 0]
@@ -268,8 +268,21 @@ if(strcmp(MPC_solver, 'qrqp') || strcmp(MPC_solver, 'osqp') || strcmp(MPC_solver
         opts.error_on_fail=false;
     elseif(strcmp(MPC_solver, 'test'))
         % https://darnstrom.github.io/daqp/parameters/
-        opts.qpsol = 'gurobi'; % Set the QP solver to 'qrqp'
-        all_gurobi_options;
+        opts.qpsol = 'nlpsol';
+        opts.qpsol_options.nlpsol = 'ipopt'; % #error Code generation not supported for QpToNlp
+        opts.qpsol_options.nlpsol_options.ipopt.tol = 1e-7;
+        opts.qpsol_options.nlpsol_options.ipopt.tiny_step_tol = 1e-20;
+        opts.qpsol_options.nlpsol_options.ipopt.fixed_variable_treatment = 'make_constraint';
+        opts.qpsol_options.nlpsol_options.ipopt.hessian_constant = 'yes';
+        opts.qpsol_options.nlpsol_options.ipopt.jac_c_constant = 'yes';
+        opts.qpsol_options.nlpsol_options.ipopt.jac_d_constant = 'yes';
+        opts.qpsol_options.nlpsol_options.ipopt.accept_every_trial_step = 'yes';
+        opts.qpsol_options.nlpsol_options.ipopt.mu_init = 1e-3;
+
+        opts.qpsol_options.nlpsol_options.ipopt.print_level = 0;
+        %opts.qpsol_options.nlpsol_options.print_time = false;
+        opts.qpsol_options.nlpsol_options.ipopt.linear_solver = 'ma27';
+        opts.qpsol_options.print_time = true;
         opts.qpsol_options.verbose = false; % Print output 
         opts.qpsol_options.error_on_fail = false; % Throw exceptions when function evaluation fails
         opts.error_on_fail=false;

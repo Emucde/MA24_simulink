@@ -91,26 +91,6 @@ int main()
     const std::string tcp_frame_name = "fr3_link8_tcp";
     
     robot_config_t robot_config = get_robot_config();
-    
-    SharedMemory shm;
-    const std::vector<std::string> shm_readwrite_names = {
-        "data_from_simulink_start",
-        "data_from_simulink_reset",
-        "data_from_simulink_stop",
-        "readonly_mode",
-        "read_traj_length",
-        "read_traj_data",
-        "read_frequency",
-        "read_state_data",
-        "read_control_data"
-    };
-
-    const std::vector<std::string> sem_readwrite_names = {
-        "shm_changed_semaphore"
-    };
-
-    shm.open_readwrite_shms(shm_readwrite_names);
-    shm.open_readwrite_sems(sem_readwrite_names);
 
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
     double Ts = 0.001;
@@ -133,6 +113,7 @@ int main()
     WorkspaceController classic_controller(urdf_filename, tcp_frame_name, use_gravity);
     CasadiController mpc_controller(urdf_filename, tcp_frame_name, use_gravity);
     mpc_controller.setActiveMPC(MPCType::MPC8);
+    classic_controller.switchController(ControllerType::InverseDynamics);
     // initialize the trajectory
     
     // set singularity robustness mode
@@ -142,10 +123,15 @@ int main()
     // Eigen::Map<Eigen::VectorXd>(W_bar_N.diagonal().data(), nq_red) = Eigen::Map<const Eigen::VectorXd>(robot_config.sugihara_limb_vector, robot_config.nq)(n_indices);
     Eigen::MatrixXd W_E = Eigen::MatrixXd::Identity(nq_red, nq_red);
 
-    Eigen::MatrixXd K_d_pd = Eigen::DiagonalMatrix<double, 6>(100, 200, 500, 200, 50, 50);
-    Eigen::MatrixXd Kp1_ct = Eigen::DiagonalMatrix<double, 6>(100, 200, 500, 200, 50, 50);
-    Eigen::MatrixXd Kp1_id = Eigen::DiagonalMatrix<double, 6>(100, 200, 500, 200, 50, 50);
-    Eigen::MatrixXd K_d_id = Eigen::DiagonalMatrix<double, 6>(100, 200, 500, 200, 50, 50);
+    // PD CONTROLLER
+    Eigen::MatrixXd K_d_pd = Eigen::DiagonalMatrix<double, 6>(100, 100, 100, 20, 20, 20);
+
+    // CT CONTROLLER
+    Eigen::MatrixXd Kp1_ct = Eigen::DiagonalMatrix<double, 6>(100, 100, 100, 50, 50, 50);
+
+    // ID CONTROLLER
+    Eigen::MatrixXd K_d_id = Eigen::DiagonalMatrix<double, 6>(100, 100, 100, 20, 20, 20);
+    Eigen::MatrixXd Kp1_id = Eigen::DiagonalMatrix<double, 6>(100, 100, 100, 50, 50, 50); // PD gains
 
     ControllerSettings ctrl_settings = {
         .pd_plus_settings = {
@@ -163,13 +149,13 @@ int main()
             .K_d = K_d_id
         },
         .regularization_settings = {
-            .mode = RegularizationMode::None,
+            .mode = RegularizationMode::Damping,
             .k = 1e-5, // RegularizationMode::Damping
             .W_bar_N = W_bar_N, // Sugihara Method, not implemented
             .W_E = W_E, // Sugihara Method, not implemented
-            .eps = 1e-1, // ThresholdSmallSingularValues::TikhonovRegularization, ThresholdSmallSingularValues, RegularizationBySingularValues
-            .eps_collinear = 1e-4, // RegularizationMode::SimpleCollinearity
-            .lambda_min = 1e-3 // RegularizationMode::SteinboeckCollinearity
+            .eps = 1e-1, // ThresholdSmallSingularValues, TikhonovRegularization, RegularizationBySingularValues
+            .eps_collinear = 1e-5, // RegularizationMode::SimpleCollinearity
+            .lambda_min = 1e-5 // RegularizationMode::SteinboeckCollinearity
         }
     };
 
@@ -214,24 +200,37 @@ int main()
     const double* act_data;
 
     casadi_uint transient_traj_len = mpc_controller.get_transient_traj_len();
-    
-    // Start measuring time
-    timer_total.tic();
+
+    // create shared memory with size
+    const std::vector<SharedMemoryInfo> shm_readwrite_infos = {
+        {"data_from_simulink_start", sizeof(int8_t), 1},
+        {"data_from_simulink_reset", sizeof(int8_t), 1},
+        {"data_from_simulink_stop", sizeof(int8_t), 1},
+        {"readonly_mode", sizeof(int8_t), 1},
+        {"read_traj_length", sizeof(casadi_uint), 1},
+        {"read_traj_data_full", 19 * sizeof(casadi_real), traj_len},
+        {"read_frequency_full", sizeof(casadi_real), traj_len},
+        {"read_state_data_full", sizeof(casadi_real) * robot_config.nx, traj_len},
+        {"read_control_data_full", sizeof(casadi_real) * robot_config.nq, traj_len}
+    };
+
+    const std::vector<std::string> sem_readwrite_names = {
+        "shm_changed_semaphore",
+    };
+
+    SharedMemory shm;
+    shm.open_readwrite_shms(shm_readwrite_infos);
+    shm.open_readwrite_sems(sem_readwrite_names);
 
     // enable shm read mode:
     int8_t readonly_mode = 1, start = 1;
 
-    shm.write("readonly_mode", &readonly_mode, sizeof(int8_t));
-    shm.write("read_traj_length", &traj_len, sizeof(casadi_uint));
-    shm.write("data_from_simulink_start", &start, sizeof(int8_t));
+    shm.write("readonly_mode", &readonly_mode);
+    shm.write("read_traj_length", &traj_len);
+    shm.write("data_from_simulink_start", &start);
     
-    // Write data to shm:
-    current_frequency = 0;
-    shm.write("read_state_data", x_k_ndof, nx * sizeof(casadi_real));
-    shm.write("read_control_data", tau_full.data(), nq * sizeof(casadi_real));
-    shm.write("read_traj_data", mpc_controller.get_act_traj_data(), 7 * sizeof(casadi_real));
-    shm.write("read_frequency", &current_frequency, sizeof(double));
-    shm.post_semaphore("shm_changed_semaphore");
+    // Start measuring time
+    timer_total.tic();
 
     // Main loop for trajectory processing
     for (casadi_uint i = 0; i < traj_len; i++)
@@ -277,12 +276,15 @@ int main()
         current_frequency = timer_mpc_solver.get_frequency();
 
         // Write data to shm:
-        shm.write("read_state_data", x_k_ndof, nx * sizeof(casadi_real));
-        shm.write("read_control_data", tau_full.data(), nq * sizeof(casadi_real));
-        shm.write("read_traj_data", act_data, 19 * sizeof(casadi_real));
-        shm.write("read_frequency", &current_frequency, sizeof(double));
+        shm.write("read_state_data_full", x_k_ndof, i);
+        shm.write("read_control_data_full", tau_full.data(), i);
+        shm.write("read_traj_data_full", act_data, i);
+        shm.write("read_frequency_full", &current_frequency, i);
         shm.post_semaphore("shm_changed_semaphore");
 
+        // short delay
+        // std::this_thread::sleep_for(std::chrono::microseconds(500));
+        
         if(use_mpc)
         {
             mpc_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
@@ -307,7 +309,7 @@ int main()
     timer_total.print_time("Total execution time: ");
     std::cout << std::endl;
 
-    shm.write("data_from_simulink_reset", &start, sizeof(int8_t));
+    shm.write("data_from_simulink_reset", &start);
     shm.post_semaphore("shm_changed_semaphore");
     shm.close_shared_memories();
     shm.close_semaphores();

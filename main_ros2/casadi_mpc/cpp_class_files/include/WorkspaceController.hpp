@@ -69,6 +69,7 @@ protected:
     Eigen::VectorXd q, q_p;
     Eigen::VectorXd x_err, x_err_p;
     Eigen::VectorXd x_d_p, x_d_pp;
+    Eigen::VectorXd column_weights = Eigen::VectorXd::Ones(nq);
     double dt;
 
 public:

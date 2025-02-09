@@ -8,6 +8,7 @@ import pinocchio
 import matplotlib.pyplot as plt
 import meshcat.geometry as g
 import meshcat.transformations as tf
+import meshcat as mc
 import webbrowser
 import os
 import sys
@@ -476,20 +477,24 @@ def initialize_shared_memory():
 
     # Shared memory configurations
     shm_configs = {
-        "data_from_python":               {"size": n_dof * 8,     "dtype": np.float64},
-        "data_from_python_valid":         {"size": 1,             "dtype": np.int8},
-        "data_from_simulink":             {"size": 2 * n_dof * 8, "dtype": np.float64},
-        "data_from_simulink_valid":       {"size": 1,             "dtype": np.int8},
-        "data_from_simulink_start":       {"size": 1,             "dtype": np.int8},
-        "data_from_simulink_reset":       {"size": 1,             "dtype": np.int8},
-        "data_from_simulink_stop":        {"size": 1,             "dtype": np.int8},
-        "data_from_simulink_traj_switch": {"size": 1,             "dtype": np.int8},
-        "readonly_mode":                  {"size": 1,             "dtype": np.int8},
-        "read_traj_length":               {"size": 4,             "dtype": np.uint32},
-        "read_traj_data":                 {"size": 19 * 8,        "dtype": np.float64}, # pos and quaternion
-        "read_frequency":                 {"size": 1 * 8,         "dtype": np.float64}, # scalar frequency (0 if skipped)
-        "read_state_data":                {"size": 2 * n_dof * 8, "dtype": np.float64}, # q and qp
-        "read_control_data":              {"size": n_dof * 8,     "dtype": np.float64}, # tau
+        "data_from_python":               {"size": n_dof * 8,             "dtype": np.float64},
+        "data_from_python_valid":         {"size": 1,                     "dtype": np.int8},
+        "data_from_simulink":             {"size": 2 * n_dof * 8,         "dtype": np.float64},
+        "data_from_simulink_valid":       {"size": 1,                     "dtype": np.int8},
+        "data_from_simulink_start":       {"size": 1,                     "dtype": np.int8},
+        "data_from_simulink_reset":       {"size": 1,                     "dtype": np.int8},
+        "data_from_simulink_stop":        {"size": 1,                     "dtype": np.int8},
+        "data_from_simulink_traj_switch": {"size": 1,                     "dtype": np.int8},
+        "readonly_mode":                  {"size": 1,                     "dtype": np.int8},
+        "read_traj_length":               {"size": 4,                     "dtype": np.uint32},
+        "read_traj_data":                 {"size": 19 * 8,                "dtype": np.float64}, # pos and quaternion
+        "read_frequency":                 {"size": 1 * 8,                 "dtype": np.float64}, # scalar frequency (0 if skipped)
+        "read_state_data":                {"size": 2 * n_dof * 8,         "dtype": np.float64}, # q and qp
+        "read_control_data":              {"size": n_dof * 8,             "dtype": np.float64}, # tau
+        "read_traj_data_full":            {"size": 19 * 8 * 20000,        "dtype": np.float64}, # pos and quaternion
+        "read_frequency_full":            {"size": 1 * 8 * 20000,         "dtype": np.float64}, # scalar frequency (0 if skipped)
+        "read_state_data_full":           {"size": 2 * n_dof * 8 * 20000, "dtype": np.float64}, # q and qp
+        "read_control_data_full":         {"size": n_dof * 8 * 20000,     "dtype": np.float64}, # tau
     }
 
     shm_objects = {}
@@ -596,6 +601,47 @@ def quat2rotm(q):
         [2 * (q12 + q03),               qq[0] - qq[1] + qq[2] - qq[3], 2 * (q23 - q01)],
         [2 * (q13 - q02),               2 * (q23 + q01),       qq[0] - qq[1] - qq[2] + qq[3]]
     ])
+
+def quat2rotm_vec(q):
+    """
+    Converts a 4-element array of quaternions to rotation matrices.
+
+    Parameters:
+        q (numpy.ndarray): A 4xN array representing N quaternions [q0, q1, q2, q3].
+
+    Returns:
+        numpy.ndarray: A 3x3xN array of rotation matrices.
+    """
+    q = np.asarray(q)  # Ensure q is a numpy array
+
+    # Extract the quaternion components
+    q0 = q[0, :]
+    q1 = q[1, :]
+    q2 = q[2, :]
+    q3 = q[3, :]
+    
+    # Precompute terms
+    qq = q**2  # Elementwise square of the quaternion
+    q01 = q0 * q1
+    q02 = q0 * q2
+    q03 = q0 * q3
+    q12 = q1 * q2
+    q13 = q1 * q3
+    q23 = q2 * q3
+
+    # Construct the rotation matrix for each quaternion
+    R = np.empty((3, 3, q.shape[1]))  # Initialize an empty array for the output
+    R[0, 0, :] = qq[0, :] + qq[1, :] - qq[2, :] - qq[3, :]
+    R[0, 1, :] = 2 * (q12 - q03)
+    R[0, 2, :] = 2 * (q13 + q02)
+    R[1, 0, :] = 2 * (q12 + q03)
+    R[1, 1, :] = qq[0, :] - qq[1, :] + qq[2, :] - qq[3, :]
+    R[1, 2, :] = 2 * (q23 - q01)
+    R[2, 0, :] = 2 * (q13 - q02)
+    R[2, 1, :] = 2 * (q23 + q01)
+    R[2, 2, :] = qq[0, :] - qq[1, :] - qq[2, :] + qq[3, :]
+
+    return R
 ################################## MODEL TESTS ############################################
 
 
@@ -1661,7 +1707,7 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
         print('Warning: NaN values detected in xs array, set to zero!')
         xs = np.nan_to_num(xs)
 
-    N = len(xs)
+    N = traj_data['N_traj']
     n = robot_model.nq
     n_indices = param_robot['n_indices']
 
@@ -2669,16 +2715,14 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
         print('Warning: NaN values detected in xs array, set to zero!')
         q_sol = np.nan_to_num(q_sol)
 
-    # Meshcat Visualize
-    robot_display = MeshcatVisualizer(robot_model)
-    robot_display.initViewer(open=False)
-
     anim = Animation()
-    vis = robot_display.viewer
+    # vis = robot_display.viewer
+    vis = mc.Visualizer()
 
     # Display trajectory as line:
     y_d_data = traj_data['p_d'].T
     R_d_data = traj_data['R_d']
+    N_traj = traj_data['N_traj']
     vertices = np.hstack([y_d_data.T[:, 0][:, np.newaxis], np.repeat(y_d_data.T[:,1::], 2, 1)]).astype(np.float32)
     
     traj_color = style_settings['traj_color']
@@ -2696,8 +2740,8 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
     N_traj_KOS = style_settings['N_traj_KOS']
     traj_KOS_len = style_settings['traj_KOS_len']
 
-    # indices = traj_data['N_init'] + np.linspace(0, traj_data['N_traj'], N_traj_KOS, dtype=int)
-    indices = np.linspace(0, traj_data['N_traj']-1, N_traj_KOS, dtype=int)
+    # indices = traj_data['N_init'] + np.linspace(0, N_traj, N_traj_KOS, dtype=int)
+    indices = np.linspace(0, N_traj-1, N_traj_KOS, dtype=int)
     for i, index in enumerate(indices):
         create_coordinate_system(vis, f"y_coord_system_{i}", traj_KOS_len)
         H = create_homogeneous_transform(y_d_data[index], R_d_data[:,:,index])
@@ -2768,7 +2812,7 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
     vis.set_cam_target(camera_target)
 
     # Iterate through trajectory data
-    for i in range(0, len(q_sol), frame_skip):
+    for i in range(0, N_traj, frame_skip):
         pinocchio.forwardKinematics(robot_model, robot_data, q_sol[i])
         pinocchio.updateFramePlacements(robot_model, robot_data)
 
@@ -2809,15 +2853,10 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
         # webbrowser.open(url)
         time.sleep(1) # othervise visualization don't work
     else:
-        robot_display.viewer.open()
-
-    create_video=False
-    if create_video:
-        robot_display = crocoddyl.MeshcatDisplay(robot, -1, 1, False, visibility=False)
-        with robot_display.robot.viz.create_video_ctx("test.mp4"):
-            robot_display.robot.viz.play(q_sol, dt)
+        viewer.open()
 
     start_server('reload_meshcat') # start server to visualize robot
+    vis.delete()
 
 
 

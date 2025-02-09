@@ -62,9 +62,7 @@ Eigen::MatrixXd BaseController::computeJacobianRegularization()
         Eigen::MatrixXd S = svd.singularValues().asDiagonal();
 
         double epsilon = regularization_settings.eps; // Threshold for small singular values
-        std::cout << "S_old: " << S.diagonal().transpose() << std::endl<< std::endl;
         S.diagonal() = S.diagonal().cwiseMax(epsilon);
-        std::cout << "S_new: " << S.diagonal().transpose() << std::endl<< std::endl;
 
         // Reconstruct the matrix with modified singular values
         Eigen::MatrixXd J_new = svd.matrixU() * S * svd.matrixV().transpose();
@@ -129,12 +127,12 @@ Eigen::MatrixXd BaseController::computeJacobianRegularization()
             }
 
             // Create a boolean vector for values below this threshold
-            Eigen::Array<bool, Eigen::Dynamic, 1> mask = (R.array() <= R_threshold);
+            Eigen::Array<bool, Eigen::Dynamic, 1> mask = (R.array() > R_threshold);
 
             std::vector<double> col_indices;
             for (int i = 0; i < sortedR.size(); ++i)
             {
-                if (mask[i])
+                if (!mask[i])
                 {
                     col_indices.push_back(i);
                 }
@@ -151,6 +149,75 @@ Eigen::MatrixXd BaseController::computeJacobianRegularization()
         {
             J_pinv = J.completeOrthogonalDecomposition().pseudoInverse();
         }
+        /*
+        // calculate singular values of J
+        Eigen::VectorXd J_scale = J.colwise().norm().cwiseInverse();                 // J_scale = J / colsum(J)
+        Eigen::MatrixXd J_tilde = J.array().rowwise() * J_scale.transpose().array(); // J_tilde = J_scale * J_scale'
+        Eigen::MatrixXd JJ_colin = J_tilde.transpose() * J_tilde;                    // JJ_colin = J_tilde' * J_tilde
+
+        double damping_factor = 0.1;
+        // Calculate Eigenvalues of JJ_colin
+        // Eigen::EigenSolver<Eigen::MatrixXd> solver(JJ_colin);
+        // Eigen::VectorXd eigenvalues = solver.eigenvalues().real();
+
+        Eigen::JacobiSVD<Eigen::MatrixXd> svd(JJ_colin, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        Eigen::VectorXd singular_values = svd.singularValues();
+
+        // Get the amount of all eigenvalues that are smaller than regularization_settings.eps_collinear
+        int ew_count = (singular_values.array() < regularization_settings.eps_collinear).count();
+
+        // Calculate collinearity column norm (changed from row to column)
+        Eigen::VectorXd R = JJ_colin.cwiseAbs().colwise().sum();
+
+        // Create a sorted copy of R (ascending order)
+        Eigen::VectorXd sortedR = R;
+        std::sort(sortedR.data(), sortedR.data() + sortedR.size());
+
+        double R_threshold;
+        if (ew_count == singular_values.size())
+        {
+            // ensure that J_new has at least one column
+            // If all columns are collinear, the one with the smallest collinearity is chosen
+            R_threshold = sortedR[0];
+        }
+        else
+        {
+            // sortedR.size() = 6
+            // ew_count = 1 ... 5
+            // max_idx = 6-1-1 = 4 ... 6-1-5 = 0
+            double max_idx = sortedR.size() - 1 - ew_count;
+            R_threshold = sortedR[max_idx];
+        }
+
+        Eigen::Array<bool, Eigen::Dynamic, 1> mask = (R.array() > R_threshold);
+
+        if (ew_count > 0)
+        {
+            for (int i = 0; i < R.size(); ++i)
+            {
+                if (mask[i])
+                {
+                    // Gradually decrease weight for highly collinear columns
+                    column_weights[i] -= damping_factor * (column_weights[i] - 0.0); // Smoothly approach 0
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < R.size(); ++i)
+            {
+                // Gradually restore weight for non-collinear columns
+                column_weights[i] += damping_factor * (1.0 - column_weights[i]); // Smoothly approach 1
+            }
+        }
+        std::cout << "Column weights: " << column_weights.transpose() << std::endl;
+        column_weights.cwiseMin(Eigen::VectorXd::Constant(column_weights.size(), 1))
+            .cwiseMax(Eigen::VectorXd::Constant(column_weights.size(), 0));
+
+        Eigen::MatrixXd J_new = J.array().rowwise() * column_weights.transpose().array();
+
+        J_pinv = J.completeOrthogonalDecomposition().pseudoInverse();
+        */
     }
     break;
     case RegularizationMode::SteinboeckCollinearity:
@@ -295,9 +362,6 @@ void BaseController::calculateControlData(const Eigen::VectorXd &x)
 
     J_pinv = computeJacobianRegularization();
     traj_count++;
-    std::cout << "cnt:" << traj_count << std::endl<< std::endl;
-    std::cout << "p_d: " << p_d << std::endl<< std::endl;
-    std::cout << "quat_d: " << q_d.coeffs().transpose() << std::endl<< std::endl;
 }
 
 
@@ -314,24 +378,6 @@ Eigen::VectorXd WorkspaceController::CTController::control(const Eigen::VectorXd
 
     // Control Law Calculation
     Eigen::VectorXd tau = M * v + C_rnea;
-
-    // DEBUG PRINT ALL DATA
-    std::cout << "J: \n" << J << std::endl << std::endl;
-    std::cout << "J_pinv: \n" << J_pinv << std::endl << std::endl;;
-    std::cout << "J_p: \n" << J_p << std::endl << std::endl;;
-    std::cout << "M: \n" << M << std::endl << std::endl;
-    std::cout << "C: \n" << C << std::endl << std::endl;
-    std::cout << "C_rnea: \n" << C_rnea << std::endl << std::endl;;
-    std::cout << "g: \n" << g << std::endl << std::endl;
-    std::cout << "q: \n" << q << std::endl << std::endl;
-    std::cout << "q_p: \n" << q_p << std::endl << std::endl;;
-    std::cout << "x_err: \n" << x_err << std::endl << std::endl;;
-    std::cout << "x_err_p: \n" << x_err_p << std::endl << std::endl;;
-    std::cout << "x_d_p: \n" << x_d_p << std::endl << std::endl;;
-    std::cout << "x_d_pp: \n" << x_d_pp << std::endl << std::endl;;
-    std::cout << "v: \n" << v << std::endl << std::endl;
-    std::cout << "tau: \n" << tau << std::endl << std::endl;;
-    std::cout << "-----------------------------------" << std::endl << std::endl;
     return tau;
 }
 
@@ -346,7 +392,7 @@ Eigen::VectorXd WorkspaceController::InverseDynamicsController::control(const Ei
 
     calculateControlData(x);
 
-    if (!init)
+    if (init)
     {
         // Initialize on first iteration
         q_d_prev = q;
@@ -363,7 +409,7 @@ Eigen::VectorXd WorkspaceController::InverseDynamicsController::control(const Ei
     Eigen::VectorXd q_d = q_d_prev + dt * q_p_d_prev;
     Eigen::VectorXd q_p_d = q_p_d_prev + dt * q_d_pp;
 
-    Eigen::VectorXd tau = M * q_d_pp + C * q_p_d + g - D_d * (q_p - q_p_d - K_d * (q - q_d));
+    Eigen::VectorXd tau = M * q_d_pp + C * q_p_d + g - D_d * (q_p - q_p_d) - K_d * (q - q_d);
 
     q_d_prev = q_d;
     q_p_d_prev = q_p_d;
@@ -446,10 +492,10 @@ void WorkspaceController::simulateModelRK4(casadi_real *const x_k_ndof_ptr, cons
 ControllerSettings WorkspaceController::init_default_controller_settings()
 {
     // Initialize the default configuration
-    Eigen::MatrixXd K_d = Eigen::DiagonalMatrix<double, 6>(100, 200, 500, 200, 50, 50);
+    Eigen::MatrixXd K_d = Eigen::DiagonalMatrix<double, 6>(100, 100, 100, 20, 20, 20);
     Eigen::MatrixXd D_d = (2 * K_d).array().sqrt();
 
-    Eigen::MatrixXd Kp1 = Eigen::DiagonalMatrix<double, 6>(100, 200, 500, 200, 50, 50);
+    Eigen::MatrixXd Kp1 = Eigen::DiagonalMatrix<double, 6>(100, 100, 100, 50, 50, 50);
     Eigen::MatrixXd Kd1 = (2 * Kp1).array().sqrt();
 
     ControllerSettings controller_settings_default;
