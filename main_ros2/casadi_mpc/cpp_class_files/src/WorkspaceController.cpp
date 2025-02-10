@@ -23,7 +23,7 @@ WorkspaceController::WorkspaceController(
 }
 
 
-Eigen::MatrixXd BaseController::computeJacobianRegularization()
+Eigen::MatrixXd BaseWorkspaceController::computeJacobianRegularization()
 {
     // Assume necessary member variables exist:
     // `J` (the reduced Jacobian matrix), `x_err` (the error vector),
@@ -300,7 +300,7 @@ Eigen::VectorXd WorkspaceController::update(const double *const x_nq)
 }
 
 
-void BaseController::calculateControlData(const Eigen::VectorXd &x)
+void BaseWorkspaceController::calculateControlData(const Eigen::VectorXd &x)
 {
     // Update the robot model state with joint positions and velocities
     robot_model.updateState(x);
@@ -459,7 +459,7 @@ void WorkspaceController::switchController(ControllerType type)
 }
 
 
-void WorkspaceController::simulateModelEuler(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt)
+void WorkspaceController::simulateModelEuler(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt)
 {
     Eigen::Map<Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
     Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
@@ -474,7 +474,7 @@ void WorkspaceController::simulateModelEuler(casadi_real *const x_k_ndof_ptr, co
 }
 
 
-void WorkspaceController::simulateModelRK4(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt)
+void WorkspaceController::simulateModelRK4(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt)
 {
     Eigen::Map<Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
     Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
@@ -548,19 +548,6 @@ RegularizationSettings WorkspaceController::init_default_regularization_settings
     regularization_settings_default.lambda_min = 1e-2;    // Minimum eigenvalue for regularization
     
     return regularization_settings_default;
-}
-
-
-void WorkspaceController::init_file_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
-                                               double T_start, double T_poly, double T_end)
-{
-    trajectory_generator.init_file_trajectory(traj_select, x_k_ndof_ptr, T_start, T_poly, T_end);
-}
-
-
-void WorkspaceController::init_custom_trajectory(ParamPolyTrajectory param)
-{
-    trajectory_generator.init_custom_trajectory(param);
 }
 
 

@@ -189,6 +189,7 @@ list(APPEND CMAKE_PREFIX_PATH "${MPC_SOURCE_DIR}")
 link_directories("${MPC_SOURCE_DIR}")
 
 find_package(pinocchio REQUIRED)
+find_package(crocoddyl REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Threads REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -200,6 +201,8 @@ file(GLOB_RECURSE SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")  # Recursiv
 set(UTILS_LIBRARIES 
     WorkspaceController
     CasadiController
+    CrocoddylController
+    CrocoddylMPC
     CasadiMPC
     FullSystemTorqueMapper
     RobotModel
@@ -220,7 +223,8 @@ foreach(SOURCE_FILE ${SRC_FILES})
 
     # Include directories
     target_include_directories(${FILE_NAME} PRIVATE 
-        ${pinocchio_INCLUDE_DIRS} 
+        ${pinocchio_INCLUDE_DIRS}
+        ${crocoddyl_INCLUDE_DIRS} 
         ${EIGEN3_INCLUDE_DIR}
         ${rclcpp_INCLUDE_DIRS}
         ${MPC_SOURCE_DIR} 
@@ -228,7 +232,8 @@ foreach(SOURCE_FILE ${SRC_FILES})
     )
 
     target_link_libraries(${FILE_NAME} PRIVATE
-        ${pinocchio_LIBRARIES} 
+        ${pinocchio_LIBRARIES}
+        ${crocoddyl_LIBRARIES}
         ${EIGEN3_LIBRARIES}
         ${rclcpp_LIBRARIES}
         ${MPC_PARAM_LIBRARIES}

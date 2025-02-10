@@ -19,10 +19,10 @@
 #include "RobotModel.hpp"
 #include "TrajectoryGenerator.hpp"
 
-class BaseController
+class BaseWorkspaceController
 {
 public:
-    BaseController(RobotModel &robot_model,
+    BaseWorkspaceController(RobotModel &robot_model,
                    RegularizationMode &sing_method,
                    ControllerSettings &controller_settings,
                    TrajectoryGenerator &trajectory_generator)
@@ -42,8 +42,8 @@ public:
     {
     }
     virtual Eigen::VectorXd control(const Eigen::VectorXd &x) = 0; // Pure virtual function
-    virtual Eigen::MatrixXd computeJacobianRegularization();       // Common method in BaseController
-    virtual void calculateControlData(const Eigen::VectorXd &x);   // Common method in BaseController
+    virtual Eigen::MatrixXd computeJacobianRegularization();       // Common method in BaseWorkspaceController
+    virtual void calculateControlData(const Eigen::VectorXd &x);   // Common method in BaseWorkspaceController
     virtual void set_singularity_robustness_mode(RegularizationMode sing_method) { this->sing_method = sing_method; }
     virtual void set_regularization_settings(RegularizationSettings regularization_settings)
     {
@@ -55,7 +55,7 @@ public:
         this->regularization_settings = controller_settings.regularization_settings;
         this->sing_method = controller_settings.regularization_settings.mode;
     }
-    virtual ~BaseController() = default; // Virtual destructor
+    virtual ~BaseWorkspaceController() = default; // Virtual destructor
 protected:
     RobotModel &robot_model;
     RegularizationMode &sing_method;
@@ -85,19 +85,29 @@ public:
                         bool use_gravity);
 
     void switchController(ControllerType type);
-    void simulateModelEuler(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
-    void simulateModelRK4(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
+    void switch_traj(uint traj_select)
+    {
+        trajectory_generator.switch_traj(traj_select);
+    }
+    void simulateModelEuler(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
+    void simulateModelRK4(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
     Eigen::VectorXd update(const double *const x_nq);
 
     ControllerSettings init_default_controller_settings();
     RegularizationSettings init_default_regularization_settings();
 
     // Initialize trajectory data
-    void init_file_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
-                              double T_start, double T_poly, double T_end);
+    void init_file_trajectory(uint traj_select, const double *x_k_ndof_ptr,
+                              double T_start, double T_poly, double T_end)
+    {
+        trajectory_generator.init_file_trajectory(traj_select, x_k_ndof_ptr, T_start, T_poly, T_end);
+    }
 
     // Method for creating a custom trajectory with extra samples for the last prediction horizon
-    void init_custom_trajectory(ParamPolyTrajectory param_target);
+    void init_custom_trajectory(ParamPolyTrajectory param_target)
+    {
+        trajectory_generator.init_custom_trajectory(param_target);
+    }
 
     // Method to set the Robustness mode
     void set_singularity_robustness_mode(RegularizationMode sing_method)
@@ -128,7 +138,7 @@ public:
         return trajectory_generator.get_traj_data_real_len();
     }
 
-    const double *get_traj_x0_init(casadi_uint traj_select)
+    const double *get_traj_x0_init(uint traj_select)
     {
         return trajectory_generator.get_traj_file_x0_init(traj_select)->data();
     }
@@ -155,39 +165,39 @@ private:
     TrajectoryGenerator trajectory_generator;
     RegularizationMode sing_method;
 
-    // Nested classes inheriting from BaseController
-    class CTController : public BaseController
+    // Nested classes inheriting from BaseWorkspaceController
+    class CTController : public BaseWorkspaceController
     {
     public:
         CTController(RobotModel &robot_model,
                      RegularizationMode &sing_method,
                      ControllerSettings &controller_settings,
                      TrajectoryGenerator &trajectory_generator)
-            : BaseController(robot_model, sing_method, controller_settings, trajectory_generator) {}
+            : BaseWorkspaceController(robot_model, sing_method, controller_settings, trajectory_generator) {}
         Eigen::VectorXd control(const Eigen::VectorXd &x) override;
         ~CTController() override = default;
     };
 
-    class PDPlusController : public BaseController
+    class PDPlusController : public BaseWorkspaceController
     {
     public:
         PDPlusController(RobotModel &robot_model,
                          RegularizationMode &sing_method,
                          ControllerSettings &controller_settings,
                          TrajectoryGenerator &trajectory_generator)
-            : BaseController(robot_model, sing_method, controller_settings, trajectory_generator) {}
+            : BaseWorkspaceController(robot_model, sing_method, controller_settings, trajectory_generator) {}
         Eigen::VectorXd control(const Eigen::VectorXd &x) override;
         ~PDPlusController() override = default;
     };
 
-    class InverseDynamicsController : public BaseController
+    class InverseDynamicsController : public BaseWorkspaceController
     {
     public:
         InverseDynamicsController(RobotModel &robot_model,
                                   RegularizationMode &sing_method,
                                   ControllerSettings &controller_settings,
                                   TrajectoryGenerator &trajectory_generator)
-            : BaseController(robot_model, sing_method, controller_settings, trajectory_generator) {}
+            : BaseWorkspaceController(robot_model, sing_method, controller_settings, trajectory_generator) {}
         Eigen::VectorXd control(const Eigen::VectorXd &x) override;
         Eigen::VectorXd q_d_prev, q_p_d_prev;
         bool init = true;
@@ -198,7 +208,7 @@ private:
     CTController ct_controller;                       // Instance of CTController
     PDPlusController pd_plus_controller;              // Instance of PDPlusController
     InverseDynamicsController inverse_dyn_controller; // Instance of InverseDynamicsController
-    BaseController *active_controller;                // I do not need a smart pointer because I store all instances in the class.
+    BaseWorkspaceController *active_controller;                // I do not need a smart pointer because I store all instances in the class.
 
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
     Eigen::VectorXd tau_full_prev = Eigen::VectorXd::Zero(nq);

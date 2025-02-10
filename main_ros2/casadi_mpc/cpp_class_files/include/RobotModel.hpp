@@ -45,7 +45,7 @@ public:
     const std::string &tcp_frame_name; // TCP frame name
     robot_config_t &robot_config;
 
-    // Private methods for calculations
+    // methods for calculations
     void computeKinematics();
     void computeDynamics();
 };

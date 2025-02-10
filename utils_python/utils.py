@@ -1142,7 +1142,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
             if q_p_common_weight not in [0, None]:
                 terminalDifferentialCostModel.addCost("q_pReg", q_pCost,             weight = scale * q_p_common_weight)
             if q_pp_common_weight not in [0, None]:
-                terminalDifferentialCostModel.addCost("q_ppReg", q_ppCost,           weight = scale * q_pp_common_weight/dt)
+                terminalDifferentialCostModel.addCost("q_ppReg", q_ppCost,           weight = scale * q_pp_common_weight)
             if q_xprev_common_weight not in [0, None]:
                 terminalDifferentialCostModel.addCost("xprevReg", xprevRegCost,      weight = scale * q_xprev_common_weight)
             if q_ureg_cost not in [0, None]:

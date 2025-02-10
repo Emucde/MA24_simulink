@@ -117,7 +117,8 @@
     "stdint.h": "c",
     "format": "cpp",
     "text_encoding": "cpp",
-    "mpc01_addressdef.h": "c"
+    "mpc01_addressdef.h": "c",
+    "valarray": "cpp"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",

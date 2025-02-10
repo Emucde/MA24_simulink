@@ -18,6 +18,7 @@
 #include "param_robot.h"
 #include "trajectory_settings.hpp"
 #include "WorkspaceController.hpp"
+#include "CrocoddylController.hpp"
 
 casadi_real x_k_tst[12] = {0};
 
@@ -88,6 +89,7 @@ int main()
     bool use_gravity = false;
     // MASTERDIR defined in CMakeLists.txt (=$masterdir)
     const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
+    const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
     const std::string tcp_frame_name = "fr3_link8_tcp";
     
     robot_config_t robot_config = get_robot_config();
@@ -112,6 +114,7 @@ int main()
 
     WorkspaceController classic_controller(urdf_filename, tcp_frame_name, use_gravity);
     CasadiController mpc_controller(urdf_filename, tcp_frame_name, use_gravity);
+    CrocoddylController crocoddyl_controller(urdf_filename, crocoddyl_config_filename, tcp_frame_name, use_gravity);
     mpc_controller.setActiveMPC(MPCType::MPC8);
     classic_controller.switchController(ControllerType::InverseDynamics);
     // initialize the trajectory
