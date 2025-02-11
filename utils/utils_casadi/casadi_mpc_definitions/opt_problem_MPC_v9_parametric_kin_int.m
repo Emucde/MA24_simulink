@@ -25,7 +25,7 @@ if(parametric_type == parametric_mode.polynomial)
     x0 = SX.sym('x0', 2*n_red, 1);
     q0 = x0(1:n_red);
     q1 = x0(n_red+1:end);
-    q = Function('q_scalar', {x0, t0, theta0}, {q0 + q1*t0 + 1/2*theta0(:, 1)*t0^2 + 1/3*theta0(:, 2)*t0^3 + 1/12*theta0(:, 3)*t0^4});
+    q = Function('q_scalar', {x0, t0, theta0}, {q0 + q1*t0 + 1/2*theta0(:, 1)*t0^2 + 1/6*theta0(:, 2)*t0^3 + 1/12*theta0(:, 3)*t0^4});
     q_p = Function('q_scalar_p', {x0, t0, theta0}, {q1 + theta0(:, 1)*t0 + 1/2*theta0(:, 2)*t0^2 + 1/3*theta0(:, 3)*t0^3});
     q_pp = Function('q_scalar_pp', {t0, theta0}, {theta0(:, 1) + theta0(:, 2)*t0 + theta0(:, 3)*t0^2});
 else
@@ -71,11 +71,11 @@ x_0_0  = [q_0_red; q_0_red_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parame
 u_k_0  = q_0_red_pp;
 
 u_init_guess_0 = ones(n_red, N_MPC).*u_k_0;
-x_init_guess_0 = ones(2*n_red, N_MPC+1).*x_0_0;
+x_init_guess_0 = ones(2*n_red, N_MPC+1).*x_0_0 + 0.2*rand(2*n_red, N_MPC+1);
 theta_init_guess_0 = zeros(n_red, 3);
 
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0) + numel(x_init_guess_0) + numel(theta_init_guess_0), 1);
-lam_g_init_guess_0 = zeros(2*numel(u_init_guess_0) + numel(x_init_guess_0) + numel(x_0_0), 1);
+lam_g_init_guess_0 = zeros(2*numel(u_init_guess_0) + numel(x_init_guess_0(:, 2:end)), 1);
 
 init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); theta_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
@@ -104,12 +104,11 @@ mpc_opt_var_inputs = {u, x, theta};
 N_u = numel(u);
 N_x = numel(x);
 
-u_idx = [1 : numel(u)];
-x_idx = N_u + [1 : numel(x)];
+x_idx = N_u + [ 1 : N_x];
+x1_idx = x_idx(1+2*n_red: 4*n_red);
 
-q0_pp_idx = u_idx(1:n_red);
-x1_idx = x_idx(1+2*n_red : 4*n_red);
-q1_pp_idx = u_idx(1+n_red : 2*n_red);
+q0_pp_idx = [1 : n_red];
+q1_pp_idx = [1+n_red : 2*n_red];
 u_opt_indices = [q0_pp_idx, x1_idx, q1_pp_idx];
 
 % optimization variables cellarray w
@@ -158,7 +157,6 @@ lambda_g0 = SX.sym('lambda_g0', size(lbg));
 y    = SX( 7, N_MPC+1 ); % TCP pose:      (y_0 ... y_N)
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
-g_x(1, 1 + (0) ) = {x(:, 1) - x_k};
 for i=0:N_MPC
     % calculate trajectory values (y_0 ... y_N)
     t_k = sum(dt_arr(1:(i+1)));
@@ -166,14 +164,17 @@ for i=0:N_MPC
     q_p_i = q_p(x(:, 1 + (i)), t_k, theta);
     q_pp_i = q_pp(t_k, theta);
     
-    H_e = H_red(q_i);
+    H_e = H_red(x(1:n_red, 1 + (i)));
     R_e = H_e(1:3, 1:3);
     y(1:3,   1 + (i)) = H_e(1:3, 4);
-    y(4:7,   1 + (i)) = quat_fun_red(q_i);
+    y(4:7,   1 + (i)) = quat_fun_red(x(1:n_red, 1 + (i)));
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
     
     x_k_i = [q_i; q_p_i];
-    g_x(1, 1 + (i+1)) = {x(:, 1 + (i)) - x_k_i};
+    if(i>0)
+        g_x(1, 1 + (i)) = {x(:, 1 + (i)) - x_k_i};
+    end
+
     if(i < N_MPC)
         g_u(1, 1 + (i))   = {u(:, 1 + (i)) - q_pp(t_k, theta)};
         g_u_prev(1, 1 + (i)) = {u(:, 1 + (i)) - u_prev(:, 1 + (i))};
@@ -183,11 +184,11 @@ end
 g = [g_x, g_u, g_u_prev];
 
 % jump in tau at max 100rad/s^2
-tau_jump_max = 1000;
-tau_jumps = repmat(tau_jump_max*dt_arr(2:end), n_red, 1);
+max_du = pp.max_du;
+max_du_arr = repmat(max_du*dt_arr(2:end), n_red, 1);
 
-lbg(1+end-N_u:end, 1) = -tau_jumps(:);
-ubg(1+end-N_u:end, 1) =  tau_jumps(:);
+lbg(1+end-N_u:end, 1) = -max_du_arr(:);
+ubg(1+end-N_u:end, 1) =  max_du_arr(:);
 
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
@@ -224,13 +225,15 @@ J_x_prev = Q_norm_square(x - x_prev, pp.R_x_prev(n_x_indices, n_x_indices)); %Q_
 
 J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices, n_indices));
 
+J_theta = Q_norm_square(theta', pp.R_theta);
+
 J_q_p = Q_norm_square(x(n_red+1:end, :), pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 J_u = Q_norm_square(u, pp.R_u(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
 
 % it is really important to only weight the first control input!
 J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices, n_indices));
 
-cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_ref, J_q_p, J_u, J_x_prev, J_u0_prev}';
+cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_theta, J_q_ref, J_q_p, J_u, J_x_prev, J_u0_prev}';
 
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');

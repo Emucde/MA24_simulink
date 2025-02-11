@@ -22,6 +22,7 @@
 #include "RobotModel.hpp"
 #include "TrajectoryGenerator.hpp"
 #include "CrocoddylMPC.hpp"
+#include "CrocoddylMPCType.hpp"
 
 class CrocoddylController
 {
@@ -58,6 +59,16 @@ public:
     uint get_traj_data_len()
     {
         return trajectory_generator.get_traj_data_len();
+    }
+
+    uint get_traj_data_real_len()
+    {
+        return trajectory_generator.get_traj_data_real_len();
+    }
+
+    uint get_transient_traj_len()
+    {
+        return trajectory_generator.get_transient_traj_len();
     }
 
     const double *get_act_traj_data()

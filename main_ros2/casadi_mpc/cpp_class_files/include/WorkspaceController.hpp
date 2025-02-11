@@ -138,6 +138,11 @@ public:
         return trajectory_generator.get_traj_data_real_len();
     }
 
+    uint get_transient_traj_len()
+    {
+        return trajectory_generator.get_transient_traj_len();
+    }
+
     const double *get_traj_x0_init(uint traj_select)
     {
         return trajectory_generator.get_traj_file_x0_init(traj_select)->data();

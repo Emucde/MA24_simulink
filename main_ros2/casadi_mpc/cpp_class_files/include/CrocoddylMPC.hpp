@@ -44,13 +44,7 @@
 #include "RobotModel.hpp"
 #include "TrajectoryGenerator.hpp"
 #include "CrocoddylBaseIntegrator.hpp"
-
-enum class CrocoddylMPCType
-{
-    DynMPC_v1,
-    INVALID,
-    COUNT
-};
+#include "CrocoddylMPCType.hpp"
 
 class CrocoddylMPC
 {

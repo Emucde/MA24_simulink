@@ -30,7 +30,7 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = False
+use_data_from_simulink = True
 manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
@@ -51,13 +51,13 @@ explicit_mpc = False
 # ich es gleich in C++ machen. Dort kann ich noch um einiges mehr Performance herausholen
 # da dort auch das Referenzwerte schreiben viel schneller geht.
 
-use_custom_trajectory = True
+use_custom_trajectory = False
 
 param_traj_poly = {}
 if not use_custom_trajectory:
     param_traj_poly['T_start'] = 0
-    param_traj_poly['T_poly'] = 4
-    param_traj_poly['T_end'] = 5
+    param_traj_poly['T_poly'] = 0
+    param_traj_poly['T_end'] = 0
 else:
     param_traj_poly['T_start'] = 0
     param_traj_poly['T_poly'] = 10

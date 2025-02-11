@@ -19,6 +19,7 @@
 #include "trajectory_settings.hpp"
 #include "WorkspaceController.hpp"
 #include "CrocoddylController.hpp"
+#include "CrocoddylMPCType.hpp"
 
 casadi_real x_k_tst[12] = {0};
 
@@ -114,6 +115,7 @@ int main()
     
     mpc_controller.setActiveMPC(MPCType::MPC8);
     classic_controller.switchController(ControllerType::InverseDynamics);
+    crocoddyl_controller.setActiveMPC(CrocoddylMPCType::DynMPC_v1);
     // initialize the trajectory
 
     // set singularity robustness mode
@@ -164,7 +166,7 @@ int main()
     }
     else if(controller_type == MainControllerType::Crocoddyl)
     {
-        traj_len = crocoddyl_controller.get_traj_data_len();
+        traj_len = crocoddyl_controller.get_traj_data_real_len();
         x0_init = crocoddyl_controller.get_traj_x0_init(TRAJ_SELECT);
     }
 
@@ -179,17 +181,22 @@ int main()
     // param_target.x_init = x_k_ndof_eig;
     // mpc_controller.init_trajectory_custom_target(param_target);
 
+    casadi_uint transient_traj_len = 0;
+
     if (controller_type == MainControllerType::Casadi)
     {
         mpc_controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
+        transient_traj_len = mpc_controller.get_transient_traj_len();
     }
     else if (controller_type == MainControllerType::Classic)
     {
         classic_controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 0.0, 0.0);
+        transient_traj_len = classic_controller.get_transient_traj_len();
     }
     else if (controller_type == MainControllerType::Crocoddyl)
     {
         crocoddyl_controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 0.0, 0.0);
+        transient_traj_len = crocoddyl_controller.get_transient_traj_len();
     }
 
     // initialize the filter
@@ -197,8 +204,6 @@ int main()
     // double* x_filtered_ptr = filter.getFilteredOutputPtr();
     // double* x_measured_ptr = x_k_ndof;
     const double *act_data;
-
-    casadi_uint transient_traj_len = mpc_controller.get_transient_traj_len();
 
     // create shared memory with size
     const std::vector<SharedMemoryInfo> shm_readwrite_infos = {
@@ -296,7 +301,7 @@ int main()
         if (error_flag != ErrorFlag::NO_ERROR)
         {
             std::cerr << "Error flag: " << static_cast<int>(error_flag) << std::endl;
-            break;
+            // break;
         }
     }
 

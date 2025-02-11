@@ -431,11 +431,11 @@ end
 g = [g_x, g_u, g_u_prev];
 
 % jump in tau at max 100rad/s^2
-tau_jump_max = 1000;
-tau_jumps = repmat(tau_jump_max*dt_int_arr, n_red, 1);
+max_du = pp.max_du;
+max_du_arr = repmat(max_du*dt_int_arr, n_red, 1);
 
-lbg(1+end-N_u:end, 1) = -tau_jumps(:);
-ubg(1+end-N_u:end, 1) =  tau_jumps(:);
+lbg(1+end-N_u:end, 1) = -max_du_arr(:);
+ubg(1+end-N_u:end, 1) =  max_du_arr(:);
 
 % Calculate Cost Functions and set equation constraints
 Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));

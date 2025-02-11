@@ -40,7 +40,7 @@
                 }
             ],
             "symbolLoadInfo": {
-                "loadAll": false
+                "loadAll": true
             },
             "externalConsole": false,
             "MIMode": "gdb",

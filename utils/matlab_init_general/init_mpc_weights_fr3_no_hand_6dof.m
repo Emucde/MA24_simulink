@@ -355,6 +355,7 @@ param_weight.(MPC).N_step = 5;
 param_weight.(MPC).Q_y      = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);
 param_weight.(MPC).Q_yN     = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);
 
+param_weight.(MPC).R_theta   = 1e-10*diag(ones(3,1)); % = R_tau
 param_weight.(MPC).R_q_ref   = 0*diag(ones(n,1));
 param_weight.(MPC).R_q_p     = 1e-2*diag(ones(n, 1));
 param_weight.(MPC).R_u       = 1e-5*diag(ones(n, 1)); % = R_q_pp
