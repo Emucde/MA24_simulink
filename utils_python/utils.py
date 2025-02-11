@@ -1112,10 +1112,9 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
             q_yr_terminateCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(Q_yr_terminal), crocoddyl.ResidualModelFrameRotation(state, TCP_frame_id, R_d))
 
         if i < N_MPC-1:
-            if i > 0:
-                runningCostModel.addCost("TCP_pose", q_ytCost,         weight = scale * q_yt_common_weight)
-                if state.nq >= 6:
-                    runningCostModel.addCost("TCP_rot", q_yrCost,      weight = scale * q_yr_common_weight)
+            runningCostModel.addCost("TCP_pose", q_ytCost,         weight = scale * q_yt_common_weight)
+            if state.nq >= 6:
+                runningCostModel.addCost("TCP_rot", q_yrCost,      weight = scale * q_yr_common_weight)
 
             if q_p_common_weight not in [0, None]:
                 runningCostModel.addCost("q_pReg", q_pCost,        weight = scale * q_p_common_weight) # Q q_p
@@ -1676,13 +1675,12 @@ def init_reference_lists(ddp, param_mpc_weight):
     xprev_list = []
     ctrl_prev_list = []
     for j, runningModel in enumerate(ddp.problem.runningModels):
-        if j > 0:
-            tcp_pose_list.append(ddp.problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual)
-            tcp_rot_list.append(ddp.problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual)
-            if(param_mpc_weight['q_xprev_common_weight'] > 0):
-                xprev_list.append(ddp.problem.runningModels[j].differential.costs.costs["xprevReg"].cost.residual)
-            if(param_mpc_weight['q_uprev_cost'] > 0):
-                ctrl_prev_list.append(ddp.problem.runningModels[j].differential.costs.costs["ctrlPrev"].cost.residual)
+        tcp_pose_list.append(ddp.problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual)
+        tcp_rot_list.append(ddp.problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual)
+        if(param_mpc_weight['q_xprev_common_weight'] > 0):
+            xprev_list.append(ddp.problem.runningModels[j].differential.costs.costs["xprevReg"].cost.residual)
+        if(param_mpc_weight['q_uprev_cost'] > 0):
+            ctrl_prev_list.append(ddp.problem.runningModels[j].differential.costs.costs["ctrlPrev"].cost.residual)
 
     tcp_pose_list.append(ddp.problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual)
     tcp_rot_list.append(ddp.problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual)

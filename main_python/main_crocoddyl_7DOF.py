@@ -569,6 +569,32 @@ try:
 
 
         if start_solving:
+            if use_gravity:
+                g_k = pin.computeGeneralizedGravity(robot_model, robot_data, x_k[:nq])
+            else:
+                g_k = np.zeros(nq)
+            
+            xs_init_guess_prev = xs_init_guess
+            if i==0:
+                us_init_guess_prev = g_k * np.ones((mpc_settings['N_MPC']-1, nu))
+            else:
+                us_init_guess_prev = us_init_guess
+
+            for j, runningModel in enumerate(ddp.problem.runningModels):
+                tcp_pose_list[j].reference = p_d[:, i+MPC_traj_indices[j]]
+                tcp_rot_list[j].reference = R_d[:, :, i+MPC_traj_indices[j]]
+                if(param_mpc_weight['q_xprev_common_weight'] > 0):
+                    xprev_list[j].reference = xs_init_guess_prev[j]
+                if(param_mpc_weight['q_uprev_cost'] > 0):
+                    ctrl_prev_list[j].reference = us_init_guess_prev[j]
+            tcp_pose_list[-1].reference = p_d[:, i+MPC_traj_indices[j+1]]
+            tcp_rot_list[-1].reference = R_d[:, :, i+MPC_traj_indices[j+1]]
+            if(param_mpc_weight['q_xprev_common_weight'] > 0):
+                xprev_list[-1].reference = xs_init_guess_prev[j+1]
+            if(param_mpc_weight['q_uprev_cost'] > 0):
+                ctrl_prev_list[-1].reference = us_init_guess_prev[j+1]
+
+
             measureSimu.tic()
 
             measureSolver.tic()
@@ -680,10 +706,7 @@ try:
             ##################################################################################
             ################ Set new data for the next optimization problem ##################
             ##################################################################################
-            if use_gravity:
-                g_k = pin.computeGeneralizedGravity(robot_model, robot_data, x_k[:nq])
-            else:
-                g_k = np.zeros(nq)
+
 
             # if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
             #     xs_init_guess_prev = np.array(xs_init_guess)
@@ -716,27 +739,8 @@ try:
             #     x0_new[:6] = xs_init_guess_prev[1, :6]
             #     ddp.problem.x0 = x0_new
             # else:
-            
-            xs_init_guess_prev = xs_init_guess
-            if i==0:
-                us_init_guess_prev = g_k * np.ones((mpc_settings['N_MPC']-1, nu))
-            else:
-                us_init_guess_prev = us_init_guess
 
-            for j, runningModel in enumerate(ddp.problem.runningModels):
-                if j > 0:
-                    tcp_pose_list[j].reference = p_d[:, i+MPC_traj_indices[j]]
-                    tcp_rot_list[j].reference = R_d[:, :, i+MPC_traj_indices[j]]
-                    if(param_mpc_weight['q_xprev_common_weight'] > 0):
-                        xprev_list[j].reference = xs_init_guess_prev[j]
-                    if(param_mpc_weight['q_uprev_cost'] > 0):
-                        ctrl_prev_list[j].reference = us_init_guess_prev[j]
-            tcp_pose_list[-1].reference = p_d[:, i+MPC_traj_indices[j+1]]
-            tcp_rot_list[-1].reference = R_d[:, :, i+MPC_traj_indices[j+1]]
-            if(param_mpc_weight['q_xprev_common_weight'] > 0):
-                xprev_list[-1].reference = xs_init_guess_prev[j+1]
-            if(param_mpc_weight['q_uprev_cost'] > 0):
-                ctrl_prev_list[-1].reference = us_init_guess_prev[j+1]
+            
 
             # # v2: update reference values
             # for j, runningModel in enumerate(ddp.problem.runningModels):
