@@ -1028,7 +1028,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     Q_yr_terminal = np.array(param_mpc_weight['Q_yr_terminal'])
 
     q_p_common_weight = param_mpc_weight['q_p_common_weight']
-    R_q_p = np.array(param_mpc_weight['R_q_p'])
+    R_x_weight_vec = np.array(param_mpc_weight['R_x'])
     q_pp_common_weight = param_mpc_weight['q_pp_common_weight']
     R_q_pp = np.array(param_mpc_weight['R_q_pp'])
     q_xprev_common_weight = param_mpc_weight['q_xprev_common_weight']
@@ -1098,9 +1098,8 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                     terminalDifferentialCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
 
         # create classic residual cost models
-        R_q_p_weight_vec = np.hstack([np.zeros(state.nq), R_q_p])
         R_q_pp_weight_vec = R_q_pp
-        q_pCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_q_p_weight_vec), crocoddyl.ResidualModelState(state, np.zeros(state.nx)))
+        q_pCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_x_weight_vec), crocoddyl.ResidualModelState(state, np.zeros(state.nx)))
         q_ppCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_q_pp_weight_vec), crocoddyl.ResidualModelJointAcceleration(state, qpp_ref))
         xprevRegCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(R_xprev), crocoddyl.ResidualModelState(state, xprev_ref))
         uRegCost = crocoddyl.CostModelResidual(state, residual=crocoddyl.ResidualModelControl(state, uref))
@@ -1545,6 +1544,7 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
         T_max_horizon = param_traj_poly['T_max_horizon']
         dt = mpc_settings['Ts']
         N_traj = transient_traj['N_traj'] - int(T_max_horizon/dt)
+        transient_traj['N_traj'] = N_traj
     else:
         transient_traj = create_transient_trajectory(x_k[:n_dof], TCP_frame_id, robot_model_full, robot_data_full, traj_data, mpc_settings, param_traj_poly, plot_traj=False)
 
@@ -1668,6 +1668,31 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
     xs_init_guess, us_init_guess = next_init_guess_fun(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj)
 
     return ddp, xs, us, xs_init_guess, us_init_guess, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, transient_traj, param_traj, title_text
+
+def init_reference_lists(ddp, param_mpc_weight):
+    # v3: update reference values
+    tcp_pose_list = []
+    tcp_rot_list = []
+    xprev_list = []
+    ctrl_prev_list = []
+    for j, runningModel in enumerate(ddp.problem.runningModels):
+        if j > 0:
+            tcp_pose_list.append(ddp.problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual)
+            tcp_rot_list.append(ddp.problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual)
+            if(param_mpc_weight['q_xprev_common_weight'] > 0):
+                xprev_list.append(ddp.problem.runningModels[j].differential.costs.costs["xprevReg"].cost.residual)
+            if(param_mpc_weight['q_uprev_cost'] > 0):
+                ctrl_prev_list.append(ddp.problem.runningModels[j].differential.costs.costs["ctrlPrev"].cost.residual)
+
+    tcp_pose_list.append(ddp.problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual)
+    tcp_rot_list.append(ddp.problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual)
+    if(param_mpc_weight['q_xprev_common_weight'] > 0):
+        xprev_list.append(ddp.problem.terminalModel.differential.costs.costs["xprevReg"].cost.residual)
+    if(param_mpc_weight['q_uprev_cost'] > 0):
+        ctrl_prev_list.append(ddp.problem.terminalModel.differential.costs.costs["ctrlPrev"].cost.residual)
+
+    return tcp_pose_list, tcp_rot_list, xprev_list, ctrl_prev_list
+    
 
 ###########################################################################
 ################################# PLOTTING ################################
