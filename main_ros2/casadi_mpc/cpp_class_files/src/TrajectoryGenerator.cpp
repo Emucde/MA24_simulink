@@ -102,7 +102,7 @@ void TrajectoryGenerator::init_custom_trajectory(ParamPolyTrajectory param)
 }
 
 void TrajectoryGenerator::init_file_trajectory(int traj_select,
-                                               const casadi_real *x_k_ndof_ptr,
+                                               const double *x_k_ndof_ptr,
                                                double T_start, double T_poly, double T_end)
 {
     switch_traj(traj_select);

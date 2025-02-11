@@ -199,14 +199,83 @@ else
     # Use makefile to build
     echo "Building using makefile..."
     if [ $STANDALONE_MAKEFILE == true ]; then
-        cd "cpp_class_files"
-        time make BUILD_TYPE=$BUILD_TYPE -j8
-        cd ..
+       cd "cpp_class_files"
+       time make BUILD_TYPE=$BUILD_TYPE -j8
+       BUILD_STATUS=$?
+       cd ..
     else
-        time cmake --build $CMAKE_BUILD_PATH -j8
+        TIME_FILE="build_time.log"
+        LAST_FILE="last_build_time.log"
+
+        # Read previous build times or set defaults
+        [ -f "$TIME_FILE" ] && MAX_BUILD_TIME=$(cat "$TIME_FILE") || MAX_BUILD_TIME=60
+        [ -f "$LAST_FILE" ] && LAST_BUILD_TIME=$(cat "$LAST_FILE") || LAST_BUILD_TIME=60
+
+        # if MAX_BUILD_TIME is no number set to 60
+        if ! [[ "$MAX_BUILD_TIME" =~ ^[0-9]+$ ]]; then
+            MAX_BUILD_TIME=60
+        fi
+
+        # if LAST_BUILD_TIME is no number set to 60
+        if ! [[ "$LAST_BUILD_TIME" =~ ^[0-9]+$ ]]; then
+            LAST_BUILD_TIME=60
+        fi
+
+        # Start a background process to show elapsed time and progress bars
+        (
+            start_time=$(date +%s)
+            while true; do
+                sleep 1
+                current_time=$(date +%s)
+                elapsed_time=$((current_time - start_time))
+
+                # Calculate progress percentages
+                [ "$LAST_BUILD_TIME" -gt 0 ] && last_percent=$((elapsed_time * 100 / LAST_BUILD_TIME)) || last_percent=0
+                [ "$MAX_BUILD_TIME" -gt 0 ] && max_percent=$((elapsed_time * 100 / MAX_BUILD_TIME)) || max_percent=0
+
+                # Cap progress at 100%
+                [ "$last_percent" -gt 100 ] && last_percent=100
+                [ "$max_percent" -gt 100 ] && max_percent=100
+
+                # Create progress bars
+                function progress_bar() {
+                    local percent=$1
+                    local bar_length=20
+                    local filled=$((bar_length * percent / 100))
+                    local empty=$((bar_length - filled))
+                    printf "[%s%s] %3d%%" "$(printf '#%.0s' $(seq 1 $filled))" "$(printf ' %.0s' $(seq 1 $empty))" "$percent"
+                }
+
+                # Display elapsed time and progress bars
+                printf "\r%02d:%02d:%02d  Last: %s  Max: %s" \
+                    $((elapsed_time / 3600)) $(((elapsed_time % 3600) / 60)) $((elapsed_time % 60)) \
+                    "$(progress_bar $last_percent)" "$(progress_bar $max_percent)"
+            done 
+        ) &
+        timer_pid=$!
+
+        # Run the cmake build command and capture its output
+        start_build_time=$(date +%s)
+        time cmake --build "$CMAKE_BUILD_PATH" -j8;
+        BUILD_STATUS=$?
+        end_build_time=$(date +%s)
+
+        NEW_BUILD_TIME=$((end_build_time - start_build_time))
+
+        # Save last build time
+        echo "$NEW_BUILD_TIME" > "$LAST_FILE"
+
+        # Calculate and save new build time
+        if [ "$NEW_BUILD_TIME" -gt "$MAX_BUILD_TIME" ]; then
+            echo "$NEW_BUILD_TIME" > "$TIME_FILE"
+        fi
+
+        # Once the build is complete, kill the timer
+        kill $timer_pid
+
+        # Optionally, wait for the background process to exit
+        wait $timer_pid
     fi
-    
-    BUILD_STATUS=$?
 fi
 
 # Check if the build was successful

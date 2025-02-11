@@ -13,6 +13,7 @@
 #include <crocoddyl/multibody/states/multibody.hpp>
 #include <crocoddyl/multibody/actuations/full.hpp>
 #include <crocoddyl/multibody/residuals/state.hpp>
+#include <crocoddyl/core/residuals/joint-acceleration.hpp>
 #include <crocoddyl/multibody/residuals/frame-translation.hpp>
 #include <crocoddyl/multibody/residuals/frame-rotation.hpp>
 #include <crocoddyl/core/residuals/control.hpp>
@@ -20,7 +21,9 @@
 #include <crocoddyl/core/integrator/rk.hpp> // Include the RK Integrator
 #include <crocoddyl/core/fwd.hpp>
 #include <crocoddyl/core/costs/residual.hpp>
+#include <crocoddyl/core/costs/cost-sum.hpp>
 #include <crocoddyl/core/activations/weighted-quadratic-barrier.hpp>
+#include <crocoddyl/core/activations/quadratic-barrier.hpp>
 #include <crocoddyl/core/activations/weighted-quadratic.hpp>
 #include <crocoddyl/core/optctrl/shooting.hpp>
 #include <boost/shared_ptr.hpp>
@@ -40,141 +43,105 @@
 
 #include "RobotModel.hpp"
 #include "TrajectoryGenerator.hpp"
+#include "CrocoddylBaseIntegrator.hpp"
 
-class BaseCrocoddylIntegrator
+enum class CrocoddylMPCType
 {
-public:
-    BaseCrocoddylIntegrator(const std::string &int_type) : int_type(int_type) {};
-
-    // Pure virtual function
-    virtual boost::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
-        const boost::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) = 0;
-    virtual ~BaseCrocoddylIntegrator() = default;
-
-protected:
-    const std::string int_type;
+    DynMPC_v1,
+    INVALID,
+    COUNT
 };
 
-class IntegratorEuler : public BaseCrocoddylIntegrator
+class CrocoddylMPC
 {
 public:
-    IntegratorEuler(std::string int_type) : BaseCrocoddylIntegrator(int_type) {}
-    boost::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
-        const boost::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) override
-    {
-        return boost::make_shared<crocoddyl::IntegratedActionModelEuler>(DAM, dt);
-    }
-};
+    CrocoddylMPC(CrocoddylMPCType mpc_type,
+                 RobotModel &robot_model,
+                 const std::string &crocoddyl_config_path,
+                 TrajectoryGenerator &trajectory_generator);
 
-class IntegratorRK2 : public BaseCrocoddylIntegrator
-{
-public:
-    IntegratorRK2(std::string int_type) : BaseCrocoddylIntegrator(int_type) {}
-    boost::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
-        const boost::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) override
-    {
-        return boost::make_shared<crocoddyl::IntegratedActionModelRK>(DAM, crocoddyl::RKType(2), dt);
-    }
-};
-
-// Example class for Runge-Kutta 3rd order integration
-class IntegratorRK3 : public BaseCrocoddylIntegrator
-{
-public:
-    IntegratorRK3(std::string int_type) : BaseCrocoddylIntegrator(int_type) {}
-    boost::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
-        const boost::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) override
-    {
-        return boost::make_shared<crocoddyl::IntegratedActionModelRK>(DAM, crocoddyl::RKType(3), dt);
-    }
-};
-
-// Example class for Runge-Kutta 4th order integration
-class IntegratorRK4 : public BaseCrocoddylIntegrator
-{
-public:
-    IntegratorRK4(std::string int_type) : BaseCrocoddylIntegrator(int_type) {}
-    boost::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
-        const boost::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) override
-    {
-        return boost::make_shared<crocoddyl::IntegratedActionModelRK>(DAM, crocoddyl::RKType(4), dt);
-    }
-};
-
-
-
-
-
-
-
-class BaseCrocoddylMPC
-{
-public:
-    BaseCrocoddylMPC(RobotModel &robot_model,
-                            const std::string &crocoddyl_config_path,
-                            const std::string &tcp_frame_name,
-                            TrajectoryGenerator &trajectory_generator)
-        : robot_model(robot_model),
-          crocoddyl_config_path(crocoddyl_config_path),
-          tcp_frame_name(tcp_frame_name),
-          trajectory_generator(trajectory_generator),
-          nq(robot_model.nq), nx(robot_model.nx),
-          dt(robot_model.robot_config.dt), traj_count(0)
-    {
-    }
+    CrocoddylMPCType mpc_type;
+    std::shared_ptr<BaseCrocoddylIntegrator> create_integrator(const std::string &int_type);
+    
+    
     template <typename T>
-    T json2value(const std::string &name)
+    T get_param(const std::string &name)
     {
         return param_mpc_weight[name].get<T>();
     }
 
+    template <typename T>
+    T get_setting(const std::string &name)
+    {
+        return mpc_settings[name].get<T>();
+    }
+
     template <typename T = Eigen::VectorXd,
               typename std::enable_if<std::is_same<T, Eigen::VectorXd>::value, int>::type = 0>
-    Eigen::VectorXd json2vec(const std::string &name)
+    Eigen::VectorXd get_param_vec(const std::string &name)
     {
         std::vector<double> vector_data = param_mpc_weight[name].get<std::vector<double>>();
         Eigen::VectorXd eigen_vector = Eigen::Map<Eigen::VectorXd>(vector_data.data(), vector_data.size());
         return eigen_vector;
     }
 
-    virtual std::shared_ptr<BaseCrocoddylIntegrator> create_integrator(const std::string &int_type);
-    virtual void create_mpc_solver() = 0; // Pure virtual function
-    virtual void set_references(casadi_real *x_k_in) = 0; // Pure virtual function
-    virtual void solve(const Eigen::VectorXd &x);                 // Common method in BaseCrocoddylMPC
-    virtual void increase_traj_count() { traj_count++; }
-    virtual void read_config_file();
-    virtual ~BaseCrocoddylMPC() = default; // Virtual destructor
-protected:
+    void generate_trajectory_blocks();
+    
+    void create_mpc_solver();
+    void set_references(const Eigen::VectorXd &x_k);
+    bool solve(const Eigen::VectorXd &x_k);
+    void set_coldstart_init_guess(const Eigen::VectorXd &x_k);
+    void increase_traj_count() { traj_count++; }
+    void init_config();
+    void switch_traj(const Eigen::VectorXd &x_k);
+
+    casadi_real *get_optimal_control()
+    {
+        return us_init_guess[0].data();
+    }
+
+    const casadi_real *get_act_traj_data()
+    {
+        return traj_data->col((traj_count > 0 ? traj_count-1 : traj_count)).data();
+    }
+
+private:
     RobotModel &robot_model;
     const std::string crocoddyl_config_path;
-    const std::string tcp_frame_name;
     nlohmann::json mpc_settings;
     nlohmann::json param_mpc_weight;
     TrajectoryGenerator &trajectory_generator;
     const int nq, nx; // this is nq_red and nx_red!!!
     double dt;
+    uint N_MPC, N_step, N_solver_steps;
+    Eigen::VectorXd x_min, x_max, x_mean;
+    Eigen::VectorXd u_min, u_max;
+    std::vector< Eigen::VectorXd > xs_init_guess;
+    std::vector< Eigen::VectorXd > us_init_guess;
+    Eigen::VectorXi mpc_traj_indices; // MPC stepwidth indices for sampling trajectory data
+
     boost::shared_ptr<crocoddyl::SolverAbstract> ddp;
+    std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::CostItem>>> cost_models;
+    std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::ResidualModelState>>> residual_state_models;
+    std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::ResidualModelJointAcceleration>>> residual_joint_acceleration_models;
+    std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::ResidualModelControl>>> residual_control_models;
+    std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::ResidualModelFrameTranslation>>> residual_frame_translation_models;
+    std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::ResidualModelFrameRotation>>> residual_frame_rotation_models;
+    boost::shared_ptr<crocoddyl::ShootingProblem> problem_reference;
 
-public:
+    const Eigen::MatrixXd *traj_data;
+    uint traj_data_real_len;
+    casadi_uint traj_rows;
+    casadi_uint traj_cols;
+
+    const Eigen::Vector3i p_d_rows{0, 1, 2};
+    const Eigen::Vector4i q_d_rows{9, 10, 11, 12};
+
+    std::vector<Eigen::MatrixXd> p_d_blocks;
+    std::vector<std::vector<Eigen::Matrix3d>> R_d_blocks;
     uint traj_count;
-};
-
-class ClassicDynMPC : public BaseCrocoddylMPC
-{
 public:
-    ClassicDynMPC(RobotModel &robot_model,
-                    const std::string &crocoddyl_config_path,
-                    const std::string &tcp_frame_name,
-                    TrajectoryGenerator &trajectory_generator)
-        : BaseCrocoddylMPC(robot_model, crocoddyl_config_path, tcp_frame_name, trajectory_generator)
-    {
-        read_config_file();
-        create_mpc_solver();
-    }
-
-public:
-    void create_mpc_solver() override;
-    void set_references(casadi_real *x_k_in) override;
+    bool is_kinematic;
 };
 
 #endif // CROCODDYL_MPC_HPP

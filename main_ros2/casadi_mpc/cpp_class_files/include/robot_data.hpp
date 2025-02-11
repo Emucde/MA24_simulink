@@ -21,7 +21,7 @@ struct DynamicsData {
     Eigen::MatrixXd M; // Mass matrix
     Eigen::MatrixXd C; // Coriolis matrix
     Eigen::MatrixXd C_rnea; // Gravitational effects
-    Eigen::MatrixXd g; // Gravitational forces
+    Eigen::VectorXd g; // Gravitational forces
 };
 
 enum class ControllerType { CT, PDPlus, InverseDynamics };

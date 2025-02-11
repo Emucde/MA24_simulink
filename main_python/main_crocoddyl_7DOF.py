@@ -576,7 +576,7 @@ try:
             
             xs_init_guess_prev = xs_init_guess
             if i==0:
-                us_init_guess_prev = g_k * np.ones((mpc_settings['N_MPC']-1, nu))
+                us_init_guess_prev = g_k * np.ones((mpc_settings['N_MPC'], nu))
             else:
                 us_init_guess_prev = us_init_guess
 

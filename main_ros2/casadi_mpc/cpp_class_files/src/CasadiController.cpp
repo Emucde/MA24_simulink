@@ -21,6 +21,7 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
     }
 
     setActiveMPC(MPCType::MPC8); // Set the default MPC
+    switch_traj(1); // Set the default trajectory
 
     // Initialize the previous torque
     tau_full_prev = Eigen::VectorXd::Zero(nq);
@@ -111,6 +112,12 @@ void CasadiController::init_custom_trajectory(ParamPolyTrajectory param)
 {
     trajectory_generator.init_custom_trajectory(param);
     update_trajectory_data(param.x_init.data());
+}
+
+void CasadiController::switch_traj(casadi_uint traj_select)
+{
+    trajectory_generator.switch_traj(traj_select);
+    update_trajectory_data(trajectory_generator.get_traj_x0_init()->data());
 }
 
 void CasadiController::update_trajectory_data(const casadi_real *const x_k_ndof_ptr)

@@ -66,7 +66,7 @@ public:
     const Eigen::VectorXi pq_d_rows = (Eigen::VectorXi(7) << 0, 1, 2, 9, 10, 11, 12).finished();
 
     void init_custom_trajectory(ParamPolyTrajectory param);
-    void init_file_trajectory(int traj_select, const casadi_real *x_k_ndof_ptr, double T_start, double T_poly, double T_end);
+    void init_file_trajectory(int traj_select, const double *x_k_ndof_ptr, double T_start, double T_poly, double T_end);
 
     void switch_traj(int traj_select);
 

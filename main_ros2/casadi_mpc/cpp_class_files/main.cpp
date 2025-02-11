@@ -22,20 +22,20 @@
 
 casadi_real x_k_tst[12] = {0};
 
-void test_fun1(const casadi_real* x_k_ndof, const casadi_uint *n_x_indices_ptr)
+void test_fun1(const casadi_real *x_k_ndof, const casadi_uint *n_x_indices_ptr)
 {
     casadi_uint nx_red = 12;
-    
+
     double x_k[nx_red];
     for (casadi_uint i = 0; i < nx_red; i++)
     {
         x_k[i] = x_k_ndof[n_x_indices_ptr[i]];
     }
-    //0.01s
-    memcpy(x_k_tst, x_k, nx_red*sizeof(casadi_real));
+    // 0.01s
+    memcpy(x_k_tst, x_k, nx_red * sizeof(casadi_real));
 }
 
-void test_fun2(const casadi_real* x_k_ndof, const Eigen::VectorXi n_x_indices_eig)
+void test_fun2(const casadi_real *x_k_ndof, const Eigen::VectorXi n_x_indices_eig)
 {
     casadi_uint nx_red = 12;
 
@@ -60,26 +60,21 @@ void test_fun2(const casadi_real* x_k_ndof, const Eigen::VectorXi n_x_indices_ei
     {
         x_k[i] = x_k_ndof[n_x_indices_eig[i]];
     }
-    memcpy(x_k_tst, x_k, nx_red*sizeof(casadi_real));
-    //0.01s
+    memcpy(x_k_tst, x_k, nx_red * sizeof(casadi_real));
+    // 0.01s
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
+enum class MainControllerType
+{
+    Classic,
+    Casadi,
+    Crocoddyl,
+    COUNT
+};
 
 int main()
 {
-    bool use_mpc = false; // Set to true to use MPC, false to use classic controller
+    MainControllerType controller_type = MainControllerType::Crocoddyl;
 
     // Measure execution time
     TicToc timer_mpc_solver;
@@ -91,7 +86,7 @@ int main()
     const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
     const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
     const std::string tcp_frame_name = "fr3_link8_tcp";
-    
+
     robot_config_t robot_config = get_robot_config();
 
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
@@ -105,7 +100,7 @@ int main()
     Eigen::VectorXi n_indices_eig = ConstIntVectorMap(n_indices_ptr, nq_red);
     Eigen::VectorXi n_x_indices_eig = ConstIntVectorMap(n_x_indices_ptr, nx_red);
     casadi_real x_k_ndof[nx] = {0};
-    const casadi_real* x0_init;
+    const casadi_real *x0_init;
     double current_frequency = 0.0;
     casadi_uint traj_len = 0;
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
@@ -115,13 +110,15 @@ int main()
     WorkspaceController classic_controller(urdf_filename, tcp_frame_name, use_gravity);
     CasadiController mpc_controller(urdf_filename, tcp_frame_name, use_gravity);
     CrocoddylController crocoddyl_controller(urdf_filename, crocoddyl_config_filename, tcp_frame_name, use_gravity);
+    
+    
     mpc_controller.setActiveMPC(MPCType::MPC8);
     classic_controller.switchController(ControllerType::InverseDynamics);
     // initialize the trajectory
-    
+
     // set singularity robustness mode
     Eigen::MatrixXd W_bar_N = Eigen::MatrixXd::Identity(nq_red, nq_red);
-    Eigen::Map<const Eigen::VectorXd>sugihara_limb_vector(robot_config.sugihara_limb_vector, nq);
+    Eigen::Map<const Eigen::VectorXd> sugihara_limb_vector(robot_config.sugihara_limb_vector, nq);
     W_bar_N.diagonal() << sugihara_limb_vector(n_indices_eig);
     // Eigen::Map<Eigen::VectorXd>(W_bar_N.diagonal().data(), nq_red) = Eigen::Map<const Eigen::VectorXd>(robot_config.sugihara_limb_vector, robot_config.nq)(n_indices);
     Eigen::MatrixXd W_E = Eigen::MatrixXd::Identity(nq_red, nq_red);
@@ -138,45 +135,40 @@ int main()
 
     ControllerSettings ctrl_settings = {
         .pd_plus_settings = {
-            .D_d = 2*K_d_pd.array().sqrt(),
-            .K_d = K_d_pd
-        },
-        .ct_settings = {
-            .Kd1 = (2*Kp1_ct).array().sqrt(),
-            .Kp1 = Kp1_ct
-        },
-        .id_settings = {
-            .Kd1 = (2*Kp1_id).array().sqrt(),
-            .Kp1 = Kp1_id,
-            .D_d = (2*K_d_id).array().sqrt(),
-            .K_d = K_d_id
-        },
+            .D_d = 2 * K_d_pd.array().sqrt(),
+            .K_d = K_d_pd},
+        .ct_settings = {.Kd1 = (2 * Kp1_ct).array().sqrt(), .Kp1 = Kp1_ct},
+        .id_settings = {.Kd1 = (2 * Kp1_id).array().sqrt(), .Kp1 = Kp1_id, .D_d = (2 * K_d_id).array().sqrt(), .K_d = K_d_id},
         .regularization_settings = {
             .mode = RegularizationMode::Damping,
-            .k = 1e-5, // RegularizationMode::Damping
-            .W_bar_N = W_bar_N, // Sugihara Method, not implemented
-            .W_E = W_E, // Sugihara Method, not implemented
-            .eps = 1e-1, // ThresholdSmallSingularValues, TikhonovRegularization, RegularizationBySingularValues
+            .k = 1e-5,             // RegularizationMode::Damping
+            .W_bar_N = W_bar_N,    // Sugihara Method, not implemented
+            .W_E = W_E,            // Sugihara Method, not implemented
+            .eps = 1e-1,           // ThresholdSmallSingularValues, TikhonovRegularization, RegularizationBySingularValues
             .eps_collinear = 1e-5, // RegularizationMode::SimpleCollinearity
-            .lambda_min = 1e-5 // RegularizationMode::SteinboeckCollinearity
-        }
-    };
+            .lambda_min = 1e-5     // RegularizationMode::SteinboeckCollinearity
+        }};
 
     classic_controller.set_controller_settings(ctrl_settings);
-    
-    #define TRAJ_SELECT 1
-    if(use_mpc)
+
+#define TRAJ_SELECT 1
+    if (controller_type == MainControllerType::Casadi)
     {
         traj_len = mpc_controller.get_traj_data_real_len();
         x0_init = mpc_controller.get_traj_x0_init(TRAJ_SELECT);
     }
-    else
+    else if(controller_type == MainControllerType::Classic)
     {
         traj_len = classic_controller.get_traj_data_real_len();
         x0_init = classic_controller.get_traj_x0_init(TRAJ_SELECT);
     }
+    else if(controller_type == MainControllerType::Crocoddyl)
+    {
+        traj_len = crocoddyl_controller.get_traj_data_len();
+        x0_init = crocoddyl_controller.get_traj_x0_init(TRAJ_SELECT);
+    }
 
-    x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd> (x0_init, nx);
+    x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
     // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
 
@@ -187,20 +179,24 @@ int main()
     // param_target.x_init = x_k_ndof_eig;
     // mpc_controller.init_trajectory_custom_target(param_target);
 
-    if(use_mpc)
+    if (controller_type == MainControllerType::Casadi)
     {
         mpc_controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
     }
-    else
+    else if (controller_type == MainControllerType::Classic)
     {
         classic_controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 0.0, 0.0);
+    }
+    else if (controller_type == MainControllerType::Crocoddyl)
+    {
+        crocoddyl_controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 0.0, 0.0);
     }
 
     // initialize the filter
     // SignalFilter filter(nq, Ts, x_k_ndof, 400, 400); // int num_joints, double Ts, double *state, double omega_c_q, double omega_c_dq
     // double* x_filtered_ptr = filter.getFilteredOutputPtr();
     // double* x_measured_ptr = x_k_ndof;
-    const double* act_data;
+    const double *act_data;
 
     casadi_uint transient_traj_len = mpc_controller.get_transient_traj_len();
 
@@ -214,8 +210,7 @@ int main()
         {"read_traj_data_full", 19 * sizeof(casadi_real), traj_len},
         {"read_frequency_full", sizeof(casadi_real), traj_len},
         {"read_state_data_full", sizeof(casadi_real) * robot_config.nx, traj_len},
-        {"read_control_data_full", sizeof(casadi_real) * robot_config.nq, traj_len}
-    };
+        {"read_control_data_full", sizeof(casadi_real) * robot_config.nq, traj_len}};
 
     const std::vector<std::string> sem_readwrite_names = {
         "shm_changed_semaphore",
@@ -231,7 +226,7 @@ int main()
     shm.write("readonly_mode", &readonly_mode);
     shm.write("read_traj_length", &traj_len);
     shm.write("data_from_simulink_start", &start);
-    
+
     // Start measuring time
     timer_total.tic();
 
@@ -240,19 +235,30 @@ int main()
     {
         // filter.run(x_measured_ptr); // updates data from x_filtered_ptr
 
-        if(use_mpc)
+        if ( controller_type == MainControllerType::Casadi )
         {
             timer_mpc_solver.tic();
             tau_full = mpc_controller.solveMPC(x_k_ndof);
             timer_mpc_solver.toc();
+            act_data = mpc_controller.get_act_traj_data();
+            error_flag = mpc_controller.get_error_flag();
         }
-        else
+        else if ( controller_type == MainControllerType::Classic )
         {
             timer_mpc_solver.tic();
             tau_full = classic_controller.update(x_k_ndof);
             timer_mpc_solver.toc();
+            act_data = classic_controller.get_act_traj_data();
+            error_flag = classic_controller.get_error_flag();
         }
-
+        else if ( controller_type == MainControllerType::Crocoddyl )
+        {
+            timer_mpc_solver.tic();
+            tau_full = crocoddyl_controller.solveMPC(x_k_ndof);
+            timer_mpc_solver.toc();
+            act_data = crocoddyl_controller.get_act_traj_data();
+            error_flag = crocoddyl_controller.get_error_flag();
+        }
 
         if (i % 100 == 0)
         {
@@ -265,17 +271,6 @@ int main()
             std::cout << "Switching to trajectory from data" << std::endl;
         }
 
-        // simulate the model
-        if(use_mpc)
-        {
-            act_data = mpc_controller.get_act_traj_data();
-            error_flag = mpc_controller.get_error_flag();
-        }
-        else
-        {
-            act_data = classic_controller.get_act_traj_data();
-            error_flag = classic_controller.get_error_flag();
-        }
         current_frequency = timer_mpc_solver.get_frequency();
 
         // Write data to shm:
@@ -285,16 +280,17 @@ int main()
         shm.write("read_frequency_full", &current_frequency, i);
         shm.post_semaphore("shm_changed_semaphore");
 
-        // short delay
-        // std::this_thread::sleep_for(std::chrono::microseconds(500));
-        
-        if(use_mpc)
+        if ( controller_type == MainControllerType::Casadi )
         {
             mpc_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
         }
-        else
+        else if ( controller_type == MainControllerType::Classic )
         {
             classic_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
+        }
+        else if ( controller_type == MainControllerType::Crocoddyl )
+        {
+            crocoddyl_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
         }
 
         if (error_flag != ErrorFlag::NO_ERROR)

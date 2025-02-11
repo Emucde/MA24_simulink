@@ -73,10 +73,6 @@ CasadiMPC::CasadiMPC(MPCType mpc,
     // Copy the parameter weights
     memcpy(mpc_config.in.param_weight.ptr, mpc_config.param_weight, mpc_config.param_weight_len * sizeof(casadi_real));
 
-    // init the reference values vector
-    generate_trajectory_blocks();
-    init_references_and_pointers();
-
 #ifdef DEBUG
     std::cout << "w: ";
     for (int i = 0; i < int(mpc_config.in.init_guess.len + mpc_config.in.reference_values.len + mpc_config.in.param_weight.len); i++)

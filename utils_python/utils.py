@@ -1053,7 +1053,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     terminalDifferentialCostModel = crocoddyl.CostModelSum(state) # darf nur eines sein:
     actuationModel = crocoddyl.ActuationModelFull(state)
 
-    for i in range(0, N_MPC):
+    for i in range(0, N_MPC+1):
         dt = int_time[i]
 
         if use_dt_scale:
@@ -1080,7 +1080,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                     activation=activationModel,
                     residual=crocoddyl.ResidualModelState(state, xmean)
                 )
-                if i < N_MPC-1:
+                if i < N_MPC:
                     runningCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
                 else:
                     terminalDifferentialCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
@@ -1092,7 +1092,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                     activation=activationModel,
                     residual=crocoddyl.ResidualModelControl(state, np.zeros(uref.shape))
                 )
-                if i < N_MPC-1:
+                if i < N_MPC:
                     runningCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
                 else:
                     terminalDifferentialCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
@@ -1111,7 +1111,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
             q_yrCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(Q_yr), crocoddyl.ResidualModelFrameRotation(state, TCP_frame_id, R_d))
             q_yr_terminateCost = crocoddyl.CostModelResidual(state, crocoddyl.ActivationModelWeightedQuad(Q_yr_terminal), crocoddyl.ResidualModelFrameRotation(state, TCP_frame_id, R_d))
 
-        if i < N_MPC-1:
+        if i < N_MPC:
             runningCostModel.addCost("TCP_pose", q_ytCost,         weight = scale * q_yt_common_weight)
             if state.nq >= 6:
                 runningCostModel.addCost("TCP_rot", q_yrCost,      weight = scale * q_yr_common_weight)
@@ -1209,7 +1209,7 @@ def ocp_problem_v3(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     terminalDifferentialCostModel = crocoddyl.CostModelSum(state) # darf nur eines sein:
     actuationModel = crocoddyl.ActuationModelFull(state)
 
-    for i in range(0, N_MPC):
+    for i in range(0, N_MPC+1):
         dt = int_time[i]
 
         scale = 1
@@ -1241,7 +1241,7 @@ def ocp_problem_v3(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                     activation=activationModel,
                     residual=crocoddyl.ResidualModelState(state, xref)
                 )
-                if i < N_MPC-1:
+                if i < N_MPC:
                     runningCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
                 else:
                     terminalDifferentialCostModel.addCost("stateRegBound", xRegBoundCost, q_x_bound_cost)
@@ -1253,7 +1253,7 @@ def ocp_problem_v3(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                     activation=activationModel,
                     residual=crocoddyl.ResidualModelControl(state, uref)
                 )
-                if i < N_MPC-1:
+                if i < N_MPC:
                     runningCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
                 else:
                     terminalDifferentialCostModel.addCost("ctrlRegBound", uRegBoundCost, q_u_bound_cost)
@@ -1279,7 +1279,7 @@ def ocp_problem_v3(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
                 ),
             )
 
-        if i < N_MPC-1:
+        if i < N_MPC:
             runningCostModel.addCost("TCP_pose", goalTrackingCost, q_tracking_cost)
             if state.nq >= 6:
                 runningCostModel.addCost("TCP_rot", goalTrackingCost_r, q_tracking_cost)
@@ -1381,8 +1381,8 @@ def next_init_guess_mpc_v1(ddp, nq, nx, robot_model, robot_data, mpc_settings, p
     # dt = mpc_settings['Ts']
 
     # # method 1: accurate next state simulation
-    # # xx_next = np.zeros((N_MPC-1, nx))
-    # # for j in range(0, N_MPC-1):
+    # # xx_next = np.zeros((N_MPC, nx))
+    # # for j in range(0, N_MPC):
     # #     xk = ddp.xs[j]
     # #     uk = ddp.us[j]
 
@@ -1395,11 +1395,11 @@ def next_init_guess_mpc_v1(ddp, nq, nx, robot_model, robot_data, mpc_settings, p
     # #     xx_next[j] = np.hstack([q_next, q_p_next])
     
     # # # method 2: approximate dynamics
-    # # d_xx_next = np.diff(ddp.xs, axis=0) / int_time[:N_MPC-1, np.newaxis]
+    # # d_xx_next = np.diff(ddp.xs, axis=0) / int_time[:N_MPC, np.newaxis]
     # # xx_next = ddp.xs[:-1] + dt * d_xx_next
 
     # # # Vectorized calculation for uu_next
-    # dtau = np.diff(ddp.us, axis=0) / int_time[:N_MPC-2, np.newaxis]
+    # dtau = np.diff(ddp.us, axis=0) / int_time[:N_MPC-1, np.newaxis]
     # uu_next = ddp.us[:-1] + dt * dtau
 
     # ddp.us[0:-1] = uu_next # approximativ bestimmt
@@ -1475,27 +1475,27 @@ def sim_model(robot_model, robot_data, q, q_p, tau, dt):
 
 ###############
 
-def first_init_guess_mpc_v1(tau_init_robot, x_0_red, N_traj, N_horizon, param_robot, traj_data):
+def first_init_guess_mpc_v1(tau_init_robot, x_0_red, N_traj, N_MPC, param_robot, traj_data):
     nu = param_robot['n_dof']
     nx = 2*nu
     xk = x_0_red
 
-    xs_init_guess = [x_0_red]  * (N_horizon)
-    us_init_guess = [tau_init_robot] * (N_horizon-1)
+    xs_init_guess = [x_0_red]  * (N_MPC+1)
+    us_init_guess = [tau_init_robot] * (N_MPC)
 
     xs = np.zeros((N_traj, nx))
     us = np.zeros((N_traj, nu))
     return xk, xs, us, xs_init_guess, us_init_guess
 
-def first_init_guess_mpc_v3(tau_init_robot, x_0_red, N_traj, N_horizon, param_robot, traj_data):
+def first_init_guess_mpc_v3(tau_init_robot, x_0_red, N_traj, N_MPC, param_robot, traj_data):
     nu = param_robot['n_dof']
     nx = 2*nu
 
     x0_init = np.hstack([traj_data['p_d'][:, 0], traj_data['p_d_p'][:, 0], x_init_robot])
     xk = x0_init
 
-    xs_init_guess = [x0_init] * (N_horizon)
-    us_init_guess = [np.hstack([traj_data['p_d_pp'][:, 0], tau_init_robot])] * (N_horizon-1)
+    xs_init_guess = [x0_init] * (N_MPC+1)
+    us_init_guess = [np.hstack([traj_data['p_d_pp'][:, 0], tau_init_robot])] * (N_MPC)
 
     xs = np.zeros((N_traj, 6+nx))
     us = np.zeros((N_traj, 3+nu))

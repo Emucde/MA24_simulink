@@ -11,7 +11,7 @@ WorkspaceController::WorkspaceController(
                         n_x_indices(ConstIntVectorMap(robot_config.n_x_indices, robot_config.nx_red)),
                         nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
                         controller_settings(init_default_controller_settings()),
-                        robot_model(urdf_path, tcp_frame_name, robot_config, use_gravity, true), // use reduced model
+                        robot_model(urdf_path, tcp_frame_name, robot_config, use_gravity, true),
                         torque_mapper(urdf_path, tcp_frame_name, robot_config, use_gravity, false),
                         trajectory_generator(torque_mapper, robot_config.dt),
                         sing_method(RegularizationMode::None),

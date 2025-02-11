@@ -10,7 +10,8 @@
       "int_method": "euler",
       "use_dt_scale": false,
       "N_extra_Ts_samples": 0,
-      "solver_steps": 1000
+      "solver_steps": 1000,
+      "is_kinematic": false
     },
     "param_mpc_weight": {
       "q_yt_common_weight":          1e2,
@@ -22,7 +23,7 @@
       "Q_yr":          [1, 1, 1],
       "Q_yr_terminal": [1, 1, 1],
       "q_p_common_weight": 1e-1,
-      "R_q_p": [1, 1, 1, 1, 1, 1],
+      "R_x": [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
       "q_pp_common_weight": 0,
       "R_q_pp": [1, 1, 1, 1, 1, 1],
       "q_xprev_common_weight": 0,

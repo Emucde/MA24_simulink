@@ -103,10 +103,7 @@ public:
     }
 
     // Method to switch the trajectory (for creating run init_trajectory)
-    void switch_traj(casadi_uint traj_select)
-    {
-        trajectory_generator.switch_traj(traj_select);
-    }
+    void switch_traj(casadi_uint traj_select);
 
     // Method to get n_x_indices
     const casadi_uint *get_n_x_indices()
