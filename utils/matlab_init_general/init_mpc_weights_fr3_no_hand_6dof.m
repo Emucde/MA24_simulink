@@ -347,7 +347,34 @@ param_weight.(MPC).u_max = param_robot.q_pp_limit_upper;
 % param_weight.(MPC).x_min = -inf(size(x_min)); %x_min 
 % param_weight.(MPC).x_max = +inf(size(x_max)); %x_max 
 % param_weight.(MPC).u_min = -inf(size(u_min)); %u_min 
-% param_weight.(MPC).u_max = +inf(size(u_max)); %u_max 
+% param_weight.(MPC).u_max = +inf(size(u_max)); %u_max
+
+MPC='MPC16';
+param_weight.(MPC).N_step = 5;
+
+param_weight.(MPC).Q_y      = 1e2*diag([1*ones(3,1); 1*ones(3,1)]);
+param_weight.(MPC).Q_yN     = 1e5*diag([1*ones(3,1); 1*ones(3,1)]);
+
+param_weight.(MPC).R_q_ref   = 0*diag(ones(n,1));
+param_weight.(MPC).R_q_p     = 1e-2*diag(ones(n, 1));
+param_weight.(MPC).R_u       = 1e-5*diag(ones(n, 1)); % = R_q_pp
+param_weight.(MPC).R_x_prev  = 0*diag([1*ones(n,1); 0*ones(n,1)]);
+param_weight.(MPC).R_u0_prev = 0*diag(ones(n,1)); % = R_tau
+
+param_jointspace_ct.(MPC).K_P_q = 100*eye(n);
+param_jointspace_ct.(MPC).K_D_q = 2*sqrt(param_jointspace_ct.(MPC).K_P_q);
+
+param_weight.(MPC).max_du = inf; % max rad/s^2 change per second
+param_weight.(MPC).q_ref = param_robot.q_n;
+% param_weight.(MPC).x_min = x_min; 
+% param_weight.(MPC).x_max = x_max;
+% param_weight.(MPC).u_min = param_robot.q_pp_limit_lower; 
+% param_weight.(MPC).u_max = param_robot.q_pp_limit_upper;
+
+param_weight.(MPC).x_min = -inf(size(x_min)); %x_min 
+param_weight.(MPC).x_max = +inf(size(x_max)); %x_max 
+param_weight.(MPC).u_min = -inf(size(u_min)); %u_min 
+param_weight.(MPC).u_max = +inf(size(u_max)); %u_max 
 
 %%%%%%%%%%%%%%%%%%% generate param MPC weights struct %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 names = fieldnames(param_weight)';
