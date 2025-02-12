@@ -15,6 +15,7 @@
 % output_dir = './s_functions/s_functions_7dof/';
 
 compile_matlab_sfun = true;
+create_some_sources = true;
 
 import casadi.*;
 
@@ -75,6 +76,22 @@ fun_arr_matlab = { ...
     'geo_jacobian_endeffector_py', ...
     'geo_jacobian_endeffector_p_py' ...
 };
+
+fun_arr_only_source = { ...
+    'ekf_fun_no_gravity_py' ...
+};
+
+if create_some_sources
+    disp('Create only source files for s-functions:');
+    for i = 1:length(fun_arr_only_source)
+        fun_name = fun_arr_only_source{i};
+        
+        casadi_fun = Function.load([input_dir, fun_name '.casadi']);
+        
+        create_only_source(casadi_fun, [output_dir, 'mpc_c_sourcefiles/']);
+    end
+    fprintf('\n--------------------------------------------------------------------\n\n');
+end
 
 %% 1. Compile casadi functions to s-functions for simulink (without sources)
 
@@ -156,4 +173,37 @@ function compile_multiple_cfun(cfun_arr, s_fun_path, input_dir, output_dir, copt
         compile_casadi_sfunction(casadi_fun, s_fun_path, output_dir, fun_name, coptimflags, compile_mode, remove_sourcefiles);
         disp([out_string, num2str(toc), ' s']);
     end
+end
+
+function create_only_source(casadi_fun, source_dir)
+%CREATE_ONLY_SOURCE Creates only the source files for the S-function
+%
+%   This function creates the source files for the S-function without compiling them.
+%
+%   Inputs:
+%       casadi_fun - CasADi function to be compiled
+%       output_dir - Directory where the source files will be saved
+    import casadi.*;
+
+    casadi_fun_name = 'fr3_ekf';
+
+    % Create the source files
+    cg_options = struct;
+    cg_options.casadi_real = 'double';
+    cg_options.real_min = num2str(eps);
+    cg_options.casadi_int = 'int';
+    cg_options.with_header = true;
+    cg_options.main = false;
+    cg = CodeGenerator(casadi_fun_name, cg_options);
+    cg.add(casadi_fun);
+    cg.generate();
+
+    % opts = struct('main', true, 'mex', false, 'with_header', true);
+    % casadi_fun.generate(casadi_fun.name, opts);
+
+    % move file to location
+    movefile([casadi_fun_name, '.c'], source_dir);
+    movefile([casadi_fun_name, '.h'], source_dir);
+
+    calculate_simple_casadi_addresses(casadi_fun, casadi_fun_name, source_dir)
 end

@@ -20,6 +20,9 @@
 #include "WorkspaceController.hpp"
 #include "CrocoddylController.hpp"
 #include "CrocoddylMPCType.hpp"
+#include "CasadiEKF.hpp"
+#include <random>
+#include <cmath>
 
 casadi_real x_k_tst[12] = {0};
 
@@ -65,6 +68,27 @@ void test_fun2(const casadi_real *x_k_ndof, const Eigen::VectorXi n_x_indices_ei
     // 0.01s
 }
 
+// Function to generate an Eigen vector of white noise
+Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude) {
+    // Calculate noise power
+    double noise_power = (Ts / 2) * M_PI * std::pow(mean_noise_amplitude, 2);
+
+    // Initializes random number generator for normal distribution
+    std::random_device rd;
+    std::mt19937 generator(rd()); // Mersenne Twister random number generator
+    std::normal_distribution<double> distribution(0.0, std::sqrt(noise_power)); // Normal distribution
+
+    // Create an Eigen vector to hold the noise
+    Eigen::VectorXd white_noise(n);
+
+    // Generate white noise
+    for (int i = 0; i < n; ++i) {
+        white_noise[i] = distribution(generator);
+    }
+
+    return white_noise; // Return the generated noise vector
+}
+
 enum class MainControllerType
 {
     Classic,
@@ -75,7 +99,7 @@ enum class MainControllerType
 
 int main()
 {
-    MainControllerType controller_type = MainControllerType::Crocoddyl;
+    MainControllerType controller_type = MainControllerType::Classic;
 
     // Measure execution time
     TicToc timer_mpc_solver;
@@ -86,6 +110,7 @@ int main()
     // MASTERDIR defined in CMakeLists.txt (=$masterdir)
     const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
     const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
+    const std::string ekf_config_filename = std::string(MASTERDIR) + "/config_settings/ekf_settings.json";
     const std::string tcp_frame_name = "fr3_link8_tcp";
 
     robot_config_t robot_config = get_robot_config();
@@ -104,6 +129,8 @@ int main()
     const casadi_real *x0_init;
     double current_frequency = 0.0;
     casadi_uint traj_len = 0;
+    double mean_noise_amplitude = 0.1e-3;
+
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
     Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
@@ -111,7 +138,6 @@ int main()
     WorkspaceController classic_controller(urdf_filename, tcp_frame_name, use_gravity);
     CasadiController mpc_controller(urdf_filename, tcp_frame_name, use_gravity);
     CrocoddylController crocoddyl_controller(urdf_filename, crocoddyl_config_filename, tcp_frame_name, use_gravity);
-    
     
     mpc_controller.setActiveMPC(MPCType::MPC8);
     classic_controller.switchController(ControllerType::InverseDynamics);
@@ -199,10 +225,17 @@ int main()
         transient_traj_len = crocoddyl_controller.get_transient_traj_len();
     }
 
+    // initialize EKF
+    CasadiEKF ekf(ekf_config_filename);
+    ekf.initialize(x_k_ndof);
+
+    double* x_filtered_ptr = ekf.get_x_k_plus_ptr();
+    Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nx);
+    x_measured << x_k_ndof_eig + generateNoiseVector(nx, Ts, mean_noise_amplitude);
+
     // initialize the filter
     // SignalFilter filter(nq, Ts, x_k_ndof, 400, 400); // int num_joints, double Ts, double *state, double omega_c_q, double omega_c_dq
     // double* x_filtered_ptr = filter.getFilteredOutputPtr();
-    // double* x_measured_ptr = x_k_ndof;
     const double *act_data;
 
     // create shared memory with size
@@ -240,10 +273,13 @@ int main()
     {
         // filter.run(x_measured_ptr); // updates data from x_filtered_ptr
 
+        ekf.predict(tau_full.data(), x_measured.data());
+        x_filtered_ptr = ekf.get_x_k_plus_ptr();
+
         if ( controller_type == MainControllerType::Casadi )
         {
             timer_mpc_solver.tic();
-            tau_full = mpc_controller.solveMPC(x_k_ndof);
+            tau_full = mpc_controller.solveMPC(x_measured.data());
             timer_mpc_solver.toc();
             act_data = mpc_controller.get_act_traj_data();
             error_flag = mpc_controller.get_error_flag();
@@ -251,7 +287,7 @@ int main()
         else if ( controller_type == MainControllerType::Classic )
         {
             timer_mpc_solver.tic();
-            tau_full = classic_controller.update(x_k_ndof);
+            tau_full = classic_controller.update(x_measured.data());
             timer_mpc_solver.toc();
             act_data = classic_controller.get_act_traj_data();
             error_flag = classic_controller.get_error_flag();
@@ -259,7 +295,7 @@ int main()
         else if ( controller_type == MainControllerType::Crocoddyl )
         {
             timer_mpc_solver.tic();
-            tau_full = crocoddyl_controller.solveMPC(x_k_ndof);
+            tau_full = crocoddyl_controller.solveMPC(x_measured.data());
             timer_mpc_solver.toc();
             act_data = crocoddyl_controller.get_act_traj_data();
             error_flag = crocoddyl_controller.get_error_flag();
@@ -298,10 +334,12 @@ int main()
             crocoddyl_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
         }
 
+        x_measured << x_k_ndof_eig + generateNoiseVector(nx, Ts, mean_noise_amplitude);
+
         if (error_flag != ErrorFlag::NO_ERROR)
         {
             std::cerr << "Error flag: " << static_cast<int>(error_flag) << std::endl;
-            // break;
+            break;
         }
     }
 

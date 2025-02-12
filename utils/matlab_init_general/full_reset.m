@@ -61,11 +61,7 @@ if(full_reset_flag)
 
             % compile casadi functions to simulink s-functions and matlab functions
             compile_py_cfun_to_sfun;
-
-            % copy ekf to mpc_sourcefiles
-            copyfile([s_fun_path, '/ekf_fun.h'], [s_fun_path, '/mpc_c_sourcefiles/ekf_fun.h']);
-            copyfile([s_fun_path, '/ekf_fun.c'], [s_fun_path, '/mpc_c_sourcefiles/ekf_fun.c']);
-
+            
             % regenerate paths (otherwise matlab casadi functions are not detected)
             restoredefaultpath;
             parameter_str = "parameters_7dof";

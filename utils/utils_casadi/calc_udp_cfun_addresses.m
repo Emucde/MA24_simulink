@@ -68,6 +68,9 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
 % hidden in the casadi function ...)
 
     casadi_fun_name = casadi_fun.name;
+    
+    % DOC: For understanding this file look at the main in generated .c file:
+    % casadi_fun.generate(casadi_fun_name, struct('main', true, 'mex', false, 'with_header', true));
 
     % Display dimensions
     %disp(casadi_fun.str);
@@ -85,13 +88,13 @@ casadi_int main_MPC8(casadi_int argc, char* argv[]) {
 
     % Calculate input addresses
     for i = 2:n_in
-        arg_in_addr(i) = length(arg_sx{1,i-1}) + arg_in_addr(i-1);
+        arg_in_addr(i) = numel(arg_sx{1,i-1}) + arg_in_addr(i-1);
     end
 
     % Calculate output addresses
-    res_out_addr(1) = arg_in_addr(end) + length(arg_sx{1, end});
+    res_out_addr(1) = arg_in_addr(end) + numel(arg_sx{1, end});
     for i = 2:n_out
-        res_out_addr(i) = length(res_sx{1,i-1}) + res_out_addr(i-1);
+        res_out_addr(i) = numel(res_sx{1,i-1}) + res_out_addr(i-1);
     end
 
     % Calculate total length of all inputs and outputs

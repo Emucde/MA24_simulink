@@ -57,7 +57,7 @@ cmake_path(SET MPC_SOURCE_DIR NORMALIZE "${MPC_SOURCE_DIR_REL}")
 message(STATUS "MPC source directory: ${MPC_SOURCE_DIR}")
 
 # Find all MPC*.c files
-file(GLOB MPC_SOURCES "${MPC_SOURCE_DIR}/MPC*.c" "${MPC_SOURCE_DIR}/param_robot.c")
+file(GLOB MPC_SOURCES "${MPC_SOURCE_DIR}/MPC*.c" "${MPC_SOURCE_DIR}/param_robot.c" "${MPC_SOURCE_DIR}/fr3_ekf.c")
 set(MPC_ALL_LIBRARIES "")
 set(MPC_PARAM_LIBRARIES "")
 set(MPC_LIBRARIES "")
@@ -210,6 +210,7 @@ set(UTILS_LIBRARIES
     SignalFilter
     TicToc
     TrajectoryGenerator
+    CasadiEKF
 )
 
 foreach(SOURCE_FILE ${SRC_FILES})

@@ -7,6 +7,7 @@
       },
       "name": "linux-gcc-x64",
       "includePath": [
+        "${workspaceFolder}/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/**",
         "${workspaceFolder}/**",
         "${env:eigen_path}/**",
         "${env:_colcon_cd_root}/include/**"

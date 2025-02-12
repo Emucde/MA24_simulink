@@ -183,9 +183,9 @@
   // "files.exclude": {
   //   "**/MPC*.c": true
   // },
-  "C_Cpp.files.exclude": {
-    "**/MPC*.c": true
-  },
+  // "C_Cpp.files.exclude": {
+  //   "**/MPC*.c": true
+  // },
   "cmake.ignoreCMakeListsMissing": true,
   "terminal.integrated.env.linux": {
     "PYTHONPATH": ""
