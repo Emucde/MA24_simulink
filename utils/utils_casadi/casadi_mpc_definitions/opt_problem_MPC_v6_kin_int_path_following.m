@@ -2,6 +2,16 @@
 
 import casadi.*
 
+% get weights from "init_MPC_weight.m"
+param_weight_init = param_weight.(casadi_func_name);
+
+% weights as parameter (~inputs)
+if(weights_and_limits_as_parameter)
+    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
+else % hardcoded weights
+    pp = param_weight_init;
+end
+
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;
 
@@ -30,14 +40,11 @@ quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
+N_step = pp.N_step;
+
 DT_ctl = param_global.Ta/M;
-if(N_step_MPC <= 2)
-    DT = DT_ctl; % special case if Ts_MPC = Ta
-    DT2 = DT_ctl; % special case if Ts_MPC = Ta
-else
-    DT = N_step_MPC * DT_ctl; % = Ts_MPC
-    DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
-end
+DT = N_step * DT_ctl; % = Ts_MPC
+DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 
 opt = struct;
 opt.allow_free = true;
@@ -48,15 +55,15 @@ h = Function('h', {theta, v}, {-lambda_theta_ew*theta + v}, opt);
 
 F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
 H_int = integrate_casadi(h, DT, M, int_method); % runs with Ts_MPC
-H = Function('H', {theta, v, lambda_theta_ew}, {H_int(theta, v)});
+H = Function('H', {theta, v, lambda_theta_ew}, {H_int(theta, v)}, opt);
 
 F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
 H_kp1_int = integrate_casadi(h, DT_ctl, M, int_method); % runs with Ta from sensors
-H_kp1 = Function('H', {theta, v, lambda_theta_ew}, {H_kp1_int(theta, v)});
+H_kp1 = Function('H', {theta, v, lambda_theta_ew}, {H_kp1_int(theta, v)}, opt);
 
 F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 H2_int = integrate_casadi(h, DT2, M, int_method); % runs with Ts_MPC-2*Ta
-H2 = Function('H', {theta, v, lambda_theta_ew}, {H2_int(theta, v)});
+H2 = Function('H', {theta, v, lambda_theta_ew}, {H2_int(theta, v)}, opt);
 
 %% set up path function: TODO: input for path selection
 
@@ -121,11 +128,19 @@ sigma_r_fun = Function('sigma_r_fun', {theta, traj_select}, {sigma_r_all});
 sigma_r_quat_fun = Function('sigma_r_quat_fun', {theta}, {quat_R_endeffector_py_fun(sigma_r)});
 
 %% Calculate Initial Guess
-if(N_step_MPC <= 2)
-    MPC_traj_indices = 1:(N_MPC+1);
-else
-    MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
+%Get trajectory data for initial guess
+time_points = SX(1, N_MPC+1);
+time_points(1:2) = [0; DT_ctl];
+
+for i = 0:N_MPC-2
+    time_points(i+3) = DT_ctl + DT2 + i * DT; % Concatenate each term
 end
+
+MPC_traj_indices = time_points/DT_ctl + 1;
+MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});
+dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
+
+MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC)));
 
 % Robot System: Initial guess
 q_0_red    = q_0(n_indices);
@@ -135,10 +150,10 @@ x_0_0  = [q_0_red; q_0_red_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parame
 
 u_k_0  = q_0_red_pp;
 
-u_init_guess_0 = ones(n_red, N_MPC).*u_k_0;
-x_init_guess_0 = [x_0_0 ones(2*n_red, N_MPC).*x_0_0];
+u_init_guess_0 = ones(1, N_MPC).*u_k_0;
+x_init_guess_0 = ones(1, N_MPC+1).*x_0_0;
 
-t_init_guess = (MPC_traj_indices-1)*DT_ctl;
+t_init_guess = (MPC_traj_indices_val-1)*DT_ctl;
 theta_init_guess_0 = t_init_guess/T;
 theta_0 = theta_init_guess_0(1);
 v_init_guess_0 = zeros(1, N_MPC);
@@ -166,16 +181,6 @@ end
 
 if(any(isnan(full(init_guess_0))))
     error('115: init_guess_0 contains NaN values!');
-end
-
-% get weights from "init_MPC_weight.m"
-param_weight_init = param_weight.(casadi_func_name);
-
-% weights as parameter (~inputs)
-if(weights_and_limits_as_parameter)
-    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
-else % hardcoded weights
-    pp = param_weight_init;
 end
 
 % Optimization Variables:
@@ -285,7 +290,7 @@ end
 g = [g_x, g_theta];
 
 % Calculate Cost Functions and set equation constraints
-Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
+Q_norm_square = @(z, Q) dot( z, mtimes(diag(Q), z));
 
 if isempty(yt_indices)
     J_yt = 0;
@@ -294,9 +299,9 @@ else
     J_yt = 0;
     for i=1:N_MPC
         if(i < N_MPC)
-            J_yt = J_yt + Q_norm_square( y(yt_indices, 1 + (i)) - sigma_t_fun(theta(1 + (i)), traj_select), pp.Q_y(yt_indices,yt_indices)  );
+            J_yt = J_yt + Q_norm_square( y(yt_indices, 1 + (i)) - sigma_t_fun(theta(1 + (i)), traj_select), pp.Q_y(yt_indices)  );
         else
-            J_yt_N = Q_norm_square( y(yt_indices, 1 + (i)) - sigma_t_fun(theta(1 + (i)), traj_select), pp.Q_yN(yt_indices,yt_indices)  );
+            J_yt_N = Q_norm_square( y(yt_indices, 1 + (i)) - sigma_t_fun(theta(1 + (i)), traj_select), pp.Q_yN(yt_indices)  );
         end
     end
 end
@@ -319,9 +324,9 @@ else
         % q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d));
     
         if(i < N_MPC)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices)  );
         else
-            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );
+            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices)  );
         end
     end
 end
@@ -329,11 +334,11 @@ end
 J_theta = Q_norm_square(theta(1 + (1:N_MPC-1)) - theta_d(1 + (1:N_MPC-1)), pp.Q_theta);
 J_thetaN = Q_norm_square(theta(1 + (N_MPC)) - theta_d(1 + (N_MPC)), pp.Q_thetaN);
 
-J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices, n_indices));
-J_q_p = Q_norm_square(x(1+n_red:2*n_red, :), pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
-J_u = Q_norm_square(u, pp.R_u(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices));
+J_q_p = Q_norm_square(x(1+n_red:2*n_red, :), pp.R_q_p(n_indices)); %Q_norm_square(u, pp.R_u);
+J_u = Q_norm_square(u, pp.R_u(n_indices)); %Q_norm_square(u, pp.R_u);
 
-J_x_prev = Q_norm_square(x-x_prev, pp.R_x_prev(n_x_indices, n_x_indices));
+J_x_prev = Q_norm_square(x-x_prev, pp.R_x_prev(n_x_indices));
 J_theta_prev = Q_norm_square(theta-theta_prev, pp.R_theta_prev);
 
 cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_ref, J_q_p, J_u, J_theta, J_thetaN, J_x_prev, J_theta_prev}';

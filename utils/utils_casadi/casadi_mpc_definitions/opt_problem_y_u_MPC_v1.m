@@ -38,6 +38,16 @@
 
 import casadi.*
 
+% get weights from "init_MPC_weight.m"
+param_weight_init = param_weight.(casadi_func_name);
+
+% weights as parameter (~inputs)
+if(weights_and_limits_as_parameter)
+    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
+else % hardcoded weights
+    pp = param_weight_init;
+end
+
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;
 
@@ -85,33 +95,33 @@ tau_fun_red = Function('tau_fun_red', {q_red, q_red_p, q_red_pp}, {tau_full(n_in
 f_red = Function('f_red', {x_red, tau_red}, {d_dt_x(n_x_indices)});
 
 % Discrete system dynamics
-
 M = rk_iter; % RK4 steps per interval
+N_step = pp.N_step;
 
-if(N_step_MPC <= 2)
-    DT_ctl = param_global.Ta/M;
-    DT = DT_ctl; % special case if Ts_MPC = Ta
-    DT2 = DT_ctl; % special case if Ts_MPC = Ta
-else
-    DT_ctl = param_global.Ta/M;
-    DT = N_step_MPC * DT_ctl; % = Ts_MPC
-    DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
-end
+DT_ctl = param_global.Ta/M;
+DT = N_step * DT_ctl; % = Ts_MPC
+DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 
 F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors, no finer integration needed
 F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-Ta
 F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
 
+%% Calculate Initial Guess
 %Get trajectory data for initial guess
-if(N_step_MPC <= 2)
-    MPC_traj_indices = 1:(N_MPC+1);
-else
-    MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
+time_points = SX(1, N_MPC+1);
+time_points(1:2) = [0; DT_ctl];
+
+for i = 0:N_MPC-2
+    time_points(i+3) = DT_ctl + DT2 + i * DT; % Concatenate each term
 end
+
+MPC_traj_indices = time_points/DT_ctl + 1;
+MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});
 dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
 
-p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
-q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
+MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC)));
+p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices_val ); % (y_0 ... y_N)
+q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices_val ); % (q_0 ... q_N)
 y_d_0 = [p_d_0; q_d_0];
 
 % initial guess for reference trajectory parameter
@@ -119,35 +129,10 @@ q_0_red    = q_0(n_indices);
 q_0_red_p  = q_0_p(n_indices);
 q_0_red_pp = q_0_pp(n_indices);
 x_0_0  = [q_0_red; q_0_red_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
+u_k_0  = full(tau_fun_red(q_0_red, q_0_red_p, q_0_red_pp)); % gravity compensation
 
-u_k_0  = tau_fun_red(q_0_red, q_0_red_p, q_0_red_pp); % gravity compensation
-
-u_init_guess_0 = ones(n_red, N_MPC).*u_k_0; % fully actuated
-
-% für die S-funktion ist der Initial Guess wesentlich!
-
-F_kp1_sim       = F_kp1.mapaccum(1);
-x_DT_ctl_init_0 = F_kp1_sim(x_0_0,           u_init_guess_0(:, 1)    );
-
-if(N_MPC > 1)
-    F2_sim          = F2.mapaccum(1);
-    x_DT2_init_0    = F2_sim(   x_DT_ctl_init_0, u_init_guess_0(:, 2)    );
-end
-
-if(N_MPC > 2)
-    F_sim           = F.mapaccum(N_MPC-2);
-    x_DT_init_0     = F_sim(    x_DT2_init_0,    u_init_guess_0(:, 3:end));
-end
-
-if(N_MPC == 1)
-    x_init_guess_0     = [x_0_0 full(x_DT_ctl_init_0)];
-elseif(N_MPC == 2)
-    x_init_guess_0     = [x_0_0 full(x_DT_ctl_init_0) full(x_DT2_init_0)];
-elseif(N_MPC > 2)
-    x_init_guess_0     = [x_0_0 full(x_DT_ctl_init_0) full(x_DT2_init_0) full(x_DT_init_0)];
-end
-
-% x_init_guess_0     = x_0_0 * ones(1, N_MPC+1);
+u_init_guess_0 = ones(1, N_MPC).*u_k_0; % fully actuated
+x_init_guess_0 = ones(1, N_MPC+1).*x_0_0;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INIT GUESS 1/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
@@ -159,16 +144,6 @@ if(any(isnan(full(init_guess_0))))
     error('init_guess_0 contains NaN values!');
 end
 
-% get weights from "init_MPC_weight.m"
-param_weight_init = param_weight.(casadi_func_name);
-
-% weights as parameter (~inputs)
-if(weights_and_limits_as_parameter)
-    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
-else % hardcoded weights
-    pp = param_weight_init;
-end
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables 2/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 u   = SX.sym( 'u',    n_red, N_MPC   );
 x   = SX.sym( 'x',  2*n_red, N_MPC+1 );
@@ -178,8 +153,8 @@ mpc_opt_var_inputs = {u, x};
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')'; % optimization variables cellarray w
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables Limits 3/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
-ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
+% lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
+% ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
 
 % Interessant: Wenn u auch im Horizont beschränkt wird, erhält man eine bleibende Regelabweichung (1e-5).
 % Hingegen wenn die u im Horizont nicht beschränkt werden, sondern nur das, dass ausgegeben wird, hat man das Problem nicht:
@@ -277,13 +252,13 @@ ubg(1+end-N_u:end, 1) =  max_du_arr(:);
 g = [g_x, g_u_prev];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Cost Function  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
+Q_norm_square = @(z, Q) dot( z, mtimes(diag(Q), z));
 
 J_yt = 0;
 J_yt_N = 0;
 if ~isempty(yt_indices)
-    J_yt   = J_yt + Q_norm_square( y(yt_indices, 1 + (1:N_MPC-1) ) - y_d(yt_indices, 1 + (1:N_MPC-1)), pp.Q_y(   yt_indices,yt_indices) );
-    J_yt_N =        Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(  yt_indices,yt_indices) );
+    J_yt   = J_yt + Q_norm_square( y(yt_indices, 1 + (1:N_MPC-1) ) - y_d(yt_indices, 1 + (1:N_MPC-1)), pp.Q_y(   yt_indices) );
+    J_yt_N =        Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(  yt_indices) );
 end
 
 if isempty(yr_indices)
@@ -312,9 +287,9 @@ else
         % q_y_yr_err = 1/2*simplify(quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i)))) - quat_mult(y_d(4:7, 1 + (i)), quat_inv(y(4:7, 1 + (i)))));
         
         if(i < N_MPC)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices)  );
         else
-            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );
+            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices)  );
         end
     end
 end
@@ -327,14 +302,14 @@ u_err = u-g_vec; % es ist stabiler es nicht gegenüber der vorherigen Lösung zu
 % q_err_p = x(n_red+1:2*n_red, :);% - x_prev(n_red+1:2*n_red, :);
 % x_err = [q_err; q_err_p];
 
-J_x_prev = Q_norm_square(x - x_prev, pp.R_x_prev(n_x_indices, n_x_indices));
-J_q_ref = Q_norm_square(q - pp.q_ref(n_indices), pp.R_q_ref(n_indices, n_indices));
-J_q_p  = Q_norm_square(q_p, pp.R_q_p(n_indices, n_indices));
-J_u  = Q_norm_square(u_err, pp.R_u(n_indices, n_indices));
+J_x_prev = Q_norm_square(x - x_prev, pp.R_x_prev(n_x_indices));
+J_q_ref = Q_norm_square(q - pp.q_ref(n_indices), pp.R_q_ref(n_indices));
+J_q_p  = Q_norm_square(q_p, pp.R_q_p(n_indices));
+J_u  = Q_norm_square(u_err, pp.R_u(n_indices));
 % J_u = Q_norm_square(q_pp, pp.R_q_pp(n_indices, n_indices)) + Q_norm_square(q_p, pp.R_q_pp(n_indices, n_indices));
 
 % it is really important to only weight the first control input!
-J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices, n_indices));
+J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Additional Outputs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_u, J_q_ref, J_q_p, J_x_prev, J_u0_prev}';

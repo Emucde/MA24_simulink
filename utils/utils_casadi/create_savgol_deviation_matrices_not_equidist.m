@@ -26,6 +26,8 @@ function [DD] = create_savgol_deviation_matrices_not_equidist(Ta, Nq, d, N, samp
     %e
     % ŷ⁽ˡ⁾[k] = [ 𝟎₍2Nₓ+1₎ₓₗ  s₀ s₁ s₂ ⋯ s₍d-l₎ ] diag( [ 𝟎₁ₓₗ  l! (l+1)! (l+2)!/2! ⋯ d!/(d-l)! ] ) Hᵀ y[k]
 
+    import casadi.*;
+
     fact = @(n) factorial(n);
 
     % Skizze: Beispiel für Fenster im Fall Nq=1:
@@ -98,35 +100,54 @@ function [DD] = create_savgol_deviation_matrices_not_equidist(Ta, Nq, d, N, samp
     DD = cell(1, d+1);
     for l = 0:d
         ii = l:d;
-        D = zeros(N, N);
+        D = SX.zeros(N, N);
         window = window_arr{1};
         H = create_SH_matrices(d, Ta, window);
         for m = -Nq:-1
-            h_m_i = sum(((Ta*window(1+Nq+m)).^(ii-l) .* fact(ii) ./ fact(ii - l)) .* H(:, ii+1), 2);
-            D(m+Nq+1, :) = [h_m_i', zeros(1, N-2*Nq-1)];
+            for k=length(ii)
+                h_m_i = sum(((Ta*window(1+Nq+m)).^(ii(k)-l) .* fact(ii(k)) ./ fact(ii(k) - l)) .* H(:, ii(k)+1), 2);
+                D(m+Nq+1, :) = [h_m_i', SX.zeros(1, N-2*Nq-1)];
+            end
+            % h_m_i = sum(((Ta*window(1+Nq+m)).^(ii-l) .* fact(ii) ./ fact(ii - l)) .* H(:, ii+1), 2);
+            % D(m+Nq+1, :) = [h_m_i', SX.zeros(1, N-2*Nq-1)];
         end
         for i = 0:N-2*Nq-1
             window = window_arr{1+i};
             H = create_SH_matrices(d, Ta, window);
-            D(i+Nq+1, :) = circshift([fact(l) * H(:, l+1)', zeros(1, N-2*Nq-1)], i);
+            D(i+Nq+1, :) = circshift([fact(l) * H(:, l+1)', SX.zeros(1, N-2*Nq-1)], i);
         end
         window = window_arr{end};
         H = create_SH_matrices(d, Ta, window);
         for m = 1:Nq
-            h_m_i = sum(((Ta*window(1+Nq+m)).^(ii-l) .* fact(ii) ./ fact(ii - l)) .* H(:, ii+1), 2);
-            D(N - Nq + m, :) = [zeros(1, N-2*Nq-1), h_m_i'];
+            for k=1:length(ii)
+                h_m_i = sum(((Ta*window(1+Nq+m)).^(ii(k)-l) .* fact(ii(k)) ./ fact(ii(k) - l)) .* H(:, ii(k)+1), 2);
+                D(N - Nq + m, :) = [SX.zeros(1, N-2*Nq-1), h_m_i'];
+            end
+            % h_m_i = sum(((Ta*window(1+Nq+m)).^(ii-l) .* fact(ii) ./ fact(ii - l)) .* H(:, ii+1), 2);
+            % D(N - Nq + m, :) = [SX.zeros(1, N-2*Nq-1), h_m_i'];
         end
         DD{l+1} = D;
     end
 end
 
 function H = create_SH_matrices(d, Ta, sample_indices)
+    import casadi.*;
+
     ii = 0:d;
 
-    S = (Ta * sample_indices)'.^ii;
+    S = SX(size(sample_indices, 2), d+1);
+    for i=1:d+1
+        for j=1:size(sample_indices, 2)
+            S(j, i) = (Ta * sample_indices(j))^ii(i);
+        end
+    end
+    % above same as:
+    % S = (Ta * sample_indices)'.^ii;
 
     % Fast way to calculate H_T = inv(S' * S) * S';
-    H_T = (S' * S) \ S';
+    H_T = solve(S' * S, S');
+    % same as:
+    % H_T = (S' * S) \ S';
     H = H_T';
 
     %L = chol(S' * S);

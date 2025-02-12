@@ -43,18 +43,11 @@ f = Function('f', {x, u}, {[x(n+1:2*n); u]});
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
-
 N_step = pp.N_step;
 
 DT_ctl = param_global.Ta/M;
-
-% if(N_step <= 3)
-%     DT = DT_ctl; % special case if Ts_MPC = Ta
-%     DT2 = DT_ctl; % special case if Ts_MPC = Ta
-% else
-    DT = N_step * DT_ctl; % = Ts_MPC
-    DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
-% end
+DT = N_step * DT_ctl; % = Ts_MPC
+DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 
 F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
 F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-Ta
@@ -66,15 +59,21 @@ Q = 1*eye(2*n_red); % d/dt V = -x'Qx
 P = lyap(A, Q); % V = x'Px => Idea: Use V as end cost term
 
 %% Calculate Initial Guess
-if(N_step_MPC <= 2)
-    MPC_traj_indices = 1:(N_MPC+1);
-else
-    MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
+%Get trajectory data for initial guess
+time_points = SX(1, N_MPC+1);
+time_points(1:2) = [0; DT_ctl];
+
+for i = 0:N_MPC-2
+    time_points(i+3) = DT_ctl + DT2 + i * DT; % Concatenate each term
 end
+
+MPC_traj_indices = time_points/DT_ctl + 1;
+MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});
 dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
 
-p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
-q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
+MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC)));
+p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices_val ); % (y_0 ... y_N)
+q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices_val ); % (q_0 ... q_N)
 y_d_0 = [p_d_0; q_d_0];
 
 % Robot System: Initial guess
@@ -85,8 +84,8 @@ x_0_0  = [q_0_red; q_0_red_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parame
 
 u_k_0  = q_0_red_pp;
 
-u_init_guess_0 = ones(n_red, N_MPC).*u_k_0;
-x_init_guess_0 = [x_0_0 ones(2*n_red, N_MPC).*x_0_0];
+u_init_guess_0 = ones(1, N_MPC).*u_k_0;
+x_init_guess_0 = ones(1, N_MPC+1).*x_0_0;
 
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0)+numel(x_init_guess_0), 1);
 lam_g_init_guess_0 = zeros(numel(x_init_guess_0)+numel(u_init_guess_0), 1);
@@ -203,7 +202,7 @@ ubg(1+end-N_u:end, 1) =  max_du_arr(:);
 g = [g_x, g_u_prev];
 
 % Calculate Cost Functions and set equation constraints
-Q_norm_square = @(z, Q) cse(dot( z, mtimes(Q, z)));
+Q_norm_square = @(z, Q) cse(dot( z, mtimes(diag(Q), z)));
 
 % e_t_tang = SX(3, N_MPC);
 % e_t_perp = SX(3, N_MPC);
@@ -226,8 +225,8 @@ Q_norm_square = @(z, Q) cse(dot( z, mtimes(Q, z)));
 J_yt = 0;
 J_yt_N = 0;
 if ~isempty(yt_indices)
-    J_yt   =  Q_norm_square( (y(yt_indices, 1 + (1:N_MPC-1) ) - y_d(yt_indices, 1 + (1:N_MPC-1))), pp.Q_y(   yt_indices,yt_indices) );
-    J_yt_N =  Q_norm_square( (y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  ))), pp.Q_yN(  yt_indices,yt_indices) );
+    J_yt   =  Q_norm_square( (y(yt_indices, 1 + (1:N_MPC-1) ) - y_d(yt_indices, 1 + (1:N_MPC-1))), pp.Q_y(   yt_indices) );
+    J_yt_N =  Q_norm_square( (y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  ))), pp.Q_yN(  yt_indices) );
 
     % Hier macht gesondertes gewichten in x,y,z keinen Sinn
     %J_yt_tang = Q_norm_square( y_t_err_tang(yt_indices, 1:N_MPC-1), pp.Q_yt_tang(1:3,1:3) );
@@ -254,20 +253,20 @@ else
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
         if(i < N_MPC)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices)  );
         else
-            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );
+            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices)  );
         end
     end
 end
 
-J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices, n_indices));
-J_q_p = Q_norm_square(x(1+n_red:2*n_red, :), pp.R_q_p(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
-J_u = Q_norm_square(u, pp.R_u(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
-J_x_prev  = Q_norm_square((x - x_prev), pp.R_x_prev(n_x_indices, n_x_indices));
+J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices));
+J_q_p = Q_norm_square(x(1+n_red:2*n_red, :), pp.R_q_p(n_indices)); %Q_norm_square(u, pp.R_u);
+J_u = Q_norm_square(u, pp.R_u(n_indices)); %Q_norm_square(u, pp.R_u);
+J_x_prev  = Q_norm_square((x - x_prev), pp.R_x_prev(n_x_indices));
 
 % it is really important to only weight the first control input!
-J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices, n_indices));
+J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices));
 
 cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_q_ref, J_q_p, J_u, J_x_prev, J_u0_prev}';
 

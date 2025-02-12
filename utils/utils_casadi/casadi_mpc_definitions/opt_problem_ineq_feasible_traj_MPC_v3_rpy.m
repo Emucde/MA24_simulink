@@ -39,6 +39,16 @@
 
 import casadi.*
 
+% get weights from "init_MPC_weight.m"
+param_weight_init = param_weight.(casadi_func_name);
+
+% weights as parameter (~inputs)
+if(weights_and_limits_as_parameter)
+    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
+else % hardcoded weights
+    pp = param_weight_init;
+end
+
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;
 
@@ -89,41 +99,43 @@ f_red = Function('f_red', {x_red, tau_red}, {d_dt_x([n_indices n_indices+n])});
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
+N_step = pp.N_step;
+
 DT_ctl = param_global.Ta/M;
-if(N_step_MPC <= 2)
-    DT = DT_ctl; % special case if Ts_MPC = Ta
-    DT2 = DT_ctl; % special case if Ts_MPC = Ta
-else
-    DT = N_step_MPC * DT_ctl; % = Ts_MPC
-    DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
-end
+DT = N_step * DT_ctl; % = Ts_MPC
+DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 
 F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
 F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-Ta
 F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
 
+%% Calculate Initial Guess
 %Get trajectory data for initial guess
-if(N_step_MPC <= 2)
-    MPC_traj_indices = 1:(N_MPC+1);
-else
-    MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
+time_points = SX(1, N_MPC+1);
+time_points(1:2) = [0; DT_ctl];
+
+for i = 0:N_MPC-2
+    time_points(i+3) = DT_ctl + DT2 + i * DT; % Concatenate each term
 end
+
+MPC_traj_indices = time_points/DT_ctl + 1;
+MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});
 dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
 
-%% Calculate Initial Guess
-
 % Get trajectory data for initial guess
-p_d_0    = param_trajectory.p_d(    1:3, MPC_traj_indices ); % (y_0 ... y_N)
-p_d_p_0  = param_trajectory.p_d_p(  1:3, MPC_traj_indices ); % (y_p_0 ... y_p_N)
-p_d_pp_0 = param_trajectory.p_d_pp( 1:3, MPC_traj_indices ); % (y_pp_0 ... y_pp_N)
+MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC)));
 
-Phi_d_0 = param_trajectory.Phi_d(      1:3, MPC_traj_indices ); % (Phi_0 ... Phi_N)
-Phi_d_p_0 = param_trajectory.Phi_d_p(  1:3, MPC_traj_indices ); % (Phi_p_0 ... Phi_p_N)
-Phi_d_pp_0 = param_trajectory.Phi_d_pp(1:3, MPC_traj_indices ); % (Phi_pp_0 ... Phi_pp_N)
+p_d_0    = param_trajectory.p_d(    1:3, MPC_traj_indices_val ); % (y_0 ... y_N)
+p_d_p_0  = param_trajectory.p_d_p(  1:3, MPC_traj_indices_val ); % (y_p_0 ... y_p_N)
+p_d_pp_0 = param_trajectory.p_d_pp( 1:3, MPC_traj_indices_val ); % (y_pp_0 ... y_pp_N)
 
-% q_d_0       = param_trajectory.q_d(       1:4, MPC_traj_indices ); % (q_0 ... q_N)
-% omega_d_0   = param_trajectory.omega_d(   1:3, MPC_traj_indices ); % (omega_0 ... omega_N)
-% omega_d_p_0 = param_trajectory.omega_d_p( 1:3, MPC_traj_indices ); % (omega_p_0 ... omega_p_N)
+Phi_d_0 = param_trajectory.Phi_d(      1:3, MPC_traj_indices_val ); % (Phi_0 ... Phi_N)
+Phi_d_p_0 = param_trajectory.Phi_d_p(  1:3, MPC_traj_indices_val ); % (Phi_p_0 ... Phi_p_N)
+Phi_d_pp_0 = param_trajectory.Phi_d_pp(1:3, MPC_traj_indices_val ); % (Phi_pp_0 ... Phi_pp_N)
+
+% q_d_0       = param_trajectory.q_d(       1:4, MPC_traj_indices_val ); % (q_0 ... q_N)
+% omega_d_0   = param_trajectory.omega_d(   1:3, MPC_traj_indices_val ); % (omega_0 ... omega_N)
+% omega_d_p_0 = param_trajectory.omega_d_p( 1:3, MPC_traj_indices_val ); % (omega_p_0 ... omega_p_N)
 
 % Phi_d_0 = zeros(3, N_MPC+1);
 % Phi_d_p_0 = zeros(3, N_MPC+1);
@@ -149,23 +161,10 @@ q_0_red    = q_0(n_indices);
 q_0_red_p  = q_0_p(n_indices);
 q_0_red_pp = q_0_pp(n_indices);
 x_0_0  = [q_0_red; q_0_red_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
+u_k_0  = full(tau_fun_red(q_0_red, q_0_red_p, q_0_red_pp)); % gravity compensation
 
-u_k_0  = tau_fun_red(q_0_red, q_0_red_p, q_0_red_pp); % gravity compensation
-
-u_init_guess_0 = ones(n_red, N_MPC).*u_k_0; % fully actuated
-
-F_kp1_sim          = F_kp1.mapaccum(1);
-F2_sim             = F2.mapaccum(1);
-F_sim              = F.mapaccum(N_MPC-2);
-
-x_DT_ctl_init_0 = F_kp1_sim(x_0_0,           u_init_guess_0(:, 1)    );
-x_DT2_init_0    = F2_sim(   x_DT_ctl_init_0, u_init_guess_0(:, 2)    );
-x_DT_init_0     = F_sim(    x_DT2_init_0,    u_init_guess_0(:, 3:end));
-
-x_init_guess_0     = [x_0_0 full(x_DT_ctl_init_0) full(x_DT2_init_0) full(x_DT_init_0)];
-
-% get weights from "init_MPC_weight.m"
-param_weight_init = param_weight.(casadi_func_name);
+u_init_guess_0 = ones(1, N_MPC).*u_k_0; % fully actuated
+x_init_guess_0 = ones(1, N_MPC+1).*x_0_0;
 
 % Discrete y_ref system
 if(isempty(yt_indices))
@@ -232,13 +231,6 @@ init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_i
 
 if(any(isnan(full(init_guess_0))))
     error('init_guess_0 contains NaN values!');
-end
-
-% weights as parameter (~inputs)
-if(weights_and_limits_as_parameter)
-    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
-else % hardcoded weights
-    pp = param_weight_init;
 end
 
 %% Start with an empty NLP
@@ -382,14 +374,14 @@ for i=0:N_MPC
 end
 
 % Calculate Cost Functions and set equation constraints
-Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
+Q_norm_square = @(z, Q) dot( z, mtimes(diag(Q), z));
 
 if isempty(yt_indices)
     J_yt = 0;
     Jt_yy_ref = 0;
     gt_eps = [];
 else
-    J_yt = Q_norm_square( y(yt_indices, 1 + (1:N_MPC-1) ) - y_ref(yt_indices, 1 + (1:N_MPC-1)), pp.Q_y(yt_indices,yt_indices)  );
+    J_yt = Q_norm_square( y(yt_indices, 1 + (1:N_MPC-1) ) - y_ref(yt_indices, 1 + (1:N_MPC-1)), pp.Q_y(yt_indices)  );
     gt_eps = norm_2( (y(yt_indices, end) - y_ref(yt_indices,end)) );
 end
 
@@ -414,7 +406,7 @@ else
         % rpy_err = y(3+yr_indices, 1 + (i)) - yr_ref(:, 1 + (i)); % das sollte eig gehen??? wird aber immer instabil [TODO]
         
         if(i < N_MPC)
-            J_yr = J_yr + Q_norm_square( rpy_err(yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  ); % Die Gewichtung sind die Fehler um eine Achse nicht die der RPY Winkel!!
+            J_yr = J_yr + Q_norm_square( rpy_err(yr_indices) , pp.Q_y(3+yr_indices)  ); % Die Gewichtung sind die Fehler um eine Achse nicht die der RPY Winkel!!
         else
             gr_eps = norm_2( rpy_err(yr_indices) );
         end
@@ -444,15 +436,15 @@ ubg(1+N_x+N_z:N_x+N_z+N_u) =  max_du_arr(:);
 
 u_err = u-g_vec; % es ist stabiler es nicht gegenüber der vorherigen Lösung zu gewichten!
 
-J_u  = Q_norm_square(u_err, pp.R_u(n_indices, n_indices));
-J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices, n_indices));
-J_q_p  = Q_norm_square(x(1+n_red:2*n_red, :), pp.R_q_p(n_indices, n_indices));
+J_u  = Q_norm_square(u_err, pp.R_u(n_indices));
+J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices));
+J_q_p  = Q_norm_square(x(1+n_red:2*n_red, :), pp.R_q_p(n_indices));
 
-J_x_prev     = Q_norm_square(x     - x_prev,     pp.R_x_prev(n_x_indices, n_x_indices));
-J_z_prev     = Q_norm_square(z     - z_prev,     pp.R_z_prev(n_z_indices, n_z_indices));
-J_alpha_prev = Q_norm_square(alpha - alpha_prev, pp.R_alpha_prev(n_y_indices, n_y_indices));
+J_x_prev     = Q_norm_square(x     - x_prev,     pp.R_x_prev(n_x_indices));
+J_z_prev     = Q_norm_square(z     - z_prev,     pp.R_z_prev(n_z_indices));
+J_alpha_prev = Q_norm_square(alpha - alpha_prev, pp.R_alpha_prev(n_y_indices));
 
-J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices, n_indices));
+J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices));
 
 J_alpha = Q_norm_square(alpha - y_d_pp, pp.R_alpha);
 

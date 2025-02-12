@@ -39,6 +39,16 @@
 
 import casadi.*
 
+% get weights from "init_MPC_weight.m"
+param_weight_init = param_weight.(casadi_func_name);
+
+% weights as parameter (~inputs)
+if(weights_and_limits_as_parameter)
+    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
+else % hardcoded weights
+    pp = param_weight_init;
+end
+
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;
 
@@ -89,37 +99,37 @@ f_red = Function('f_red', {x_red, tau_red}, {d_dt_x([n_indices n_indices+n])});
 
 % Discrete system dynamics
 M = rk_iter; % RK4 steps per interval
+N_step = pp.N_step;
+
 DT_ctl = param_global.Ta/M;
-if(N_step_MPC <= 2)
-    DT = DT_ctl; % special case if Ts_MPC = Ta
-    DT2 = DT_ctl; % special case if Ts_MPC = Ta
-else
-    DT = N_step_MPC * DT_ctl; % = Ts_MPC
-    DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
-end
+DT = N_step * DT_ctl; % = Ts_MPC
+DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 
 F_kp1 = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
 F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-Ta
 F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
 
+%% Calculate Initial Guess
 %Get trajectory data for initial guess
-if(N_step_MPC <= 2)
-    MPC_traj_indices = 1:(N_MPC+1);
-else
-    MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
+time_points = SX(1, N_MPC+1);
+time_points(1:2) = [0; DT_ctl];
+
+for i = 0:N_MPC-2
+    time_points(i+3) = DT_ctl + DT2 + i * DT; % Concatenate each term
 end
+
+MPC_traj_indices = time_points/DT_ctl + 1;
+MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});
 dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
 
-%% Calculate Initial Guess
+MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC)));
+p_d_0    = param_trajectory.p_d(    1:3, MPC_traj_indices_val ); % (y_0 ... y_N)
+p_d_p_0  = param_trajectory.p_d_p(  1:3, MPC_traj_indices_val ); % (y_p_0 ... y_p_N)
+p_d_pp_0 = param_trajectory.p_d_pp( 1:3, MPC_traj_indices_val ); % (y_pp_0 ... y_pp_N)
 
-% Get trajectory data for initial guess
-p_d_0    = param_trajectory.p_d(    1:3, MPC_traj_indices ); % (y_0 ... y_N)
-p_d_p_0  = param_trajectory.p_d_p(  1:3, MPC_traj_indices ); % (y_p_0 ... y_p_N)
-p_d_pp_0 = param_trajectory.p_d_pp( 1:3, MPC_traj_indices ); % (y_pp_0 ... y_pp_N)
-
-q_d_0       = param_trajectory.q_d(       1:4, MPC_traj_indices ); % (q_0 ... q_N)
-omega_d_0   = param_trajectory.omega_d(   1:3, MPC_traj_indices ); % (omega_0 ... omega_N)
-omega_d_p_0 = param_trajectory.omega_d_p( 1:3, MPC_traj_indices ); % (omega_p_0 ... omega_p_N)
+q_d_0       = param_trajectory.q_d(       1:4, MPC_traj_indices_val ); % (q_0 ... q_N)
+omega_d_0   = param_trajectory.omega_d(   1:3, MPC_traj_indices_val ); % (omega_0 ... omega_N)
+omega_d_p_0 = param_trajectory.omega_d_p( 1:3, MPC_traj_indices_val ); % (omega_p_0 ... omega_p_N)
 
 % initial guess for reference trajectory
 y_d_0    = [p_d_0;    q_d_0   ];
@@ -132,22 +142,14 @@ q_0_red    = q_0(n_indices);
 q_0_red_p  = q_0_p(n_indices);
 q_0_red_pp = q_0_pp(n_indices);
 x_0_0  = [q_0_red; q_0_red_p];%q1, .. qn, d/dt q1 ... d/dt qn, defined in parameters_xdof.m
+u_k_0  = full(tau_fun_red(q_0_red, q_0_red_p, q_0_red_pp)); % gravity compensation
 
-u_k_0  = tau_fun_red(q_0_red, q_0_red_p, q_0_red_pp); % gravity compensation
-
-u_init_guess_0 = ones(n_red, N_MPC).*u_k_0; % fully actuated
-
-F_kp1_sim          = F_kp1.mapaccum(1);
-F2_sim             = F2.mapaccum(1);
-F_sim              = F.mapaccum(N_MPC-2);
-
-x_DT_ctl_init_0 = F_kp1_sim(x_0_0,           u_init_guess_0(:, 1)    );
-x_DT2_init_0    = F2_sim(   x_DT_ctl_init_0, u_init_guess_0(:, 2)    );
-x_DT_init_0     = F_sim(    x_DT2_init_0,    u_init_guess_0(:, 3:end));
-
+u_init_guess_0 = ones(1, N_MPC).*u_k_0; % fully actuated
 q_pp_init_guess_0 = zeros(n_red, 1); % initial guess for joint acceleration
+x_init_guess_0 = ones(1, N_MPC+1).*x_0_0;
 
-x_init_guess_0     = [x_0_0 full(x_DT_ctl_init_0) full(x_DT2_init_0) full(x_DT_init_0)];
+opt = struct;
+opt.allow_free = true;
 
 % Discrete yt_ref system
 if(isempty(yt_indices))
@@ -206,20 +208,19 @@ else
     omega_r = SX.sym('omega_r', 3);
     H_norm = Function('H_norm', {quat_r, omega_r}, {[if_else(norm_2(quat_r) == 0, SX([1; 0; 0; 0]), quat_r/norm_2(quat_r)); omega_r]});
 
-
     Hr_unorm = integrate_casadi(hr_ref, DT, M, int_method);
     Hr_val = Hr_unorm(zr, alpha_r); % ensure unit quaternion: normalize
-    Hr = Function('H_qw', {zr, alpha_r}, {[Hr_val(1:4)/norm_2(Hr_val(1:4)); Hr_val(5:7)]});
+    Hr = Function('Hr', {zr, alpha_r}, {[Hr_val(1:4)/norm_2(Hr_val(1:4)); Hr_val(5:7)]}, opt);
     % Hr = Function('H_qw', {zr, alpha_r}, {H_norm(Hr_val(1:4), Hr_val(5:7))});
 
     Hr_unorm = integrate_casadi(hr_ref, DT_ctl, M, int_method); % runs with Ta from sensors
     Hr_val = Hr_unorm(zr, alpha_r); % ensure unit quaternion: normalize
-    Hr_kp1 = Function('H_qw', {zr, alpha_r}, {[Hr_val(1:4)/norm_2(Hr_val(1:4)); Hr_val(5:7)]});
+    Hr_kp1 = Function('Hr_kp1', {zr, alpha_r}, {[Hr_val(1:4)/norm_2(Hr_val(1:4)); Hr_val(5:7)]}, opt);
     % Hr_kp1 = Function('H_qw', {zr, alpha_r}, {H_norm(Hr_val(1:4), Hr_val(5:7))});
 
     Hr_unorm = integrate_casadi(hr_ref, DT2, M, int_method); % runs with Ts_MPC-Ta
     Hr_val = Hr_unorm(zr, alpha_r); % ensure unit quaternion: normalize
-    Hr2 = Function('H_qw', {zr, alpha_r}, {[Hr_val(1:4)/norm_2(Hr_val(1:4)); Hr_val(5:7)]});
+    Hr2 = Function('Hr2', {zr, alpha_r}, {[Hr_val(1:4)/norm_2(Hr_val(1:4)); Hr_val(5:7)]}, opt);
     % Hr2 = Function('H_qw', {zr, alpha_r}, {H_norm(Hr_val(1:4), Hr_val(5:7))});
 
     % Ref System: Rotational init guess
@@ -236,9 +237,9 @@ end
 
 z = SX.sym('z', n_zt + n_zr);
 alpha = SX.sym('alpha', n_alpha_r + n_alpha_t);
-H = Function('H', {z, alpha}, {[Ht(z(1:n_zt), alpha(1:n_alpha_t)); Hr(z(n_zt+1:end), alpha(n_alpha_t+1:end))]});
-H_kp1 = Function('H_kp1', {z, alpha}, {[Ht_kp1(z(1:n_zt), alpha(1:n_alpha_t)); Hr_kp1(z(n_zt+1:end), alpha(n_alpha_t+1:end))]});
-H2 = Function('H2', {z, alpha}, {[Ht2(z(1:n_zt), alpha(1:n_alpha_t)); Hr2(z(n_zt+1:end), alpha(n_alpha_t+1:end))]});
+H = Function('H', {z, alpha}, {[Ht(z(1:n_zt), alpha(1:n_alpha_t)); Hr(z(n_zt+1:end), alpha(n_alpha_t+1:end))]}, opt);
+H_kp1 = Function('H_kp1', {z, alpha}, {[Ht_kp1(z(1:n_zt), alpha(1:n_alpha_t)); Hr_kp1(z(n_zt+1:end), alpha(n_alpha_t+1:end))]}, opt);
+H2 = Function('H2', {z, alpha}, {[Ht2(z(1:n_zt), alpha(1:n_alpha_t)); Hr2(z(n_zt+1:end), alpha(n_alpha_t+1:end))]}, opt);
 
 n_y = n_alpha_t + n_alpha_r;
 n_alpha = n_y;
@@ -257,16 +258,6 @@ init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); z_init_guess_0(:); alpha_i
 
 if(any(isnan(full(init_guess_0))))
     error('init_guess_0 contains NaN values!');
-end
-
-% get weights from "init_MPC_weight.m"
-param_weight_init = param_weight.(casadi_func_name);
-
-% weights as parameter (~inputs)
-if(weights_and_limits_as_parameter)
-    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
-else % hardcoded weights
-    pp = param_weight_init;
 end
 
 % Optimization Variables:
@@ -404,38 +395,30 @@ for i=0:N_MPC
 end
 
 % Calculate Cost Functions and set equation constraints
-Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
+Q_norm_square = @(z, Q) dot( z, mtimes(diag(Q), z));
 
 if isempty(yt_indices)
     J_yt = 0;
     gt_eps = [];
-    Jt_yy_ref = 0;
 else
-    J_yt = Q_norm_square( y(yt_indices, 1 + (1:N_MPC-1) ) - yt_ref(:, 1 + (1:N_MPC-1)), pp.Q_y(yt_indices,yt_indices)  );
+    J_yt = Q_norm_square( y(yt_indices, 1 + (1:N_MPC-1) ) - yt_ref(:, 1 + (1:N_MPC-1)), pp.Q_y(yt_indices)  );
     gt_eps = norm_2( (y(yt_indices,end) - yt_ref(:,end)) );
 
     et_pp = yt_pp_ref( :, 1 + (0:N_MPC) ) - y_d_pp( yt_indices, 1 + (0:N_MPC) );
     et_p  = yt_p_ref(  :, 1 + (0:N_MPC) ) - y_d_p(  yt_indices, 1 + (0:N_MPC) );
     et    = yt_ref(    :, 1 + (0:N_MPC) ) - y_d(    yt_indices, 1 + (0:N_MPC) );
-
-    Jt_yy_ref = Q_norm_square( et_pp + ...
-                            mtimes(pp.Q_y_p_ref(yt_indices, yt_indices), et_p) + ...
-                            mtimes(pp.Q_y_ref(  yt_indices, yt_indices), et), ...
-                            eye(numel(yt_indices))...
-                            );
 end
 
 if isempty(yr_indices)
     J_yr = 0;
     gr_eps = [];
-    Jr_yy_ref = 0;
 else
     J_yr = 0;
     for i=1:N_MPC
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(yr_ref(:, 1 + (i))));
 
         if(i < N_MPC)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices)  );
         else
             gr_eps = norm_2( q_y_yr_err(1+yr_indices) );
         end
@@ -451,12 +434,6 @@ else
         q_yr_yd_err = quat_mult(yr_ref(:, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         er(:, 1 + (i)) = q_yr_yd_err(1+yr_indices);
     end
-
-    Jr_yy_ref = Q_norm_square( er_pp + ...
-                               mtimes(pp.Q_y_p_ref(3+yr_indices, 3+yr_indices), er_p) + ...
-                               mtimes(pp.Q_y_ref(  3+yr_indices, 3+yr_indices), er), ...
-                               eye(numel(yr_indices))...
-                             );
 end
 
 gcnt = 1;
@@ -481,19 +458,19 @@ g = [g_x, g_z, g_u_prev, g_eps]; % merge_cell_arrays([g_x, g_z, g_eps], 'vector'
 
 u_err = u-g_vec; % es ist stabiler es nicht gegenüber der vorherigen Lösung zu gewichten!
 
-J_u  = Q_norm_square(u_err, pp.R_u(n_indices, n_indices));
-J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices, n_indices));
-J_q_p  = Q_norm_square(q_p, pp.R_q_p(n_indices, n_indices));
+J_u  = Q_norm_square(u_err, pp.R_u(n_indices));
+J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices));
+J_q_p  = Q_norm_square(q_p, pp.R_q_p(n_indices));
 
-J_x_prev     = Q_norm_square(x     - x_prev,     pp.R_x_prev(n_x_indices, n_x_indices));
-J_z_prev     = Q_norm_square(z     - z_prev,     pp.R_z_prev(n_z_indices, n_z_indices));
-J_alpha_prev = Q_norm_square(alpha - alpha_prev, pp.R_alpha_prev(n_y_indices, n_y_indices));
+J_x_prev     = Q_norm_square(x     - x_prev,     pp.R_x_prev(n_x_indices));
+J_z_prev     = Q_norm_square(z     - z_prev,     pp.R_z_prev(n_z_indices));
+J_alpha_prev = Q_norm_square(alpha - alpha_prev, pp.R_alpha_prev(n_y_indices));
 
 % it is really important to only weight the first control input!
-J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices, n_indices));
+J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices));
 
-Jt_yy_ref = Q_norm_square( alpha(yt_indices, :)        - y_d_pp(yt_indices,   :), pp.Q_y(yt_indices, yt_indices) );
-Jr_yy_ref = Q_norm_square( alpha(n_yt + yr_indices, :) - y_d_pp(3+yr_indices, :), pp.Q_y(3+yr_indices, 3+yr_indices) );
+Jt_yy_ref = Q_norm_square( alpha(yt_indices, :)        - y_d_pp(yt_indices,   :), pp.Q_y(yt_indices) );
+Jr_yy_ref = Q_norm_square( alpha(n_yt + yr_indices, :) - y_d_pp(3+yr_indices, :), pp.Q_y(3+yr_indices) );
 J_alpha = Jt_yy_ref + Jr_yy_ref;
 
 cost_vars_names = '{J_yt, J_yr, J_u, J_q_ref, J_q_p, J_alpha, J_u0_prev, J_x_prev, J_z_prev, J_alpha_prev}';

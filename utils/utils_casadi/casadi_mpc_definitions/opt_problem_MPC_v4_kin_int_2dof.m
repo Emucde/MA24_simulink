@@ -182,15 +182,15 @@ end
 g = g_x;
 
 % Calculate Cost Functions and set equation constraints
-Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
+Q_norm_square = @(z, Q) dot( z, mtimes(diag(Q), z));
 
 if isempty(yt_indices)
     J_yt = 0;
     J_yt_N = 0;
 else
-    J_yt   =      Q_norm_square( y(yt_indices, 1 + (2:N_MPC-1) ) - y_d(yt_indices, 1 + (2:N_MPC-1)), pp.Q_y(   yt_indices,yt_indices) );
-    J_yt = J_yt + Q_norm_square( y(yt_indices, 1 + ( 1       ) ) - y_d(yt_indices, 1 + ( 1       )), pp.Q_ykp1(yt_indices,yt_indices) );
-    J_yt_N =      Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(  yt_indices,yt_indices) );
+    J_yt   =      Q_norm_square( y(yt_indices, 1 + (2:N_MPC-1) ) - y_d(yt_indices, 1 + (2:N_MPC-1)), pp.Q_y(   yt_indices) );
+    J_yt = J_yt + Q_norm_square( y(yt_indices, 1 + ( 1       ) ) - y_d(yt_indices, 1 + ( 1       )), pp.Q_ykp1(yt_indices) );
+    J_yt_N =      Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(  yt_indices) );
 end
 
 if isempty(yr_indices)
@@ -205,16 +205,16 @@ else
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
         if(i==1)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_ykp1(3+yr_indices,3+yr_indices)  );
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_ykp1(3+yr_indices)  );
         elseif(i < N_MPC)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices)  );
         else
-            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );
+            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices)  );
         end
     end
 end
 
-J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices, n_indices)); %Q_norm_square(u, pp.R_u);
+J_q_pp = Q_norm_square(u, pp.R_q_pp(n_indices)); %Q_norm_square(u, pp.R_u);
 % J_q_pp = N_MPC*Q_norm_square(u - q_d_pp, pp.R_y_pp)+Q_norm_square(u, pp.R_q_pp); %Q_norm_square(u, pp.R_u);
 % J_q_pp = Q_norm_square(y_pp - y_d_pp, pp.R_y_pp);
 

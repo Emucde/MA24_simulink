@@ -7,11 +7,11 @@ q_0_pp = param_traj.q_0_pp(:, traj_select_mpc);
 if(strcmp(MPC_version, "opt_problem_y_u_MPC_v1"))
     opt_problem_y_u_MPC_v1;
     kinematic_mpc = 0;
-elseif(strcmp(MPC_version, "opt_problem_ineq_feasible_traj_MPC_v3_rpy"))
-    opt_problem_ineq_feasible_traj_MPC_v3_rpy;
-    kinematic_mpc = 0;
 elseif(strcmp(MPC_version, "opt_problem_ineq_feasible_traj_MPC_v3_quat"))
     opt_problem_ineq_feasible_traj_MPC_v3_quat;
+    kinematic_mpc = 0;
+elseif(strcmp(MPC_version, "opt_problem_ineq_feasible_traj_MPC_v3_rpy"))
+    opt_problem_ineq_feasible_traj_MPC_v3_rpy;
     kinematic_mpc = 0;
 elseif(strcmp(MPC_version, "opt_problem_MPC_v4_kin_int"))
     opt_problem_MPC_v4_kin_int;

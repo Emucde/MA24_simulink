@@ -2,6 +2,16 @@
 
 import casadi.*
 
+% get weights from "init_MPC_weight.m"
+param_weight_init = param_weight.(casadi_func_name);
+
+% weights as parameter (~inputs)
+if(weights_and_limits_as_parameter)
+    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
+else % hardcoded weights
+    pp = param_weight_init;
+end
+
 % if you have n_red < 6 it is much faster to neglect some positions - but it works also full poses.
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;
@@ -35,14 +45,11 @@ x3 = x(2*n_red+1:3*n_red); % x3 = d^2/dt^2 q = u
 % d/dt x3 = d^3/dt^3 q = -lambda_u_ew x3 + v
 
 M = rk_iter; % RK4 steps per interval
+N_step = pp.N_step;
+
 DT_ctl = param_global.Ta/M;
-if(N_step_MPC <= 2)
-    DT = DT_ctl; % special case if Ts_MPC = Ta
-    DT2 = DT_ctl; % special case if Ts_MPC = Ta
-else
-    DT = N_step_MPC * DT_ctl; % = Ts_MPC
-    DT2 = DT - DT_ctl; % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
-end
+DT = N_step * DT_ctl; % = Ts_MPC
+DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 
 opt = struct;
 opt.allow_free = true;
@@ -52,25 +59,30 @@ opt.allow_free = true;
 f_red = Function('f_red', {x, v}, {[x2; x3; -diag(lambda_u_ew) * (x3  - v)]}, opt);
 
 F_int = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
-F = Function('F', {x, v, lambda_u_ew}, {F_int(x, v)});
+F = Function('F', {x, v, lambda_u_ew}, {F_int(x, v)}, opt);
 
 F_kp1_int = integrate_casadi(f_red, DT_ctl, M, int_method); % runs with Ta from sensors
-F_kp1 = Function('F_kp1', {x, v, lambda_u_ew}, {F_kp1_int(x, v)});
+F_kp1 = Function('F_kp1', {x, v, lambda_u_ew}, {F_kp1_int(x, v)}, opt);
 
 F2_int = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-Ta
-F2 = Function('F2', {x, v, lambda_u_ew}, {F2_int(x, v)});
+F2 = Function('F2', {x, v, lambda_u_ew}, {F2_int(x, v)}, opt);
 
 %% Calculate Initial Guess
+%Get trajectory data for initial guess
+time_points = SX(1, N_MPC+1);
+time_points(1:2) = [0; DT_ctl];
 
-% initial guess for reference trajectory parameter
-if(N_step_MPC <= 2)
-    MPC_traj_indices = 1:(N_MPC+1);
-else
-    MPC_traj_indices = [0, 1, (1:1+(N_MPC-2))*N_step_MPC]+1;
+for i = 0:N_MPC-2
+    time_points(i+3) = DT_ctl + DT2 + i * DT; % Concatenate each term
 end
 
-p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices ); % (y_0 ... y_N)
-q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices ); % (q_0 ... q_N)
+MPC_traj_indices = time_points/DT_ctl + 1;
+MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});
+dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
+
+MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC)));
+p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices_val ); % (y_0 ... y_N)
+q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices_val ); % (q_0 ... q_N)
 y_d_0 = [p_d_0; q_d_0];
 
 % Robot System: Initial guess
@@ -93,16 +105,6 @@ init_guess_0 = [x_init_guess_0(:); v_init_guess_0(:); lam_x_init_guess_0(:); lam
 
 if(any(isnan(full(init_guess_0))))
     error('115: init_guess_0 contains NaN values!');
-end
-
-% get weights from "init_MPC_weight.m"
-param_weight_init = param_weight.(casadi_func_name);
-
-% weights as parameter (~inputs)
-if(weights_and_limits_as_parameter)
-    pp = convert_doublestruct_to_casadi(param_weight_init); % Matrizen sind keine Diagonlmatrizen [TODO]
-else % hardcoded weights
-    pp = param_weight_init;
 end
 
 % Optimization Variables:
@@ -195,14 +197,14 @@ end
 g = g_x;
 
 % Calculate Cost Functions and set equation constraints
-Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
+Q_norm_square = @(z, Q) dot( z, mtimes(diag(Q), z));
 
 if isempty(yt_indices)
     J_yt = 0;
     J_yt_N = 0;
 else
-    J_yt   = Q_norm_square( y(yt_indices, 1 + (1:N_MPC-1) ) - y_d(yt_indices, 1 + (1:N_MPC-1)), pp.Q_y( yt_indices,yt_indices) );
-    J_yt_N = Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(yt_indices,yt_indices) );
+    J_yt   = Q_norm_square( y(yt_indices, 1 + (1:N_MPC-1) ) - y_d(yt_indices, 1 + (1:N_MPC-1)), pp.Q_y( yt_indices) );
+    J_yt_N = Q_norm_square( y(yt_indices, 1 + (  N_MPC  ) ) - y_d(yt_indices, 1 + (  N_MPC  )), pp.Q_yN(yt_indices) );
 end
 
 if isempty(yr_indices)
@@ -214,15 +216,15 @@ else
         q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
         
         if(i < N_MPC)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices,3+yr_indices)  );
+            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices)  );
         else
-            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices,3+yr_indices)  );
+            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices)  );
         end
     end
 end
 
-J_u = 0*Q_norm_square(x(2*n_red+1:3*n_red, :), pp.R_u(n_indices, n_indices));% + Q_norm_square(x(1:n_red, :), pp.R_u) + Q_norm_square(x(n_red+1:2*n_red, :), pp.R_u);
-J_v = Q_norm_square(v, pp.R_v(n_indices, n_indices));
+J_u = 0*Q_norm_square(x(2*n_red+1:3*n_red, :), pp.R_u(n_indices));% + Q_norm_square(x(1:n_red, :), pp.R_u) + Q_norm_square(x(n_red+1:2*n_red, :), pp.R_u);
+J_v = Q_norm_square(v, pp.R_v(n_indices));
 %J_v = Q_norm_square(v - pp.K_P_u*x(2*n_red+1:3*n_red,1:N_MPC ), pp.R_v); % weight in relation to stationary value: v == K_p*u
 
 cost_vars_names = '{J_yt, J_yt_N, J_yr, J_yr_N, J_u, J_v}';
