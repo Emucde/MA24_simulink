@@ -9,7 +9,6 @@ CrocoddylMPC::CrocoddylMPC(CrocoddylMPCType mpc_type,
           crocoddyl_config_path(crocoddyl_config_path),
           trajectory_generator(trajectory_generator),
           nq(robot_model.nq), nx(robot_model.nx), // this is nq_red and nx_red!!!
-          dt(robot_model.robot_config.dt),
           traj_data(trajectory_generator.get_traj_data()),
           traj_data_real_len(trajectory_generator.get_traj_data_real_len()),
           traj_rows(trajectory_generator.get_traj_data()->rows()), 
@@ -186,12 +185,13 @@ void CrocoddylMPC::create_mpc_solver()
     // Build the MPC problem
     std::string int_method = get_setting<std::string>("int_method");
     uint N_MPC = get_setting<uint>("N_MPC");
+    dt = get_setting<double>("Ts_MPC");
     std::shared_ptr<BaseCrocoddylIntegrator> integrator = create_integrator(int_method);
 
     // get robot model
 
     Eigen::VectorXd p_d;
-    Eigen::Quaterniond q_d;
+    Eigen::VectorXd q_d;
     Eigen::MatrixXd R_d;
 
     cost_models.resize(N_MPC+1);
@@ -210,43 +210,43 @@ void CrocoddylMPC::create_mpc_solver()
     std::vector<boost::shared_ptr<crocoddyl::ActionModelAbstract>> runningCostModels;
     boost::shared_ptr<crocoddyl::ActionModelAbstract> terminalCostModel;
 
+    auto actuationModel = boost::make_shared<crocoddyl::ActuationModelFull>(state);
+
+    crocoddyl::ActivationBounds state_bounds(x_min, x_max);
+    crocoddyl::ActivationBounds ctrl_bounds(u_min, u_max);
+
+    auto activation_state_bound = boost::make_shared<crocoddyl::ActivationModelWeightedQuadraticBarrier>(
+        state_bounds, get_param_vec("R_x_bounds"));
+    auto activation_ctrl_bound = boost::make_shared<crocoddyl::ActivationModelQuadraticBarrier>(
+        ctrl_bounds);
+    auto activation_q_yt = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+        get_param_vec("Q_yt"));
+    auto activation_q_yt_terminate = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+        get_param_vec("Q_yt_terminal"));
+    auto activation_q_yr = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+        get_param_vec("Q_yr"));
+    auto activation_q_yr_terminate = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+        get_param_vec("Q_yr_terminal"));
+    auto activation_q_qp = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+        get_param_vec("R_x"));
+    auto activation_q_qpp = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+        get_param_vec("R_q_pp"));
+    auto activation_q_xprev = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+        get_param_vec("R_xprev"));
+
     double scalar_weight = 0;
 
     for (uint i = 0; i < N_MPC+1; i++)
     {
-        p_d = trajectory_generator.p_d.col(i);
-        q_d = vec2quat<double>(trajectory_generator.q_d.col(i));
-        R_d = q_d.toRotationMatrix();
-
-        auto actuationModel = boost::make_shared<crocoddyl::ActuationModelFull>(state);
-
-        crocoddyl::ActivationBounds state_bounds(x_min, x_max);
-        crocoddyl::ActivationBounds ctrl_bounds(u_min, u_max);
-
-        auto activation_state_bound = boost::make_shared<crocoddyl::ActivationModelWeightedQuadraticBarrier>(
-            state_bounds, get_param_vec("R_x_bounds"));
-        auto activation_ctrl_bound = boost::make_shared<crocoddyl::ActivationModelQuadraticBarrier>(
-            ctrl_bounds);
-        auto activation_q_yt = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
-            get_param_vec("Q_yt"));
-        auto activation_q_yt_terminate = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
-            get_param_vec("Q_yt_terminal"));
-        auto activation_q_yr = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
-            get_param_vec("Q_yr"));
-        auto activation_q_yr_terminate = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
-            get_param_vec("Q_yr_terminal"));
-        auto activation_q_qp = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
-            get_param_vec("R_x"));
-        auto activation_q_qpp = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
-            get_param_vec("R_q_pp"));
-        auto activation_q_xprev = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
-            get_param_vec("R_xprev"));
+        p_d = trajectory_generator.p_d.col(mpc_traj_indices[i]);
+        q_d = trajectory_generator.q_d.col(mpc_traj_indices[i]);
+        R_d = quat2rotm<double>(q_d);
 
         auto residual_xreg_bound = boost::make_shared<crocoddyl::ResidualModelState>(
         state, x_mean); // r = x_mean - x
         residual_state_models[i]["stateRegBound"] = residual_xreg_bound;
         auto residual_ureg_bound = boost::make_shared<crocoddyl::ResidualModelControl>(
-            state, Eigen::VectorXd::Zero(nq)); // r = x_mean - x
+            state, Eigen::VectorXd::Zero(nq)); // r = u
         residual_control_models[i]["ctrlRegBound"] = residual_ureg_bound;
         auto residual_q_yt = boost::make_shared<crocoddyl::ResidualModelFrameTranslation>(
             state, robot_model.tcp_frame_id, p_d); // r = p_d - p
