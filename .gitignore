@@ -9,6 +9,7 @@ slprj
 *.pyc
 *.mexa64
 *.mtx
+*.log
 .tmp
 videos
 main_simulink/simulink_log/*.txt
