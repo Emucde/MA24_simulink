@@ -32,6 +32,7 @@ CLEAR=false
 CLEAR_ALL=false
 CLEAR_MPC=false
 RUN_FILE=true
+RUN_ONLY=false
 
 if [[ $# -ge 2 ]]; then
     if [ $2 == "all" ]; then
@@ -99,6 +100,10 @@ if [[ $# -gt 0 ]]; then
         RUN_FILE=false
         shift
         ;;
+        --run_only)
+        RUN_ONLY=true
+        shift
+        ;;
         *)
         echo "Unknown option: $key"
         exit 1
@@ -117,6 +122,7 @@ echo "CLEAR: $CLEAR"
 echo "CLEAR_ALL: $CLEAR_ALL"
 echo "CLEAR_MPC: $CLEAR_MPC"
 echo "RUN_FILE: $RUN_FILE"
+echo "RUN_ONLY: $RUN_ONLY"
 echo ""
 
 if [ "$BUILD_TYPE" = "release" ]; then
@@ -159,6 +165,11 @@ if [ "$INCLUDE_WHAT_YOU_USE" = true ]; then
     iwyu_tool -p ./main_ros2/casadi_mpc/cpp_class_files/build_debug/ --jobs=8 -- -I$(gcc -print-file-name=include) -I/usr/include > ./main_ros2/casadi_mpc/cpp_class_files/build_debug/iwyu_output.txt
     echo "Successfully created ./main_ros2/casadi_mpc/cpp_class_files/build_debug/iwyu_output.txt"
     cat ./main_ros2/casadi_mpc/cpp_class_files/build_debug/iwyu_output.txt
+    exit 0
+fi
+
+if [ "$RUN_ONLY" = true ]; then
+    time nice -n -20 ./main_ros2/casadi_mpc/cpp_class_files/build_release/bin/main
     exit 0
 fi
 
@@ -287,9 +298,9 @@ if [ $BUILD_STATUS -eq 0 ]; then
         if [ $RUN_FILE == true ]; then
             echo -e "Running the executable...\n----------------------------------\n"
             if [ $STANDALONE_MAKEFILE == true ]; then
-                time nice -n 0 ./main_ros2/casadi_mpc/cpp_class_files/bin/$BUILD_TYPE/main
+                time nice -n -20 ./main_ros2/casadi_mpc/cpp_class_files/bin/$BUILD_TYPE/main
             else
-                time nice -n 0 ./main_ros2/casadi_mpc/cpp_class_files/build_release/bin/main
+                time nice -n -20 ./main_ros2/casadi_mpc/cpp_class_files/build_release/bin/main
                 # if error do the command, after that logout login
                 # sudo sed -i '/# End of file/i @realtime soft nice -20\n@realtime hard nice -20' /etc/security/limits.d/realtime.conf
             fi

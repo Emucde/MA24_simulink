@@ -1,11 +1,17 @@
 % Parameter initialization for the Extended Kalman Filter (EKF) for the
 % estimation of the robot state.
 
+jsonText = fileread('./config_settings/ekf_settings.json'); % Read JSON file as text
+ekf_settings = jsondecode(jsonText);        % Convert JSON text to structure
+
 noise_amp = 0.1e-3;
 param_EKF.Rk = diag([1/2*pi*ones(1,7)*noise_amp^2, 1/2*pi*ones(1,7)*noise_amp^2]); % cov measurement noise
-param_EKF.Rk_FR3 = diag([ones(1,7)*5e-12, ones(1,7)*6.43e-7]); % cov measurement noise
 param_EKF.Qk = diag([1e3*1/2*pi*ones(1,7)*noise_amp^2, 1e5*ones(1,7)]);
-param_EKF.Qk_FR3 = diag([1e3*ones(1,7)*5e-12, 1e5*ones(1,7)]);
+% param_EKF.Rk = ekf_settings.param_EKF.Rk;
+% param_EKF.Qk = ekf_settings.param_EKF.Qk;
+
+param_EKF.Rk_FR3 = ekf_settings.param_EKF.Rk_FR3;
+param_EKF.Qk_FR3 = ekf_settings.param_EKF.Qk_FR3;
 % param_EKF.Qk_FR3 = diag([1e5*ones(1,7), 1e5*ones(1,7)]);
 param_EKF.P0 = diag([1e0*ones(1,7), 1e0*ones(1,7)]);
 

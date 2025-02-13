@@ -21,23 +21,11 @@
 #include "CrocoddylController.hpp"
 #include "CrocoddylMPCType.hpp"
 #include "CasadiEKF.hpp"
+#include "json.hpp"
 #include <random>
 #include <cmath>
 
 casadi_real x_k_tst[12] = {0};
-
-void test_fun1(const casadi_real *x_k_ndof, const casadi_uint *n_x_indices_ptr)
-{
-    casadi_uint nx_red = 12;
-
-    double x_k[nx_red];
-    for (casadi_uint i = 0; i < nx_red; i++)
-    {
-        x_k[i] = x_k_ndof[n_x_indices_ptr[i]];
-    }
-    // 0.01s
-    memcpy(x_k_tst, x_k, nx_red * sizeof(casadi_real));
-}
 
 void test_fun2(const casadi_real *x_k_ndof, const Eigen::VectorXi n_x_indices_eig)
 {
@@ -66,6 +54,20 @@ void test_fun2(const casadi_real *x_k_ndof, const Eigen::VectorXi n_x_indices_ei
     }
     memcpy(x_k_tst, x_k, nx_red * sizeof(casadi_real));
     // 0.01s
+}
+
+nlohmann::json read_config(std::string file_path)
+{
+    std::ifstream file(file_path);
+    if (!file.is_open())
+    {
+        std::cerr << "Error: Could not open JSON file." << std::endl;
+        return {};
+    }
+    nlohmann::json jsonData;
+    file >> jsonData; // Parse JSON file
+    file.close();
+    return jsonData;
 }
 
 // Function to generate an Eigen vector of white noise
@@ -97,25 +99,76 @@ enum class MainControllerType
     COUNT
 };
 
+MainControllerType get_controller_type(const std::string &controller_type_str)
+{
+    if (controller_type_str == "Classic")
+        return MainControllerType::Classic;
+    else if (controller_type_str == "Casadi")
+        return MainControllerType::Casadi;
+    else if (controller_type_str == "Crocoddyl")
+        return MainControllerType::Crocoddyl;
+    else
+    {
+        throw std::invalid_argument("Invalid controller type");
+        return MainControllerType::COUNT;
+    }
+}
+
+// get controller type of classic controller
+ControllerType get_classic_controller_type(const std::string &controller_type_str)
+{
+    if (controller_type_str == "PD")
+        return ControllerType::PDPlus;
+    else if (controller_type_str == "CT")
+        return ControllerType::CT;
+    else if (controller_type_str == "ID")
+        return ControllerType::InverseDynamics;
+    else
+    {
+        throw std::invalid_argument("Invalid controller type");
+        return ControllerType::PDPlus;
+    }
+}
+
+// get controller type of casadi controller
+
+
+// get controller type of crocoddyl controller
+CrocoddylMPCType get_crocoddyl_controller_type(const std::string &controller_type_str)
+{
+    if (controller_type_str == "DynMPC_v1")
+        return CrocoddylMPCType::DynMPC_v1;
+    // else if (controller_type_str == "DynMPC_v2")
+    //     return CrocoddylMPCType::DynMPC_v2;
+    // else if (controller_type_str == "DynMPC_v3")
+    //     return CrocoddylMPCType::DynMPC_v3;
+    else
+    {
+        throw std::invalid_argument("Invalid controller type");
+        return CrocoddylMPCType::DynMPC_v1;
+    }
+}
+
 int main()
 {
-    MainControllerType controller_type = MainControllerType::Classic;
-
     // Measure execution time
     TicToc timer_mpc_solver;
     TicToc timer_total;
-
-    // Configuration flags
-    bool use_gravity = false;
-    bool use_lowpass_filter = true;
-    bool use_ekf = true;
-    bool use_noise = true;
 
     // MASTERDIR defined in CMakeLists.txt (=$masterdir)
     const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
     const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
     const std::string ekf_config_filename = std::string(MASTERDIR) + "/config_settings/ekf_settings.json";
+    const std::string general_config_filename = std::string(MASTERDIR) + "/config_settings/general_settings.json";
     const std::string tcp_frame_name = "fr3_link8_tcp";
+
+    nlohmann::json general_config = read_config(general_config_filename);
+
+    // Configuration flags
+    bool use_gravity = general_config["use_gravity"];
+    bool use_lowpass_filter = general_config["use_lowpass_filter"];
+    bool use_ekf = general_config["use_ekf"];
+    bool use_noise = general_config["use_noise"];
 
     robot_config_t robot_config = get_robot_config();
 
@@ -144,9 +197,10 @@ int main()
     CasadiController mpc_controller(urdf_filename, tcp_frame_name, use_gravity);
     CrocoddylController crocoddyl_controller(urdf_filename, crocoddyl_config_filename, tcp_frame_name, use_gravity);
     
-    mpc_controller.setActiveMPC(MPCType::MPC8);
-    classic_controller.switchController(ControllerType::InverseDynamics);
-    crocoddyl_controller.setActiveMPC(CrocoddylMPCType::DynMPC_v1);
+    MainControllerType controller_type = get_controller_type(general_config["default_controller"]);
+    mpc_controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
+    classic_controller.switchController(get_classic_controller_type(general_config["default_classic_controller"]));
+    crocoddyl_controller.setActiveMPC(get_crocoddyl_controller_type(general_config["default_crocoddyl_mpc"]));
     // initialize the trajectory
 
     // set singularity robustness mode
@@ -317,9 +371,10 @@ int main()
 
         if (i % 100 == 0)
         {
-            timer_mpc_solver.print_frequency("\tOUT,i=" + std::to_string(i));
-            std::cout << "q_k: " << q_k_ndof_eig.transpose() << std::endl;
-            std::cout << "\tFull torque: " << tau_full.transpose() << std::endl;
+            timer_mpc_solver.print_frequency("i=" + std::to_string(i));
+            std::cout << std::endl;
+            std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
+            std::cout << "u_k: |" << tau_full.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|"<< std::endl;
         }
         if (i == transient_traj_len)
         {

@@ -1,0 +1,37 @@
+{
+    "use_gravity": false,
+    "use_lowpass_filter": false,
+    "use_ekf": false,
+    "use_noise": false,
+    "default_controller": "Classic",
+    "available_controllers": [
+        "Classic",
+        "Casadi",
+        "Crocoddyl"
+    ],
+    "default_classic_controller": "PD",
+    "available_classic_controller": [
+        "PD",
+        "CT",
+        "ID"
+    ],
+    "default_casadi_mpc": "MPC8",
+    "available_casadi_mpc": [
+        "MPC01",
+        "MPC6",
+        "MPC7",
+        "MPC8",
+        "MPC9",
+        "MPC10",
+        "MPC11",
+        "MPC12",
+        "MPC13",
+        "MPC14",
+        "MPC15",
+        "MPC16"
+    ],
+    "default_crocoddyl_mpc": "DynMPC_v1",
+    "available_crocoddyl_mpc": [
+        "DynMPC_v1"
+    ]
+}

@@ -98,6 +98,30 @@
             }
         },
         {
+            "label": "C++ Run (-O3)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-ic",
+                "./main_ros2/casadi_mpc/build.sh --run_only"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "dependsOn": [],
+            "detail": "Run the project without debug info.",
+            "icon": {
+                "id": "play"
+            }
+        },
+        {
             "label": "C++ Build and Run (-O3)",
             "type": "shell",
             "command": "bash",
