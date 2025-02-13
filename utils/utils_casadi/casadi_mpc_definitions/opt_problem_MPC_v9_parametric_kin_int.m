@@ -176,7 +176,6 @@ lambda_g0 = SX.sym('lambda_g0', size(lbg));
 y    = SX( 7, N_MPC+1 ); % TCP pose:      (y_0 ... y_N)
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
-g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
 for i=0:N_MPC
     % calculate trajectory values (y_0 ... y_N)
     t_k = time_points(1 + (i));
@@ -192,17 +191,23 @@ for i=0:N_MPC
     
     x_k_i = [q_i; q_p_i];
 
+    g_x(1, 1 + (i)) = {x(:, 1 + (i)) - x_k_i};
+
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        if(i == 0 || i == 1)
-            g_x(1, 1 + (i+1))  = { F_kp1(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
-        elseif(i == 2)
-            g_x(1, 1 + (i+1))  = { F2(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
-        else
-            g_x(1, 1 + (i+1))  = { F(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
-            % runs only to T_horizon-Ts_MPC, i. e. tilde x_{N-1} = x(t0+Ts_MPC*(N-1)) and x_N doesn't exist
-            % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(N-1))
-        end
+        % if(i == 0)
+        %     g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
+        % end
+
+        % if(i == 0 || i == 1)
+        %     g_x(1, 1 + (i+1))  = { F_kp1(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
+        % elseif(i == 2)
+        %     g_x(1, 1 + (i+1))  = { F2(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
+        % else
+        %     g_x(1, 1 + (i+1))  = { F(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
+        %     % runs only to T_horizon-Ts_MPC, i. e. tilde x_{N-1} = x(t0+Ts_MPC*(N-1)) and x_N doesn't exist
+        %     % Trajectory must be y(t0), y(t0+Ta), Y(t0+Ts_MPC), ..., y(t0+Ts_MPC*(N-1))
+        % end
         g_u(1, 1 + (i))   = {u(:, 1 + (i)) - q_pp_i};
         g_u_prev(1, 1 + (i)) = {u(:, 1 + (i)) - u_prev(:, 1 + (i))};
     end
