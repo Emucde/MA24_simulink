@@ -143,7 +143,7 @@ function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_
     %     }
     % }
 
-    fprintf(fid, 'inline std::string mpctype_to_string(MPCType mpc)\n');
+    fprintf(fid, 'inline std::string casadi_mpctype_to_string(MPCType mpc)\n');
     fprintf(fid, '{\n');
     fprintf(fid, '    switch (mpc)\n');
     fprintf(fid, '    {\n');
@@ -154,6 +154,16 @@ function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_
     fprintf(fid, '    default:\n');
     fprintf(fid, '        return "INVALID";\n');
     fprintf(fid, '    }\n');
+    fprintf(fid, '}\n\n');
+
+    % Create string to mpc enum function
+    fprintf(fid, 'inline MPCType string_to_casadi_mpctype(const std::string& str)\n');
+    fprintf(fid, '{\n');
+    for i = 1:length(mpc_names)
+        fprintf(fid, '    if (str == "%s")\n', param_casadi_fun_struct_list{i}.name);
+        fprintf(fid, '        return MPCType::%s;\n', param_casadi_fun_struct_list{i}.name);
+    end
+    fprintf(fid, '    return MPCType::INVALID;\n');
     fprintf(fid, '}\n\n');
 
     % Create Enum for inputs
