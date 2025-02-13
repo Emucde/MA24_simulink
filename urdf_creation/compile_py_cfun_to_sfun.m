@@ -205,5 +205,5 @@ function create_only_source(casadi_fun, source_dir)
     movefile([casadi_fun_name, '.c'], source_dir);
     movefile([casadi_fun_name, '.h'], source_dir);
 
-    calculate_simple_casadi_addresses(casadi_fun, casadi_fun_name, source_dir)
+    calculate_simple_casadi_addresses(casadi_fun, casadi_fun_name, source_dir);
 end
