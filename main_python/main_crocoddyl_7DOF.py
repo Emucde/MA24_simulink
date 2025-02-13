@@ -362,6 +362,8 @@ if explicit_mpc:
 else:
     explicit_flag = False
 
+process_plot = None
+process_vis = None
 new_data_flag = False
 run_loop = True
 try:
@@ -463,21 +465,25 @@ try:
 
                     if i > 0:
                         if plot_sol:
+                            if process_plot is not None and process_plot.is_alive():
+                                process_plot.terminate()
                             def plot_sol_act():
                                 subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
                                 plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
-                            process = multiprocessing.Process(target=plot_sol_act)
-                            process.daemon = True # this will kill the process if the main process is killed
-                            process.start()
+                            process_plot = multiprocessing.Process(target=plot_sol_act)
+                            process_plot.daemon = True # this will kill the process if the main process is killed
+                            process_plot.start()
 
                         if visualize_sol:
+                            if process_vis is not None and process_vis.is_alive():
+                                process_vis.terminate()
                             def vis_sol_act():
                                 visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
                                                     xs[:, :n_dof], transient_traj, Ts,
                                                     frame_skip=1, create_html = True, html_name = visualize_file_path)
-                            process = multiprocessing.Process(target=vis_sol_act)
-                            process.daemon = True # this will kill the process if the main process is killed
-                            process.start()
+                            process_vis = multiprocessing.Process(target=vis_sol_act)
+                            process_vis.daemon = True # this will kill the process if the main process is killed
+                            process_vis.start()
                     i = 0
             elif not explicit_mpc:
                 # in this mode, all data (states and torques) are read out of the shared memory. This mode is only
@@ -517,21 +523,25 @@ try:
                     }
 
                     if plot_sol:
+                        if process_plot is not None and process_plot.is_alive():
+                            process_plot.terminate()
                         def plot_sol_act():
                             subplot_data = calc_7dof_data(us, xs, TCP_frame_id, robot_model_full, robot_data_full, transient_traj, freq_per_Ta_step, param_robot)
                             plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
-                        process = multiprocessing.Process(target=plot_sol_act)
-                        process.daemon = True # this will kill the process if the main process is killed
-                        process.start()
+                        process_plot = multiprocessing.Process(target=plot_sol_act)
+                        process_plot.daemon = True # this will kill the process if the main process is killed
+                        process_plot.start()
 
                     if visualize_sol:
+                        if process_vis is not None and process_vis.is_alive():
+                            process_vis.terminate()
                         def vis_sol_act():
                             visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
                                                 xs[:, :n_dof], transient_traj, Ts,
                                                 frame_skip=1, create_html = True, html_name = visualize_file_path)
-                        process = multiprocessing.Process(target=vis_sol_act)
-                        process.daemon = True # this will kill the process if the main process is killed
-                        process.start()
+                        process_vis = multiprocessing.Process(target=vis_sol_act)
+                        process_vis.daemon = True # this will kill the process if the main process is killed
+                        process_vis.start()
 
                 if stop == 1:
                     data_from_simulink_stop[:] = 0

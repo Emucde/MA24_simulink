@@ -2727,6 +2727,29 @@ def create_homogeneous_transform(translation, rotation):
     transform[:3, 3] = translation  # Set the first three elements of the last column to the translation vector
     return transform
 ####################################################### VIS ROBOT #################################################
+def kill_process_on_port(port):
+    try:
+        # Run the lsof command to find the process using the port
+        command = f"lsof -i :{port}"
+        process = os.popen(command)
+        output = process.read()
+        process.close()
+
+        # Parse the output to extract the PID
+        lines = output.splitlines()
+        if len(lines) < 2:
+            print(f"No process found running on port {port}.")
+            return
+
+        # Extract the PID from the second line
+        pid_line = lines[1]
+        pid = int(pid_line.split()[1])
+
+        # Kill the process
+        os.system(f"kill {pid}")
+        print(f"Process with PID {pid} running on port {port} has been killed.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, traj_data, dt,
                     frame_skip = 1, create_html = False, html_name = 'robot_visualization.html',
@@ -2880,6 +2903,7 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
 
     start_server('reload_meshcat') # start server to visualize robot
     vis.delete()
+    kill_process_on_port(7000)
 
 
 
