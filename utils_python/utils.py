@@ -2387,6 +2387,86 @@ def get_custom_download_button_script():
     setTimeout(add_custom_button, rec_time_btn);
     '''
 
+def store_meshcat_camera_script():
+    return '''
+    var count = 0;
+    function save_cam_pose() {
+        var el=document.querySelector("#meshcat-pane");
+        if(el != null) {
+            document.querySelector("#meshcat-pane").addEventListener("mouseup", (event) => {
+                var saved_state = {
+                    position: viewer.camera.position.clone(),
+                    rotation: viewer.camera.rotation.clone(),
+                    quaternion: viewer.camera.quaternion.clone(),
+                    matrixWorld: viewer.camera.matrixWorld.clone(),
+                    matrixWorldInverse: viewer.camera.matrixWorldInverse.clone(),
+                    projectionMatrix: viewer.camera.projectionMatrix.clone(),
+                    projectionMatrixInverse: viewer.camera.projectionMatrixInverse.clone(),
+                    target: viewer.controls.target.clone()
+                };
+
+                localStorage.setItem("current_cam_pose", JSON.stringify(saved_state));
+                localStorage.setItem("current_cam", JSON.stringify(viewer.camera.toJSON()));
+            });
+
+            // restore camera pose if one is available
+            var restored_state_str = localStorage.getItem("current_cam_pose");
+            var restored_state = JSON.parse(restored_state_str);
+            if(restored_state != null)
+            {
+                restore_cam_state();
+            }
+        }
+        else {
+            setTimeout(save_cam_pose, 100);
+        }
+    }
+
+    function restore_cam_state() {
+        viewer.controls.enabled = false;
+        viewer.camera.matrixAutoUpdate=false;
+    	var restored_state_str = localStorage.getItem("current_cam");
+        var restored_state = JSON.parse(restored_state_str);
+        viewer.set_camera_from_json(restored_state);
+        viewer.renderer.render(viewer.scene, viewer.camera);
+
+        restored_state_str = localStorage.getItem("current_cam_pose");
+        restored_state = JSON.parse(restored_state_str);
+
+        viewer.camera.matrixWorld.copy(restored_state.matrixWorld);
+        viewer.camera.matrixWorldInverse.copy(restored_state.matrixWorldInverse);
+        viewer.camera.projectionMatrix.copy(restored_state.projectionMatrix);
+        viewer.camera.projectionMatrixInverse.copy(restored_state.projectionMatrixInverse);
+        viewer.camera.position.set(restored_state.position.x, restored_state.position.y, restored_state.position.z);
+        viewer.camera.quaternion.set(restored_state.quaternion._x, restored_state.quaternion._y, restored_state.quaternion._z, restored_state.quaternion._w)
+        viewer.camera.rotation.set(restored_state.rotation._x, restored_state.rotation._y, restored_state.rotation._z);
+        viewer.controls.target.set(restored_state.target.x, restored_state.target.y, restored_state.target.z);
+        viewer.camera.updateMatrix(true);
+        viewer.camera.updateMatrixWorld(true);
+        viewer.camera.updateProjectionMatrix(true);
+
+        viewer.renderer.render(viewer.scene, viewer.camera);
+        viewer.camera.matrixAutoUpdate=true;
+        viewer.controls.enabled = true;
+        
+        new_state = {
+            position: viewer.camera.position.clone(),
+            rotation: viewer.camera.rotation.clone(),
+            quaternion: viewer.camera.quaternion.clone(),
+            matrixWorld: viewer.camera.matrixWorld.clone(),
+            matrix: viewer.camera.matrix.clone(),
+            aspect: viewer.camera.aspect,
+        };
+
+        if(restored_state.position.x != viewer.camera.position.x || restored_state.position.y != viewer.camera.position.y || restored_state.position.z != viewer.camera.position.z)
+        {
+            setTimeout(restore_cam_state, 100);
+        }
+    }
+
+    save_cam_pose();
+    '''
+
 def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', plot_fig=True, matlab_import=True, reload_page=False, title_text=''):
     subplot_number = len(subplot_data)
     sig_labels = np.empty(24, dtype=object)
@@ -2854,8 +2934,8 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
     camera_target = np.array([1.0, 1.0, 1.0])    # Looking at this point
 
     # Set the camera position and target
-    vis.set_cam_pos(camera_position)
-    vis.set_cam_target(camera_target)
+    # vis.set_cam_pos(camera_position)
+    # vis.set_cam_target(camera_target)
 
     # Iterate through trajectory data
     for i in range(0, N_traj, frame_skip):
@@ -2882,14 +2962,14 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
             link_name = stl_file[:-4] # without .stl
             vis[link_name].set_property('visible', True)
 
-    vis.set_cam_pos(camera_position)
-    vis.set_cam_target(camera_target)
+    # vis.set_cam_pos(camera_position)
+    # vis.set_cam_target(camera_target)
 
     if create_html:
         html_out = vis.static_html()
         soup = BeautifulSoup(html_out, 'html.parser')
         script_tag = soup.new_tag('script', type='text/javascript')
-        script_tag.string = get_reload_tab_script('reload_meshcat')
+        script_tag.string = get_reload_tab_script('reload_meshcat') + store_meshcat_camera_script()
 
         # Add the script tag to the body of the HTML
         soup.body.append(script_tag)
@@ -2899,7 +2979,7 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
         # webbrowser.open(url)
         time.sleep(1) # othervise visualization don't work
     else:
-        viewer.open()
+        vis.open()
 
     start_server('reload_meshcat') # start server to visualize robot
     vis.delete()

@@ -495,11 +495,14 @@ try:
                 if start == 1:
                     data_from_simulink_start[:] = 0
                     run_flag = True
+                    print()
                     print('Start MPC (data logging mode).')
 
                 if reset == 1:
+                    i=0
                     data_from_simulink_reset[:] = 0
                     run_flag = False
+                    print()
                     print('Reset MPC (data logging mode).')
 
                     # read data from shared memory
@@ -546,6 +549,7 @@ try:
                 if stop == 1:
                     data_from_simulink_stop[:] = 0
                     run_flag = False
+                    print()
                     print('Stop MPC (data logging mode).')
 
                 if i == 0:
