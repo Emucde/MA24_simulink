@@ -14,10 +14,10 @@ function rpy = rotm2rpy(R)
     beta = atan2(-r31, sqrt(r32^2 + r33^2));
     cos_beta = cos(beta);
 
-    if(beta == pi/2)
+    if(abs(beta - pi/2) < eps)
         gamma = atan2(r12, r13);
         alpha = 0;
-    elseif(beta == -pi/2)
+    elseif(abs(beta + pi/2) < eps)
         gamma = atan2(-r12, -r13);
         alpha = 0;
     else

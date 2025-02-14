@@ -37,8 +37,10 @@ function [x_d] = create_poly_traj_jointspace(traj_select, t, param_traj, init_bu
     [q_d_p, q_d_pp] = quat_deriv(q_d, omega_d, omega_d_p);
 
     Phi_act = rotm2rpy(H(1:3,1:3));
-    Phi_act_p  = T_rpy(Phi_act)*omega_d;
-    Phi_act_pp = T_rpy_p(Phi_act, Phi_act_p)*omega_d + T_rpy(Phi_act)*omega_d_p;
+    % w = T Phi_p -> Phi_p = T^(-1)w = T\w
+    % w_p = Tp Phi_p + T Phi_pp -> Phi_pp = T^-1(w_p - Tp Phi_p) = T\(w_p - Tp Phi_p)
+    Phi_act_p = T_rpy(Phi_act)\omega_d;
+    Phi_act_pp = T_rpy(Phi_act)\(omega_d_p - T_rpy_p(Phi_act, Phi_act_p)*Phi_act_p);
 
     alpha_d = 0;
     alpha_d_p = 0;

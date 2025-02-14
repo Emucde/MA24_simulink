@@ -2,6 +2,10 @@
 #define EIGEN_TEMPLATES_HPP
 
 #include <Eigen/Dense>
+#include <cmath>
+#include <array>
+#include <type_traits>
+
 
 template <typename T>
 Eigen::Map<const Eigen::VectorXi> ConstIntVectorMap(T *ptr, int size)
@@ -15,16 +19,12 @@ Eigen::Map<const Eigen::VectorXd> ConstDoubleVectorMap(T *ptr, int size)
     return Eigen::Map<const Eigen::VectorXd>(const_cast<double *>(ptr), size);
 }
 
-#include <array>
-#include <cmath>
-#include <type_traits>
-
 // Reference:
 //   Sarabandi, S., & Thomas, F. (2018). Accurate computation of quaternions
 //   from rotation matrices. In International Symposium on Advances in Robot
 //   Kinematics. Springer International Publishing.
 template <typename T = double>
-Eigen::Vector4d rotm2quat_v4(Eigen::Matrix3d &R)
+Eigen::Vector4d rotm2quat_v4(const Eigen::Matrix3d &R)
 {
     static_assert(std::is_floating_point<T>::value, "Template parameter must be a floating-point type");
 
@@ -116,6 +116,43 @@ Eigen::Vector4d rotm2quat_v4(Eigen::Matrix3d &R)
     % Assemble the quaternion
     q = [q1; my_sign(r32 - r23) * q2; my_sign(r13 - r31) * q3; my_sign(r21 - r12) * q4];
     */
+}
+
+template <typename T = double>
+Eigen::Vector3d rotm2rpy(const Eigen::Matrix3d &R)
+{
+    static_assert(std::is_floating_point<T>::value, "Template parameter must be a floating-point type");
+    // Extract elements of the rotation matrix
+    T r11 = R(0, 0);
+    T r12 = R(0, 1);
+    T r13 = R(0, 2);
+    T r21 = R(1, 0);
+    T r22 = R(1, 1);
+    T r23 = R(1, 2);
+    T r31 = R(2, 0);
+    T r32 = R(2, 1);
+    T r33 = R(2, 2);
+
+    // Calculate the roll, pitch, and yaw angles (Craig, S. 47f)
+    // alpha = yaw, beta = pitch, gamma = roll
+    T beta = std::atan2(-r31, std::sqrt(r32 * r32 + r33 * r33));
+    T cos_beta = std::cos(beta);
+
+    T gamma, alpha;
+
+    if (std::abs(beta - M_PI / 2) < 1e-6) { // beta == pi/2  Using a tolerance for comparison
+        gamma = std::atan2(r12, r13);
+        alpha = 0.0;
+    } else if (std::abs(beta + M_PI / 2) < 1e-6) { // beta == -pi/2 Using a tolerance for comparison
+        gamma = std::atan2(-r12, -r13);
+        alpha = 0.0;
+    } else {
+        gamma = std::atan2(r32 / cos_beta, r33 / cos_beta);
+        alpha = std::atan2(r21 / cos_beta, r11 / cos_beta);
+    }
+
+    Eigen::Vector3d rpy(alpha, beta, gamma);
+    return rpy;
 }
 
 template <typename T = double>

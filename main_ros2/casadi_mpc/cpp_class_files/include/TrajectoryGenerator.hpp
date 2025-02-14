@@ -56,6 +56,9 @@ public:
     Eigen::MatrixXd q_d;       // Target quaternion
     Eigen::MatrixXd omega_d;   // Target angular velocity
     Eigen::MatrixXd omega_d_p; // Target angular acceleration
+    Eigen::MatrixXd phi_d;     // Target rpy orientation
+    Eigen::MatrixXd phi_d_p;   // Target rpy orientation velocity
+    Eigen::MatrixXd phi_d_pp;  // Target rpy orientation acceleration
 
     const Eigen::Vector3i p_d_rows{0, 1, 2};
     const Eigen::Vector3i p_d_p_rows{3, 4, 5};
@@ -63,6 +66,9 @@ public:
     const Eigen::Vector4i q_d_rows{9, 10, 11, 12};
     const Eigen::Vector3i omega_d_rows{13, 14, 15};
     const Eigen::Vector3i omega_d_p_rows{16, 17, 18};
+    const Eigen::Vector3i phi_d_rows{19, 20, 21};
+    const Eigen::Vector3i phi_d_p_rows{22, 23, 24};
+    const Eigen::Vector3i phi_d_pp_rows{25, 26, 27};
     const Eigen::VectorXi pq_d_rows = (Eigen::VectorXi(7) << 0, 1, 2, 9, 10, 11, 12).finished();
 
     void init_custom_trajectory(ParamPolyTrajectory param);

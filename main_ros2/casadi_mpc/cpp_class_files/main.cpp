@@ -196,17 +196,24 @@ int main()
     std::cout << "7" << std::endl;
     WorkspaceController classic_controller(urdf_filename, tcp_frame_name, use_gravity);
     std::cout << "8" << std::endl;
-    CasadiController mpc_controller(urdf_filename, tcp_frame_name, use_gravity);
+    CasadiController casadi_controller(urdf_filename, tcp_frame_name, use_gravity);
     std::cout << "9" << std::endl;
     CrocoddylController crocoddyl_controller(urdf_filename, crocoddyl_config_filename, tcp_frame_name, use_gravity);
     std::cout << "10" << std::endl;
     
     MainControllerType controller_type = get_controller_type(general_config["default_controller"]);
-    mpc_controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
+    casadi_controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
     classic_controller.switchController(get_classic_controller_type(general_config["default_classic_controller"]));
     crocoddyl_controller.setActiveMPC(get_crocoddyl_controller_type(general_config["default_crocoddyl_mpc"]));
     // initialize the trajectory
 
+    double* w = casadi_controller.get_w();
+    std::cout << "w:" << std::endl;
+    for(int i = 0; i < 1101; i++)
+    {
+        std::cout << w[i] << " ";
+    }
+    std::cout << std::endl;
     // set singularity robustness mode
     Eigen::MatrixXd W_bar_N = Eigen::MatrixXd::Identity(nq_red, nq_red);
     Eigen::Map<const Eigen::VectorXd> sugihara_limb_vector(robot_config.sugihara_limb_vector, nq);
@@ -245,8 +252,8 @@ int main()
 #define TRAJ_SELECT 1
     if (controller_type == MainControllerType::Casadi)
     {
-        traj_len = mpc_controller.get_traj_data_real_len();
-        x0_init = mpc_controller.get_traj_x0_init(TRAJ_SELECT);
+        traj_len = casadi_controller.get_traj_data_real_len();
+        x0_init = casadi_controller.get_traj_x0_init(TRAJ_SELECT);
     }
     else if(controller_type == MainControllerType::Classic)
     {
@@ -268,14 +275,14 @@ int main()
     // param_target.R_target = Eigen::Matrix3d::Identity();
     // param_target.T_horizon_max = 2.0
     // param_target.x_init = x_k_ndof_eig;
-    // mpc_controller.init_trajectory_custom_target(param_target);
+    // casadi_controller.init_trajectory_custom_target(param_target);
 
     casadi_uint transient_traj_len = 0;
 
     if (controller_type == MainControllerType::Casadi)
     {
-        mpc_controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
-        transient_traj_len = mpc_controller.get_transient_traj_len();
+        casadi_controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 1.0, 2.0);
+        transient_traj_len = casadi_controller.get_transient_traj_len();
     }
     else if (controller_type == MainControllerType::Classic)
     {
@@ -351,10 +358,10 @@ int main()
         if ( controller_type == MainControllerType::Casadi )
         {
             timer_mpc_solver.tic();
-            tau_full = mpc_controller.solveMPC(x_filtered_ptr_2);
+            tau_full = casadi_controller.solveMPC(x_filtered_ptr_2);
             timer_mpc_solver.toc();
-            act_data = mpc_controller.get_act_traj_data();
-            error_flag = mpc_controller.get_error_flag();
+            act_data = casadi_controller.get_act_traj_data();
+            error_flag = casadi_controller.get_error_flag();
         }
         else if ( controller_type == MainControllerType::Classic )
         {
@@ -396,7 +403,7 @@ int main()
 
         if ( controller_type == MainControllerType::Casadi )
         {
-            mpc_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
+            casadi_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
         }
         else if ( controller_type == MainControllerType::Classic )
         {
@@ -415,7 +422,7 @@ int main()
     }
 
     // Measure and print execution time
-    timer_mpc_solver.print_time("Total mpc_controller.solveMPC time: ");
+    timer_mpc_solver.print_time("Total casadi_controller.solveMPC time: ");
     std::cout << std::endl;
 
     timer_total.toc();

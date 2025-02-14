@@ -171,6 +171,12 @@ public:
         return error_flag;
     }
 
+    // Method to get w pointer
+    casadi_real *get_w()
+    {
+        return active_mpc->get_w();
+    }
+
     // Method to set the maximum torque jump
     void set_tau_max_jump(double tau_jump)
     {

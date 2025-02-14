@@ -50,9 +50,10 @@ private:
     casadi_real dt;                          // Control sampling time
     casadi_real t_k=0;                       // Current time
 
-    const Eigen::VectorXi y_d_rows = (Eigen::VectorXi(7) << 0, 1, 2, 9, 10, 11, 12).finished(); // Selecting p_d (0-2) and q_d (9-11)
+    const Eigen::VectorXi y_d_rows = (Eigen::VectorXi(7) << 0, 1, 2, 9, 10, 11, 12).finished(); // Selecting p_d (0-2) and q_d (9-12)
     const Eigen::VectorXi y_d_p_rows = (Eigen::VectorXi(6) << 3, 4, 5, 13, 14, 15).finished();  // Selecting p_d_p (3-5) and omega_d (13-15)
     const Eigen::VectorXi y_d_pp_rows = (Eigen::VectorXi(6) << 6, 7, 8, 16, 17, 18).finished(); // Selecting p_d_pp (6-8) and omega_d_p (16-18)
+    const Eigen::VectorXi z_d_rows = (Eigen::VectorXi(6) << 0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14, 15).finished(); // Selecting p_d (0-2), p_d_p (3-5), q_d (9-12), omega_d (13-15)
     double* x_k_ptr = 0; // - Initial state (12 x 1);
     double* t_k_ptr = &t_k; // - Time (1 x 1)
     double* y_d_ptr = 0; // - Desired trajectory (7 x horizon_len)

@@ -224,6 +224,16 @@ void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_k_ptr)
 
     // set all x_prev reference values to the current state
     set_row_vector(mpc_config.in.x_prev.ptr, mpc_config.in.x_k.ptr, nx_red, mpc_config.in.x_prev.len);
+
+    if (mpc_config.in.z.len != 0)
+    {
+        // set all z input values to the current state
+        Eigen::MatrixXd z_d(mpc_config.in.z_k.len, horizon_len);
+        z_d << (*traj_data)(z_d_rows, mpc_traj_indices.array() + 0);
+        set_row_vector(mpc_config.in.z.ptr, z_d.data(), mpc_config.in.z.len, mpc_config.in.z.len);
+    }
+
+    // if (mpc_config.in.alpha.len != 0)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
