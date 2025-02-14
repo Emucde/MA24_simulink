@@ -10,17 +10,17 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
       trajectory_generator(torque_mapper, robot_config.dt)
 {
     // Initialize MPC objects
-    for (int i = 0; i < static_cast<int>(MPCType::COUNT); ++i)
+    for (int i = 0; i < static_cast<int>(CasadiMPCType::COUNT); ++i)
     {
 
-        MPCType mpc = static_cast<MPCType>(i);
-        if (mpc != MPCType::INVALID)
+        CasadiMPCType mpc = static_cast<CasadiMPCType>(i);
+        if (mpc != CasadiMPCType::INVALID)
         {                                                                                                                                             // Ensures we are within valid enum range
             casadi_mpcs.push_back(CasadiMPC(mpc, robot_config, trajectory_generator.get_traj_data(), trajectory_generator.get_traj_data_real_len())); // Initialize all MPCs
         }
     }
 
-    setActiveMPC(MPCType::MPC8); // Set the default MPC
+    setActiveMPC(CasadiMPCType::MPC8); // Set the default MPC
     switch_traj(1); // Set the default trajectory
 
     // Initialize the previous torque
@@ -130,9 +130,9 @@ void CasadiController::update_trajectory_data(const casadi_real *const x_k_ndof_
     }
 
     // send trajectory pointer to all MPCs
-    for (int i = 0; i < static_cast<int>(MPCType::COUNT); ++i)
+    for (int i = 0; i < static_cast<int>(CasadiMPCType::COUNT); ++i)
     {
-        if (static_cast<MPCType>(i) != MPCType::INVALID)
+        if (static_cast<CasadiMPCType>(i) != CasadiMPCType::INVALID)
         {
             casadi_mpcs[i].switch_traj(trajectory_generator.get_traj_data(), x_k, trajectory_generator.get_traj_data_real_len());
         }
@@ -140,9 +140,9 @@ void CasadiController::update_trajectory_data(const casadi_real *const x_k_ndof_
 }
 
 // set the active MPC
-void CasadiController::setActiveMPC(MPCType mpc_type)
+void CasadiController::setActiveMPC(CasadiMPCType mpc_type)
 {
-    if (mpc_type != MPCType::INVALID)
+    if (mpc_type != CasadiMPCType::INVALID)
     {
         selected_mpc_type = mpc_type;
         active_mpc = &casadi_mpcs[static_cast<int>(selected_mpc_type)];

@@ -3,7 +3,7 @@
     "use_lowpass_filter": false,
     "use_ekf": false,
     "use_noise": false,
-    "default_controller": "Casadi",
+    "default_controller": "Classic",
     "available_controllers": [
         "Classic",
         "Casadi",

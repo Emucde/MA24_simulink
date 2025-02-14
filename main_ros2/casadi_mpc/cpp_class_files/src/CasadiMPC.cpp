@@ -15,7 +15,7 @@ mpc_config_t invalid_config(const std::string &mpc_name)
 }
 
 // Constructor implementation
-CasadiMPC::CasadiMPC(MPCType mpc,
+CasadiMPC::CasadiMPC(CasadiMPCType mpc,
                      robot_config_t &robot_config,
                      const Eigen::MatrixXd *traj_data,
                      const casadi_uint traj_data_real_len) : mpc_name(casadi_mpctype_to_string(mpc)),

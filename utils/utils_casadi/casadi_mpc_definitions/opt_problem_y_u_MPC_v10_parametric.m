@@ -66,13 +66,32 @@ n_x_indices = [n_indices n_indices+n];
 
 if(parametric_type == parametric_mode.polynomial)
     t0 = SX.sym('t0');
-    theta0 = SX.sym('theta', n_red, 3);
     x0 = SX.sym('x0', 2*n_red, 1);
     q0 = x0(1:n_red);
     q1 = x0(n_red+1:end);
-    q = Function('q_scalar', {x0, t0, theta0}, {q0 + q1*t0 + 1/2*theta0(:, 1)*t0^2 + 1/6*theta0(:, 2)*t0^3 + 1/12*theta0(:, 3)*t0^4});
-    q_p = Function('q_scalar_p', {x0, t0, theta0}, {q1 + theta0(:, 1)*t0 + 1/2*theta0(:, 2)*t0^2 + 1/3*theta0(:, 3)*t0^3});
-    q_pp = Function('q_scalar_pp', {t0, theta0}, {theta0(:, 1) + theta0(:, 2)*t0 + theta0(:, 3)*t0^2});
+
+    % theta0 = SX.sym('theta', n_red, 3);
+    % q = Function('q_scalar', {x0, t0, theta0}, {q0 + q1*t0 + 1/2*theta0(:, 1)*t0^2 + 1/6*theta0(:, 2)*t0^3 + 1/12*theta0(:, 3)*t0^4});
+    % q_p = Function('q_scalar_p', {x0, t0, theta0}, {q1 + theta0(:, 1)*t0 + 1/2*theta0(:, 2)*t0^2 + 1/3*theta0(:, 3)*t0^3});
+    % q_pp = Function('q_scalar_pp', {t0, theta0}, {theta0(:, 1) + theta0(:, 2)*t0 + theta0(:, 3)*t0^2});
+    
+    order=2;
+    theta0 = SX.sym('theta_0', n_red, order+1);
+    qq_pp = SX(0);
+    qq_p = q1;
+    qq = q0 + q1*t0;
+    for i=0:order
+        qq_pp = qq_pp + theta0(:, i+1)*t0^i;
+        qq_p = qq_p + theta0(:, i+1)*t0^(i+1)/(i+1);
+        qq = qq + theta0(:, i+1)*t0^(i+2)/((i+1)*(i+2));
+    end
+    qq_pp = cse(qq_pp);
+    qq_p = cse(qq_p);
+    qq = cse(qq);
+    
+    q = Function('q', {x0, t0, theta0}, {qq});
+    q_p = Function('q_p', {x0, t0, theta0}, {qq_p});
+    q_pp = Function('q_pp', {t0, theta0}, {qq_pp});
 else
     error('parametric_type not supported');
 end
@@ -81,7 +100,7 @@ end
 % Forward Dynamics: d/dt x = f(x, u)
 
 gravity = false;
-use_aba = false;
+use_aba = true;
 [f, compute_tau_fun, gravity_fun, hom_transform_endeffector_py_fun, quat_endeffector_py_fun] = ...
     load_robot_dynamics(input_dir, n, gravity, use_aba);
 
@@ -153,7 +172,7 @@ u_k_0  = full(tau_fun_red(q_0_red, q_0_red_p, q_0_red_pp)); % gravity compensati
 
 u_init_guess_0 = ones(1, N_MPC).*u_k_0; % fully actuated
 x_init_guess_0 = ones(1, N_MPC+1).*x_0_0;
-theta_init_guess_0 = zeros(n_red, 3);
+theta_init_guess_0 = zeros(n_red, order+1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INIT GUESS 1/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0) + numel(x_init_guess_0) + numel(theta_init_guess_0), 1);
@@ -168,7 +187,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables 2/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 u   = SX.sym( 'u',    n_red, N_MPC   );
 x   = SX.sym( 'x',  2*n_red, N_MPC+1 );
-theta = SX.sym( 'theta', n_red, 3);
+theta = SX.sym( 'theta', n_red, order+1);
 
 mpc_opt_var_inputs = {u, x, theta};
 

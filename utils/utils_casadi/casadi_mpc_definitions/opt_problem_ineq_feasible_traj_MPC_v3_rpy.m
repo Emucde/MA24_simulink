@@ -62,7 +62,7 @@ n_z_indices = [yt_indices 3+yt_indices 6+yr_indices 9+yr_indices]; % weil nur de
 
 % Robot model Forward Dynamics: d/dt x = f(x, u)
 gravity = false;
-use_aba = false;
+use_aba = true;
 [f, compute_tau_fun, gravity_fun, hom_transform_endeffector_py_fun, quat_endeffector_py_fun] = ...
     load_robot_dynamics(input_dir, n, gravity, use_aba);
 

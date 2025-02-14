@@ -21,7 +21,7 @@ class CasadiController// : public TrajectoryGenerator
 private:
     robot_config_t robot_config;                 // Robot configuration
     std::vector<CasadiMPC> casadi_mpcs;          // MPC objects
-    MPCType selected_mpc_type;                   // Active MPC type
+    CasadiMPCType selected_mpc_type;                   // Active MPC type
     CasadiMPC *active_mpc;                       // Active MPC object
     mpc_config_t *active_mpc_config;             // Active MPC configuration
     const mpc_input_config_t *active_mpc_input_config; // Active MPC input configuration
@@ -88,7 +88,7 @@ public:
     void reset();
 
     // Getters and setters
-    void setActiveMPC(MPCType mpc);
+    void setActiveMPC(CasadiMPCType mpc);
     // void setTransientTrajParams(double T_start, double T_poly, double T_end);
 
     // increase counter from casadi mpc if it solves too slow

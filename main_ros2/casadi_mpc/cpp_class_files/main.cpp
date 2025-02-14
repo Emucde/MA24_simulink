@@ -151,6 +151,7 @@ CrocoddylMPCType get_crocoddyl_controller_type(const std::string &controller_typ
 
 int main()
 {
+    std::cout << "Starting main loop" << std::endl;
     // Measure execution time
     TicToc timer_mpc_solver;
     TicToc timer_total;
@@ -161,17 +162,17 @@ int main()
     const std::string ekf_config_filename = std::string(MASTERDIR) + "/config_settings/ekf_settings.json";
     const std::string general_config_filename = std::string(MASTERDIR) + "/config_settings/general_settings.json";
     const std::string tcp_frame_name = "fr3_link8_tcp";
-
+    std::cout << "2" << std::endl;
     nlohmann::json general_config = read_config(general_config_filename);
-
+    std::cout << "3" << std::endl;
     // Configuration flags
     bool use_gravity = general_config["use_gravity"];
     bool use_lowpass_filter = general_config["use_lowpass_filter"];
     bool use_ekf = general_config["use_ekf"];
     bool use_noise = general_config["use_noise"];
-
+    std::cout << "4" << std::endl;
     robot_config_t robot_config = get_robot_config();
-
+    std::cout << "5" << std::endl;
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
     double Ts = 0.001;
     const casadi_uint nq = robot_config.nq;
@@ -188,14 +189,17 @@ int main()
     casadi_uint traj_len = 0;
     double mean_noise_amplitude = 0.1e-3;
     Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nx);
-
+    std::cout << "6" << std::endl;
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
     Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
-
+    std::cout << "7" << std::endl;
     WorkspaceController classic_controller(urdf_filename, tcp_frame_name, use_gravity);
+    std::cout << "8" << std::endl;
     CasadiController mpc_controller(urdf_filename, tcp_frame_name, use_gravity);
+    std::cout << "9" << std::endl;
     CrocoddylController crocoddyl_controller(urdf_filename, crocoddyl_config_filename, tcp_frame_name, use_gravity);
+    std::cout << "10" << std::endl;
     
     MainControllerType controller_type = get_controller_type(general_config["default_controller"]);
     mpc_controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));

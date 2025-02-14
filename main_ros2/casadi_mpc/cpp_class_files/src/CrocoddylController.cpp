@@ -58,9 +58,9 @@ void CrocoddylController::update_trajectory_data(const double *x_k_ndof_ptr)
     x_k << x_k_ndof(n_x_indices);
 
     // send trajectory pointer to all MPCs
-    for (int i = 0; i < static_cast<int>(MPCType::COUNT); ++i)
+    for (int i = 0; i < static_cast<int>(CrocoddylMPCType::COUNT); ++i)
     {
-        if (static_cast<MPCType>(i) != MPCType::INVALID)
+        if (static_cast<CrocoddylMPCType>(i) != CrocoddylMPCType::INVALID)
         {
             crocoddyl_mpcs[i].switch_traj(x_k);
         }

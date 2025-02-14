@@ -86,7 +86,7 @@ private:
 
 public:
     // Constructor that accepts parameters for configuration
-    CasadiMPC(MPCType mpc,
+    CasadiMPC(CasadiMPCType mpc,
               robot_config_t &robot_config,
               const Eigen::MatrixXd *traj_data,
               const casadi_uint traj_data_real_len);

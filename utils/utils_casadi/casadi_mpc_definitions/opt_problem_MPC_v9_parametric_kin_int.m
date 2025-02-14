@@ -14,6 +14,7 @@ end
 
 parametric_mode = struct;
 parametric_mode.polynomial = 1;
+parametric_mode.chebyshev = 2;
 
 parametric_type = parametric_mode.polynomial;
 
@@ -32,13 +33,79 @@ quat_R_endeffector_py_fun = Function.load([input_dir, 'quat_R_endeffector_py.cas
 
 if(parametric_type == parametric_mode.polynomial)
     t0 = SX.sym('t0');
-    theta0 = SX.sym('theta', n_red, 3);
     x0 = SX.sym('x0', 2*n_red, 1);
     q0 = x0(1:n_red);
     q1 = x0(n_red+1:end);
-    q = Function('q_scalar', {x0, t0, theta0}, {q0 + q1*t0 + 1/2*theta0(:, 1)*t0^2 + 1/6*theta0(:, 2)*t0^3 + 1/12*theta0(:, 3)*t0^4});
-    q_p = Function('q_scalar_p', {x0, t0, theta0}, {q1 + theta0(:, 1)*t0 + 1/2*theta0(:, 2)*t0^2 + 1/3*theta0(:, 3)*t0^3});
-    q_pp = Function('q_scalar_pp', {t0, theta0}, {theta0(:, 1) + theta0(:, 2)*t0 + theta0(:, 3)*t0^2});
+
+    % theta0 = SX.sym('theta', n_red, 3);
+    % q = Function('q_scalar', {x0, t0, theta0}, {q0 + q1*t0 + 1/2*theta0(:, 1)*t0^2 + 1/6*theta0(:, 2)*t0^3 + 1/12*theta0(:, 3)*t0^4});
+    % q_p = Function('q_scalar_p', {x0, t0, theta0}, {q1 + theta0(:, 1)*t0 + 1/2*theta0(:, 2)*t0^2 + 1/3*theta0(:, 3)*t0^3});
+    % q_pp = Function('q_scalar_pp', {t0, theta0}, {theta0(:, 1) + theta0(:, 2)*t0 + theta0(:, 3)*t0^2});
+    
+    order=1;
+    theta0 = SX.sym('theta_0', n_red, order+1);
+    qq_pp = SX(0);
+    qq_p = q1;
+    qq = q0 + q1*t0;
+    for i=0:order
+        qq_pp = qq_pp + theta0(:, i+1)*t0^i;
+        qq_p = qq_p + theta0(:, i+1)*t0^(i+1)/(i+1);
+        qq = qq + theta0(:, i+1)*t0^(i+2)/((i+1)*(i+2));
+    end
+    qq_pp = cse(qq_pp);
+    qq_p = cse(qq_p);
+    qq = cse(qq);
+    
+    q = Function('q', {x0, t0, theta0}, {qq});
+    q_p = Function('q_p', {x0, t0, theta0}, {qq_p});
+    q_pp = Function('q_pp', {t0, theta0}, {qq_pp});
+elseif(parametric_type == parametric_mode.chebyshev)
+    t0 = SX.sym('t0');
+    x0 = SX.sym('x0', 2*n_red, 1);
+    q0 = x0(1:n_red);
+    q1 = x0(n_red+1:end);
+
+    T_max = (N_MPC-1)*param_global.Ta;
+    t_hat = (2*t0 - T_max)/T_max;
+
+    T0 = SX(1);
+    T0_I = t_hat;
+    TO_II = 1/2*t_hat^2;
+
+    T1 = t_hat;
+    T1_I = 1/2*t_hat^2;
+    T1_II = 1/6 * t_hat^3;
+
+    T2 = 2*t_hat^2 - 1;
+    T2_I = 2/3 * t_hat^3 - t_hat;
+    T2_II = 1/6 * t_hat^4 - 1/2 * t_hat^2;
+
+    T3 = 4*t_hat^3 - 3*t_hat;
+    T3_I = t_hat^4 - 3/2*t_hat^2;
+    T3_II = 1/5*t_hat^5 - 1/2*t_hat^3;
+
+    T_arr = {T0, T1, T2, T3};
+    TI_arr = {T0_I, T1_I, T2_I, T3_I};
+    TII_arr = {TO_II, T1_II, T2_II, T3_II};
+    
+    order = 1;
+
+    theta0 = SX.sym('theta_0', n_red, order+1);
+    qq_pp = SX(0);
+    qq_p = q1;
+    qq = q0 + q1*t0;
+    for i=0:order
+        qq_pp = qq_pp + theta0(:, i+1) * T_arr{i+1};
+        qq_p = qq_p + theta0(:, i+1)*TI_arr{i+1};
+        qq = qq + theta0(:, i+1)*TII_arr{i+1};
+    end
+    qq_pp = cse(qq_pp);
+    qq_p = cse(qq_p);
+    qq = cse(qq);
+
+    q = Function('q', {x0, t0, theta0}, {qq});
+    q_p = Function('q_p', {x0, t0, theta0}, {qq_p});
+    q_pp = Function('q_pp', {t0, theta0}, {qq_pp});
 else
     error('parametric_type not supported');
 end
@@ -98,7 +165,7 @@ u_k_0  = q_0_red_pp;
 
 u_init_guess_0 = ones(1, N_MPC).*u_k_0;
 x_init_guess_0 = ones(1, N_MPC+1).*x_0_0;
-theta_init_guess_0 = zeros(n_red, 3);
+theta_init_guess_0 = zeros(n_red, order+1);
 
 lam_x_init_guess_0 = zeros(numel(u_init_guess_0) + numel(x_init_guess_0) + numel(theta_init_guess_0), 1);
 lam_g_init_guess_0 = zeros(2*numel(u_init_guess_0) + numel(x_init_guess_0), 1);
@@ -112,7 +179,7 @@ end
 % Optimization Variables:
 u     = SX.sym( 'u',    n_red,   N_MPC   );
 x     = SX.sym( 'x',    2*n_red, N_MPC+1 );
-theta = SX.sym( 'theta', n_red, 3);
+theta = SX.sym( 'theta', n_red, order+1);
 
 % need opt vars only for the joint and velocity limits are maintained
 mpc_opt_var_inputs = {u, x, theta};
@@ -191,21 +258,21 @@ for i=0:N_MPC
     
     x_k_i = [q_i; q_p_i];
 
-    % g_x(1, 1 + (i)) = {x(:, 1 + (i)) - x_k_i};
+    g_x(1, 1 + (i)) = {x(:, 1 + (i)) - x_k_i};
 
     if(i < N_MPC)
         % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        if(i == 0)
-            g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
-        end
+        % if(i == 0)
+        %     g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
+        % end
 
-        if(i == 0 || i == 1)
-            g_x(1, 1 + (i+1))  = { F_kp1(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
-        elseif(i == 2)
-            g_x(1, 1 + (i+1))  = { F2(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
-        else
-            g_x(1, 1 + (i+1))  = { F(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
-        end
+        % if(i == 0 || i == 1)
+        %     g_x(1, 1 + (i+1))  = { F_kp1(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
+        % elseif(i == 2)
+        %     g_x(1, 1 + (i+1))  = { F2(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
+        % else
+        %     g_x(1, 1 + (i+1))  = { F(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
+        % end
         g_u(1, 1 + (i))   = {u(:, 1 + (i)) - q_pp_i};
         g_u_prev(1, 1 + (i)) = {u(:, 1 + (i)) - u_prev(:, 1 + (i))};
     end

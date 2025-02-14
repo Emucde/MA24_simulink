@@ -88,7 +88,7 @@ function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_
 
     fprintf(fid, '#ifdef __cplusplus\n\n');
 
-    % enum class MPCType
+    % enum class CasadiMPCType
     % {
     %     MPC01,
     %     MPC6,
@@ -112,43 +112,43 @@ function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_
                                      num2str(param.N_MPC), ...
                                      num2str(param.int_method)), ...
                                      param_casadi_fun_struct_list, 'UniformOutput', false);
-    create_enum(fid, 'enum class MPCType', mpc_names, '', '', mpc_comments, true, true);
+    create_enum(fid, 'enum class CasadiMPCType', mpc_names, '', '', mpc_comments, true, true);
     
-    % inline std::string mpctype_to_string(MPCType mpc)
+    % inline std::string mpctype_to_string(CasadiMPCType mpc)
     % {
     %     switch (mpc)
     %     {
-    %     case MPCType::MPC01:
+    %     case CasadiMPCType::MPC01:
     %         return "MPC01";
-    %     case MPCType::MPC6:
+    %     case CasadiMPCType::MPC6:
     %         return "MPC6";
-    %     case MPCType::MPC7:
+    %     case CasadiMPCType::MPC7:
     %         return "MPC7";
-    %     case MPCType::MPC8:
+    %     case CasadiMPCType::MPC8:
     %         return "MPC8";
-    %     case MPCType::MPC9:
+    %     case CasadiMPCType::MPC9:
     %         return "MPC9";
-    %     case MPCType::MPC10:
+    %     case CasadiMPCType::MPC10:
     %         return "MPC10";
-    %     case MPCType::MPC11:
+    %     case CasadiMPCType::MPC11:
     %         return "MPC11";
-    %     case MPCType::MPC12:
+    %     case CasadiMPCType::MPC12:
     %         return "MPC12";
-    %     case MPCType::MPC13:
+    %     case CasadiMPCType::MPC13:
     %         return "MPC13";
-    %     case MPCType::MPC14:
+    %     case CasadiMPCType::MPC14:
     %         return "MPC14";
     %     default:
     %         return "INVALID";
     %     }
     % }
 
-    fprintf(fid, 'inline std::string casadi_mpctype_to_string(MPCType mpc)\n');
+    fprintf(fid, 'inline std::string casadi_mpctype_to_string(CasadiMPCType mpc)\n');
     fprintf(fid, '{\n');
     fprintf(fid, '    switch (mpc)\n');
     fprintf(fid, '    {\n');
     for i = 1:length(mpc_names)
-        fprintf(fid, '    case MPCType::%s:\n', param_casadi_fun_struct_list{i}.name);
+        fprintf(fid, '    case CasadiMPCType::%s:\n', param_casadi_fun_struct_list{i}.name);
         fprintf(fid, '        return "%s";\n', param_casadi_fun_struct_list{i}.name);
     end
     fprintf(fid, '    default:\n');
@@ -157,13 +157,13 @@ function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_
     fprintf(fid, '}\n\n');
 
     % Create string to mpc enum function
-    fprintf(fid, 'inline MPCType string_to_casadi_mpctype(const std::string& str)\n');
+    fprintf(fid, 'inline CasadiMPCType string_to_casadi_mpctype(const std::string& str)\n');
     fprintf(fid, '{\n');
     for i = 1:length(mpc_names)
         fprintf(fid, '    if (str == "%s")\n', param_casadi_fun_struct_list{i}.name);
-        fprintf(fid, '        return MPCType::%s;\n', param_casadi_fun_struct_list{i}.name);
+        fprintf(fid, '        return CasadiMPCType::%s;\n', param_casadi_fun_struct_list{i}.name);
     end
-    fprintf(fid, '    return MPCType::INVALID;\n');
+    fprintf(fid, '    return CasadiMPCType::INVALID;\n');
     fprintf(fid, '}\n\n');
 
     % Create Enum for inputs
@@ -283,43 +283,43 @@ function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_
         fprintf(fid, '#include "%s_param.h"\n', mpc_names{i});
     end
 
-    % Create Enum for MPCType
+    % Create Enum for CasadiMPCType
 
-    % inline mpc_config_t get_mpc_config(MPCType mpc)
+    % inline mpc_config_t get_mpc_config(CasadiMPCType mpc)
     % {
     %     switch (mpc)
     %     {
-    %     case MPCType::MPC01:
+    %     case CasadiMPCType::MPC01:
     %         return get_MPC01_config();
-    %     case MPCType::MPC6:
+    %     case CasadiMPCType::MPC6:
     %         return get_MPC6_config();
-    %     case MPCType::MPC7:
+    %     case CasadiMPCType::MPC7:
     %         return get_MPC7_config();
-    %     case MPCType::MPC8:
+    %     case CasadiMPCType::MPC8:
     %         return get_MPC8_config();
-    %     case MPCType::MPC9:
+    %     case CasadiMPCType::MPC9:
     %         return get_MPC9_config();
-    %     case MPCType::MPC10:
+    %     case CasadiMPCType::MPC10:
     %         return get_MPC10_config();
-    %     case MPCType::MPC11:
+    %     case CasadiMPCType::MPC11:
     %         return get_MPC11_config();
-    %     case MPCType::MPC12:
+    %     case CasadiMPCType::MPC12:
     %         return get_MPC12_config();
-    %     case MPCType::MPC13:
+    %     case CasadiMPCType::MPC13:
     %         return get_MPC13_config();
-    %     case MPCType::MPC14:
+    %     case CasadiMPCType::MPC14:
     %         return get_MPC14_config();
     %     default:
     %         return {};
     %     }
     % }
 
-    fprintf(fid, 'inline mpc_config_t get_MPC_config(MPCType mpc)\n');
+    fprintf(fid, 'inline mpc_config_t get_MPC_config(CasadiMPCType mpc)\n');
     fprintf(fid, '{\n');
     fprintf(fid, '    switch (mpc)\n');
     fprintf(fid, '    {\n');
     for i = 1:length(mpc_names)
-        fprintf(fid, '    case MPCType::%s:\n', param_casadi_fun_struct_list{i}.name);
+        fprintf(fid, '    case CasadiMPCType::%s:\n', param_casadi_fun_struct_list{i}.name);
         fprintf(fid, '        return get_%s_config();\n', param_casadi_fun_struct_list{i}.name);
     end
     fprintf(fid, '    default:\n');
