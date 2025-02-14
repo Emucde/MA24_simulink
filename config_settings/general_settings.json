@@ -15,7 +15,7 @@
         "CT",
         "ID"
     ],
-    "default_casadi_mpc": "MPC6",
+    "default_casadi_mpc": "MPC8",
     "available_casadi_mpc": [
         "MPC01",
         "MPC6",
@@ -27,8 +27,10 @@
         "MPC12",
         "MPC13",
         "MPC14",
-        "MPC15",
-        "MPC16"
+        "MPC15LL",
+        "MPC15HL",
+        "MPC16",
+        "MPC17"
     ],
     "default_crocoddyl_mpc": "DynMPC_v1",
     "available_crocoddyl_mpc": [

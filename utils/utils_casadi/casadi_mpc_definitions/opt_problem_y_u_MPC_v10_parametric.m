@@ -244,8 +244,6 @@ for i=0:N_MPC
         % else
         %     g_x(1, 1 + (i+1))  = { F(  x_k_i, tau_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
         % end
-        
-        dx   = f_red(x_k_i, tau_i); % = [d/dt q, d^2/dt^2 q], Alternativ: Differenzenquotient
 
         % q_prev = x_prev(1:n_red, 1 + (i));
         %g_vec(:, 1 + (i)) = g_fun_red(q);
