@@ -166,7 +166,7 @@ Eigen::MatrixXd TrajectoryGenerator::generate_poly_trajectory()
     // Only for the custom target trajectory it is important because extra samples for the
     // last prediction horizon are necessary to calulate all MPC control values
     int N = static_cast<int>((T_end + param_poly_traj.T_horizon_max) / dt);
-    Eigen::MatrixXd traj_data_temp(19, N); // p_d, p_d_p, p_d_pp, q_d, omega_d, omega_d_p
+    Eigen::MatrixXd traj_data_temp(28, N); // p_d, p_d_p, p_d_pp, q_d, omega_d, omega_d_p
 
     Eigen::Matrix3d RR = R_target * R_init.transpose();
     Eigen::Quaterniond rot_quat(RR);
@@ -275,13 +275,15 @@ Eigen::VectorXd TrajectoryGenerator::get_poly_traj_point(double t, const Eigen::
     // std::cout << "q_d: " << q_d.w() << " " << q_d.x() << " " << q_d.y() << " " << q_d.z() << std::endl;
     // std::cout << "alpha: " << alpha << std::endl;
 
-    omega_d = alpha_p * rot_ax;
-    omega_d_p = alpha_pp * rot_ax;
+    Eigen::Vector3d omega_d_temp = alpha_p * rot_ax;
+    Eigen::Vector3d omega_d_p_temp = alpha_pp * rot_ax;
+
+    Eigen::VectorXd PPhi = calculateRPYVelocitiesAndAccelerations<double>(R_act, omega_d_temp, omega_d_p_temp);
 
     Eigen::VectorXi pose_rows = (Eigen::VectorXi(9) << 0, 1, 2, 4, 5, 6, 8, 9, 10).finished();
 
-    Eigen::VectorXd result(19); // p_d, p_d_p, p_d_pp, q_d, omega_d, omega_d_p
-    result << yy_d(pose_rows), q_d.w(), q_d.x(), q_d.y(), q_d.z(), omega_d, omega_d_p;
+    Eigen::VectorXd result(28); // p_d, p_d_p, p_d_pp, q_d, omega_d, omega_d_p
+    result << yy_d(pose_rows), q_d.w(), q_d.x(), q_d.y(), q_d.z(), omega_d_temp, omega_d_p_temp, PPhi;
 
     return result;
 }
@@ -361,4 +363,7 @@ void TrajectoryGenerator::update_traj_values()
     q_d = traj_data_out.block(9, 0, 4, traj_data_out.cols());
     omega_d = traj_data_out.block(13, 0, 3, traj_data_out.cols());
     omega_d_p = traj_data_out.block(16, 0, 3, traj_data_out.cols());
+    phi_d = traj_data_out.block(19, 0, 3, traj_data_out.cols());
+    phi_d_p = traj_data_out.block(22, 0, 3, traj_data_out.cols());
+    phi_d_pp = traj_data_out.block(25, 0, 3, traj_data_out.cols());
 }

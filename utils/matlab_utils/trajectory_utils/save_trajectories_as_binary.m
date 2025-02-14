@@ -17,7 +17,10 @@ function save_trajectories_as_binary(param_traj_data, param_traj, traj_file, q0_
         param_traj_data.p_d_pp; 
         param_traj_data.q_d; 
         param_traj_data.omega_d; 
-        param_traj_data.omega_d_p
+        param_traj_data.omega_d_p;
+        param_traj_data.Phi_d;
+        param_traj_data.Phi_d_p;
+        param_traj_data.Phi_d_pp;
     ];
     
     yy_d_size = size(yy_d);

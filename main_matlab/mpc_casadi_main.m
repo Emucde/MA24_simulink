@@ -25,9 +25,9 @@ if(~use_extern_flags)
     convert_maple_to_casadi         = false; % convert maple functions into casadi functions
     fullsimu                        = false; % make full mpc simulation and plot results
     traj_select_mpc                 = 1; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
-    create_init_guess_for_all_traj  = ~true; % create init guess for all trajectories
+    create_init_guess_for_all_traj  = true; % create init guess for all trajectories
     create_test_solve               = true; % create init guess for all trajectories
-    compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
+    compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
     compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
     iterate_all_mpc_sfunctions      = ~true;
     mpc_source_selection            = 4; % (1: all MPCs, 2: only dynamic MPCs, 3: only kinematic MPCs, 4: only selected MPC, 5: custom list)

@@ -127,8 +127,8 @@ Eigen::Vector3d rotm2rpy(const Eigen::Matrix3d &R)
     T r12 = R(0, 1);
     T r13 = R(0, 2);
     T r21 = R(1, 0);
-    T r22 = R(1, 1);
-    T r23 = R(1, 2);
+    //T r22 = R(1, 1);
+    //T r23 = R(1, 2);
     T r31 = R(2, 0);
     T r32 = R(2, 1);
     T r33 = R(2, 2);
@@ -153,6 +153,128 @@ Eigen::Vector3d rotm2rpy(const Eigen::Matrix3d &R)
 
     Eigen::Vector3d rpy(alpha, beta, gamma);
     return rpy;
+}
+
+/**
+ * @brief Computes a specific 3x3 matrix based on roll and pitch angles.
+ *
+ * This function takes a vector of Euler angles (specifically, roll and pitch)
+ * and calculates a 3x3 matrix according to the formula implemented
+ * in the original MATLAB code.  The yaw angle is not used.
+ *
+ * @param Phi A 3D vector where:
+ *            - Phi(0) is the roll angle (around the x-axis).
+ *            - Phi(1) is the pitch angle (around the y-axis).
+ *            - Phi(2) is the yaw angle (around the z-axis), *which is ignored by this function*.
+ *
+ * @return A 3x3 Eigen matrix calculated based on the input angles.
+ */
+template <typename T = double>
+Eigen::Matrix3d T_rpy(const Eigen::Vector3d& Phi)
+{
+    static_assert(std::is_floating_point<T>::value, "Template parameter must be a floating-point type");
+   
+   Eigen::Matrix3d m = Eigen::Matrix3d::Zero(); // Initialize to a zero matrix
+
+    // Extract roll and pitch angles
+    T roll  = Phi(0);  // Rotation around the x-axis
+    T pitch = Phi(1);  // Rotation around the y-axis
+
+    // Calculate trigonometric values
+    T sin_roll  = std::sin(roll);
+    T cos_roll  = std::cos(roll);
+    T cos_pitch = std::cos(pitch);
+    T sin_pitch = std::sin(pitch);
+
+    // Populate the matrix elements according to the original MATLAB code
+    m(0, 1) = -sin_roll;
+    m(0, 2) = cos_pitch * cos_roll;
+    m(1, 1) = cos_roll;
+    m(1, 2) = cos_pitch * sin_roll;
+    m(2, 0) = 1.0;
+    m(2, 2) = -sin_pitch;
+
+    return m;
+}
+
+
+/**
+ * @brief Computes the derivative of the T_rpy matrix.
+ *
+ * This function calculates the derivative of the T_rpy matrix with respect to time,
+ * given the current RPY angles (Phi) and their corresponding angular velocities (Phi_p).
+ * It directly translates the formula from the original MATLAB code.
+ *
+ * @param Phi   A 3D vector representing the RPY angles (roll, pitch, yaw - yaw is ignored).
+ * @param Phi_p A 3D vector representing the RPY angular velocities (roll_dot, pitch_dot, yaw_dot - yaw_dot is ignored).
+ *
+ * @return The 3x3 matrix representing the time derivative of T_rpy.
+ */
+template <typename T = double>
+Eigen::Matrix3d T_rpy_p(const Eigen::Vector3d& Phi, const Eigen::Vector3d& Phi_p) {
+    static_assert(std::is_floating_point<T>::value, "Template parameter must be a floating-point type");
+    
+    Eigen::Matrix3d m = Eigen::Matrix3d::Zero(); // Initialize to a zero matrix
+
+    // Extract roll, pitch, roll_dot, and pitch_dot
+    T roll      = Phi(0);
+    T pitch     = Phi(1);
+    T roll_dot  = Phi_p(0);
+    T pitch_dot = Phi_p(1);
+
+    // Calculate trigonometric values
+    T sin_roll  = std::sin(roll);
+    T cos_roll  = std::cos(roll);
+    T cos_pitch = std::cos(pitch);
+    T sin_pitch = std::sin(pitch);
+
+    // Populate the matrix elements based on the MATLAB code
+    m(0, 1) = -cos_roll * roll_dot;
+    m(0, 2) = -cos_roll * sin_pitch * pitch_dot - cos_pitch * sin_roll * roll_dot;
+    m(1, 1) = -sin_roll * roll_dot;
+    m(1, 2) = -sin_roll * sin_pitch * pitch_dot + cos_pitch * cos_roll * roll_dot;
+    m(2, 2) = -cos_pitch * pitch_dot;
+
+    return m;
+}
+
+/**
+ * @brief Calculates angular velocities and accelerations in RPY coordinates.
+ *
+ * This function takes a rotation matrix, desired angular velocity, and desired
+ * angular acceleration as input and computes the corresponding RPY angles,
+ * angular velocities, and angular accelerations.  It avoids direct matrix inversion
+ * by solving a linear system instead.
+ *
+ * @param R_act     The current rotation matrix.
+ * @param omega_d   The desired angular velocity in the world frame.
+ * @param omega_d_p The desired angular acceleration in the world frame.
+ */
+template <typename T = double>
+Eigen::VectorXd calculateRPYVelocitiesAndAccelerations(
+    const Eigen::Matrix3d& R_act,
+    const Eigen::Vector3d& omega_d,
+    const Eigen::Vector3d& omega_d_p) {
+
+    Eigen::Vector3d Phi_act;
+    Eigen::Vector3d Phi_act_p;
+    Eigen::Vector3d Phi_act_pp;
+
+    // Calculate RPY angles from the rotation matrix
+    Phi_act = rotm2rpy(R_act);
+
+    // Solve T_rpy(Phi_act) * Phi_act_p = omega_d for Phi_act_p
+    Phi_act_p = T_rpy<T>(Phi_act).colPivHouseholderQr().solve(omega_d);
+
+    // Compute T_rpy_p(Phi_act, Phi_act_p) * Phi_act_p
+    Eigen::Vector3d T_rpy_p_times_Phi_act_p = T_rpy_p<T>(Phi_act, Phi_act_p) * Phi_act_p;
+
+    // Solve T_rpy(Phi_act) * Phi_act_pp = omega_d_p - T_rpy_p(Phi_act, Phi_act_p) * Phi_act_p for Phi_act_pp
+    Phi_act_pp = T_rpy<T>(Phi_act).colPivHouseholderQr().solve(omega_d_p - T_rpy_p_times_Phi_act_p);
+
+    Eigen::VectorXd result(9);
+    result << Phi_act, Phi_act_p, Phi_act_pp;
+    return result;
 }
 
 template <typename T = double>

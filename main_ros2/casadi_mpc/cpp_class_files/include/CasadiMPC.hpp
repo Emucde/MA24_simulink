@@ -50,10 +50,17 @@ private:
     casadi_real dt;                          // Control sampling time
     casadi_real t_k=0;                       // Current time
 
-    const Eigen::VectorXi y_d_rows = (Eigen::VectorXi(7) << 0, 1, 2, 9, 10, 11, 12).finished(); // Selecting p_d (0-2) and q_d (9-12)
-    const Eigen::VectorXi y_d_p_rows = (Eigen::VectorXi(6) << 3, 4, 5, 13, 14, 15).finished();  // Selecting p_d_p (3-5) and omega_d (13-15)
-    const Eigen::VectorXi y_d_pp_rows = (Eigen::VectorXi(6) << 6, 7, 8, 16, 17, 18).finished(); // Selecting p_d_pp (6-8) and omega_d_p (16-18)
-    const Eigen::VectorXi z_d_rows = (Eigen::VectorXi(6) << 0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14, 15).finished(); // Selecting p_d (0-2), p_d_p (3-5), q_d (9-12), omega_d (13-15)
+    const Eigen::VectorXi y_d_quat_rows = (Eigen::VectorXi(7) << 0, 1, 2, 9, 10, 11, 12).finished(); // Selecting p_d (0-2) and q_d (9-12)
+    const Eigen::VectorXi y_d_p_quat_rows = (Eigen::VectorXi(6) << 3, 4, 5, 13, 14, 15).finished();  // Selecting p_d_p (3-5) and omega_d (13-15)
+    const Eigen::VectorXi y_d_pp_quat_rows = (Eigen::VectorXi(6) << 6, 7, 8, 16, 17, 18).finished(); // Selecting p_d_pp (6-8) and omega_d_p (16-18)
+    
+    const Eigen::VectorXi y_d_rpy_rows = (Eigen::VectorXi(6) << 0, 1, 2, 19, 20, 21).finished(); // Selecting p_d (0-2) and Phi_d (19-21)
+    const Eigen::VectorXi y_d_p_rpy_rows = (Eigen::VectorXi(6) << 3, 4, 5, 22, 23, 24).finished();  // Selecting p_d_p (3-5) and Phi_d_p (22-24)
+    const Eigen::VectorXi y_d_pp_rpy_rows = (Eigen::VectorXi(6) << 6, 7, 8, 25, 26, 27).finished(); // Selecting p_d_pp (6-8) and Phi_d_pp (25-27)
+    
+    const Eigen::VectorXi z_d_quat_rows = (Eigen::VectorXi(13) << 0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14, 15).finished(); // Selecting p_d (0-2), p_d_p (3-5), q_d (9-12), omega_d (13-15)
+    const Eigen::VectorXi z_d_rpy_rows = (Eigen::VectorXi(12) << 0, 1, 2, 19, 20, 21, 3, 4, 5, 22, 23, 24).finished(); // Selecting p_d (0-2), Phi_d (19-21), p_d_p (3-5), Phi_d_p (22-24)
+
     double* x_k_ptr = 0; // - Initial state (12 x 1);
     double* t_k_ptr = &t_k; // - Time (1 x 1)
     double* y_d_ptr = 0; // - Desired trajectory (7 x horizon_len)
@@ -61,6 +68,8 @@ private:
     double* y_d_pp_ptr = 0; // - Desired trajectory second derivative (6 x horizon_len)
     std::vector<double **> mpc_data;      // - Array of pointers to the data
     std::vector<CasadiIOPtr_t> mpc_set_funcs; // - Array of pointers to the functions
+
+    bool use_quat;
 
     std::vector<Eigen::MatrixXd> y_d_blocks;
     std::vector<Eigen::MatrixXd> y_d_p_blocks;
@@ -216,7 +225,8 @@ private:
     void set_coldstart_init_guess(const casadi_real *const x_k_ptr);
     void init_references_and_pointers();
 
-    void generate_trajectory_blocks();
+    void generate_trajectory_blocks_quat();
+    void generate_trajectory_blocks_rpy();
 
     ///////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////
