@@ -124,9 +124,9 @@ void TrajectoryGenerator::init_file_trajectory(int traj_select,
     param_poly_traj.p_target = traj_data_file(p_d_rows, 0);
     param_poly_traj.R_target = quat2rotm<double>(traj_data_file(q_d_rows, 0));
     // prints
-    std::cout << "traj_data_file(q_d_rows, 0)\n" << traj_data_file(q_d_rows, 0) << std::endl;
-    std::cout << "R_init\n" << R_init << std::endl;
-    std::cout << "param_poly_traj.R_target\n" << param_poly_traj.R_target << std::endl;
+    // std::cout << "traj_data_file(q_d_rows, 0)\n" << traj_data_file(q_d_rows, 0) << std::endl;
+    // std::cout << "R_init\n" << R_init << std::endl;
+    // std::cout << "param_poly_traj.R_target\n" << param_poly_traj.R_target << std::endl;
 
     check_param_poly_traj(param_poly_traj);
 

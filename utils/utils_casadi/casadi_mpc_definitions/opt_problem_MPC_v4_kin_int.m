@@ -60,12 +60,24 @@ P = lyap(A, Q); % V = x'Px => Idea: Use V as end cost term
 
 %% Calculate Initial Guess
 %Get trajectory data for initial guess
-time_points = SX(1, N_MPC+1);
-time_points(1:2) = [0; DT_ctl];
 
-for i = 0:N_MPC-2
-    time_points(i+3) = DT_ctl + DT2 + i * DT; % Concatenate each term
+use_first_Ta_step = true; % (true: is much more precise!)
+
+if(use_first_Ta_step)
+    time_points = SX(1, N_MPC+1);
+    time_points(1:2) = [0; DT_ctl];
+
+    for i = 0:N_MPC-2
+        time_points(i+3) = DT_ctl + DT2 + i * DT; % Concatenate each term
+    end
+else
+    time_points = SX(1, N_MPC+1);
+    for i = 0:N_MPC
+        time_points(i+1) = i * DT; % Concatenate each term
+    end
 end
+
+
 
 MPC_traj_indices = time_points/DT_ctl + 1;
 MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});

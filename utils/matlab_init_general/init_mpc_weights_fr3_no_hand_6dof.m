@@ -1,4 +1,4 @@
-jsonText = fileread('./utils/matlab_init_general/casadi_mpc_weights_fr3_no_hand.json'); % Read JSON file as text
+jsonText = fileread('./config_settings/casadi_mpc_weights_fr3_no_hand.json'); % Read JSON file as text
 param_weight = jsondecode(jsonText);        % Convert JSON text to structure
 
 %%%%%%%%%%%%%%%%%%% generate param MPC weights struct %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

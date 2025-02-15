@@ -232,22 +232,16 @@ H2 = Function('H_qw', {z_ref, v_ref}, {[H_temp(1:3);H_norm(H_temp(4:7)); H_temp(
 % z_0 = [p0, q0, p0_p, q0_p] = [p0, q0, p0_p, Q(q0)*omega0]
 z_0_0              = [y_d_0(:, 1); y_d_p_0(1:n_yt, 1); Q(y_d_0(4:7))*y_d_p_0(4:6, 1)]; % init for z_ref
 
-quat_pp = zeros(4, N_MPC+1);
+quat_p_0 = zeros(4, N_MPC+1);
+quat_pp_0 = zeros(4, N_MPC+1);
 for i=1:N_MPC+1
     quat_temp = y_d_0(4:7, i);
     omega_temp = y_d_p_0(4:6, i);
     omega_p_temp = y_d_pp_0(4:6, i);
-    quat_pp(:, i) = Q(Q(quat_temp)*omega_temp)*omega_temp - Q(quat_temp)*omega_p_temp;
-end
-alpha_init_guess_0 =  [y_d_pp_0(yt_indices, :); quat_pp];
-
-quat_p_0 = zeros(4, N_MPC+1);
-for i=1:N_MPC+1
-    quat_temp = y_d_0(4:7, i);
-    omega_temp = y_d_p_0(4:6, i);
     quat_p_0(:, i) = Q(quat_temp)*omega_temp;
+    quat_pp_0(:, i) = Q(quat_p_0(:, i))*omega_temp + Q(quat_temp)*omega_p_temp;
 end
-
+alpha_init_guess_0 =  [y_d_pp_0(yt_indices, :); quat_pp_0];
 z_init_guess_0 = [y_d_0; y_d_p_0(yt_indices, :); quat_p_0];
 
 

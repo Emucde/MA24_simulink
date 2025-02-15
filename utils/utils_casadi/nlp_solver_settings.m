@@ -325,11 +325,47 @@ elseif(strcmp(MPC_solver, 'fatrop'))
 
     % Fatrop-specific options
     opts.fatrop = struct;
-    opts.fatrop.print_level = 0; % Set the level of printing (-1 for no printing, 0 for normal, 1 for verbose)
-    opts.fatrop.max_iter = 100; % Specify maximum iterations, adjust based on problem scale
-    opts.fatrop.tol = 1e-6; % Set a tolerance for the convergence criteria
-    opts.fatrop.mu_init = 0.1;
-
+    opts.fatrop.print_level = 0; % fatrop print level, default value: 10
+    opts.fatrop.max_iter = 100; % maximum number of iterations, default value: 1000
+    opts.fatrop.tol = 1e-8; % tolerance, default value: 1e-8
+    opts.fatrop.acceptable_tol = 1e-6; % acceptable tolerance, default value: 1e-6
+    opts.fatrop.max_watchdog_steps = 4; % maximum number of watchdog steps, default value: 4
+    opts.fatrop.acceptable_iter = 15; % acceptable iter, default value: 15
+    opts.fatrop.lammax = 1e3; % lammax, default value: 1e3
+    opts.fatrop.mu_init = 1e2; % mu_init, default value: 1e2
+    opts.fatrop.kappa_eta = 10.0; % kappa_eta, default value: 10.0
+    opts.fatrop.kappa_mu = 0.2; % kappa_mu, default value: 0.2
+    opts.fatrop.theta_mu = 1.5; % theta_mu, default value: 1.5
+    opts.fatrop.delta_w0 = 1e-4; % delta_w0, default value: 1e-4
+    opts.fatrop.delta_wmin = 1e-20; % delta_wmin, default value: 1e-20
+    opts.fatrop.kappa_wmin = 1.0/3.0; % kappa_wmin, default value: 1/3
+    opts.fatrop.kappa_wplus = 8.0; % kappa_wplus, default value: 8.0
+    opts.fatrop.kappa_wplusem = 100.0; % kappa_wplusem, default value: 100.0
+    opts.fatrop.delta_c_stripe = 1e-6; % delta_c_stripe, default value: 1e-6
+    opts.fatrop.kappa_c = 0.25; % kappa_c, default value: 0.25
+    opts.fatrop.warm_start_init_point = true; % warm_start_init_point, default value: false
+    opts.fatrop.theta_min = 1e-4; % theta_min, default value: 1e-4
+    opts.fatrop.recalc_y = false; % recalc_y, default value: false
+    opts.fatrop.recalc_y_feas_tol = 1e-6; % recalc_y_feas_tol, default value: 1e-6
+    opts.fatrop.kappa_d = 1e-5; % kappa_d, default value: 1e-5
+    opts.fatrop.accept_every_trial_step = false; % accept every trial step, default value: false
+    opts.fatrop.s_phi = 2.3; % s_phi, default value: 2.3
+    opts.fatrop.delta = 1.0; % delta, default value: 1.0
+    opts.fatrop.s_theta = 1.1; % s_theta, default value: 1.1
+    opts.fatrop.gamma_theta = 1e-5; % gamma_theta, default value: 1e-5
+    opts.fatrop.gamma_phi = 1e-8; % gamma_phi, default value: 1e-8
+    opts.fatrop.eta_phi = 1e-8; % eta_phi, default value: 1e-8
+    opts.fatrop.gamma_alpha = 0.05; % gamma_alpha, default value: 0.05
+    opts.fatrop.max_soc = 2; % max_soc, default value: 2
+    opts.fatrop.iterative_refinement_SOC = true; % Use iterative refinement for SOC, default value: true
+    opts.fatrop.ls_scaling = true; % Use automatic scaling for linear system, default value: true
+    opts.fatrop.warm_start_mult_bound_push = 1e-2; % warm_start_mult_bound_push, default value: 1e-2
+    opts.fatrop.smax = 100.0; % smax, default value: 100.0
+    opts.fatrop.bound_push = 1e-2; % kappa1, default value: 1e-2
+    opts.fatrop.bound_frac = 1e-2; % kappa2, default value: 1e-2
+    opts.fatrop.kappa_sigma = 1e10; % kappa_sigma, default value: 1e10
+    opts.fatrop.bound_relax_factor = 1e-8; % bound_relax_factor, default value: 1e-8
+    opts.fatrop.constr_viol_tol = 1e-4; % constr_viol_tol, default value: 1e-4
     % opts.structure_detection = 'auto';
     % opts.equality = {1};
     if(exist('ng', 'var') && exist('nu', 'var') && exist('nx', 'var') && exist('N', 'var'))

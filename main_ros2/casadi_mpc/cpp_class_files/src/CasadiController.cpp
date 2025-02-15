@@ -1,22 +1,23 @@
 #include "CasadiController.hpp"
 #include "eigen_templates.hpp"
 
-CasadiController::CasadiController(const std::string &urdf_path, const std::string &tcp_frame_name, bool use_gravity)
+CasadiController::CasadiController(const std::string &urdf_path, const std::string &casadi_mpc_weights_file, const std::string &tcp_frame_name, bool use_gravity)
     : robot_config(get_robot_config()),
       nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
       n_indices(ConstIntVectorMap(robot_config.n_indices, nq_red)),
       n_x_indices(ConstIntVectorMap(robot_config.n_x_indices, nx_red)),
       torque_mapper(urdf_path, tcp_frame_name, robot_config, use_gravity, true),
-      trajectory_generator(torque_mapper, robot_config.dt)
+      trajectory_generator(torque_mapper, robot_config.dt),
+      casadi_mpc_weights_file(casadi_mpc_weights_file)
 {
     // Initialize MPC objects
     for (int i = 0; i < static_cast<int>(CasadiMPCType::COUNT); ++i)
     {
 
         CasadiMPCType mpc = static_cast<CasadiMPCType>(i);
-        if (mpc != CasadiMPCType::INVALID)
-        {                                                                                                                                             // Ensures we are within valid enum range
-            casadi_mpcs.push_back(CasadiMPC(mpc, robot_config, trajectory_generator.get_traj_data(), trajectory_generator.get_traj_data_real_len())); // Initialize all MPCs
+        if (mpc != CasadiMPCType::INVALID) // Ensures we are within valid enum range
+        {                                  
+            casadi_mpcs.push_back(CasadiMPC(mpc, robot_config, trajectory_generator)); // Initialize all MPCs
         }
     }
 
@@ -101,6 +102,29 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
     return tau_full;
 }
 
+void CasadiController::update_mpc_weights()
+{
+    std::ifstream file(casadi_mpc_weights_file);
+    if (!file.is_open())
+    {
+        std::cerr << "Error: Could not open JSON file." << std::endl;
+        return;
+    }
+
+    nlohmann::json param_mpc_weight;
+    file >> param_mpc_weight; // Parse JSON file
+    file.close();
+
+    for (int i = 0; i < static_cast<int>(CasadiMPCType::COUNT); ++i)
+    {
+        if (static_cast<CasadiMPCType>(i) != CasadiMPCType::INVALID)
+        {
+            std::string mpc_name = casadi_mpcs[i].get_mpc_name();
+            casadi_mpcs[i].update_mpc_weights(param_mpc_weight[mpc_name]);
+        }
+    }
+}
+
 void CasadiController::init_file_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
                                             double T_start, double T_poly, double T_end)
 {
@@ -134,7 +158,7 @@ void CasadiController::update_trajectory_data(const casadi_real *const x_k_ndof_
     {
         if (static_cast<CasadiMPCType>(i) != CasadiMPCType::INVALID)
         {
-            casadi_mpcs[i].switch_traj(trajectory_generator.get_traj_data(), x_k, trajectory_generator.get_traj_data_real_len());
+            casadi_mpcs[i].switch_traj(x_k);
         }
     }
 }

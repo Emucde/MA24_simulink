@@ -2,8 +2,6 @@
 #define FULLSYSTEMTORQUEMAPPER_HPP
 
 #include <vector>
-#include "CasadiMPC.hpp"
-#include "casadi_types.h"
 #include "param_robot.h"
 #include <iostream>
 #include <pinocchio/algorithm/crba.hpp>
@@ -59,7 +57,7 @@ public:
     Eigen::VectorXd calc_full_torque(const Eigen::VectorXd &u, const Eigen::VectorXd &x_k_ndof);
 
     // Method to calculate the pose (p, R) by a given state
-    void calcPose(const casadi_real* x, Eigen::Vector3d &p, Eigen::Matrix3d &R);
+    void calcPose(const double* x, Eigen::Vector3d &p, Eigen::Matrix3d &R);
     void calcPose(const Eigen::VectorXd &q, Eigen::Vector3d &p, Eigen::Matrix3d &R);
 
     // Method to simulate the robot model
@@ -88,11 +86,11 @@ private:
     const std::string tcp_frame_name;
     robot_config_t &robot_config;
     bool is_kinematic_mpc; // Kinematic MPC flag
-    casadi_uint nq;        // Number of degrees of freedom
-    casadi_uint nx;        // Number of degrees of freedom
-    casadi_uint nq_red;    // Number of reduced degrees of freedom
-    casadi_uint nx_red;    // Number of reduced degrees of freedom
-    casadi_uint nq_fixed;  // Number of reduced degrees of freedom
+    uint nq;        // Number of degrees of freedom
+    uint nx;        // Number of degrees of freedom
+    uint nq_red;    // Number of reduced degrees of freedom
+    uint nx_red;    // Number of reduced degrees of freedom
+    uint nq_fixed;  // Number of reduced degrees of freedom
     pinocchio::Model robot_model_full;
     pinocchio::Data robot_data_full;
     pinocchio::Model::FrameIndex tcp_frame_id;

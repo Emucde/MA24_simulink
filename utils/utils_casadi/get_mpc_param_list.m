@@ -1,6 +1,10 @@
 function [output_names, param_mpc_source_selection] = get_mpc_param_list(param_casadi_fun_name, param_casadi_fun_struct, mpc_source_selection, iterate_all_mpc_sfunctions)
 
-    param_casadi_fun_struct_list_temp = struct2cell(param_casadi_fun_name);
+    if(mpc_source_selection == 5)
+        param_casadi_fun_struct_list_temp = init_custom_mpc_list();
+    else
+        param_casadi_fun_struct_list_temp = struct2cell(param_casadi_fun_name);
+    end
 
     if(mpc_source_selection == 1) % all mpcs
         param_casadi_fun_struct_list = param_casadi_fun_struct_list_temp;
@@ -18,3 +22,5 @@ function [output_names, param_mpc_source_selection] = get_mpc_param_list(param_c
 
     output_names = cellfun(@(x) x.name, param_casadi_fun_struct_list, 'UniformOutput', false);
     param_mpc_source_selection = param_casadi_fun_struct_list;
+
+end

@@ -290,6 +290,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '        .kinematic_mpc = %s_KINEMATIC_MPC, // Kinematic MPC (u_opt=q0_pp, x1, q1pp) or dynamic MPC (u_opt=tau0)\n', func_name);
     fprintf(fid, '        .traj_data_per_horizon = %s_TRAJ_DATA_PER_HORIZON, // Number of trajectory data points per horizon\n', func_name);
     fprintf(fid, '        .traj_indices = %s_TRAJ_INDICES, // Local indices of the trajectory per horizon\n', func_name);
+    fprintf(fid, '        .N_step = %s_N_STEP, // Number of Control frequency stepswidth in the prediction horizon\n', func_name);
     fprintf(fid, '        .param_weight = %s_param_weight, // Parameter weights\n', func_name);
     fprintf(fid, '        .param_weight_len = %s_PARAM_WEIGHT_LEN, // Length of the parameter weights\n', func_name);
     fprintf(fid, '        .casadi_fun = &%s, // CasADi function\n', func_name);
@@ -305,7 +306,6 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '        .mem = 0, // Memory\n');
     fprintf(fid, '        .set_init_guess_out_to_in = &set_init_guess_out_to_in_%s, // Setter function for updating init guess\n', func_name);
     fprintf(fid, '        .set_prev_to_out = &set_prev_to_out_%s, // Setter function for previous to output\n', func_name);
-    % create the mpc_input_config struct
     fprintf(fid, '        .in = {\n');
     
     for i = 1:length(casadi_fun_input_cell)

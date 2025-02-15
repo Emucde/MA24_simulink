@@ -118,7 +118,9 @@
     "format": "cpp",
     "text_encoding": "cpp",
     "mpc01_addressdef.h": "c",
-    "valarray": "cpp"
+    "valarray": "cpp",
+    "subscription_content_filter_options.h": "c",
+    "ret_types.h": "c"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",

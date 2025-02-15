@@ -38,8 +38,8 @@ if(~use_extern_flags)
     remove_sourcefiles              = false; % remove source files after compilation
 end
 
-% MPC TO COMPILE:
-SELECTED_MPC_NAME = 'MPC17';
+% MPC TO COMPILE FOR SIMULINK
+SELECTED_MPC_NAME = 'MPC11';
 
 % Compile Mode:
 % compile_mode = 1 | nlpsol-sfun | fast compile time | very accurate,          | sometimes slower exec
@@ -88,7 +88,7 @@ param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version = 'opt_problem_MPC_v4_kin_int'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 10;
+param_casadi_fun_name.(MPC).N_MPC   = 5;
 param_casadi_fun_name.(MPC).compile_mode = 2; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler)

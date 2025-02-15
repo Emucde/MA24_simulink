@@ -1,6 +1,7 @@
 #ifndef CASADICONTROLLER_HPP
 #define CASADICONTROLLER_HPP
 
+#include "json.hpp"
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
@@ -40,6 +41,8 @@ private:
     const Eigen::VectorXi n_x_indices;
     FullSystemTorqueMapper torque_mapper; // Torque mapper
     TrajectoryGenerator trajectory_generator;    // Trajectory generator
+    const std::string casadi_mpc_weights_file;  // Path to the casadi mpc weights file
+    nlohmann::json param_mpc_weight;
 
     double *u_k_ptr; // - Pointer to the optimal control
 
@@ -69,10 +72,12 @@ private:
 
 public:
     // Constructor
-    CasadiController(const std::string &urdf_path, const std::string &tcp_frame_name, bool use_gravity);
+    CasadiController(const std::string &urdf_path, const std::string &casadi_mpc_weights_file, const std::string &tcp_frame_name, bool use_gravity);
 
     // solve the MPC
     Eigen::VectorXd solveMPC(const casadi_real *const x_k_ndof_ptr);
+
+    void update_mpc_weights();
 
     // Initialize trajectory data
     void init_file_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,

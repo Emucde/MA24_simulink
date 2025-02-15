@@ -198,16 +198,16 @@ find_library(RT_LIB rt)
 # Add source files for main executable, including CasadiMPC.cpp
 file(GLOB_RECURSE SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")  # Recursively find all .cpp files in src folder
 # Define utility libraries
-set(UTILS_LIBRARIES 
-    WorkspaceController
-    CasadiController
+set(UTILS_LIBRARIES
     CrocoddylController
     CrocoddylMPC
-    CasadiMPC
+    WorkspaceController
+    CasadiController
     FullSystemTorqueMapper
     RobotModel
     SharedMemory
     SignalFilter
+    CasadiMPC
     TicToc
     TrajectoryGenerator
     CasadiEKF
@@ -222,10 +222,53 @@ foreach(SOURCE_FILE ${SRC_FILES})
     # Set the output library name to 'lib<NAME>.so'
     set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}" INSTALL_RPATH "${MPC_SOURCE_DIR};${LIBRARY_PATH}")
 
+    if(${FILE_NAME} STREQUAL "WorkspaceController")
+        set(SHARED_LIBRARIES
+            ${EIGEN3_LIBRARIES}
+            ${pinocchio_LIBRARIES}
+        )
+    elseif(${FILE_NAME} STREQUAL "CasadiController" OR ${FILE_NAME} STREQUAL "CasadiMPC")
+        set(SHARED_LIBRARIES
+            ${EIGEN3_LIBRARIES}
+            ${MPC_PARAM_LIBRARIES}
+            ${MPC_LIBRARIES}
+        )
+    elseif(${FILE_NAME} STREQUAL "CrocoddylController" OR ${FILE_NAME} STREQUAL "CrocoddylMPC")
+        set(SHARED_LIBRARIES
+            ${EIGEN3_LIBRARIES}
+            ${pinocchio_LIBRARIES}
+            ${crocoddyl_LIBRARIES}
+        )
+    elseif(${FILE_NAME} STREQUAL "FullSystemTorqueMapper" OR ${FILE_NAME} STREQUAL "RobotModel")
+        set(SHARED_LIBRARIES
+            ${EIGEN3_LIBRARIES}
+            ${pinocchio_LIBRARIES}
+        )
+    elseif(${FILE_NAME} STREQUAL "SharedMemory")
+        set(SHARED_LIBRARIES
+            ${rclcpp_LIBRARIES}
+        )
+    elseif(${FILE_NAME} STREQUAL "SignalFilter")
+        set(SHARED_LIBRARIES
+            ${EIGEN3_LIBRARIES}
+        )
+    elseif(${FILE_NAME} STREQUAL "TicToc")
+        set(SHARED_LIBRARIES "")
+    elseif(${FILE_NAME} STREQUAL "TrajectoryGenerator")
+        set(SHARED_LIBRARIES
+            ${EIGEN3_LIBRARIES}
+        )
+    elseif(${FILE_NAME} STREQUAL "CasadiEKF")
+        set(SHARED_LIBRARIES
+            ${EIGEN3_LIBRARIES}
+            ${MPC_LIBRARIES}
+        )
+    endif()
+
     # Include directories
-    target_include_directories(${FILE_NAME} PRIVATE 
+    target_include_directories(${FILE_NAME} PRIVATE
         ${pinocchio_INCLUDE_DIRS}
-        ${crocoddyl_INCLUDE_DIRS} 
+        ${crocoddyl_INCLUDE_DIRS}
         ${EIGEN3_INCLUDE_DIR}
         ${rclcpp_INCLUDE_DIRS}
         ${MPC_SOURCE_DIR} 
@@ -233,14 +276,10 @@ foreach(SOURCE_FILE ${SRC_FILES})
     )
 
     target_link_libraries(${FILE_NAME} PRIVATE
-        ${pinocchio_LIBRARIES}
-        ${crocoddyl_LIBRARIES}
-        ${EIGEN3_LIBRARIES}
-        ${rclcpp_LIBRARIES}
-        ${MPC_PARAM_LIBRARIES}
-        ${MPC_LIBRARIES}
+        ${SHARED_LIBRARIES}
         ${RT_LIB}
         ${CMAKE_THREAD_LIBS_INIT}
+        param_robot
     )
 
     target_compile_options(${FILE_NAME} PRIVATE -Wall -Wextra -fdiagnostics-color=always ${OPT_FLAG})

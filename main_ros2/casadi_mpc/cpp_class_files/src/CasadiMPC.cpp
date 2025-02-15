@@ -17,21 +17,22 @@ mpc_config_t invalid_config(const std::string &mpc_name)
 // Constructor implementation
 CasadiMPC::CasadiMPC(CasadiMPCType mpc,
                      robot_config_t &robot_config,
-                     const Eigen::MatrixXd *traj_data,
-                     const casadi_uint traj_data_real_len) : mpc_name(casadi_mpctype_to_string(mpc)),
-                                                             mpc_config(get_MPC_config(mpc)),
-                                                             robot_config(robot_config),
-                                                             traj_data(traj_data),
-                                                             traj_data_real_len(traj_data_real_len),
-                                                             is_kinematic_mpc(mpc_config.kinematic_mpc == 1),
-                                                             nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
-                                                             casadi_fun(mpc_config.casadi_fun),
-                                                             arg(mpc_config.arg), res(mpc_config.res), iw(mpc_config.iw), w(mpc_config.w), w_end(mpc_config.w_end),
-                                                             horizon_len(mpc_config.traj_data_per_horizon),
-                                                             mpc_traj_indices(ConstIntVectorMap(mpc_config.traj_indices, horizon_len)),
-                                                             traj_data_per_horizon(mpc_config.traj_data_per_horizon),
-                                                             traj_count(0), traj_select(1),
-                                                             mem(mpc_config.mem), dt(robot_config.dt)
+                     TrajectoryGenerator &trajectory_generator) : mpc_name(casadi_mpctype_to_string(mpc)),
+                                                                  mpc_config(get_MPC_config(mpc)),
+                                                                  robot_config(robot_config),
+                                                                  trajectory_generator(trajectory_generator),
+                                                                  traj_data(trajectory_generator.get_traj_data()),
+                                                                  traj_data_real_len(trajectory_generator.get_traj_data_real_len()),
+                                                                  is_kinematic_mpc(mpc_config.kinematic_mpc == 1),
+                                                                  nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
+                                                                  casadi_fun(mpc_config.casadi_fun),
+                                                                  arg(mpc_config.arg), res(mpc_config.res), iw(mpc_config.iw), w(mpc_config.w), w_end(mpc_config.w_end),
+                                                                  horizon_len(mpc_config.traj_data_per_horizon),
+                                                                  mpc_traj_indices((Eigen::VectorXi(horizon_len) << ConstIntVectorMap(mpc_config.traj_indices, horizon_len)).finished()),
+                                                                  N_step(static_cast<uint32_t>(mpc_config.N_step)),
+                                                                  traj_data_per_horizon(mpc_config.traj_data_per_horizon),
+                                                                  traj_count(0), traj_select(1),
+                                                                  mem(mpc_config.mem), dt(robot_config.dt)
 {
     // Check if the configuration is valid
     if (mpc_config.casadi_fun == nullptr)
@@ -106,21 +107,8 @@ CasadiMPC::CasadiMPC(CasadiMPCType mpc,
 
 // Method to run the MPC
 int CasadiMPC::solve(casadi_real *x_k_in)
-{
-    // Copy the state to the MPC object
-
+{ // Copy the state to the MPC object
     set_references(x_k_in);
-
-#ifdef DEBUG
-    std::cout << "int CasadiMPC::solve()\nw:\n";
-    for (int i = 0; i < int(mpc_config.in.init_guess.len + mpc_config.in.reference_values.len + mpc_config.in.param_weight.len); i++)
-    {
-        std::cout << w[i] << " ";
-    }
-    std::cout << std::endl;
-    std::cout << "MPC object created." << std::endl
-              << std::endl;
-#endif
 
     // Call the Casadi function
     int flag = casadi_fun(arg, res, iw, w_end, mem);
@@ -139,14 +127,6 @@ int CasadiMPC::solve(casadi_real *x_k_in)
     return flag;
 }
 
-// int CasadiMPC::solve(casadi_real *x_k_in)
-// {
-//     // Copy the initial state
-//     memcpy(x_k, x_k_in, nx_red * sizeof(casadi_real));
-
-//     return CasadiMPC::solve();
-// }
-
 int CasadiMPC::solve_planner()
 {
     // Call the Casadi function
@@ -160,21 +140,6 @@ int CasadiMPC::solve_planner()
 
         // mpc planner: use x_k+1 as x_k for next iteration - not the measurement!
         set_references(mpc_config.out.x_out.ptr + nx_red);
-        // memcpy(x_k, w + mpc_config.out.x_out.ptr + nx_red, nx_red * sizeof(casadi_real));
-#ifdef DEBUG
-        if (traj_count % 100 == 0)
-        {
-            double *x_k = mpc_config.in.x_k.ptr;
-            double *u_opt = mpc_config.out.u_opt.ptr;
-            std::cout << "x_k: " << x_k[0] << " " << x_k[1] << " " << x_k[2] << " " << x_k[3] << " " << x_k[4] << " " << x_k[5] << " " << x_k[6] << std::endl;
-
-            for (int i = 0; i < 24; i++)
-            {
-                std::cout << u_opt[i] << " ";
-            }
-            std::cout << std::endl;
-        }
-#endif
     }
     else
     {
@@ -184,14 +149,52 @@ int CasadiMPC::solve_planner()
     return flag;
 }
 
-// Method for switching the trajectory
-void CasadiMPC::switch_traj(const Eigen::MatrixXd *traj_data_new, const casadi_real *const x_k_ptr, casadi_uint traj_data_real_len_new)
+void CasadiMPC::update_mpc_weights(nlohmann::json param_weight)
 {
-    traj_data = traj_data_new;
+    // iterate all keys in param_weight and update the weights
+    for (auto &item : param_weight.items())
+    {
+        const MPCInput input_id = string_to_mpc_input(item.key());
+        const mpc_input_entry_t *entry = get_mpc_input_entry(&mpc_config.in, static_cast<mpc_input_config_id_t>(input_id));
+        if (entry != nullptr)
+        {
+            if (item.value().is_array())
+            {
+                std::vector<casadi_real> weight = item.value().get<std::vector<casadi_real>>();
+                entry->set(w, weight.data());
+            }
+            else if (item.value().is_number())
+            {
+                casadi_real weight = item.value().get<casadi_real>();
+                entry->set(w, &weight);
+
+                if (item.key() == "N_step")
+                {
+                    mpc_traj_indices = static_cast<int>(weight) * (mpc_traj_indices.array() / N_step);
+                    // mpc_traj_indices[1] = 1; // always start at Ta here (control frequency)
+                    N_step = weight;
+                }
+            }
+            else
+            {
+                throw std::runtime_error("CasadiMPC::update_mpc_weights(): " + item.key() + " has an invalid type. Expected scalar or array.");
+            }
+        }
+        else
+        {
+            throw std::runtime_error("CasadiMPC::update_mpc_weights(): " + item.key() + " is not a valid parameter name.");
+        }
+    }
+}
+
+// Method for switching the trajectory
+void CasadiMPC::switch_traj(const casadi_real *const x_k_ptr)
+{
+    traj_data = trajectory_generator.get_traj_data();
     traj_rows = traj_data->rows();
     traj_cols = traj_data->cols();
 
-    traj_data_real_len = traj_data_real_len_new;
+    traj_data_real_len = trajectory_generator.get_traj_data_real_len();
 
     if (traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1] > traj_cols)
     {
@@ -204,14 +207,7 @@ void CasadiMPC::switch_traj(const Eigen::MatrixXd *traj_data_new, const casadi_r
                                  ". Please generate new.");
     }
 
-    if(use_quat)
-    {
-        generate_trajectory_blocks_quat();
-    }
-    else
-    {
-        generate_trajectory_blocks_rpy();
-    }
+    generate_trajectory_blocks();
     init_references_and_pointers();
     set_coldstart_init_guess(x_k_ptr);
 
@@ -239,26 +235,56 @@ void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_k_ptr)
 
     if (mpc_config.in.z.len != 0)
     {
+        const Eigen::VectorXi z_d_quat_rows = (Eigen::VectorXi(10) << trajectory_generator.p_d_rows, trajectory_generator.q_d_rows, trajectory_generator.p_d_p_rows).finished();                                     // Selecting p_d (0-2), q_d (9-12), p_d_p (3-5)
+        const Eigen::VectorXi z_d_rpy_rows = (Eigen::VectorXi(12) << trajectory_generator.p_d_rows, trajectory_generator.phi_d_rows, trajectory_generator.p_d_p_rows, trajectory_generator.phi_d_p_rows).finished(); // Selecting p_d (0-2), Phi_d (19-21), p_d_p (3-5), Phi_d_p (22-24)
+        const Eigen::VectorXi quat_rows = trajectory_generator.q_d_rows;
+        const Eigen::VectorXi omega_rows = trajectory_generator.omega_d_rows;
+        const Eigen::VectorXi omega_p_rows = trajectory_generator.omega_d_p_rows;
+        const Eigen::VectorXi p_d_pp_rows = trajectory_generator.p_d_pp_rows;
+
         Eigen::MatrixXd z_d(mpc_config.in.z_k.len, horizon_len);
-        Eigen::MatrixXd alpha_d(6, horizon_len);
+        Eigen::MatrixXd alpha_d(static_cast<int>(mpc_config.in.alpha.len / horizon_len), horizon_len);
         Eigen::MatrixXd z_k_d(mpc_config.in.z_k.len, 1);
-        if(use_quat) // in case of MPC_v3_rpy z_k = [p_d; p_d_p; quat_d; omega_d]
+        if (use_quat) // in case of MPC_v3_quat z_k = [p_d; p_d_p; quat_d; omega_d]
         {
-            z_d << (*traj_data)(z_d_quat_rows, mpc_traj_indices.array() + 0);
-            alpha_d << (*traj_data)(y_d_pp_quat_rows, mpc_traj_indices.array() + 0);
+            Eigen::MatrixXd quat_d = (*traj_data)(quat_rows, mpc_traj_indices.array() + 0);
+            Eigen::MatrixXd omega_d = (*traj_data)(omega_rows, mpc_traj_indices.array() + 0);
+            Eigen::MatrixXd omega_d_p = (*traj_data)(omega_p_rows, mpc_traj_indices.array() + 0);
+
+            Eigen::MatrixXd quat_d_p(4, horizon_len);
+            Eigen::MatrixXd quat_d_pp(4, horizon_len);
+
+            for (uint32_t i = 0; i < horizon_len; i++)
+            {
+                quat_d_p.col(i) = d_dt_quat(quat_d.col(i), omega_d.col(i));
+                quat_d_pp.col(i) = d_dt2_quat(quat_d.col(i), omega_d.col(i), omega_d_p.col(i));
+            }
+
+            z_d << (*traj_data)(z_d_quat_rows, mpc_traj_indices.array() + 0), quat_d_p;
+            alpha_d << (*traj_data)(p_d_pp_rows, mpc_traj_indices.array() + 0), quat_d_pp;
         }
-        else // In case of MPC_v3_quat z_k = [p_d; phi_d; p_d_p; phi_d_p]
+        else // In case of MPC_v3_rpy z_k = [p_d; phi_d; p_d_p; phi_d_p]
         {
             z_d << (*traj_data)(z_d_rpy_rows, mpc_traj_indices.array() + 0);
             alpha_d << (*traj_data)(y_d_pp_rpy_rows, mpc_traj_indices.array() + 0);
         }
         z_k_d = z_d.col(0);
 
-        memcpy(mpc_config.in.z_k.ptr, z_k_d.data(), mpc_config.in.z_k.len * sizeof(double));
-        memcpy(mpc_config.in.z.ptr, z_d.data(), mpc_config.in.z.len * sizeof(double));
-        memcpy(mpc_config.in.z_prev.ptr, z_d.data(), mpc_config.in.z.len * sizeof(double));
-        memcpy(mpc_config.in.alpha.ptr, alpha_d.data(), mpc_config.in.alpha.len * sizeof(double));
-        memcpy(mpc_config.in.alpha_prev.ptr, alpha_d.data(), mpc_config.in.alpha.len * sizeof(double));
+        mpc_config.in.z_k.set(w, z_k_d.data());
+        mpc_config.in.z.set(w, z_d.data());
+        mpc_config.in.z_prev.set(w, z_d.data());
+        mpc_config.in.alpha.set(w, alpha_d.data());
+        mpc_config.in.alpha_prev.set(w, alpha_d.data());
+    }
+    if (mpc_config.in.traj_select.len != 0)
+    {
+        double traj_select_double = static_cast<double>(traj_select);
+        Eigen::VectorXd init_guess_theta = Eigen::VectorXd(mpc_traj_indices.cast<double>()) * dt;
+
+        mpc_config.in.t_k.set(w, init_guess_theta.data());
+        mpc_config.in.traj_select.set(w, &traj_select_double);
+        mpc_config.in.theta.set(w, init_guess_theta.data());
+        mpc_config.in.theta_prev.set(w, init_guess_theta.data());
     }
 }
 
@@ -306,7 +332,7 @@ Damit erstellt man ein Struct für die Setter der Referenzen und ein Struct für
 void CasadiMPC::init_references_and_pointers()
 {
     // Temporary vectors to hold pointers and set functions
-    std::vector<double**> temp_mpc_data(static_cast<int>(MPCInput::COUNT), nullptr);
+    std::vector<double **> temp_mpc_data(static_cast<int>(MPCInput::COUNT), nullptr);
     std::vector<CasadiIOPtr_t> temp_mpc_set_funcs(static_cast<int>(MPCInput::COUNT), nullptr);
 
     size_t count = 0; // Counter for valid entries
@@ -320,9 +346,9 @@ void CasadiMPC::init_references_and_pointers()
         case MPCInput::x_k:
             if (mpc_config.in.x_k.len != 0)
             {
-                temp_mpc_data[count] = &x_k_ptr; // Store pointer
+                temp_mpc_data[count] = &x_k_ptr;                   // Store pointer
                 temp_mpc_set_funcs[count] = mpc_config.in.x_k.set; // Store set function
-                count++; // Increment count
+                count++;                                           // Increment count
             }
             break;
         case MPCInput::t_k:
@@ -374,58 +400,51 @@ void CasadiMPC::init_references_and_pointers()
     }
 }
 
-
-void CasadiMPC::generate_trajectory_blocks_quat()
+void CasadiMPC::generate_trajectory_blocks()
 {
-    Eigen::MatrixXd y_d(7, horizon_len);
+    Eigen::MatrixXd y_d;
     Eigen::MatrixXd y_d_p(6, horizon_len);
     Eigen::MatrixXd y_d_pp(6, horizon_len);
+    Eigen::VectorXd t_d(horizon_len);
 
-    y_d_blocks.resize(traj_cols);
-    y_d_p_blocks.resize(traj_cols);
-    y_d_pp_blocks.resize(traj_cols);
+    Eigen::VectorXi y_d_rows;
+    Eigen::VectorXi y_d_p_rows;
+    Eigen::VectorXi y_d_pp_rows;
 
-    y_d_blocks_data.resize(traj_cols);
-    y_d_p_blocks_data.resize(traj_cols);
-    y_d_pp_blocks_data.resize(traj_cols);
-
-    for( uint32_t i = 0; i < traj_cols; i++)
+    if (use_quat)
     {
-        y_d << (*traj_data)(y_d_quat_rows, mpc_traj_indices.array() + i);
-        y_d_p << (*traj_data)(y_d_p_quat_rows, mpc_traj_indices.array() + i);
-        y_d_pp << (*traj_data)(y_d_pp_quat_rows, mpc_traj_indices.array() + i);
-        y_d_blocks[i] = y_d;
-        y_d_p_blocks[i] = y_d_p;
-        y_d_pp_blocks[i] = y_d_pp;
-
-        y_d_blocks_data[i] = y_d_blocks[i].data();
-        y_d_p_blocks_data[i] = y_d_p_blocks[i].data();
-        y_d_pp_blocks_data[i] = y_d_pp_blocks[i].data();
+        y_d.resize(7, horizon_len);
+        y_d_rows = y_d_quat_rows;
+        y_d_p_rows = y_d_p_quat_rows;
+        y_d_pp_rows = y_d_pp_quat_rows;
     }
-}
-
-void CasadiMPC::generate_trajectory_blocks_rpy()
-{
-    Eigen::MatrixXd y_d(6, horizon_len);
-    Eigen::MatrixXd y_d_p(6, horizon_len);
-    Eigen::MatrixXd y_d_pp(6, horizon_len);
+    else
+    {
+        y_d.resize(6, horizon_len);
+        y_d_rows = y_d_rpy_rows;
+        y_d_p_rows = y_d_p_rpy_rows;
+        y_d_pp_rows = y_d_pp_rpy_rows;
+    }
 
     y_d_blocks.resize(traj_cols);
     y_d_p_blocks.resize(traj_cols);
     y_d_pp_blocks.resize(traj_cols);
+    t_d_arr.resize(traj_cols);
 
     y_d_blocks_data.resize(traj_cols);
     y_d_p_blocks_data.resize(traj_cols);
     y_d_pp_blocks_data.resize(traj_cols);
 
-    for( uint32_t i = 0; i < traj_cols; i++)
+    for (uint32_t i = 0; i < traj_cols; i++)
     {
-        y_d << (*traj_data)(y_d_rpy_rows, mpc_traj_indices.array() + i);
-        y_d_p << (*traj_data)(y_d_p_rpy_rows, mpc_traj_indices.array() + i);
-        y_d_pp << (*traj_data)(y_d_pp_rpy_rows, mpc_traj_indices.array() + i);
+        y_d << (*traj_data)(y_d_rows, mpc_traj_indices.array() + i);
+        y_d_p << (*traj_data)(y_d_p_rows, mpc_traj_indices.array() + i);
+        y_d_pp << (*traj_data)(y_d_pp_rows, mpc_traj_indices.array() + i);
+
         y_d_blocks[i] = y_d;
         y_d_p_blocks[i] = y_d_p;
         y_d_pp_blocks[i] = y_d_pp;
+        t_d_arr[i] = i * dt;
 
         y_d_blocks_data[i] = y_d_blocks[i].data();
         y_d_p_blocks_data[i] = y_d_p_blocks[i].data();
@@ -460,7 +479,7 @@ void CasadiMPC::set_references(casadi_real *x_k_in)
     if (traj_count < traj_data_real_len - 1)
     {
         x_k_ptr = x_k_in;
-        t_k = dt*traj_count;
+        t_k_ptr = &t_d_arr[traj_count];
         y_d_ptr = y_d_blocks_data[traj_count];
         y_d_p_ptr = y_d_p_blocks_data[traj_count];
         y_d_pp_ptr = y_d_pp_blocks_data[traj_count];

@@ -1,6 +1,7 @@
 #ifndef CASADIMPC_HPP
 #define CASADIMPC_HPP
 
+#include "json.hpp"
 #include <iostream>
 #include "mpc_config_types.h"
 #include "casadi_types.h" // Include for casadi types
@@ -9,6 +10,7 @@
 #include <Eigen/Core>
 #include "param_robot.h"
 #include "mpc_configs.h"
+#include "TrajectoryGenerator.hpp"
 #include "FullSystemTorqueMapper.hpp"
 
 // #define DEBUG 1
@@ -19,6 +21,7 @@ private:
     const std::string mpc_name; // MPC name
     mpc_config_t mpc_config;
     robot_config_t &robot_config;
+    TrajectoryGenerator &trajectory_generator;    // Trajectory generator
     const Eigen::MatrixXd *traj_data;        // Trajectory data
     casadi_uint traj_data_real_len;          // Real length of the singular trajectory data without additional samples for last prediction horizon
 public:
@@ -41,28 +44,26 @@ private:
     casadi_uint traj_cols;                                                                      // Total length of trajectory data (transient traj + singular traj)        Eigen::VectorXi selected_rows(7);
 
     const casadi_uint horizon_len;           // Needed trajectory samples in a prediction horizon.
-    const Eigen::VectorXi mpc_traj_indices;  // MPC stepwidth indices for sampling trajectory data
+    Eigen::VectorXi mpc_traj_indices;        // MPC stepwidth indices for sampling trajectory data
+    casadi_uint N_step;
     const std::string traj_file;             // Path to trajectory data file
     const casadi_uint traj_data_per_horizon; // Trajectory data per horizon
     casadi_uint traj_count;                  // Trajectory count
     int traj_select;                         // Trajectory selection
     int mem;                                 // Memory
     casadi_real dt;                          // Control sampling time
-    casadi_real t_k=0;                       // Current time
 
-    const Eigen::VectorXi y_d_quat_rows = (Eigen::VectorXi(7) << 0, 1, 2, 9, 10, 11, 12).finished(); // Selecting p_d (0-2) and q_d (9-12)
-    const Eigen::VectorXi y_d_p_quat_rows = (Eigen::VectorXi(6) << 3, 4, 5, 13, 14, 15).finished();  // Selecting p_d_p (3-5) and omega_d (13-15)
-    const Eigen::VectorXi y_d_pp_quat_rows = (Eigen::VectorXi(6) << 6, 7, 8, 16, 17, 18).finished(); // Selecting p_d_pp (6-8) and omega_d_p (16-18)
+    const Eigen::VectorXi y_d_quat_rows = (Eigen::VectorXi(7) << trajectory_generator.p_d_rows, trajectory_generator.q_d_rows).finished(); // Selecting p_d (0-2) and q_d (9-12)
+    const Eigen::VectorXi y_d_p_quat_rows = (Eigen::VectorXi(6) << trajectory_generator.p_d_p_rows, trajectory_generator.omega_d_rows).finished();  // Selecting p_d_p (3-5) and omega_d (13-15)
+    const Eigen::VectorXi y_d_pp_quat_rows = (Eigen::VectorXi(6) << trajectory_generator.p_d_pp_rows, trajectory_generator.omega_d_p_rows).finished(); // Selecting p_d_pp (6-8) and omega_d_p (16-18)
     
-    const Eigen::VectorXi y_d_rpy_rows = (Eigen::VectorXi(6) << 0, 1, 2, 19, 20, 21).finished(); // Selecting p_d (0-2) and Phi_d (19-21)
-    const Eigen::VectorXi y_d_p_rpy_rows = (Eigen::VectorXi(6) << 3, 4, 5, 22, 23, 24).finished();  // Selecting p_d_p (3-5) and Phi_d_p (22-24)
-    const Eigen::VectorXi y_d_pp_rpy_rows = (Eigen::VectorXi(6) << 6, 7, 8, 25, 26, 27).finished(); // Selecting p_d_pp (6-8) and Phi_d_pp (25-27)
+    const Eigen::VectorXi y_d_rpy_rows = (Eigen::VectorXi(6) << trajectory_generator.p_d_rows, trajectory_generator.phi_d_rows).finished(); // Selecting p_d (0-2) and Phi_d (19-21)
+    const Eigen::VectorXi y_d_p_rpy_rows = (Eigen::VectorXi(6) << trajectory_generator.p_d_p_rows, trajectory_generator.phi_d_p_rows).finished();  // Selecting p_d_p (3-5) and Phi_d_p (22-24)
+    const Eigen::VectorXi y_d_pp_rpy_rows = (Eigen::VectorXi(6) << trajectory_generator.p_d_pp_rows, trajectory_generator.phi_d_pp_rows).finished(); // Selecting p_d_pp (6-8) and Phi_d_pp (25-27)
     
-    const Eigen::VectorXi z_d_quat_rows = (Eigen::VectorXi(13) << 0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14, 15).finished(); // Selecting p_d (0-2), p_d_p (3-5), q_d (9-12), omega_d (13-15)
-    const Eigen::VectorXi z_d_rpy_rows = (Eigen::VectorXi(12) << 0, 1, 2, 19, 20, 21, 3, 4, 5, 22, 23, 24).finished(); // Selecting p_d (0-2), Phi_d (19-21), p_d_p (3-5), Phi_d_p (22-24)
 
     double* x_k_ptr = 0; // - Initial state (12 x 1);
-    double* t_k_ptr = &t_k; // - Time (1 x 1)
+    double* t_k_ptr = 0; // - Time (1 x 1)
     double* y_d_ptr = 0; // - Desired trajectory (7 x horizon_len)
     double* y_d_p_ptr = 0; // - Desired trajectory derivative (6 x horizon_len)
     double* y_d_pp_ptr = 0; // - Desired trajectory second derivative (6 x horizon_len)
@@ -74,6 +75,7 @@ private:
     std::vector<Eigen::MatrixXd> y_d_blocks;
     std::vector<Eigen::MatrixXd> y_d_p_blocks;
     std::vector<Eigen::MatrixXd> y_d_pp_blocks;
+    Eigen::VectorXd t_d_arr;
 
     std::vector<double *> y_d_blocks_data;
     std::vector<double *> y_d_p_blocks_data;
@@ -98,16 +100,19 @@ public:
     // Constructor that accepts parameters for configuration
     CasadiMPC(CasadiMPCType mpc,
               robot_config_t &robot_config,
-              const Eigen::MatrixXd *traj_data,
-              const casadi_uint traj_data_real_len);
+              TrajectoryGenerator &trajectory_generator);
 
     // Method to run the MPC
     int solve(casadi_real *x_k_in); // closed loop mpc with copying x_k_in to x_k
 
     int solve_planner(); // mpc planner: open loop mpc
 
+    void get_valid_mpc_inputs();
+    void update_mpc_weights(nlohmann::json param_weight);
+
+
     // Method to switch the trajectory
-    void switch_traj(const Eigen::MatrixXd *traj_data_new, const casadi_real *const x_k_ptr, casadi_uint traj_data_real_len_new);
+    void switch_traj(const casadi_real *const x_k_ptr);
 
     // if it solves too slow.
     void increase_traj_count()
@@ -171,6 +176,11 @@ public:
         return &mpc_config;
     }
 
+    const std::string get_mpc_name()
+    {
+        return mpc_name;
+    }
+
     // Method to get mpc_traj_indices
     const casadi_uint *get_mpc_traj_indices()
     {
@@ -225,8 +235,7 @@ private:
     void set_coldstart_init_guess(const casadi_real *const x_k_ptr);
     void init_references_and_pointers();
 
-    void generate_trajectory_blocks_quat();
-    void generate_trajectory_blocks_rpy();
+    void generate_trajectory_blocks();
 
     ///////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////

@@ -42,6 +42,30 @@ std::string regularizationModeToString(T mode)
         return "Unknown";
     }
 }
+template <typename T>
+RegularizationMode stringToRegularizationMode(const T& str)
+{
+    if (str == "None")
+        return RegularizationMode::None;
+    else if (str == "Damping")
+        return RegularizationMode::Damping;
+    else if (str == "CompleteOrthogonalDecomposition")
+        return RegularizationMode::CompleteOrthogonalDecomposition;
+    else if (str == "JacobiSVD")
+        return RegularizationMode::JacobiSVD;
+    else if (str == "ThresholdSmallSingularValues")
+        return RegularizationMode::ThresholdSmallSingularValues;
+    else if (str == "TikhonovRegularization")
+        return RegularizationMode::TikhonovRegularization;
+    else if (str == "SimpleCollinearity")
+        return RegularizationMode::SimpleCollinearity;
+    else if (str == "SteinboeckCollinearity")
+        return RegularizationMode::SteinboeckCollinearity;
+    else if (str == "RegularizationBySingularValues")
+        return RegularizationMode::RegularizationBySingularValues;
+    else
+        throw std::invalid_argument("Unknown regularization mode string");
+}
 
 struct PDSettings {
     Eigen::MatrixXd D_d;                // Damping matrix

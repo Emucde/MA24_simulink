@@ -56,27 +56,6 @@ if(overwrite_offline_traj || overwrite_offline_traj_forced || overwrite_offline_
 
     % create param_traj_settings for simulink (online)
     % TODO: ist doch komplizierter als gedacht!!!!
-    if(bdIsLoaded(simulink_main_model_name))
-        mpc_amount = length(mpc_list); % variable used from "comment_in_out_mpc_blocks.m"
-
-        param_traj_settings_online = struct;
-        param_traj_settings_online.control_select = [mpc_list.Value];
-        
-        param_traj_settings_online.T_horizon = zeros(1, mpc_amount);
-        mpc_names = fieldnames(T_horizon_struct);
-        for j = 1:mpc_amount
-            for i = 1:length(mpc_names)
-                name = mpc_names{i};
-                if(contains(mpc_list(j).Label, name))
-                    T_horizon_tmp = T_horizon_struct.(name);
-                    break
-                else % then ct control was selected
-                    T_horizon_tmp = param_global.Ta;
-                end
-            end
-            param_traj_settings_online.T_horizon(j) = T_horizon_tmp;
-        end
-    end
     param_traj_settings_online.traj_mode = traj_mode;
 
     % 2. calculate all trajectories for max horizon length

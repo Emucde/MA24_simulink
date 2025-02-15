@@ -161,6 +161,7 @@ int main()
     const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
     const std::string ekf_config_filename = std::string(MASTERDIR) + "/config_settings/ekf_settings.json";
     const std::string general_config_filename = std::string(MASTERDIR) + "/config_settings/general_settings.json";
+    const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand.json";
     const std::string tcp_frame_name = "fr3_link8_tcp";
 
     nlohmann::json general_config = read_config(general_config_filename);
@@ -187,7 +188,11 @@ int main()
     const casadi_real *x0_init;
     double current_frequency = 0.0;
     casadi_uint traj_len = 0;
-    double mean_noise_amplitude = 0.1e-3;
+    double mean_noise_amplitude = general_config["mean_noise_amplitude"];
+    double trajectory_selection = general_config["trajectory_selection"];
+    double T_traj_start = general_config["transient_traj_start_time"];
+    double T_traj_dur = general_config["transient_traj_duration"];
+    double T_traj_end = general_config["transient_traj_end_time"];
     Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nx);
 
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
@@ -195,65 +200,69 @@ int main()
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
 
     WorkspaceController classic_controller(urdf_filename, tcp_frame_name, use_gravity);
-    CasadiController casadi_controller(urdf_filename, tcp_frame_name, use_gravity);
+    CasadiController casadi_controller(urdf_filename, casadi_mpc_config_filename, tcp_frame_name, use_gravity);
     CrocoddylController crocoddyl_controller(urdf_filename, crocoddyl_config_filename, tcp_frame_name, use_gravity);
     
     MainControllerType controller_type = get_controller_type(general_config["default_controller"]);
     casadi_controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
+    casadi_controller.update_mpc_weights();
     classic_controller.switchController(get_classic_controller_type(general_config["default_classic_controller"]));
     crocoddyl_controller.setActiveMPC(get_crocoddyl_controller_type(general_config["default_crocoddyl_mpc"]));
-    // initialize the trajectory
-
-    // set singularity robustness mode
-    Eigen::MatrixXd W_bar_N = Eigen::MatrixXd::Identity(nq_red, nq_red);
-    Eigen::Map<const Eigen::VectorXd> sugihara_limb_vector(robot_config.sugihara_limb_vector, nq);
-    W_bar_N.diagonal() << sugihara_limb_vector(n_indices_eig);
-    // Eigen::Map<Eigen::VectorXd>(W_bar_N.diagonal().data(), nq_red) = Eigen::Map<const Eigen::VectorXd>(robot_config.sugihara_limb_vector, robot_config.nq)(n_indices);
-    Eigen::MatrixXd W_E = Eigen::MatrixXd::Identity(nq_red, nq_red);
 
     // PD CONTROLLER
-    Eigen::MatrixXd K_d_pd = Eigen::DiagonalMatrix<double, 6>(100, 100, 100, 20, 20, 20);
+    auto classic_ctl_settings = general_config["classic_controller_settings"];
+    Eigen::MatrixXd K_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
+    Eigen::MatrixXd D_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
 
     // CT CONTROLLER
-    Eigen::MatrixXd Kp1_ct = Eigen::DiagonalMatrix<double, 6>(100, 100, 100, 50, 50, 50);
+    Eigen::MatrixXd Kp1_ct = Eigen::VectorXd::Map(classic_ctl_settings["CT"]["Kp1"].get<std::vector<double>>().data(), 6).asDiagonal();
+    Eigen::MatrixXd Kd1_ct = Eigen::VectorXd::Map(classic_ctl_settings["CT"]["Kd1"].get<std::vector<double>>().data(), 6).asDiagonal();
 
     // ID CONTROLLER
-    Eigen::MatrixXd K_d_id = Eigen::DiagonalMatrix<double, 6>(100, 100, 100, 20, 20, 20);
-    Eigen::MatrixXd Kp1_id = Eigen::DiagonalMatrix<double, 6>(100, 100, 100, 50, 50, 50); // PD gains
+    Eigen::MatrixXd Kp1_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["Kp1"].get<std::vector<double>>().data(), 6).asDiagonal();
+    Eigen::MatrixXd Kd1_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["Kd1"].get<std::vector<double>>().data(), 6).asDiagonal();
+
+    Eigen::MatrixXd K_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
+    Eigen::MatrixXd D_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
+
+    // REGULARIZATION SETTINGS
+    auto reg_settings = classic_ctl_settings["regularization_settings"];
+    Eigen::VectorXd W_bar_N_nq = Eigen::VectorXd::Map(reg_settings["W_bar_N"].get<std::vector<double>>().data(), 7);
+    Eigen::MatrixXd W_bar_N = W_bar_N_nq(n_indices_eig).asDiagonal();;
+    Eigen::VectorXd W_E_nq = Eigen::VectorXd::Map(reg_settings["W_E"].get<std::vector<double>>().data(), 7);
+    Eigen::MatrixXd W_E = W_E_nq(n_indices_eig).asDiagonal();;
 
     ControllerSettings ctrl_settings = {
-        .pd_plus_settings = {
-            .D_d = 2 * K_d_pd.array().sqrt(),
-            .K_d = K_d_pd},
-        .ct_settings = {.Kd1 = (2 * Kp1_ct).array().sqrt(), .Kp1 = Kp1_ct},
-        .id_settings = {.Kd1 = (2 * Kp1_id).array().sqrt(), .Kp1 = Kp1_id, .D_d = (2 * K_d_id).array().sqrt(), .K_d = K_d_id},
+        .pd_plus_settings = {.D_d = K_d_pd, .K_d = D_d_pd},
+        .ct_settings = {.Kd1 = Kd1_ct, .Kp1 = Kp1_ct},
+        .id_settings = {.Kd1 = Kd1_id, .Kp1 = Kp1_id, .D_d = D_d_id, .K_d = K_d_id},
         .regularization_settings = {
-            .mode = RegularizationMode::Damping,
-            .k = 1e-5,             // RegularizationMode::Damping
-            .W_bar_N = W_bar_N,    // Sugihara Method, not implemented
-            .W_E = W_E,            // Sugihara Method, not implemented
-            .eps = 1e-1,           // ThresholdSmallSingularValues, TikhonovRegularization, RegularizationBySingularValues
-            .eps_collinear = 1e-5, // RegularizationMode::SimpleCollinearity
-            .lambda_min = 1e-5     // RegularizationMode::SteinboeckCollinearity
+            .mode = stringToRegularizationMode<std::string>(reg_settings["mode"]),
+            .k = reg_settings["k"], // RegularizationMode::Damping
+            .W_bar_N = W_bar_N, // Sugihara Method, not implemented
+            .W_E = W_E, // Sugihara Method, not implemented
+            .eps = reg_settings["eps"], // ThresholdSmallSingularValues, TikhonovRegularization, RegularizationBySingularValues
+            .eps_collinear = reg_settings["eps_collinear"], // RegularizationMode::SimpleCollinearity
+            .lambda_min = reg_settings["lambda_min"] // RegularizationMode::SteinboeckCollinearity
         }};
 
     classic_controller.set_controller_settings(ctrl_settings);
 
-#define TRAJ_SELECT 1
+
     if (controller_type == MainControllerType::Casadi)
     {
         traj_len = casadi_controller.get_traj_data_real_len();
-        x0_init = casadi_controller.get_traj_x0_init(TRAJ_SELECT);
+        x0_init = casadi_controller.get_traj_x0_init(trajectory_selection);
     }
     else if(controller_type == MainControllerType::Classic)
     {
         traj_len = classic_controller.get_traj_data_real_len();
-        x0_init = classic_controller.get_traj_x0_init(TRAJ_SELECT);
+        x0_init = classic_controller.get_traj_x0_init(trajectory_selection);
     }
     else if(controller_type == MainControllerType::Crocoddyl)
     {
         traj_len = crocoddyl_controller.get_traj_data_real_len();
-        x0_init = crocoddyl_controller.get_traj_x0_init(TRAJ_SELECT);
+        x0_init = crocoddyl_controller.get_traj_x0_init(trajectory_selection);
     }
 
     x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
@@ -271,17 +280,17 @@ int main()
 
     if (controller_type == MainControllerType::Casadi)
     {
-        casadi_controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 0.0, 0.0);
+        casadi_controller.init_file_trajectory(trajectory_selection, x_k_ndof, T_traj_start, T_traj_dur, T_traj_end);
         transient_traj_len = casadi_controller.get_transient_traj_len();
     }
     else if (controller_type == MainControllerType::Classic)
     {
-        classic_controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 0.0, 0.0);
+        classic_controller.init_file_trajectory(trajectory_selection, x_k_ndof, T_traj_start, T_traj_dur, T_traj_end);
         transient_traj_len = classic_controller.get_transient_traj_len();
     }
     else if (controller_type == MainControllerType::Crocoddyl)
     {
-        crocoddyl_controller.init_file_trajectory(TRAJ_SELECT, x_k_ndof, 0.0, 0.0, 0.0);
+        crocoddyl_controller.init_file_trajectory(trajectory_selection, x_k_ndof, T_traj_start, T_traj_dur, T_traj_end);
         transient_traj_len = crocoddyl_controller.get_transient_traj_len();
     }
 

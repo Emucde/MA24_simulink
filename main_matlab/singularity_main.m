@@ -98,7 +98,7 @@ p_d_0 = H_0(1:3, 4);
 R_d_0 = H_0(1:3, 1:3);
 q_d_0 = quat_R_endeffector_py(H_0(1:3, 1:3));
 
-MPC_solver = 'fatrop';
+MPC_solver = 'ipopt';
 use_jit = false;
 opt_problem_find_multiple_singular_solutions;
 gen_opt_problem_test;
@@ -107,7 +107,7 @@ coptimflags = '-Ofast -march=native -flto'; % Optimization flag for compilation
 % casadi_fun_to_mex(f_opt, [s_fun_path, '/mpc_c_sourcefiles'], [s_fun_path, '/matlab_functions'], casadi_func_name, coptimflags, MPC_solver, false);
 
 
-N_min = 10;
+N_min = 1000;
 qq_min = repmat({[q_0, q_1]}, 1, N_min);
 w_min = 100*ones(N_min, 1);
 delta_H_min = 100*ones(N_min, 1);
@@ -115,13 +115,13 @@ delta_q_min = 100*ones(N_min, 1);
 krit_min = 100*ones(N_min, 1);
 
 % könnte man auch zufällig ändern
-Qt_1_ref = 1e2*diag([1, 1, 1]);
-Qr_1_ref = 1e0*diag([1, 1, 1]);
-Qt_2_ref = 1e2*diag([1, 1, 1]);
-Qr_2_ref = 1e0*diag([1, 1, 1]);
+Qt_1_ref = 0*diag([1, 1, 1]);
+Qr_1_ref = 0*diag([1, 1, 1]);
+Qt_2_ref = 0*diag([1, 1, 1]);
+Qr_2_ref = 0*diag([1, 1, 1]);
 Qt_3_ref = 1e8*diag([1, 1, 1]);
 Qr_3_ref = 1e8*diag([1, 1, 1]);
-Q4_ref = 1e1*eye(n_red);
+Q4_ref = 1e1*eye(n_red); %(q1)^2
 Q5_ref = 1e1*eye(n_red);
 q1_manip_ref = 1e4;
 q2_manip_ref = 1e4;
@@ -134,9 +134,18 @@ qq_n_sol = zeros(n, 2);
 q_min = zeros(n, 1);
 min_idx=1;
 tic
-for i=1:20000
-    q_0 = q_min + pi*rand(n, 1);
-    q_1 = q_0 + pi*rand(n, 1);
+for i=1:100000
+    q1_manip_ref = 1e4 + 1e4*rand(1);
+    q2_manip_ref = 1e4 + 1e4*rand(1);
+    dq_eps_ref = 1e4 + 1e3*rand(1);
+    q_eps_ref = 1e4 + 1e3*rand(1);
+
+    Q4_ref = 1e3*eye(n_red)+ 1e3*rand(1); %(q1)^2
+    Q5_ref = 1e3*eye(n_red)+ 1e3*rand(1); %(q2)^2
+    mpc_init_reference_values = [y_d_0(:); Qt_1_ref(:); Qr_1_ref(:); Qt_2_ref(:); Qr_2_ref(:); Qt_3_ref(:); Qr_3_ref(:); Q4_ref(:); Q5_ref(:); q1_manip_ref; q2_manip_ref; dq_eps_ref; q_eps_ref];
+
+    q_0 = 2*pi*rand(n, 1);
+    q_1 = 2*pi*rand(n, 1);
     q_0 = min(max(q_0, param_robot.q_limit_lower*0.5), param_robot.q_limit_upper*0.5);
     q_1 = min(max(q_1, param_robot.q_limit_lower*0.5), param_robot.q_limit_upper*0.5);
     q_0(param_robot.n_indices_fixed) = 0;
@@ -177,10 +186,9 @@ for i=1:20000
         krit_min(max_idx) = krit_min_new;
         [~, min_idx] = min(krit_min);
         q_min(n_indices) = qq_min{min_idx}(n_indices,1+round(rand(1)));
-        disp(['Iteration: ', num2str(i), ', krit_min: ', num2str(krit_min_new), ', w: ', num2str(w), ', delta_H: ', num2str(delta_H), ', delta_q: ', num2str(delta_q)]);
+        %disp(['Iteration: ', num2str(i), ', krit_min: ', num2str(krit_min_new), ', w: ', num2str(w), ', delta_H: ', num2str(delta_H), ', delta_q: ', num2str(delta_q)]);
     end
 end
-toc;
 
 % display all solutions
 for i=1:N_min
@@ -199,6 +207,21 @@ for i=1:N_min
     fprintf('||q1 - q2|| = %f\n\n', norm(qq_min{i}(:,1) - qq_min{i}(:,2), 2));
     fprintf('------------------------------------------------------------------------------------\n\n');
 end
+
+% print all solutions
+for i=1:N_min
+    fprintf('%f, ', qq_min{i}(1:end-1,1));fprintf('%f\n', qq_min{i}(end,1));
+end
+toc;
+
+% save result into csv file
+fileID = fopen('singularity_solutions.csv', 'w');
+for i=1:N_min
+    qq = qq_min{i};
+    qq = qq(:);
+    fprintf(fileID, '%f, ', qq(1:end-1,1));fprintf(fileID, '%f\n', qq(end,1));
+end
+fclose(fileID);
 
 function f = f_cost(x, param)
     n = param.n;

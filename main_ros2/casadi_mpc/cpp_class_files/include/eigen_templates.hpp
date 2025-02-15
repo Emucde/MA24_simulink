@@ -350,4 +350,43 @@ public:
     }
 };
 
+// Template function for constructing the Q matrix for d/dt quat = Q(quat)
+template <typename T = double>
+Eigen::Matrix<T, 4, 3> constructQ(const Eigen::Quaternion<T>& quat) {
+    Eigen::Matrix<T, 4, 3> Q_mat;
+    Eigen::Matrix<T, 3, 1> v = quat.vec();
+    T w = quat.w();
+
+    Q_mat << -v.x(), -v.y(), -v.z(),
+              w, v.z(), -v.y(),
+             -v.z(), w, v.x(),
+              v.y(), -v.x(), w;
+
+    return 0.5 * Q_mat;
+}
+
+template <typename T = double>
+Eigen::Matrix<T, 4, 3> constructQ(const Eigen::Vector4d& quat) {
+    Eigen::Matrix<T, 4, 3> Q_mat;
+    Eigen::Vector3d v(quat(1), quat(2), quat(3));
+    T w = quat(0);
+
+    Q_mat << -v.x(), -v.y(), -v.z(),
+              w, v.z(), -v.y(),
+             -v.z(), w, v.x(),
+              v.y(), -v.x(), w;
+
+    return 0.5 * Q_mat;
+}
+
+template <typename T = double>
+Eigen::Vector4d d_dt_quat(const Eigen::Vector4d& quat, const Eigen::Vector3d& omega) {
+    return constructQ(quat) * omega;
+}
+
+template <typename T = double>
+Eigen::Vector4d d_dt2_quat(const Eigen::Vector4d& quat, const Eigen::Vector3d& omega, const Eigen::Vector3d& omega_p) {
+    return constructQ(d_dt_quat(quat, omega)) * omega + constructQ(quat) * omega_p;
+}
+
 #endif // EIGEN_TEMPLATES_HPP

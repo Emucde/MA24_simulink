@@ -172,6 +172,54 @@ function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_
     % Create Enum for outputs
     create_enum(fid, 'enum class MPCOutput', unique_f_opt_output_cell, '', '', '', true, false);
 
+    % create MPCInput to string functions
+    fprintf(fid, 'inline std::string mpc_input_to_string(MPCInput input)\n');
+    fprintf(fid, '{\n');
+    fprintf(fid, '    switch (input)\n');
+    fprintf(fid, '    {\n');
+    for i = 1:length(unique_f_opt_input_cell)
+        fprintf(fid, '    case MPCInput::%s:\n', unique_f_opt_input_cell{i});
+        fprintf(fid, '        return "%s";\n', unique_f_opt_input_cell{i});
+    end
+    fprintf(fid, '    default:\n');
+    fprintf(fid, '        return "INVALID";\n');
+    fprintf(fid, '    }\n');
+    fprintf(fid, '}\n\n');
+
+    % create MPCOutput to string functions
+    fprintf(fid, 'inline std::string mpc_output_to_string(MPCOutput output)\n');
+    fprintf(fid, '{\n');
+    fprintf(fid, '    switch (output)\n');
+    fprintf(fid, '    {\n');
+    for i = 1:length(unique_f_opt_output_cell)
+        fprintf(fid, '    case MPCOutput::%s:\n', unique_f_opt_output_cell{i});
+        fprintf(fid, '        return "%s";\n', unique_f_opt_output_cell{i});
+    end
+    fprintf(fid, '    default:\n');
+    fprintf(fid, '        return "INVALID";\n');
+    fprintf(fid, '    }\n');
+    fprintf(fid, '}\n\n');
+
+    % function to get an MPCInput by a given string
+    fprintf(fid, 'inline MPCInput string_to_mpc_input(const std::string& str)\n');
+    fprintf(fid, '{\n');
+    for i = 1:length(unique_f_opt_input_cell)
+        fprintf(fid, '    if (str == "%s")\n', unique_f_opt_input_cell{i});
+        fprintf(fid, '        return MPCInput::%s;\n', unique_f_opt_input_cell{i});
+    end
+    fprintf(fid, '    throw std::invalid_argument("Invalid MPCInput string: " + str);\n');
+    fprintf(fid, '}\n\n');
+
+    % function to get an MPCOutput by a given string
+    fprintf(fid, 'inline MPCOutput string_to_mpc_output(const std::string& str)\n');
+    fprintf(fid, '{\n');
+    for i = 1:length(unique_f_opt_output_cell)
+        fprintf(fid, '    if (str == "%s")\n', unique_f_opt_output_cell{i});
+        fprintf(fid, '        return MPCOutput::%s;\n', unique_f_opt_output_cell{i});
+    end
+    fprintf(fid, '    throw std::invalid_argument("Invalid MPCOutput string: " + str);\n');
+    fprintf(fid, '}\n\n');
+
     fprintf(fid, 'extern "C" {\n');
     fprintf(fid, '#endif\n\n');
 
@@ -206,16 +254,21 @@ function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_
     fprintf(fid, '    const casadi_uint id;\n');
     fprintf(fid, '} mpc_output_entry_t;\n\n');
 
-    write_struct(fid, 'mpc_input_config_t', 'const mpc_input_entry_t', unique_f_opt_input_cell);
+    write_struct(fid, 'mpc_input_config', 'mpc_input_entry', unique_f_opt_input_cell);
+    write_id_to_struct_entry_fun(fid, 'mpc_input_config', 'mpc_input_entry', unique_f_opt_input_cell);
     
     % Process outputs
-    write_struct(fid, 'mpc_output_config_t', 'const mpc_output_entry_t', unique_f_opt_output_cell);
+    write_struct(fid, 'mpc_output_config', 'mpc_output_entry', unique_f_opt_output_cell);
+    write_id_to_struct_entry_fun(fid, 'mpc_output_config', 'mpc_output_entry', unique_f_opt_output_cell);
+
+    
 
     % Write the struct definition with typedef
     fprintf(fid, 'typedef struct {\n');
     fprintf(fid, '    const casadi_uint kinematic_mpc;\n');
     fprintf(fid, '    const casadi_uint traj_data_per_horizon;\n');
     fprintf(fid, '    const casadi_uint* traj_indices;\n');
+    fprintf(fid, '    const casadi_uint N_step;\n');
     fprintf(fid, '    const casadi_real* param_weight;\n');
     fprintf(fid, '    casadi_uint param_weight_len;\n');
     fprintf(fid, '    CasadiFunPtr_t casadi_fun;\n');
@@ -343,16 +396,32 @@ function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_
     end
 end
 
-function write_struct(fid, structName, typename, casadi_fun_cell, existing_entries)
+function write_struct(fid, structName, typename, casadi_fun_cell)
     fprintf(fid, 'typedef struct {\n');
     
     for i = 1:length(casadi_fun_cell)
         entry_name = casadi_fun_cell{i};
-        fprintf(fid, '    %s %s;\n',typename, entry_name);
-        existing_entries(entry_name) = true; % Mark this entry as seen
+        fprintf(fid, '    const %s_t %s;\n',typename, entry_name);
     end
     
-    fprintf(fid, '} %s;\n\n', structName);
+    fprintf(fid, '} %s_t;\n\n', structName);
+end
+
+function write_id_to_struct_entry_fun(fid, structName, typename, casadi_fun_cell)
+    % Function that returns a structName pointer by a given enum from mpc_input_config_id_t
+    fprintf(fid, 'inline const %s_t* get_%s(const %s_t* config, %s_id_t id)\n', typename, typename, structName, structName);
+    fprintf(fid, '{\n');
+    fprintf(fid, '    switch (id)\n');
+    fprintf(fid, '    {\n');
+    for i = 1:length(casadi_fun_cell)
+        entry_name = casadi_fun_cell{i};
+        fprintf(fid, '    case MPC_%s:\n', entry_name);
+        fprintf(fid, '        return &config->%s;\n', entry_name);
+    end
+    fprintf(fid, '    default:\n');
+    fprintf(fid, '        return 0;\n');
+    fprintf(fid, '    }\n');
+    fprintf(fid, '}\n\n');
 end
 
 function [existing_inputs, existing_outputs] = parse_existing_header(filename)

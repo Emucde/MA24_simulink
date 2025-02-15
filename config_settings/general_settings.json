@@ -3,6 +3,11 @@
     "use_lowpass_filter": false,
     "use_ekf": false,
     "use_noise": false,
+    "mean_noise_amplitude": 0.1e-3,
+    "trajectory_selection": 3,
+    "transient_traj_start_time": 0.0,
+    "transient_traj_duration": 0.0,
+    "transient_traj_end_time": 0.0,
     "default_controller": "Casadi",
     "available_controllers": [
         "Classic",
@@ -15,7 +20,8 @@
         "CT",
         "ID"
     ],
-    "default_casadi_mpc": "MPC8",
+    "default_casadi_mpc": "MPC16",
+    "is_planner_only": false,
     "available_casadi_mpc": [
         "MPC01",
         "MPC6",
@@ -35,5 +41,30 @@
     "default_crocoddyl_mpc": "DynMPC_v1",
     "available_crocoddyl_mpc": [
         "DynMPC_v1"
-    ]
+    ],
+    "classic_controller_settings" :{
+        "PD": {
+            "K_d": [100, 100, 100, 20, 20, 20],
+            "D_d": [20, 20, 20, 8.944, 8.944, 8.944]
+        },
+        "CT": {
+            "Kp1": [100, 100, 100, 50, 50, 50],
+            "Kd1": [20, 20, 20, 14.142, 14.142, 14.142]
+        },
+        "ID": {
+            "Kp1": [100, 100, 100, 50, 50, 50],
+            "Kd1": [20, 20, 20, 14.142, 14.142, 14.142],
+            "K_d": [100, 100, 100, 20, 20, 20],
+            "D_d": [20, 20, 20, 8.944, 8.944, 8.944]
+        },
+        "regularization_settings": {
+            "mode" : "Damping",
+            "k": 1e-5,
+            "W_bar_N": [0.110889, 0.099856, 0.147456, 0.007744, 0.011449, 0.0106916],
+            "W_E": [1, 1, 1, 1, 1, 1],
+            "eps": 1e-5,
+            "eps_collinear": 1e-5,
+            "lambda_min": 1e-5
+        }
+    }
 }
