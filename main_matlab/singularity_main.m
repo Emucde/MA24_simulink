@@ -134,7 +134,7 @@ qq_n_sol = zeros(n, 2);
 q_min = zeros(n, 1);
 min_idx=1;
 tic
-for i=1:100000
+for i=1:300000
     q1_manip_ref = 1e4 + 1e4*rand(1);
     q2_manip_ref = 1e4 + 1e4*rand(1);
     dq_eps_ref = 1e4 + 1e3*rand(1);
@@ -146,8 +146,8 @@ for i=1:100000
 
     q_0 = 2*pi*rand(n, 1);
     q_1 = 2*pi*rand(n, 1);
-    q_0 = min(max(q_0, param_robot.q_limit_lower*0.5), param_robot.q_limit_upper*0.5);
-    q_1 = min(max(q_1, param_robot.q_limit_lower*0.5), param_robot.q_limit_upper*0.5);
+    q_0 = min(max(q_0, param_robot.q_limit_lower*0.85), param_robot.q_limit_upper*0.85);
+    q_1 = min(max(q_1, param_robot.q_limit_lower*0.85), param_robot.q_limit_upper*0.85);
     q_0(param_robot.n_indices_fixed) = 0;
     q_1(param_robot.n_indices_fixed) = 0;
 

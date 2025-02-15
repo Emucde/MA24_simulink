@@ -17,18 +17,29 @@
 #include "CasadiMPC.hpp"
 #include "error_flags.h"
 
-class CasadiController// : public TrajectoryGenerator
+class BaseSolver
+{
+public:
+    BaseSolver(CasadiMPC *active_mpc) : active_mpc(active_mpc) {}
+    virtual bool solveMPC(const casadi_real *const x_k_ndof_ptr) = 0;
+    virtual void switch_controller(CasadiMPC *new_mpc) { active_mpc = new_mpc; }
+    virtual ~BaseSolver() = default;
+    protected:
+        CasadiMPC *active_mpc;
+};
+
+class CasadiController // : public TrajectoryGenerator
 {
 private:
-    robot_config_t robot_config;                 // Robot configuration
-    std::vector<CasadiMPC> casadi_mpcs;          // MPC objects
+    robot_config_t robot_config;                       // Robot configuration
+    std::vector<CasadiMPC> casadi_mpcs;                // MPC objects
     CasadiMPCType selected_mpc_type;                   // Active MPC type
-    CasadiMPC *active_mpc;                       // Active MPC object
-    mpc_config_t *active_mpc_config;             // Active MPC configuration
+    CasadiMPC *active_mpc;                             // Active MPC object
+    mpc_config_t *active_mpc_config;                   // Active MPC configuration
     const mpc_input_config_t *active_mpc_input_config; // Active MPC input configuration
 
-    std::string traj_file;                       // Path to trajectory data file
-    std::string x0_init_file;                    // Path to initial state data of trajectories
+    std::string traj_file;    // Path to trajectory data file
+    std::string x0_init_file; // Path to initial state data of trajectories
 
 public:
     const casadi_uint nq;     // Number of degrees of freedom
@@ -39,18 +50,18 @@ public:
 private:
     const Eigen::VectorXi n_indices;
     const Eigen::VectorXi n_x_indices;
-    FullSystemTorqueMapper torque_mapper; // Torque mapper
-    TrajectoryGenerator trajectory_generator;    // Trajectory generator
-    const std::string casadi_mpc_weights_file;  // Path to the casadi mpc weights file
+    FullSystemTorqueMapper torque_mapper;      // Torque mapper
+    TrajectoryGenerator trajectory_generator;  // Trajectory generator
+    const std::string casadi_mpc_weights_file; // Path to the casadi mpc weights file
     nlohmann::json param_mpc_weight;
+    bool use_planner;
 
     double *u_k_ptr; // - Pointer to the optimal control
 
-    casadi_real *w_ptr;                   // Workspace real address
-    casadi_uint traj_data_per_horizon;    // Trajectory data per horizon
-    casadi_uint *mpc_traj_indices;        // Trajectory indices for not equidistant sampling
+    casadi_real *w_ptr;                // Workspace real address
+    casadi_uint traj_data_per_horizon; // Trajectory data per horizon
+    casadi_uint *mpc_traj_indices;     // Trajectory indices for not equidistant sampling
     casadi_real dt;
-
 
     // std::map<std::string, double> param_transient_traj_poly;
     // casadi_uint traj_rows;
@@ -64,15 +75,18 @@ private:
     // Eigen::VectorXd traj_data_x0_init;
     // casadi_uint traj_len;
     // casadi_uint traj_real_len; // number of columns of the singular trajectory data without additional samples for last prediction horizon
-    
-    
+
     Eigen::VectorXd tau_full_prev;
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
     double tau_max_jump = 5.0;
 
 public:
     // Constructor
-    CasadiController(const std::string &urdf_path, const std::string &casadi_mpc_weights_file, const std::string &tcp_frame_name, bool use_gravity);
+    CasadiController(const std::string &urdf_path,
+                     const std::string &casadi_mpc_weights_file,
+                     const std::string &tcp_frame_name,
+                     bool use_gravity,
+                     bool use_planner);
 
     // solve the MPC
     Eigen::VectorXd solveMPC(const casadi_real *const x_k_ndof_ptr);
@@ -81,7 +95,7 @@ public:
 
     // Initialize trajectory data
     void init_file_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
-                                       double T_start, double T_poly, double T_end);
+                              double T_start, double T_poly, double T_end);
 
     // Method for creating a custom trajectory with extra samples for the last prediction horizon
     void init_custom_trajectory(ParamPolyTrajectory param);
@@ -95,6 +109,19 @@ public:
     // Getters and setters
     void setActiveMPC(CasadiMPCType mpc);
     // void setTransientTrajParams(double T_start, double T_poly, double T_end);
+
+    void set_planner_mode(bool use_planner)
+    {
+        this->use_planner = use_planner;
+        if (use_planner)
+        {
+            solver = &planner_solver;
+        }
+        else
+        {
+            solver = &standard_solver;
+        }
+    }
 
     // increase counter from casadi mpc if it solves too slow
     void increase_traj_count()
@@ -153,7 +180,7 @@ public:
     }
 
     // Method to get transient trajectory data
-    const Eigen::MatrixXd* get_transient_traj_data()
+    const Eigen::MatrixXd *get_transient_traj_data()
     {
         return trajectory_generator.get_transient_traj_data();
     }
@@ -193,29 +220,52 @@ public:
         return robot_config.q_0_ref;
     }
 
-    const Eigen::MatrixXd* get_trajectory()
+    const Eigen::MatrixXd *get_trajectory()
     {
         return trajectory_generator.get_traj_data();
     }
 
-    const casadi_real* get_act_traj_data()
+    const casadi_real *get_act_traj_data()
     {
         return active_mpc->get_act_traj_data();
     }
 
-    const casadi_real* get_act_traj_x0_init()
+    const casadi_real *get_act_traj_x0_init()
     {
         return trajectory_generator.get_act_traj_x0_init()->data();
     }
 
-    const casadi_real* get_traj_x0_init(casadi_uint traj_select)
+    const casadi_real *get_traj_x0_init(casadi_uint traj_select)
     {
         return trajectory_generator.get_traj_file_x0_init(traj_select)->data();
     }
 
-
 private:
     // Private methods
     void update_trajectory_data(const casadi_real *const x_k_ndof_ptr);
+
+    class StandardSolver : public BaseSolver
+    {
+    public:
+        StandardSolver(CasadiMPC *active_mpc) : BaseSolver(active_mpc) {}
+        bool solveMPC(const casadi_real *const x_k_ptr) override
+        {
+            return active_mpc->solve(x_k_ptr);
+        }
+    };
+
+    class PlannerSolver : public BaseSolver
+    {
+    public:
+        PlannerSolver(CasadiMPC *active_mpc) : BaseSolver(active_mpc) {}
+        bool solveMPC(const casadi_real *const) override
+        {
+            return active_mpc->solve_planner();
+        }
+    };
+
+    BaseSolver *solver;
+    StandardSolver standard_solver;
+    PlannerSolver planner_solver;
 };
 #endif // CASADICONTROLLER_HPP

@@ -80,6 +80,8 @@ public:
     void check_param_poly_traj(ParamPolyTrajectory param);
 
     // Getters
+    // getter for traj select
+    int get_traj_select() const { return selected_trajectory; }
     const Eigen::MatrixXd *get_traj_data() const { return &traj_data_out; }
     const Eigen::VectorXd *get_traj_x0_init() const { return &traj_data_out_x0_init; }
     const Eigen::MatrixXd *get_transient_traj_data() const { return &traj_data_transient; }

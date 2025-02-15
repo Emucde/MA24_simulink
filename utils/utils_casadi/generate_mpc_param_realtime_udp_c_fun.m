@@ -83,11 +83,12 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '\n');
 
     % define setter functions
-    generate_function_declarations(fid, setter_prestring, casadi_fun_input_cell, func_name);
+    is_setter=true;
+    generate_function_declarations(fid, setter_prestring, casadi_fun_input_cell, func_name, is_setter);
 
     % Extra setter functions for reference_values, init_guess, and param_weight
     for i = 1:length(extra_input_entries.names)
-        fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s);', func_name, extra_input_entries.names{i}, extra_input_entries.names{i});
+        fprintf(fid, 'void set_%s_%s(casadi_real *const w, const casadi_real *const %s);', func_name, extra_input_entries.names{i}, extra_input_entries.names{i});
         fprintf(fid, '        /*set %s: %s array values */\n', extra_input_entries.names{i}, extra_input_entries.dim_text{i});
     end
 
@@ -105,10 +106,11 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
 
     fprintf(fid, '\n');
 
-    generate_function_declarations(fid, getter_prestring, casadi_fun_output_cell, func_name);
+    is_setter=false;
+    generate_function_declarations(fid, getter_prestring, casadi_fun_output_cell, func_name, is_setter);
 
     % extra getter for init_guess_out
-    fprintf(fid, 'void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out);\n', func_name);
+    fprintf(fid, 'void get_%s_init_guess_out(const casadi_real *const w, casadi_real *const init_guess_out);\n', func_name);
 
     % Close the header guard
     fprintf(fid, ['#endif //', func_name, '_PARAM_H\n']);
@@ -168,7 +170,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
 
     % Extra setter functions for reference_values, init_guess, and param_weight
     for i = 1:length(extra_input_entries.names)
-        fprintf(fid, 'void set_%s_%s(casadi_real *const w, casadi_real *const %s) {\n', func_name, extra_input_entries.names{i}, extra_input_entries.names{i});
+        fprintf(fid, 'void set_%s_%s(casadi_real *const w, const casadi_real *const %s) {\n', func_name, extra_input_entries.names{i}, extra_input_entries.names{i});
         fprintf(fid, '    memcpy(w + %s_%s_ADDR, %s, %s_%s_LEN * sizeof(casadi_real));', func_name, upper(extra_input_entries.names{i}), extra_input_entries.names{i}, func_name, upper(extra_input_entries.names{i}));
         fprintf(fid, '        /*%s: %s array values */\n', extra_input_entries.names{i}, extra_input_entries.dim_text{i});
         fprintf(fid, '}\n');
@@ -213,7 +215,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     generate_set_get_functions(fid, func_name, getter_prestring, casadi_fun_output_cell, is_setter)
     
     % extra getter for init_guess_out
-    fprintf(fid, 'void get_%s_init_guess_out(casadi_real *const w, casadi_real *const init_guess_out)\n', func_name);
+    fprintf(fid, 'void get_%s_init_guess_out(const casadi_real *const w, casadi_real *const init_guess_out)\n', func_name);
     fprintf(fid, '{\n');
     fprintf(fid, '    memcpy(init_guess_out, w + %s_INIT_GUESS_OUT_ADDR, %s_INIT_GUESS_LEN * sizeof(casadi_real));\n', func_name, func_name);
     fprintf(fid, '}\n\n');
@@ -418,14 +420,15 @@ function generate_set_get_functions(fid, func_name, prestring, casadi_fun_cell, 
             name = input_cell{j}.name;
             
             % Write the function definition
-            fprintf(fid, 'void %s_%s_%s(casadi_real *const w, casadi_real *const %s) {\n', prestring, func_name, name, name);
             
             if(set)
                 % Write the memcpy statement
+                fprintf(fid, 'void %s_%s_%s(casadi_real *const w, const casadi_real *const %s) {\n', prestring, func_name, name, name);
                 fprintf(fid, '    memcpy(w + %s_%s_ADDR, %s, %s_%s_LEN * sizeof(casadi_real));', ...
                         func_name, upper(name), name, func_name, upper(name));
             else
                 % Write the memcpy statement
+                fprintf(fid, 'void %s_%s_%s(const casadi_real *const w, casadi_real *const %s) {\n', prestring, func_name, name, name);
                 fprintf(fid, '    memcpy(%s, w + %s_%s_ADDR, %s_%s_LEN * sizeof(casadi_real));', ...
                     name, func_name, upper(name), func_name, upper(name));
             end
@@ -472,7 +475,7 @@ function generate_prev_to_out_functions(fid, prestring, casadi_fun_input_cell, c
     end
 end
 
-function generate_function_declarations(fid, prestring, casadi_fun_input_cell, func_name)
+function generate_function_declarations(fid, prestring, casadi_fun_input_cell, func_name, is_setter)
     % Generates C-style function declarations for CasADi functions
     %
     % Inputs:
@@ -500,7 +503,11 @@ function generate_function_declarations(fid, prestring, casadi_fun_input_cell, f
             name = input_cell{j}.name;
 
             % Write the function declaration
-            fprintf(fid, 'void %s_%s_%s(casadi_real *const w, casadi_real *const %s);', prestring, func_name, name, name);
+            if(is_setter)
+                fprintf(fid, 'void %s_%s_%s(casadi_real *const w, const casadi_real *const %s);', prestring, func_name, name, name);
+            else
+                fprintf(fid, 'void %s_%s_%s(const casadi_real *const w, casadi_real *const %s);', prestring, func_name, name, name);
+            end
 
             % Add a comment describing the dimensions
             if length(dim) == 2 && all(dim > 1)

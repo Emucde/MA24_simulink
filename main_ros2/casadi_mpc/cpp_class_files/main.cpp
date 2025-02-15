@@ -193,6 +193,7 @@ int main()
     double T_traj_start = general_config["transient_traj_start_time"];
     double T_traj_dur = general_config["transient_traj_duration"];
     double T_traj_end = general_config["transient_traj_end_time"];
+    bool use_planner = general_config["use_casadi_planner"];
     Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nx);
 
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
@@ -200,7 +201,7 @@ int main()
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
 
     WorkspaceController classic_controller(urdf_filename, tcp_frame_name, use_gravity);
-    CasadiController casadi_controller(urdf_filename, casadi_mpc_config_filename, tcp_frame_name, use_gravity);
+    CasadiController casadi_controller(urdf_filename, casadi_mpc_config_filename, tcp_frame_name, use_gravity, use_planner);
     CrocoddylController crocoddyl_controller(urdf_filename, crocoddyl_config_filename, tcp_frame_name, use_gravity);
     
     MainControllerType controller_type = get_controller_type(general_config["default_controller"]);

@@ -33,7 +33,6 @@ public:
 
 private:
     CasadiFunPtr_t casadi_fun;                                                                  // MPC Function pointer
-    std::vector<CasadiIOPtr_t> casadi_io_fun;                                                   // MPC Reference Function pointer list
     const casadi_real **arg;                                                                    // Pointer to arguments
     casadi_real **res;                                                                          // Pointer to results
     casadi_int *iw;                                                                             // Workspace integer
@@ -62,13 +61,13 @@ private:
     const Eigen::VectorXi y_d_pp_rpy_rows = (Eigen::VectorXi(6) << trajectory_generator.p_d_pp_rows, trajectory_generator.phi_d_pp_rows).finished(); // Selecting p_d_pp (6-8) and Phi_d_pp (25-27)
     
 
-    double* x_k_ptr = 0; // - Initial state (12 x 1);
-    double* t_k_ptr = 0; // - Time (1 x 1)
-    double* y_d_ptr = 0; // - Desired trajectory (7 x horizon_len)
-    double* y_d_p_ptr = 0; // - Desired trajectory derivative (6 x horizon_len)
-    double* y_d_pp_ptr = 0; // - Desired trajectory second derivative (6 x horizon_len)
-    std::vector<double **> mpc_data;      // - Array of pointers to the data
-    std::vector<CasadiIOPtr_t> mpc_set_funcs; // - Array of pointers to the functions
+    const double* x_k_ptr = 0; // - Initial state (12 x 1);
+    const double* t_k_ptr = 0; // - Time (1 x 1)
+    const double* y_d_ptr = 0; // - Desired trajectory (7 x horizon_len)
+    const double* y_d_p_ptr = 0; // - Desired trajectory derivative (6 x horizon_len)
+    const double* y_d_pp_ptr = 0; // - Desired trajectory second derivative (6 x horizon_len)
+    std::vector<const double **> mpc_data;      // - Array of pointers to the data
+    std::vector<CasadiSetPtr_t> mpc_set_funcs; // - Array of pointers to the functions
 
     bool use_quat;
 
@@ -103,7 +102,7 @@ public:
               TrajectoryGenerator &trajectory_generator);
 
     // Method to run the MPC
-    int solve(casadi_real *x_k_in); // closed loop mpc with copying x_k_in to x_k
+    int solve(const casadi_real *const x_k_in); // closed loop mpc with copying x_k_in to x_k
 
     int solve_planner(); // mpc planner: open loop mpc
 
@@ -230,7 +229,7 @@ private:
     // std::streamoff get_traj_dims();
 
     void set_row_vector(casadi_real *matrix_data, casadi_real *row_data, casadi_uint rows, casadi_uint length);
-    void set_references(casadi_real *x_k_in);
+    void set_references(const casadi_real *const x_k_in);
 
     void set_coldstart_init_guess(const casadi_real *const x_k_ptr);
     void init_references_and_pointers();

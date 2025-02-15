@@ -4,7 +4,7 @@
     "use_ekf": false,
     "use_noise": false,
     "mean_noise_amplitude": 0.1e-3,
-    "trajectory_selection": 3,
+    "trajectory_selection": 5,
     "transient_traj_start_time": 0.0,
     "transient_traj_duration": 0.0,
     "transient_traj_end_time": 0.0,
@@ -20,8 +20,8 @@
         "CT",
         "ID"
     ],
-    "default_casadi_mpc": "MPC16",
-    "is_planner_only": false,
+    "use_casadi_planner": false,
+    "default_casadi_mpc": "MPC17",
     "available_casadi_mpc": [
         "MPC01",
         "MPC6",

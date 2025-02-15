@@ -1,14 +1,20 @@
 #include "CasadiController.hpp"
 #include "eigen_templates.hpp"
 
-CasadiController::CasadiController(const std::string &urdf_path, const std::string &casadi_mpc_weights_file, const std::string &tcp_frame_name, bool use_gravity)
+CasadiController::CasadiController(const std::string &urdf_path,
+                                   const std::string &casadi_mpc_weights_file,
+                                   const std::string &tcp_frame_name,
+                                   bool use_gravity,
+                                   bool use_planner)
     : robot_config(get_robot_config()),
       nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
       n_indices(ConstIntVectorMap(robot_config.n_indices, nq_red)),
       n_x_indices(ConstIntVectorMap(robot_config.n_x_indices, nx_red)),
       torque_mapper(urdf_path, tcp_frame_name, robot_config, use_gravity, true),
       trajectory_generator(torque_mapper, robot_config.dt),
-      casadi_mpc_weights_file(casadi_mpc_weights_file)
+      casadi_mpc_weights_file(casadi_mpc_weights_file),
+      use_planner(use_planner),
+      standard_solver(nullptr), planner_solver(nullptr)
 {
     // Initialize MPC objects
     for (int i = 0; i < static_cast<int>(CasadiMPCType::COUNT); ++i)
@@ -16,13 +22,22 @@ CasadiController::CasadiController(const std::string &urdf_path, const std::stri
 
         CasadiMPCType mpc = static_cast<CasadiMPCType>(i);
         if (mpc != CasadiMPCType::INVALID) // Ensures we are within valid enum range
-        {                                  
+        {
             casadi_mpcs.push_back(CasadiMPC(mpc, robot_config, trajectory_generator)); // Initialize all MPCs
         }
     }
+    
+    setActiveMPC(static_cast<CasadiMPCType>(0)); // Set the default MPC
+    switch_traj(1);                    // Set the default trajectory
 
-    setActiveMPC(CasadiMPCType::MPC8); // Set the default MPC
-    switch_traj(1); // Set the default trajectory
+    if(use_planner)
+    {
+        solver = &planner_solver;
+    }
+    else
+    {
+        solver = &standard_solver;
+    }
 
     // Initialize the previous torque
     tau_full_prev = Eigen::VectorXd::Zero(nq);
@@ -57,7 +72,7 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
     }
 
     // Solve the MPC
-    int flag = active_mpc->solve(x_k); // uses internal the pointer x_k_ptr
+    int flag = solver->solveMPC(x_k);
     if (flag)
     {
         std::cerr << "Error in Casadi function call." << std::endl;
@@ -170,6 +185,9 @@ void CasadiController::setActiveMPC(CasadiMPCType mpc_type)
     {
         selected_mpc_type = mpc_type;
         active_mpc = &casadi_mpcs[static_cast<int>(selected_mpc_type)];
+
+        standard_solver.switch_controller(active_mpc);
+        planner_solver.switch_controller(active_mpc);
 
         active_mpc_config = active_mpc->get_mpc_config();
         active_mpc_input_config = &active_mpc_config->in;

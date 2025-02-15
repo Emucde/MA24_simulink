@@ -106,7 +106,7 @@ CasadiMPC::CasadiMPC(CasadiMPCType mpc,
 ///////////////////////////////////////////////////////////////////////////////////////
 
 // Method to run the MPC
-int CasadiMPC::solve(casadi_real *x_k_in)
+int CasadiMPC::solve(const casadi_real *const x_k_in)
 { // Copy the state to the MPC object
     set_references(x_k_in);
 
@@ -193,6 +193,7 @@ void CasadiMPC::switch_traj(const casadi_real *const x_k_ptr)
     traj_data = trajectory_generator.get_traj_data();
     traj_rows = traj_data->rows();
     traj_cols = traj_data->cols();
+    traj_select = trajectory_generator.get_traj_select();
 
     traj_data_real_len = trajectory_generator.get_traj_data_real_len();
 
@@ -332,8 +333,8 @@ Damit erstellt man ein Struct für die Setter der Referenzen und ein Struct für
 void CasadiMPC::init_references_and_pointers()
 {
     // Temporary vectors to hold pointers and set functions
-    std::vector<double **> temp_mpc_data(static_cast<int>(MPCInput::COUNT), nullptr);
-    std::vector<CasadiIOPtr_t> temp_mpc_set_funcs(static_cast<int>(MPCInput::COUNT), nullptr);
+    std::vector<const double **> temp_mpc_data(static_cast<int>(MPCInput::COUNT), nullptr);
+    std::vector<CasadiSetPtr_t> temp_mpc_set_funcs(static_cast<int>(MPCInput::COUNT), nullptr);
 
     size_t count = 0; // Counter for valid entries
 
@@ -474,7 +475,7 @@ void CasadiMPC::set_row_vector(casadi_real *matrix_data, casadi_real *row_data, 
     }
 }
 
-void CasadiMPC::set_references(casadi_real *x_k_in)
+void CasadiMPC::set_references(const casadi_real *const x_k_in)
 {
     if (traj_count < traj_data_real_len - 1)
     {

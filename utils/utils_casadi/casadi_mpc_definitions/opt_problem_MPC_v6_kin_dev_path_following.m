@@ -23,7 +23,7 @@ diff_variant_mode.savgol_not_equidist_noise_supr = 5; % savgol filtering without
 diff_variant_mode.savgol_not_equidist_combined = 6; % savgol filtering, non equidistant samples, for pd control, first derivatve approximated
 diff_variant_mode.savgol_not_equidist_combined2 = 7; % savgol filtering, non equidistant samples, for pd control, first derivatve approximated
 
-diff_variant = diff_variant_mode.savgol_not_equidist_combined2;
+diff_variant = diff_variant_mode.numdiff;
 
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;

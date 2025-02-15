@@ -243,14 +243,14 @@ function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_
     fprintf(fid, 'typedef struct {\n');
     fprintf(fid, '    double* const ptr;\n');
     fprintf(fid, '    const casadi_uint len;\n');
-    fprintf(fid, '    const CasadiIOPtr_t set;\n');
+    fprintf(fid, '    const CasadiSetPtr_t set;\n');
     fprintf(fid, '    const casadi_uint id;\n');
     fprintf(fid, '} mpc_input_entry_t;\n\n');
     
     fprintf(fid, 'typedef struct {\n');
     fprintf(fid, '    double* const ptr;\n');
     fprintf(fid, '    const casadi_uint len;\n');
-    fprintf(fid, '    const CasadiIOPtr_t get;\n');
+    fprintf(fid, '    const CasadiGetPtr_t get;\n');
     fprintf(fid, '    const casadi_uint id;\n');
     fprintf(fid, '} mpc_output_entry_t;\n\n');
 
