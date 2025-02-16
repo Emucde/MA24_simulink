@@ -14,18 +14,36 @@
 #include "mpc_config_types.h"
 #include "TrajectoryGenerator.hpp"
 #include "FullSystemTorqueMapper.hpp"
+#include "RobotModel.hpp"
 #include "CasadiMPC.hpp"
 #include "error_flags.h"
 
 class BaseSolver
 {
 public:
-    BaseSolver(CasadiMPC *active_mpc) : active_mpc(active_mpc) {}
-    virtual bool solveMPC(const casadi_real *const x_k_ndof_ptr) = 0;
-    virtual void switch_controller(CasadiMPC *new_mpc) { active_mpc = new_mpc; }
+    BaseSolver(CasadiMPC *active_mpc,
+               RobotModel &robot_model,
+               nlohmann::json &param_mpc_weight,
+               robot_config_t &robot_config) : active_mpc(active_mpc),
+                                               robot_model(robot_model),
+                                               param_mpc_weight(param_mpc_weight),
+                                               nq_red(robot_config.nq_red),
+                                               nx_red(robot_config.nx_red)
+    {
+    }
+    virtual bool solveMPC(const casadi_real *const x_k_ptr) = 0;
+    virtual void switch_controller(CasadiMPC *new_mpc) = 0;
+    virtual casadi_real *get_optimal_control() = 0;
     virtual ~BaseSolver() = default;
-    protected:
-        CasadiMPC *active_mpc;
+
+protected:
+    CasadiMPC *active_mpc;
+    RobotModel &robot_model;
+    nlohmann::json &param_mpc_weight;
+    casadi_real *u_k_ptr;
+    bool planner_mpc;
+    const casadi_uint nq_red, nx_red;
+    Eigen::VectorXd u_opt = Eigen::VectorXd::Zero(nq_red);
 };
 
 class CasadiController // : public TrajectoryGenerator
@@ -51,6 +69,7 @@ private:
     const Eigen::VectorXi n_indices;
     const Eigen::VectorXi n_x_indices;
     FullSystemTorqueMapper torque_mapper;      // Torque mapper
+    RobotModel robot_model;                    // Robot model
     TrajectoryGenerator trajectory_generator;  // Trajectory generator
     const std::string casadi_mpc_weights_file; // Path to the casadi mpc weights file
     nlohmann::json param_mpc_weight;
@@ -88,9 +107,10 @@ public:
                      bool use_gravity,
                      bool use_planner);
 
-    // solve the MPC
+    // CasadiController: solve the MPC
     Eigen::VectorXd solveMPC(const casadi_real *const x_k_ndof_ptr);
 
+    nlohmann::json read_mpc_weights();
     void update_mpc_weights();
 
     // Initialize trajectory data
@@ -104,24 +124,14 @@ public:
     void simulateModelEuler(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
     void simulateModelRK4(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
 
+    void collinearity_weight_x(const casadi_real *const x_k_ndof_ptr);
     void reset();
 
     // Getters and setters
     void setActiveMPC(CasadiMPCType mpc);
     // void setTransientTrajParams(double T_start, double T_poly, double T_end);
 
-    void set_planner_mode(bool use_planner)
-    {
-        this->use_planner = use_planner;
-        if (use_planner)
-        {
-            solver = &planner_solver;
-        }
-        else
-        {
-            solver = &standard_solver;
-        }
-    }
+    void set_planner_mode(bool use_planner_new);
 
     // increase counter from casadi mpc if it solves too slow
     void increase_traj_count()
@@ -247,21 +257,82 @@ private:
     class StandardSolver : public BaseSolver
     {
     public:
-        StandardSolver(CasadiMPC *active_mpc) : BaseSolver(active_mpc) {}
+        StandardSolver(CasadiMPC *active_mpc,
+                       RobotModel &robot_model,
+                       nlohmann::json &param_mpc_weight,
+                       robot_config_t &robot_config) : BaseSolver(active_mpc,
+                                                                  robot_model,
+                                                                  param_mpc_weight,
+                                                                  robot_config) {}
         bool solveMPC(const casadi_real *const x_k_ptr) override
         {
             return active_mpc->solve(x_k_ptr);
+        }
+        void switch_controller(CasadiMPC *new_mpc) override
+        {
+            active_mpc = new_mpc;
+            u_k_ptr = active_mpc->get_optimal_control();
+        }
+        casadi_real *get_optimal_control() override
+        {
+            return active_mpc->get_optimal_control();
         }
     };
 
     class PlannerSolver : public BaseSolver
     {
     public:
-        PlannerSolver(CasadiMPC *active_mpc) : BaseSolver(active_mpc) {}
-        bool solveMPC(const casadi_real *const) override
+        PlannerSolver(CasadiMPC *active_mpc,
+                      RobotModel &robot_model,
+                      nlohmann::json &param_mpc_weight,
+                      robot_config_t &robot_config) : BaseSolver(active_mpc, robot_model, param_mpc_weight, robot_config),
+                                              planner_only_solver(active_mpc),
+                                              planner_and_controller_solver(active_mpc) {}
+        class Solver
         {
-            return active_mpc->solve_planner();
+            public:
+                Solver(CasadiMPC *active_mpc): active_mpc(active_mpc) {}
+                virtual bool solveMPC(const casadi_real *const x_k_ptr) = 0;
+                virtual void switch_controller(CasadiMPC *new_mpc) { active_mpc = new_mpc; }
+                CasadiMPC *active_mpc;
+        };
+
+        class PlannerOnlySolver : public Solver
+        {
+            public:
+                PlannerOnlySolver(CasadiMPC *active_mpc): Solver(active_mpc) {}
+                bool solveMPC(const casadi_real *const) override
+                {
+                    return active_mpc->solve_planner();
+                }
+        };
+
+        class PlannerAndControllerSolver : public Solver
+        {
+            public:
+                PlannerAndControllerSolver(CasadiMPC *active_mpc): Solver(active_mpc) {}
+                bool solveMPC(const casadi_real *const x_k_ptr) override
+                {
+                    return active_mpc->solve(x_k_ptr);
+                }
+        };
+
+        bool solveMPC(const casadi_real *const x_k_ptr) override;
+        void switch_controller(CasadiMPC *new_mpc) override;
+        void update_planner_params();
+        casadi_real *get_optimal_control() override
+        {
+            return u_opt.data();
         }
+
+    private:
+        bool planner_mpc;
+        casadi_real *x_d_ptr;
+        casadi_real *q_pp_d_ptr;
+        Eigen::VectorXd K_P_q, K_D_q;
+        Solver *solver;
+        PlannerOnlySolver planner_only_solver;
+        PlannerAndControllerSolver planner_and_controller_solver;
     };
 
     BaseSolver *solver;

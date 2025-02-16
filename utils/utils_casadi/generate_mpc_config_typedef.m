@@ -266,6 +266,7 @@ function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_
     % Write the struct definition with typedef
     fprintf(fid, 'typedef struct {\n');
     fprintf(fid, '    const casadi_uint kinematic_mpc;\n');
+    fprintf(fid, '    const casadi_uint planner_mpc;\n');
     fprintf(fid, '    const casadi_uint traj_data_per_horizon;\n');
     fprintf(fid, '    const casadi_uint* traj_indices;\n');
     fprintf(fid, '    const casadi_uint N_step;\n');

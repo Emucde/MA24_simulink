@@ -58,8 +58,13 @@ u_opt_indices = [1:2*n_red];
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-ubw = [repmat(param_robot.q_limit_upper(n_indices), size(x, 2), 1); epsilon_max];
-lbw = [repmat(param_robot.q_limit_lower(n_indices), size(x, 2), 1); epsilon_min];
+q_max = param_robot.q_limit_upper(n_indices);
+q_min = param_robot.q_limit_lower(n_indices);
+q_n = param_robot.q_n(n_indices);
+q_mean_up = (q_max - q_n);
+q_mean_down = (q_min - q_n);
+ubw = [repmat(q_n + q_mean_up*0.8, size(x, 2), 1); epsilon_max];
+lbw = [repmat(q_n + q_mean_down*0.8, size(x, 2), 1); epsilon_min];
 
 % input parameter
 y_d = SX.sym( 'y_d',     7, 1 );

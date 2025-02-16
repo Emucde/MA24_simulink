@@ -7,6 +7,9 @@ export PKG_CONFIG_PATH=/opt/ros/humble/lib/x86_64-linux-gnu/pkgconfig/
 export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$MAMBA_ROOT_PREFIX/envs/ros_env/lib/pkgconfig/:$MAMBA_ROOT_PREFIX/pkgs/hpp-fcl-2.4.4-py311h04f086a_0/lib/pkgconfig/"
 export PIN_LIBS=$(pkg-config --cflags --libs pinocchio)
 
+alias mujocosim_fr3_6dof="$masterdir/urdf_creation/run_mujoco_robots.sh fr3 6dof"
+alias mujocosim_fr3_6dof_no_hand="$masterdir/urdf_creation/run_mujoco_robots.sh fr3 6dof_no_hand"
+alias mujocosim_fr3_7dof="$masterdir/urdf_creation/run_mujoco_robots.sh fr3 7dof"
 
 function ros2enable()
 {

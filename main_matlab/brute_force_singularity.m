@@ -2,26 +2,61 @@ clc;clear;
 parameters_7dof;
 
 overwrite_offline_traj_forced_extern = true;
+overwrite_init_guess = false;
 dont_clear = true;
 
 
-for i = 419:100000
+for i = 1:1
     % Erstellen Sie eindeutige Namen für die Textdatei und das Video
     current_time = datetime('now', 'Format', 'yyyyMMdd_HHmmss_SSS');
-    textFileName = sprintf('videos/max2_simulation_%05d_%s.txt', i, char(current_time));
-    videoFileName = sprintf('videos/max2_simulation_%05d_%s', i, char(current_time));
+    textFileName = sprintf('videos/%05d/max2_simulation_%05d_%s.txt', i, i, char(current_time));
+    videoFileName = sprintf('videos/%05d/max2_simulation_%05d_%s', i, char(current_time));
+
+    % create folder
+    if ~exist('videos', 'dir')
+        mkdir('videos');
+    end
+
+    % create folder %05d
+    if ~exist(sprintf('videos/%05d', i), 'dir')
+        mkdir(sprintf('videos/%05d', i));
+    end
     
     % Starten Sie die Aufzeichnung des Command Window
     diary(textFileName);
     
     % Führen Sie die Simulation aus
-    sim('sim_discrete_7dof');
+    sim_out = sim('sim_discrete_7dof');
+    q = sim_out.q;
+    q_p = sim_out.q_p;
+    q_pp = sim_out.q_pp;
+
+
+    % Extract time and values
+    values_q = q_signal.Values.Data;
+    values_q_p = q_p_signal.Values.Data;
+
+    % Check if q is feasible
+    q_is_feasible = check_q_feasibility(values_q, param_robot.q_limit_lower, param_robot.q_limit_upper);
+
+    %if(q_is_feasible)
+        % Beenden Sie die Aufzeichnung
+        diary off;
     
-    % Beenden Sie die Aufzeichnung
-    diary off;
+        % Erstellen Sie das Video
+        smwritevideo("sim_discrete_7dof", videoFileName, "PlaybackSpeedRatio", 5, "FrameRate", 10, "VideoFormat", "motion jpeg avi");
     
-    % Erstellen Sie das Video
-    smwritevideo("sim_discrete_7dof", videoFileName, "PlaybackSpeedRatio", 5, "FrameRate", 10, "VideoFormat", "motion jpeg avi");
+        % copy all files from folder [s_fun_path, '/trajectory_data/'] into %05d folder
+        copyfile([s_fun_path, '/trajectory_data/'], sprintf('videos/%05d', i));
+    %else
+        % Löschen Sie die Textdatei und das Video
+        %delete(textFileName);
+        %delete([videoFileName, '.avi']);
+
+        % remove folder %05d
+        %rmdir(sprintf('videos/%05d', i));
+    %end
+    
 
     pause(1);
     
@@ -32,3 +67,8 @@ for i = 419:100000
 end
 
 fprintf('Alle 10000 Durchläufe abgeschlossen.\n');
+
+function q_is_feasible = check_q_feasibility(q, q_limit_lower, q_limit_upper)
+    % Check if q is feasible
+    q_is_feasible = all(q >= q_limit_lower) && all(q <= q_limit_upper);
+end

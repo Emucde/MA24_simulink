@@ -271,7 +271,14 @@ N_x = numel(x);
 N_z = numel(z);
 N_alpha = numel(alpha);
 N_theta = numel(theta);
-u_opt_indices = 1:n_red;
+
+u_idx = [1 : numel(u)];
+x_idx = N_u + [1 : numel(x)];
+
+q0_pp_idx = u_idx(1:n_red);
+x1_idx = x_idx(1+2*n_red : 4*n_red);
+q1_pp_idx = u_idx(1+n_red : 2*n_red);
+u_opt_indices = [q0_pp_idx, x1_idx, q1_pp_idx];
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';

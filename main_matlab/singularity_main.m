@@ -100,12 +100,16 @@ q_d_0 = quat_R_endeffector_py(H_0(1:3, 1:3));
 
 MPC_solver = 'ipopt';
 use_jit = false;
-opt_problem_find_multiple_singular_solutions;
+%opt_problem_find_multiple_singular_solutions;
+
+opt_problem_find_singular_chains;
 gen_opt_problem_test;
+reshape(xx_full(1:N_x), n_red, 10)
+
+asdfsdfasdf
 
 coptimflags = '-Ofast -march=native -flto'; % Optimization flag for compilation
 % casadi_fun_to_mex(f_opt, [s_fun_path, '/mpc_c_sourcefiles'], [s_fun_path, '/matlab_functions'], casadi_func_name, coptimflags, MPC_solver, false);
-
 
 N_min = 1000;
 qq_min = repmat({[q_0, q_1]}, 1, N_min);

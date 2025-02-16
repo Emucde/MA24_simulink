@@ -23,7 +23,7 @@ CasadiMPC::CasadiMPC(CasadiMPCType mpc,
                                                                   trajectory_generator(trajectory_generator),
                                                                   traj_data(trajectory_generator.get_traj_data()),
                                                                   traj_data_real_len(trajectory_generator.get_traj_data_real_len()),
-                                                                  is_kinematic_mpc(mpc_config.kinematic_mpc == 1),
+                                                                  is_kinematic_mpc(mpc_config.kinematic_mpc == 1), is_planner_mpc(mpc_config.planner_mpc == 1),
                                                                   nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
                                                                   casadi_fun(mpc_config.casadi_fun),
                                                                   arg(mpc_config.arg), res(mpc_config.res), iw(mpc_config.iw), w(mpc_config.w), w_end(mpc_config.w_end),
@@ -295,11 +295,39 @@ void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_k_ptr)
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 
+casadi_real* CasadiMPC::get_param_ptr(std::string key)
+{
+    const MPCInput input_id = string_to_mpc_input(key);
+    const mpc_input_entry_t *entry = get_mpc_input_entry(&mpc_config.in, static_cast<mpc_input_config_id_t>(input_id));
+    if (entry != nullptr)
+    {
+        return entry->ptr;
+    }
+    else
+    {
+        throw std::runtime_error("CasadiMPC::get_param(): " + key + " is not a valid parameter name.");
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// PUBLIC SETTER METHODS ////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
+
+void CasadiMPC::set_param(std::string key, const casadi_real *param_data)
+{
+    const MPCInput input_id = string_to_mpc_input(key);
+    const mpc_input_entry_t *entry = get_mpc_input_entry(&mpc_config.in, static_cast<mpc_input_config_id_t>(input_id));
+    if (entry != nullptr)
+    {
+        entry->set(w, param_data);
+    }
+    else
+    {
+        throw std::runtime_error("CasadiMPC::set_param(): " + key + " is not a valid parameter name.");
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////

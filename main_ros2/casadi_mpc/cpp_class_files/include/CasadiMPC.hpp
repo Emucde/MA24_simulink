@@ -25,7 +25,8 @@ private:
     const Eigen::MatrixXd *traj_data;        // Trajectory data
     casadi_uint traj_data_real_len;          // Real length of the singular trajectory data without additional samples for last prediction horizon
 public:
-    const bool is_kinematic_mpc; // Kinematic MPC flag
+    bool is_kinematic_mpc; // Kinematic MPC flag
+    const bool is_planner_mpc; // Kinematic MPC flag
     const casadi_uint nq;        // Number of degrees of freedom
     const casadi_uint nx;        // Number of reduced degrees of freedom
     const casadi_uint nq_red;    // Number of reduced degrees of freedom
@@ -106,7 +107,6 @@ public:
 
     int solve_planner(); // mpc planner: open loop mpc
 
-    void get_valid_mpc_inputs();
     void update_mpc_weights(nlohmann::json param_weight);
 
 
@@ -198,11 +198,16 @@ public:
         return traj_data->col((traj_count > 0 ? traj_count-1 : traj_count)).data();
     }
 
+    casadi_real* get_param_ptr(std::string key);
+
     ///////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////// PUBLIC SETTER METHODS ////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////
+
+    // Method to set a parameter in the MPC configuration
+    void set_param(std::string, const casadi_real *param_data);
 
     ///////////////////////// DESTRUCTOR /////////////////////////
     ~CasadiMPC();

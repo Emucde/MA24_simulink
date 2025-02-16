@@ -175,7 +175,14 @@ lbw = [repmat(pp.u_min(n_indices), 1, 1); -inf(n_red*(N_MPC-1),1); -inf(2*n_red,
 N_u = numel(u);
 N_x = numel(x);
 N_theta = numel(theta);
-u_opt_indices = [1:n_red]; % tau_0
+
+u_idx = [1 : numel(u)];
+x_idx = N_u + [1 : numel(x)];
+
+q0_pp_idx = u_idx(1:n_red);
+x1_idx = x_idx(1+2*n_red : 4*n_red);
+q1_pp_idx = u_idx(1+n_red : 2*n_red);
+u_opt_indices = [q0_pp_idx, x1_idx, q1_pp_idx];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INPUT Parameter 4/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 x_k    = SX.sym( 'x_k', 2*n_red, 1       ); % current x state

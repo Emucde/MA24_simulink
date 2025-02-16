@@ -290,6 +290,7 @@ function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_f
     fprintf(fid, '    // It have to be static because only then all other values and pointer are set to zero!\n');
     fprintf(fid, ['    static mpc_config_t ', func_name, 'Config = {\n']);
     fprintf(fid, '        .kinematic_mpc = %s_KINEMATIC_MPC, // Kinematic MPC (u_opt=q0_pp, x1, q1pp) or dynamic MPC (u_opt=tau0)\n', func_name);
+    fprintf(fid, '        .planner_mpc = %s_PLANNER_MPC, // Planner MPC (u_opt=x0, q0_pp, x1, q1pp)\n', func_name);
     fprintf(fid, '        .traj_data_per_horizon = %s_TRAJ_DATA_PER_HORIZON, // Number of trajectory data points per horizon\n', func_name);
     fprintf(fid, '        .traj_indices = %s_TRAJ_INDICES, // Local indices of the trajectory per horizon\n', func_name);
     fprintf(fid, '        .N_step = %s_N_STEP, // Number of Control frequency stepswidth in the prediction horizon\n', func_name);
