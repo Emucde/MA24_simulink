@@ -97,7 +97,7 @@ catch ME
 end
 % solver.stats(1)
 
-if(size(u_opt_sol, 2) > 1)
+if(numel(u_opt_sol) > n_red)
     result = reshape(full(u_opt_sol), n_red, 2);
     qq_sol = zeros(n, 2);
     qq_sol(n_indices, :) = result;
