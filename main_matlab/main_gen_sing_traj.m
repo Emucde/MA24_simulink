@@ -1,9 +1,12 @@
-double_sing_pose = csvread('double_pose_singularities.csv');
+double_sing_pose = csvread('./main_c/double_pose_singularities2.csv');
 
 qq1 = double_sing_pose(:, 1:7);
 qq2 = double_sing_pose(:, 8:14);
 
 qq_all = [qq1; qq2];
+
+% write back to file but 7 dim:
+csvwrite('./main_c/double_pose_singularities_7dim.csv', qq_all);
 
 % calculate pose distances
 sorted_pose = zeros(size(qq_all, 1), 7);

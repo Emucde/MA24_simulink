@@ -20,8 +20,8 @@
         "CT",
         "ID"
     ],
-    "use_casadi_planner": true,
-    "default_casadi_mpc": "MPC01",
+    "use_casadi_planner": false,
+    "default_casadi_mpc": "MPC12",
     "available_casadi_mpc": [
         "MPC01",
         "MPC6",

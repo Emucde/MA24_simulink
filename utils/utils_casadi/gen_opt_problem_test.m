@@ -96,15 +96,27 @@ catch ME
     error(getReport(ME));
 end
 % solver.stats(1)
-result = reshape(full(u_opt_sol), n_red, 2);
-qq_sol = zeros(n, 2);
-qq_sol(n_indices, :) = result;
 
-disp(hom_transform_endeffector_py(qq_sol(:,1)));
-disp(hom_transform_endeffector_py(qq_sol(:,2)));
-JJ1 = geo_jacobian_endeffector_py(qq_sol(:,1));
-JJ2 = geo_jacobian_endeffector_py(qq_sol(:,2));
-w1 = sqrt(det(JJ1 * JJ1'));
-w2 = sqrt(det(JJ2 * JJ2'));
-disp(['manip=', num2str(w1), ', |q1-q2|=', num2str(norm(qq_sol(:,1)-qq_sol(:,2), 2))]);
-disp(qq_sol);
+if(size(u_opt_sol, 2) > 1)
+    result = reshape(full(u_opt_sol), n_red, 2);
+    qq_sol = zeros(n, 2);
+    qq_sol(n_indices, :) = result;
+
+    disp(hom_transform_endeffector_py(qq_sol(:,1)));
+    disp(hom_transform_endeffector_py(qq_sol(:,2)));
+    JJ1 = geo_jacobian_endeffector_py(qq_sol(:,1));
+    JJ2 = geo_jacobian_endeffector_py(qq_sol(:,2));
+    w1 = sqrt(det(JJ1 * JJ1'));
+    w2 = sqrt(det(JJ2 * JJ2'));
+    disp(['manip=', num2str(w1), ', |q1-q2|=', num2str(norm(qq_sol(:,1)-qq_sol(:,2), 2))]);
+    disp(qq_sol);
+else
+    result = full(u_opt_sol);
+    qq_sol = zeros(n, 1);
+    qq_sol(n_indices) = result;
+
+    JJ = full(J_red(result));
+    w = sqrt(det(JJ * JJ'));
+    disp(['manip=', num2str(w)]);
+    disp(qq_sol);
+end
