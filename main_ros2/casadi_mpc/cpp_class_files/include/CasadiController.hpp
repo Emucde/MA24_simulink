@@ -139,6 +139,11 @@ public:
         active_mpc->increase_traj_count();
     }
 
+    casadi_uint get_traj_count()
+    {
+        return active_mpc->get_traj_count();
+    }
+
     const casadi_uint *get_n_indices()
     {
         return robot_config.n_indices;

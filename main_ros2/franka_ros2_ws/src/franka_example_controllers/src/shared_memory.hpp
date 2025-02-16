@@ -1,6 +1,6 @@
 // shared_memory.hpp
-#ifndef SHARED_MEMORY_HPP
-#define SHARED_MEMORY_HPP
+#ifndef SHARED_MEMORY_2_HPP
+#define SHARED_MEMORY_2_HPP
 
 #include <cstddef>
 #include "rclcpp/rclcpp.hpp"
@@ -20,4 +20,4 @@ struct shm_flags
     int8_t torques_valid = 0;
 };
 
-#endif // SHARED_MEMORY_HPP
+#endif // SHARED_MEMORY_2_HPP

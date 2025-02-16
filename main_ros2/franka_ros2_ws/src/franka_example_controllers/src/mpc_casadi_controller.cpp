@@ -16,7 +16,6 @@
 
 #include <exception>
 #include <string>
-#include "shared_memory.hpp"
 #include <unistd.h>
 
 #include <memory>
@@ -26,7 +25,6 @@ using std::placeholders::_1;
 
 namespace franka_example_controllers
 {
-
     controller_interface::InterfaceConfiguration
     ModelPredictiveControllerCasadi::command_interface_configuration() const
     {
@@ -69,14 +67,23 @@ namespace franka_example_controllers
             {
                 state[i] = state_interfaces_[i].get_value();
             }
+            x_measured = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
 
-            Eigen::Map<Eigen::VectorXd> q_measured(state, N_DOF);
-            Eigen::Map<Eigen::VectorXd> q_p_measured(state + N_DOF, N_DOF);
-            Eigen::Map<Eigen::VectorXd> q_filtered(x_filtered.data(), N_DOF);
-            Eigen::Map<Eigen::VectorXd> q_p_filtered(x_filtered.data() + N_DOF, N_DOF);
-            
-            q_filtered = A1 * q_filtered + B1 * q_measured;
-            q_p_filtered = A2 * q_p_filtered + B2 * q_p_measured;
+            //TODO
+            if(use_ekf)
+            {
+                ekf.predict(tau_full.data(), x_measured.data());
+                if(use_lowpass_filter)
+                    lowpass_filter.run(x_filtered_ptr); // updates data from x_filtered_ptr
+            }
+            else if(use_lowpass_filter)
+            {
+                lowpass_filter.run(x_measured.data()); // updates data from x_filtered_ptr
+            }
+            else
+            {
+                x_filtered_ptr = x_measured.data();
+            }
 
             // Logging joint states
             #ifdef DEBUG
@@ -101,7 +108,7 @@ namespace franka_example_controllers
                 {
                     tau_full_future = std::async(std::launch::async, [this]()
                                                  {  timer_mpc_solver.tic();
-                                                    Eigen::VectorXd tau_temp = controller.solveMPC(x_filtered.data());
+                                                    Eigen::VectorXd tau_temp = controller.solveMPC(x_filtered_ptr);
                                                     timer_mpc_solver.toc();
                                                     return tau_temp; });
                 }
@@ -148,11 +155,12 @@ namespace franka_example_controllers
             }
 
             // Send data to shared memory
-            write_to_shared_memory(shm_read_state_data, state, 2 * N_DOF * sizeof(double), get_node()->get_logger());
-            write_to_shared_memory(shm_read_control_data, tau_full.data(), N_DOF * sizeof(casadi_real), get_node()->get_logger());
-            write_to_shared_memory(shm_read_traj_data, controller.get_act_traj_data(), 7 * sizeof(casadi_real), get_node()->get_logger());
-            write_to_shared_memory(shm_read_frequency, &current_frequency, sizeof(double), get_node()->get_logger());
-            sem_post(shm_changed_semaphore);
+            traj_count = controller.get_traj_count();
+            shm.write("read_state_data_full", state, traj_count);
+            shm.write("read_control_data_full", tau_full.data(), traj_count);
+            shm.write("read_traj_data_full", controller.get_act_traj_data(), traj_count);
+            shm.write("read_frequency_full", &current_frequency, traj_count);
+            shm.post_semaphore("shm_changed_semaphore");
         }
         else
         {
@@ -243,81 +251,53 @@ namespace franka_example_controllers
             return CallbackReturn::ERROR;
         }
 
-        controller.setActiveMPC(MPCType::MPC8);
+        controller.setActiveMPC(CasadiMPCType::MPC8);
         RCLCPP_INFO(get_node()->get_logger(), "MPC controller initialized");
 
         return CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCasadi::on_deactivate(const rclcpp_lifecycle::State &previous_state)
+    CallbackReturn ModelPredictiveControllerCasadi::on_deactivate(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
-        RCLCPP_INFO(get_node()->get_logger(), "on_deactivate: Shared memory closed successfully.", get_node()->get_logger());
+        RCLCPP_INFO(get_node()->get_logger(), "on_deactivate: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCasadi::on_activate(const rclcpp_lifecycle::State &previous_state)
+    CallbackReturn ModelPredictiveControllerCasadi::on_activate(const rclcpp_lifecycle::State &)
     {
         open_shared_memories();
         int8_t readonly_mode = 1;
-        write_to_shared_memory(shm_readonly_mode, &readonly_mode, sizeof(int8_t), get_node()->get_logger());
-        RCLCPP_INFO(get_node()->get_logger(), "on_activate: Shared memory opened successfully.", get_node()->get_logger());
+        shm.write("readonly_mode", &readonly_mode);
+        RCLCPP_INFO(get_node()->get_logger(), "on_activate: Shared memory opened successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCasadi::on_cleanup(const rclcpp_lifecycle::State &previous_state)
+    CallbackReturn ModelPredictiveControllerCasadi::on_cleanup(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
-        RCLCPP_INFO(get_node()->get_logger(), "on_cleanup: Shared memory closed successfully.", get_node()->get_logger());
+        RCLCPP_INFO(get_node()->get_logger(), "on_cleanup: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCasadi::on_shutdown(const rclcpp_lifecycle::State &previous_state)
+    CallbackReturn ModelPredictiveControllerCasadi::on_shutdown(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
-        RCLCPP_INFO(get_node()->get_logger(), "on_shutdown: Shared memory closed successfully.", get_node()->get_logger());
+        RCLCPP_INFO(get_node()->get_logger(), "on_shutdown: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
     void ModelPredictiveControllerCasadi::open_shared_memories()
     {
-        // Open shared memory for writing states to crocddyl
-        shm_start_mpc         = open_write_shm("data_from_simulink_start", get_node()->get_logger());
-        shm_reset_mpc         = open_write_shm("data_from_simulink_reset", get_node()->get_logger());
-        shm_stop_mpc          = open_write_shm("data_from_simulink_stop", get_node()->get_logger());
-        shm_readonly_mode     = open_write_shm("readonly_mode", get_node()->get_logger());
-        shm_read_traj_length  = open_write_shm("read_traj_length", get_node()->get_logger());
-        shm_read_traj_data    = open_write_shm("read_traj_data", get_node()->get_logger());
-        shm_read_state_data   = open_write_shm("read_state_data", get_node()->get_logger());
-        shm_read_control_data = open_write_shm("read_control_data", get_node()->get_logger());
-        shm_read_frequency    = open_write_shm("read_frequency", get_node()->get_logger());
-        shm_select_trajectory = open_write_shm("data_from_simulink_traj_switch", get_node()->get_logger());
-        shm_changed_semaphore = open_write_sem("shm_changed_semaphore", get_node()->get_logger());
-        RCLCPP_INFO(get_node()->get_logger(), "Shared memory opened successfully.", get_node()->get_logger());
+        shm.open_readwrite_shms(shm_readwrite_infos);
+        shm.open_readwrite_sems(sem_readwrite_names);
+        RCLCPP_INFO(get_node()->get_logger(), "Shared memory opened successfully.");
     }
 
     void ModelPredictiveControllerCasadi::close_shared_memories()
     {
-        if (shm_start_mpc != 0)
-            close(shm_start_mpc);
-        if (shm_reset_mpc != 0)
-            close(shm_reset_mpc);
-        if (shm_stop_mpc != 0)
-            close(shm_stop_mpc);
-        if (shm_readonly_mode != 0)
-            close(shm_readonly_mode);
-        if (shm_read_traj_length != 0)
-            close(shm_read_traj_length);
-        if (shm_read_traj_data != 0)
-            close(shm_read_traj_data);
-        if (shm_read_state_data != 0)
-            close(shm_read_state_data);
-        if (shm_read_control_data != 0)
-            close(shm_read_control_data);
-        if (shm_select_trajectory != -1)
-            close(shm_select_trajectory);
-        if (shm_changed_semaphore != 0)
-            sem_close(shm_changed_semaphore);
+        shm.close_shared_memories();
+        shm.close_semaphores();
     }
 
     // void ModelPredictiveControllerCasadi::topic_callback(const mpc_interfaces::msg::Num & msg)
@@ -325,7 +305,7 @@ namespace franka_example_controllers
     //   RCLCPP_WARN(get_node()->get_logger(), "I heard: '%ld'", msg.num);
     // }
 
-    void ModelPredictiveControllerCasadi::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+    void ModelPredictiveControllerCasadi::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                     std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -335,9 +315,9 @@ namespace franka_example_controllers
             0  // torques_valid
         };
 
-        write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
-        write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
-        write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
+        shm.write("data_from_simulink_start", &flags.start);
+        shm.write("data_from_simulink_reset", &flags.reset);
+        shm.write("data_from_simulink_stop", &flags.stop);
 
         response->status = "start flag set";
 
@@ -346,34 +326,65 @@ namespace franka_example_controllers
         {
             state[i] = state_interfaces_[i].get_value();
         }
+        x_measured = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
 
-        Eigen::VectorXd state_eig = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
-        x_filtered = state_eig; // set x0 for Lowpass Filter
+        // Update general configuration
+        nlohmann::json general_config = read_config(general_config_filename);
+        use_lowpass_filter = general_config["use_lowpass_filter"];
+        use_ekf = general_config["use_ekf"];
+        traj_select = general_config["trajectory_selection"];
+        double T_traj_start = general_config["transient_traj_start_time"];
+        double T_traj_dur = general_config["transient_traj_duration"];
+        double T_traj_end = general_config["transient_traj_end_time"];
+        bool use_planner = general_config["use_casadi_planner"];
+        double omega_c_q = general_config["lowpass_filter_omega_c_q"];
+        double omega_c_dq = general_config["lowpass_filter_omega_c_dq"];
+
+        if(use_ekf)
+        {
+            ekf.update_config();
+            ekf.initialize(x_measured.data());
+            x_filtered_ptr = ekf.get_x_k_plus_ptr();
+            if(use_lowpass_filter)
+            {
+                lowpass_filter.init(x_filtered_ptr, omega_c_q, omega_c_dq);
+                x_filtered_ptr = lowpass_filter.getFilteredOutputPtr();
+            }
+        }
+        else if(use_lowpass_filter)
+        {
+            lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
+            x_filtered_ptr = lowpass_filter.getFilteredOutputPtr();
+        }
+        else
+        {
+            x_filtered_ptr = x_measured.data();
+        }
         
-        controller.init_trajectory(traj_select, state, 0.0, 4.0, 5.0);
-        // controller.switch_traj(traj_select, state); // eig nicht useful
-        casadi_uint total_traj_len = controller.get_traj_data_len();
+        controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
+        controller.init_file_trajectory(traj_select, state, T_traj_start, T_traj_dur, T_traj_end);
+        controller.set_planner_mode(use_planner);
+        controller.update_mpc_weights();
+        traj_len = controller.get_traj_data_real_len();
+        shm.write("read_traj_length", &traj_len);
 
-        write_to_shared_memory(shm_read_traj_length, &total_traj_len, sizeof(casadi_uint), get_node()->get_logger());
-
-        RCLCPP_INFO(get_node()->get_logger(), "Trajectory initialized");
-
-        tau_full_future = std::async(std::launch::async, [this, state]()
+        tau_full_future = std::async(std::launch::async, [this]()
                                      {
-            Eigen::VectorXd tau_full_temp = controller.solveMPC(state);
+            Eigen::VectorXd tau_full_temp = controller.solveMPC(x_filtered_ptr);
             mpc_started = true;
             first_torque_read = false;
 
-            write_to_shared_memory(shm_read_state_data, state, 2 * N_DOF * sizeof(double), get_node()->get_logger());
-            write_to_shared_memory(shm_read_control_data, tau_full.data(), N_DOF * sizeof(casadi_real), get_node()->get_logger());
-            write_to_shared_memory(shm_read_traj_data, controller.get_act_traj_data(), 7 * sizeof(casadi_real), get_node()->get_logger());
+            shm.write("read_state_data_full", x_filtered_ptr, traj_count);
+            shm.write("read_control_data_full", tau_full.data(), traj_count);
+            shm.write("read_traj_data_full", controller.get_act_traj_data(), traj_count);
+            shm.write("read_frequency_full", &current_frequency, traj_count);
+            shm.post_semaphore("shm_changed_semaphore");
 
-            sem_post(shm_changed_semaphore);
             RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC started");
             return tau_full_temp; });
     }
 
-    void ModelPredictiveControllerCasadi::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+    void ModelPredictiveControllerCasadi::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                     std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -383,19 +394,19 @@ namespace franka_example_controllers
             0  // torques_valid
         };
 
-        write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
-        write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
-        write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
+        shm.write("data_from_simulink_start", &flags.start);
+        shm.write("data_from_simulink_reset", &flags.reset);
+        shm.write("data_from_simulink_stop", &flags.stop);
 
         controller.reset();
 
         response->status = "reset flag set";
         mpc_started = false;
-        sem_post(shm_changed_semaphore);
+        shm.post_semaphore("shm_changed_semaphore");
         RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC reset");
     }
 
-    void ModelPredictiveControllerCasadi::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+    void ModelPredictiveControllerCasadi::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                    std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -405,13 +416,13 @@ namespace franka_example_controllers
             0  // torques_valid
         };
 
-        write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
-        write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
-        write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
+        shm.write("data_from_simulink_start", &flags.start);
+        shm.write("data_from_simulink_reset", &flags.reset);
+        shm.write("data_from_simulink_stop", &flags.stop);
+        shm.post_semaphore("shm_changed_semaphore");
 
         response->status = "stop flag set";
         mpc_started = false;
-        sem_post(shm_changed_semaphore);
         RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC stopped");
     }
 
@@ -427,40 +438,41 @@ namespace franka_example_controllers
             0  // torques_valid
         };
 
-        write_to_shared_memory(shm_select_trajectory, &traj_select, sizeof(int8_t), get_node()->get_logger());
-        write_to_shared_memory(shm_start_mpc, &flags.start, sizeof(int8_t), get_node()->get_logger());
-        write_to_shared_memory(shm_reset_mpc, &flags.reset, sizeof(int8_t), get_node()->get_logger());
-        write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
+        shm.write("data_from_simulink_start", &flags.start);
+        shm.write("data_from_simulink_reset", &flags.reset);
+        shm.write("data_from_simulink_stop", &flags.stop);
+        shm.post_semaphore("shm_changed_semaphore");
 
         response->status = "trajectory " + std::to_string(traj_select) + " selected";
         mpc_started = false;
-        sem_post(shm_changed_semaphore);
+        
         RCLCPP_INFO(get_node()->get_logger(), "Trajectory %d selected", traj_select);
     }
 
     void ModelPredictiveControllerCasadi::mpc_switch(const std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Request> request,
                                                          std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Response> response)
     {
-        MPCType mpc_type = static_cast<MPCType>(request->mpc_type);
+        CasadiMPCType mpc_type = static_cast<CasadiMPCType>(request->mpc_type);
         controller.setActiveMPC(mpc_type);
 
         response->status = "MPC type " + std::to_string(request->mpc_type) + " selected";
-        std::string status_message;
-        switch(mpc_type) {
-            case MPCType::MPC01: status_message = "Switched to Casadi MPC01"; break;
-            case MPCType::MPC6: status_message = "Switched to Casadi MPC6"; break;
-            case MPCType::MPC7: status_message = "Switched to Casadi MPC7"; break;
-            case MPCType::MPC8: status_message = "Switched to Casadi MPC8"; break;
-            case MPCType::MPC9: status_message = "Switched to Casadi MPC9"; break;
-            case MPCType::MPC10: status_message = "Switched to Casadi MPC10"; break;
-            case MPCType::MPC11: status_message = "Switched to Casadi MPC11"; break;
-            case MPCType::MPC12: status_message = "Switched to Casadi MPC12"; break;
-            case MPCType::MPC13: status_message = "Switched to Casadi MPC13"; break;
-            case MPCType::MPC14: status_message = "Switched to Casadi MPC14"; break;
-            default: status_message = "Switched to Casadi MPC01"; break;
-        }
+        std::string status_message = "Switched to Casadi " + casadi_mpctype_to_string(mpc_type);
         RCLCPP_INFO(get_node()->get_logger(), status_message.c_str());
         response->status = status_message;
+    }
+
+    nlohmann::json ModelPredictiveControllerCasadi::read_config(std::string file_path)
+    {
+        std::ifstream file(file_path);
+        if (!file.is_open())
+        {
+            std::cerr << "Error: Could not open JSON file." << std::endl;
+            return {};
+        }
+        nlohmann::json jsonData;
+        file >> jsonData; // Parse JSON file
+        file.close();
+        return jsonData;
     }
 
 } // namespace franka_example_controllers

@@ -238,7 +238,6 @@ namespace franka_example_controllers
 
         try
         {
-            int8_t readonly_mode = 0;
             open_shared_memories();
         }
         catch (const std::exception &e)
@@ -251,14 +250,14 @@ namespace franka_example_controllers
         return CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerPinocchio::on_deactivate(const rclcpp_lifecycle::State &previous_state)
+    CallbackReturn ModelPredictiveControllerPinocchio::on_deactivate(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
         RCLCPP_INFO(get_node()->get_logger(), "on_deactivate: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerPinocchio::on_activate(const rclcpp_lifecycle::State &previous_state)
+    CallbackReturn ModelPredictiveControllerPinocchio::on_activate(const rclcpp_lifecycle::State &)
     {
         open_shared_memories();
         int8_t readonly_mode = 0;
@@ -267,14 +266,14 @@ namespace franka_example_controllers
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerPinocchio::on_cleanup(const rclcpp_lifecycle::State &previous_state)
+    CallbackReturn ModelPredictiveControllerPinocchio::on_cleanup(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
         RCLCPP_INFO(get_node()->get_logger(), "on_cleanup: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerPinocchio::on_shutdown(const rclcpp_lifecycle::State &previous_state)
+    CallbackReturn ModelPredictiveControllerPinocchio::on_shutdown(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
         RCLCPP_INFO(get_node()->get_logger(), "on_shutdown: Shared memory closed successfully.");
@@ -327,7 +326,7 @@ namespace franka_example_controllers
     //   RCLCPP_WARN(get_node()->get_logger(), "I heard: '%ld'", msg.num);
     // }
 
-    void ModelPredictiveControllerPinocchio::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+    void ModelPredictiveControllerPinocchio::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                        std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -358,7 +357,7 @@ namespace franka_example_controllers
         RCLCPP_INFO(get_node()->get_logger(), "Pinocchio MPC started");
     }
 
-    void ModelPredictiveControllerPinocchio::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+    void ModelPredictiveControllerPinocchio::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                        std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -379,7 +378,7 @@ namespace franka_example_controllers
         RCLCPP_INFO(get_node()->get_logger(), "Pinocchio MPC reset");
     }
 
-    void ModelPredictiveControllerPinocchio::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
+    void ModelPredictiveControllerPinocchio::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                       std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {

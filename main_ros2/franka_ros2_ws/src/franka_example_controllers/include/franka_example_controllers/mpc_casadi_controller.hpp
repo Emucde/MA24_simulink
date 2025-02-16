@@ -34,10 +34,16 @@
 #include "mpc_interfaces/srv/casadi_mpc_type_command.hpp"
 #include <semaphore.h>
 
+#include "json.hpp"
+#include "TicToc.hpp"
+#include "SignalFilter.hpp"
+#include "SharedMemory.hpp"
 #include "CasadiController.hpp"
+#include "CasadiEKF.hpp"
 #include "TicToc.hpp"
 #include "param_robot.h"
 #include "casadi_types.h"
+#include "trajectory_settings.hpp"
 #include <Eigen/Dense>
 
 #include <future> // Include the future and async library
@@ -47,6 +53,13 @@ using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface
 namespace franka_example_controllers
 {
 
+    struct shm_flags
+    {
+        int8_t start = 0;
+        int8_t reset = 0;
+        int8_t stop = 0;
+        int8_t torques_valid = 0;
+    };
     /**
      * The gravity compensation controller only sends zero torques so that the robot does gravity
      * compensation
@@ -89,32 +102,50 @@ namespace franka_example_controllers
         const int num_joints = N_DOF;
         double torques_prev[N_DOF] = {0}; // previous torques
         int invalid_counter = 0;          // counter for invalid data, if exceeds MAX_INVALID_COUNT, terminate the controller
-        int shm_start_mpc = 0;
-        int shm_reset_mpc = 0;
-        int shm_stop_mpc = 0;
-        int shm_readonly_mode = 0;
-        int shm_read_traj_length = 0;
-        int shm_read_traj_data = 0;
-        int shm_read_frequency = 0;
-        int shm_read_state_data = 0;
-        int shm_read_control_data = 0;
-        int shm_select_trajectory = 0;
-        sem_t *shm_changed_semaphore = 0;
+        uint traj_count = 0;
         bool mpc_started = false;
         int8_t traj_select = 1; // default trajectory
         bool first_torque_read = false;
         const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
+        const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand.json";
+        const std::string general_config_filename = std::string(MASTERDIR) + "/config_settings/general_settings.json";
+        const std::string ekf_config_filename = std::string(MASTERDIR) + "/config_settings/ekf_settings.json";
         const std::string tcp_frame_name = "fr3_link8_tcp";
         bool use_gravity = false;
-        CasadiController controller = CasadiController(urdf_filename, tcp_frame_name, use_gravity);
+        bool use_planner = false;
+        bool use_lowpass_filter = false;
+        bool use_ekf = false;
+        CasadiController controller = CasadiController(urdf_filename, casadi_mpc_config_filename, tcp_frame_name, use_gravity, use_planner);
         Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(num_joints);
-        Eigen::VectorXd x_filtered = Eigen::VectorXd::Zero(2*num_joints);
         Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(2*num_joints);
+        double* x_filtered_ptr = x_measured.data();
+        CasadiEKF ekf = CasadiEKF(ekf_config_filename);
+        SignalFilter lowpass_filter = SignalFilter(num_joints, Ts, 400, 400);
+
         double Ts = 0.001;
         double T1 = 1/400, A1 = std::exp(-Ts/T1), B1 = 1 - A1; // Lowpass Filter for q
         double T2 = 1/400, A2 = std::exp(-Ts/T2), B2 = 1 - A2; // Lowpass Filter for q_p
         std::future<Eigen::VectorXd> tau_full_future;
         ErrorFlag error_flag = ErrorFlag::NO_ERROR;
+
+        robot_config_t robot_config = get_robot_config();
+        casadi_uint traj_len = controller.get_traj_data_real_len();
+
+        const std::vector<SharedMemoryInfo> shm_readwrite_infos = {
+            {"data_from_simulink_start", sizeof(int8_t), 1},
+            {"data_from_simulink_reset", sizeof(int8_t), 1},
+            {"data_from_simulink_stop", sizeof(int8_t), 1},
+            {"readonly_mode", sizeof(int8_t), 1},
+            {"read_traj_length", sizeof(casadi_uint), 1},
+            {"read_traj_data_full", 19 * sizeof(casadi_real), traj_len},
+            {"read_frequency_full", sizeof(casadi_real), traj_len},
+            {"read_state_data_full", sizeof(casadi_real) * robot_config.nx, traj_len},
+            {"read_control_data_full", sizeof(casadi_real) * robot_config.nq, traj_len}};
+
+        const std::vector<std::string> sem_readwrite_names = {
+            "shm_changed_semaphore",
+        };
+        SharedMemory shm;
 
         double current_frequency = 0.0;
         TicToc timer_mpc_solver;
@@ -139,5 +170,6 @@ namespace franka_example_controllers
                          std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response);
         void mpc_switch(const std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Request> request,
                         std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Response> response);
+        nlohmann::json read_config(std::string file_path);
     };
 } // namespace franka_example_controllers

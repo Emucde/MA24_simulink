@@ -4,6 +4,8 @@ source ~/.bashrc
 # Default to debug build
 export CLICOLOR_FORCE=1
 export CMAKE_COLOR_DIAGNOSTICS=ON
+export RCUTILS_COLORIZED_OUTPUT=1
+export RCUTILS_LOGGING_USE_STDOUT=1
 export TERM=dumb
 BUILD_TYPE="debug"
 STANDALONE_MAKEFILE=false
@@ -321,8 +323,10 @@ if [ $BUILD_STATUS -eq 0 ]; then
     fi
 
     if [ $RUN_MAKE_INSTALL == true ]; then
+        CURRENT_PATH=$(pwd);
         cd $UTILS_BUILD_PATH
         make install
+        cd $CURRENT_PATH
     fi
 else
     echo "Build failed with status code $BUILD_STATUS"
@@ -332,10 +336,10 @@ fi
 # build ros2
 if [ $BUILD_ROS2_MPCS == true ]; then
     if [ "$BUILD_TYPE" = "release" ]; then
-        BUILD_PATH=./main_ros2/franka_ros2_ws/build_release
+        BUILD_PATH="$masterdir/main_ros2/franka_ros2_ws/build_release"
         BUILD_TYPE="Release"
     else
-        BUILD_PATH=./main_ros2/franka_ros2_ws/build_debug
+        BUILD_PATH="$masterdir/main_ros2/franka_ros2_ws/build_debug"
         BUILD_TYPE="Debug"
     fi
 
@@ -349,7 +353,7 @@ if [ $BUILD_ROS2_MPCS == true ]; then
     mkdir -p $BUILD
 
     cd $masterdir/main_ros2/franka_ros2_ws
-    COMMAND="colcon --log-base $LOG \
+    COMMAND="RCUTILS_COLORIZED_OUTPUT=1 colcon --log-base $LOG \
                 build --cmake-args \
                 -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
                 -DCMAKE_VERBOSE_MAKEFILE=ON \

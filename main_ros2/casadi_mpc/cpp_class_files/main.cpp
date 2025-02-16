@@ -193,6 +193,8 @@ int main()
     double T_traj_start = general_config["transient_traj_start_time"];
     double T_traj_dur = general_config["transient_traj_duration"];
     double T_traj_end = general_config["transient_traj_end_time"];
+    double omega_c_q = general_config["lowpass_filter_omega_c_q"];
+    double omega_c_dq = general_config["lowpass_filter_omega_c_dq"];
     bool use_planner = general_config["use_casadi_planner"];
     Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nx);
 
@@ -301,7 +303,8 @@ int main()
     double* x_filtered_ptr = ekf.get_x_k_plus_ptr();
 
     // initialize the filter
-    SignalFilter filter(nq, Ts, x_k_ndof, 400, 400); // int num_joints, double Ts, double *state, double omega_c_q, double omega_c_dq
+    
+    SignalFilter filter(nq, Ts, x_k_ndof, omega_c_q, omega_c_dq); // int num_joints, double Ts, double *state, double omega_c_q, double omega_c_dq
     double* x_filtered_ptr_2 = filter.getFilteredOutputPtr();
     const double *act_data;
 

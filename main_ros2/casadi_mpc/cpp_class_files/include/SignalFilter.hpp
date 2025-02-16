@@ -7,6 +7,9 @@ class SignalFilter {
 public:   
     // Constructor to initialize the filter with the number of degrees of freedom (DOF) and initial state
     SignalFilter(int num_joints, double Ts, double* state, double omega_c_q, double omega_c_dq);
+    SignalFilter(int num_joints, double Ts, double omega_c_q, double omega_c_dq);
+
+    void update_filter_coeffs(double omega_c_q, double omega_c_dq);
     
     // Method to initialize the filter state and coefficients
     void init(double* state, double omega_c_q, double omega_c_dq);

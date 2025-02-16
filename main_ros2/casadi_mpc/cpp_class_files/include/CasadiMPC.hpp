@@ -163,6 +163,11 @@ public:
         return traj_cols * traj_rows;
     }
 
+    casadi_uint get_traj_count()
+    {
+        return traj_count;
+    }
+
     // Method to get the control sampling time dt
     casadi_real get_dt()
     {

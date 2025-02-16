@@ -171,7 +171,10 @@
                 "./main_ros2/casadi_mpc/build.sh -r all"
             ],
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}",
+                "env": {
+                "RCUTILS_COLORIZED_OUTPUT": "1"
+                }
             },
             "problemMatcher": [
                 "$gcc"

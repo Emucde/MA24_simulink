@@ -4,6 +4,8 @@
     "use_ekf": false,
     "use_noise": false,
     "mean_noise_amplitude": 0.1e-3,
+    "lowpass_filter_omega_c_q": 400,
+    "lowpass_filter_omega_c_dq": 400,
     "trajectory_selection": 1,
     "transient_traj_start_time": 0.0,
     "transient_traj_duration": 0.0,

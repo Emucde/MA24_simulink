@@ -140,6 +140,21 @@ find_library(CASADI_MPC_LIBRARY
     HINTS "${MPC_SOURCE_DIR}"
 )
 
+find_library(SHARED_MEMORY_LIBRARY
+    NAMES SharedMemory
+    HINTS "${MPC_SOURCE_DIR}"
+)
+
+find_library(CASADI_EKF_LIBRARY
+    NAMES CasadiEKF
+    HINTS "${MPC_SOURCE_DIR}"
+)
+
+find_library(SIGNAL_FILTER_LIBRARY
+    NAMES SignalFilter
+    HINTS "${MPC_SOURCE_DIR}"
+)
+
 find_library(FULL_SYSTEM_TORQUE_MAPPER_LIB
     NAMES FullSystemTorqueMapper
     HINTS "${MPC_SOURCE_DIR}"
