@@ -313,6 +313,15 @@ else
             disp(['Iteration: ', num2str(i), ', krit_min: ', num2str(krit_min_new), ', w: ', num2str(w)]);
         end
     end
+
+    current_time = datetime('now', 'Format', 'yyyyMMdd_HHmmss_SSS');
+    fileID = fopen(sprintf('singularity_solutions_single_%s.csv', char(current_time)), 'w');
+    for i=1:N_min
+        qq = qq_min{i};
+        qq = qq(:);
+        fprintf(fileID, '%f, ', qq(1:end-1,1));fprintf(fileID, '%f\n', qq(end,1));
+    end
+    fclose(fileID);
 end
 
 function f = f_cost(x, param)
