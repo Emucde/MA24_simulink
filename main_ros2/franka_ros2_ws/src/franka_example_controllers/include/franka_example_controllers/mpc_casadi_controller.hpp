@@ -42,6 +42,7 @@
 #include "SharedMemory.hpp"
 #include "CasadiController.hpp"
 #include "CasadiEKF.hpp"
+#include "FullSystemTorqueMapper.hpp"
 #include "TicToc.hpp"
 #include "param_robot.h"
 #include "casadi_types.h"
@@ -102,7 +103,6 @@ namespace franka_example_controllers
     private:
         std::string arm_id_;
         const int num_joints = N_DOF;
-        double torques_prev[N_DOF] = {0}; // previous torques
         int invalid_counter = 0;          // counter for invalid data, if exceeds MAX_INVALID_COUNT, terminate the controller
         uint global_traj_count = 0;
         bool mpc_started = false;
@@ -119,11 +119,14 @@ namespace franka_example_controllers
         bool use_ekf = false;
         CasadiController controller = CasadiController(urdf_filename, casadi_mpc_config_filename, tcp_frame_name, use_gravity, use_planner);
         Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(num_joints);
+        Eigen::VectorXd tau_prev = Eigen::VectorXd::Zero(num_joints);
+        Eigen::VectorXd x_prev = Eigen::VectorXd::Zero(2*num_joints);
         Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(2*num_joints);
+        Eigen::VectorXd x_filtered = Eigen::VectorXd::Zero(2*num_joints);
         double* x_filtered_ptr = x_measured.data();
-        double* u_next = controller.get_u_next();
-        //Eigen::Map<Eigen::VectorXd>(u_next, robot_config.nq_red);
+        double* u_next_ptr = controller.get_u_next();
         uint N_step = controller.get_N_step();
+        FullSystemTorqueMapper* torque_mapper = controller.get_torque_mapper();
         CasadiEKF ekf = CasadiEKF(ekf_config_filename);
         SignalFilter lowpass_filter = SignalFilter(num_joints, Ts, 400, 400);
 

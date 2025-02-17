@@ -488,9 +488,9 @@ try:
             elif not explicit_mpc:
                 # in this mode, all data (states and torques) are read out of the shared memory. This mode is only
                 # used by CasaDi from ROS 2 for logging the data.
-                start = start_button.debounce(data_from_simulink_start[:])
-                reset = reset_button.debounce(data_from_simulink_reset[:])
-                stop = stop_button.debounce(data_from_simulink_stop[:])
+                start = data_from_simulink_start[:]
+                reset = data_from_simulink_reset[:]
+                stop = data_from_simulink_stop[:]
                 
                 if start == 1:
                     data_from_simulink_start[:] = 0

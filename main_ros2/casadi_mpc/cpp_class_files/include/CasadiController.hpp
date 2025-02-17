@@ -164,6 +164,11 @@ public:
         return robot_config.n_indices;
     }
 
+    FullSystemTorqueMapper* get_torque_mapper()
+    {
+        return &torque_mapper;
+    }
+
     // Method to switch the trajectory (for creating run init_trajectory)
     void switch_traj(casadi_uint traj_select);
 

@@ -26,19 +26,50 @@ import websockets
 import psutil
 import fcntl
 
+import time
+
 class DebouncedButton:
     def __init__(self, delay):
+        """
+        Initializes the DebouncedButton instance.
+
+        Parameters:
+        - delay (float): The debounce delay in seconds. This is the minimum 
+                         amount of time that must pass between valid button presses.
+
+        Attributes:
+        - self.delay (float): Stores the debounce delay.
+        - self.last_press_time (float): Tracks the last valid button press time. 
+                                        Initialized to 0.5 seconds for default purposes.
+        """
         self.delay = delay
-        self.last_press_time = 0
+        self.last_press_time = 0.5
 
     def debounce(self, value):
+        """
+        Determines whether a button press is valid based on the debounce logic.
+
+        Parameters:
+        - value (int): The current state of the button (1 for pressed, 0 for not pressed).
+
+        Returns:
+        - int: Returns 1 if the button press is valid (not within the debounce delay),
+               otherwise returns 0.
+        """
+        # Get the current time in seconds since the epoch
         current_time = time.time()
 
+        # Check if the button is pressed (value == 1) and enough time has passed since
+        # the last valid press (current_time - last_press_time > delay)
         if value == 1 and (current_time - self.last_press_time > self.delay):
+            # Update last_press_time to the current time
             self.last_press_time = current_time
+            # Return 1 to indicate a valid button press
             return 1
         else:
+            # Return 0 to indicate an invalid or ignored button press
             return 0
+
 
 def trajectory_poly(t, y0, yT, T):
     # The function plans a trajectory from y0 in R3 to yT in R3 and returns the desired position and velocity on this trajectory at time t.

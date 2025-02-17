@@ -57,7 +57,7 @@ CasadiController::CasadiController(const std::string &urdf_path,
 Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr)
 {
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
-    Eigen::Map<const Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
+    Eigen::VectorXd x_k_ndof = Eigen::Map<const Eigen::VectorXd>(x_k_ndof_ptr, nx);
     double x_k[nx_red];
 
     // Convert nx to nx_red state

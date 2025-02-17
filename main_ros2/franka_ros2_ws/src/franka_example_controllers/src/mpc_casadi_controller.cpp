@@ -92,6 +92,7 @@ namespace franka_example_controllers
             {
                 x_filtered_ptr = x_measured.data();
             }
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ptr, 2 * N_DOF);
 
             // Logging joint states
             #ifdef DEBUG
@@ -109,6 +110,8 @@ namespace franka_example_controllers
             {
                 invalid_counter = 0;                      // Reset the counter on successful retrieval
                 tau_full = tau_full_future.get();         // Get the result
+                tau_prev = tau_full;                      // Update the previous torque
+                x_prev = x_filtered;                      // Update the previous state
                 error_flag = controller.get_error_flag(); // Get the error flag
                 current_frequency = timer_mpc_solver.get_frequency();
 
@@ -149,9 +152,17 @@ namespace franka_example_controllers
             {
                 current_frequency = 0.0;
                 controller.set_traj_count(global_traj_count); // sync the global trajectory count
+
                 if (invalid_counter < MAX_INVALID_COUNT)
                 {
                     invalid_counter++;
+                    //Interpolate previous u_next
+                    // Eigen::VectorXd u_next = Eigen::Map<Eigen::VectorXd>(u_next_ptr, robot_config.nq_red);
+                    // if(invalid_counter <= static_cast<int>(N_step))
+                    // {
+                    //     tau_full = tau_prev + static_cast<double>(invalid_counter) / N_step * (torque_mapper->calc_full_torque(u_next, x_prev) - tau_prev);
+                    // }
+                    // tau_full = tau_prev;
                     RCLCPP_WARN(get_node()->get_logger(), "No valid MPC data (%d/%d). Using previous torques.", invalid_counter, MAX_INVALID_COUNT);
                 }
                 else
@@ -326,9 +337,9 @@ namespace franka_example_controllers
             0  // torques_valid
         };
 
-        shm.write("data_from_simulink_start", &flags.start);
         shm.write("data_from_simulink_reset", &flags.reset);
         shm.write("data_from_simulink_stop", &flags.stop);
+        shm.write("data_from_simulink_start", &flags.start);
 
         response->status = "start flag set";
 
@@ -422,8 +433,8 @@ namespace franka_example_controllers
         };
 
         shm.write("data_from_simulink_start", &flags.start);
-        shm.write("data_from_simulink_reset", &flags.reset);
         shm.write("data_from_simulink_stop", &flags.stop);
+        shm.write("data_from_simulink_reset", &flags.reset);
 
         controller.reset();
         global_traj_count = 0;
@@ -459,17 +470,18 @@ namespace franka_example_controllers
     {
         traj_select = request->traj_select; // it is later used at start_mpc() in init_trajectory
 
-        shm_flags flags = {
-            0, // start
-            1, // reset
-            0, // stop
-            0  // torques_valid
-        };
+        // shm_flags flags = {
+        //     0, // start
+        //     1, // reset
+        //     0, // stop
+        //     0  // torques_valid
+        // };
 
-        shm.write("data_from_simulink_start", &flags.start);
-        shm.write("data_from_simulink_reset", &flags.reset);
-        shm.write("data_from_simulink_stop", &flags.stop);
-        shm.post_semaphore("shm_changed_semaphore");
+        // shm.write("data_from_simulink_stop", &flags.stop);
+        // shm.write("data_from_simulink_reset", &flags.reset);
+        // shm.write("data_from_simulink_start", &flags.start);
+        // shm.post_semaphore("shm_changed_semaphore");
+        controller.switch_traj(traj_select);
 
         response->status = "trajectory " + std::to_string(traj_select) + " selected";
         mpc_started = false;
