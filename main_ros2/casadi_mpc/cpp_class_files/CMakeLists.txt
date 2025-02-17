@@ -183,8 +183,8 @@ endif()
 
 list(APPEND CMAKE_PREFIX_PATH "$ENV{MAMBA_ROOT_PREFIX}/envs/ros_env/")
 
-set(Python_EXECUTABLE "$ENV{_colcon_cd_root}/bin/python")
-set(Python3_EXECUTABLE "$ENV{_colcon_cd_root}/bin/python3")
+# set(Python_EXECUTABLE "$ENV{_colcon_cd_root}/bin/python")
+# set(Python3_EXECUTABLE "$ENV{_colcon_cd_root}/bin/python3")
 
 message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 list(APPEND CMAKE_PREFIX_PATH "/opt/ros/humble")
