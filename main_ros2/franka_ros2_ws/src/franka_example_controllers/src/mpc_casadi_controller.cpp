@@ -59,9 +59,6 @@ namespace franka_example_controllers
         const rclcpp::Time & /*time*/,
         const rclcpp::Duration & /*period*/)
     {
-        
-        double state[2 * N_DOF];
-        
         if (mpc_started)
         {
             // Read states from joint state interface
@@ -210,54 +207,56 @@ namespace franka_example_controllers
     controller_interface::return_type ModelPredictiveControllerCasadi::update(
         const rclcpp::Time & /*time*/,
         const rclcpp::Duration & /*period*/)
-    {
+    {   
         
-        double state[2 * N_DOF];
-        
+        #ifndef SIMULATION_MODE
+        // Read states from joint state interface
+        for (int i = 0; i < 2 * N_DOF; ++i)
+        {
+            state[i] = state_interfaces_[i].get_value();
+        }
+        #endif
+
         if (mpc_started)
         {
-            timer_all.tic();
-        
-            controller.simulateModelRK4(x_measured.data(), tau_full.data(), Ts);
-            for (int i = 0; i < 2 * N_DOF; ++i)
-            {
-                state[i] = x_measured[i];
-            }
-
-            //TODO
-            Eigen::VectorXd x_filtered;
-            if(use_ekf && use_lowpass_filter)
-            {
-                ekf.predict(tau_full.data(), state);
-                lowpass_filter.run(x_filtered_ekf_ptr);
-                x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
-            }
-            else if(use_lowpass_filter)
-            {
-                lowpass_filter.run(state); // updates data from x_filtered_ptr
-                x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
-            }
-            else if(use_ekf)
-            {
-                ekf.predict(tau_full.data(), state);
-                x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
-            }
-            else
-            {
-                x_filtered = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
-            }
-
             // Attempt to get the result (blocking call)
             if (tau_full_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
             {
                 invalid_counter = 0;                      // Reset the counter on successful retrieval
                 tau_full = tau_full_future.get();         // Get the result
                 tau_prev = tau_full;                      // Update the previous torque
-                x_prev = x_filtered;                      // Update the previous state
                 error_flag = controller.get_error_flag(); // Get the error flag
                 current_frequency = timer_mpc_solver.get_frequency();
                 
+                // simulate one step
+                #ifndef SIMULATION_MODE
+                controller.simulateModelRK4(x_filtered.data(), tau_full.data(), Ts);
+                #else
+                controller.simulateModelRK4(state, tau_full.data(), Ts);
+                #endif
 
+                Eigen::VectorXd x_filtered;
+                if(use_ekf && use_lowpass_filter)
+                {
+                    ekf.predict(tau_full.data(), state);
+                    lowpass_filter.run(x_filtered_ekf_ptr);
+                    x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
+                }
+                else if(use_lowpass_filter)
+                {
+                    lowpass_filter.run(state); // updates data from x_filtered_ptr
+                    x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
+                }
+                else if(use_ekf)
+                {
+                    ekf.predict(tau_full.data(), state);
+                    x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
+                }
+                else
+                {
+                    x_filtered = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
+                }
+                
                 if (error_flag == ErrorFlag::NO_ERROR)
                 {
                     tau_full_future = std::async(std::launch::async, [this, x_filtered]()
@@ -315,23 +314,41 @@ namespace franka_example_controllers
                     invalid_counter = 0;
                     mpc_started = false;
                 }
+                
+                #ifdef SIMULATION_MODE
+                controller.simulateModelRK4(state, tau_full.data(), Ts);
+                #endif
             }
-            timer_all.toc();
-            double current_Time = timer_all.get_time();
-            RCLCPP_WARN(get_node()->get_logger(), "time: %f", current_Time);
-            // Send data to shared memory
+
             shm.write("read_state_data_full", state, global_traj_count);
             shm.write("read_control_data_full", tau_full.data(), global_traj_count);
-            shm.write("read_traj_data_full", controller.get_act_traj_data(), global_traj_count);
+            shm.write("read_traj_data_full", current_trajectory->col(global_traj_count).data(), global_traj_count);
             shm.write("read_frequency_full", &current_frequency, global_traj_count);
             shm.post_semaphore("shm_changed_semaphore");
 
             if(global_traj_count < traj_len)
                 global_traj_count++;
+
+            #ifdef SIMULATION_MODE
+            //controller.simulateModelRK4(state, tau_full.data(), Ts);
+            #endif
         }
         else
         {
             tau_full = Eigen::VectorXd::Zero(N_DOF);
+            if(use_ekf && use_lowpass_filter)
+            {
+                ekf.predict(tau_full.data(), state);
+                lowpass_filter.run(x_filtered_ekf_ptr);
+            }
+            else if(use_lowpass_filter)
+            {
+                lowpass_filter.run(state); // updates data from x_filtered_ptr
+            }
+            else if(use_ekf)
+            {
+                ekf.predict(tau_full.data(), state);
+            }
         }
 
         return controller_interface::return_type::OK;
@@ -502,11 +519,10 @@ namespace franka_example_controllers
         traj_len = controller.get_traj_data_real_len();
         N_step = controller.get_N_step();
         
+        current_trajectory = controller.get_trajectory();
         controller.set_planner_mode(use_planner);
         controller.update_mpc_weights();
         traj_len = controller.get_traj_data_real_len();
-
-        double state[2 * N_DOF];
 
         #ifndef SIMULATION_MODE
         for (int i = 0; i < 2 * N_DOF; ++i)
@@ -552,7 +568,7 @@ namespace franka_example_controllers
 
         shm.write("read_traj_length", &traj_len);
 
-        tau_full_future = std::async(std::launch::async, [this, state]()
+        tau_full_future = std::async(std::launch::async, [this]()
                                      {
             Eigen::VectorXd tau_full_temp = controller.solveMPC(state);
             mpc_started = true;
