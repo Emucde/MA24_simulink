@@ -236,7 +236,7 @@ int main()
     Eigen::MatrixXd W_E = W_E_nq(n_indices_eig).asDiagonal();;
 
     ControllerSettings ctrl_settings = {
-        .pd_plus_settings = {.D_d = K_d_pd, .K_d = D_d_pd},
+        .pd_plus_settings = {.D_d = D_d_pd, .K_d = K_d_pd},
         .ct_settings = {.Kd1 = Kd1_ct, .Kp1 = Kp1_ct},
         .id_settings = {.Kd1 = Kd1_id, .Kp1 = Kp1_id, .D_d = D_d_id, .K_d = K_d_id},
         .regularization_settings = {

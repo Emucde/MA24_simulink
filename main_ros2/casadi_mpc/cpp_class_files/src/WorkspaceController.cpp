@@ -430,7 +430,7 @@ Eigen::VectorXd WorkspaceController::PDPlusController::control(const Eigen::Vect
     Eigen::MatrixXd J_pinv_T = J_pinv.transpose(); // Assuming J_pinv is computed somewhere earlier
     Eigen::MatrixXd Lambda = J_pinv_T * M * J_pinv;
     Lambda = 0.5 * (Lambda + Lambda.transpose());
-    Eigen::VectorXd mu = J_pinv_T * (C - M * J_pinv * J_p) * J_pinv;
+    Eigen::MatrixXd mu = J_pinv_T * (C - M * J_pinv * J_p) * J_pinv;
     Eigen::VectorXd F_g = J_pinv_T * g; // g is zero here
 
     Eigen::VectorXd F = Lambda * x_d_pp + mu * x_d_p + F_g - D_d * x_err_p - K_d * x_err;
