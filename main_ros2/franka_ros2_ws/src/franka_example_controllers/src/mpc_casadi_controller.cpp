@@ -54,45 +54,45 @@ namespace franka_example_controllers
         return state_interfaces_config;
     }
 
+#ifndef SIMULATION_MODE
     controller_interface::return_type ModelPredictiveControllerCasadi::update(
         const rclcpp::Time & /*time*/,
         const rclcpp::Duration & /*period*/)
     {
+        
         double state[2 * N_DOF];
-
+        
         if (mpc_started)
         {
-            #ifndef SIMULATION_MODE
             // Read states from joint state interface
             for (int i = 0; i < 2 * N_DOF; ++i)
             {
                 state[i] = state_interfaces_[i].get_value();
             }
             x_measured = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
-            #else
-            controller.simulateModelRK4(x_measured.data(), tau_full.data(), Ts);
-            for (int i = 0; i < 2 * N_DOF; ++i)
-            {
-                state[i] = x_measured[i];
-            }
-            #endif
 
             //TODO
-            if(use_ekf)
+            Eigen::VectorXd x_filtered;
+            if(use_ekf && use_lowpass_filter)
             {
-                ekf.predict(tau_full.data(), x_measured.data());
-                if(use_lowpass_filter)
-                    lowpass_filter.run(x_filtered_ptr); // updates data from x_filtered_ptr
+                ekf.predict(tau_full.data(), state);
+                lowpass_filter.run(x_filtered_ekf_ptr);
+                x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
             }
             else if(use_lowpass_filter)
             {
-                lowpass_filter.run(x_measured.data()); // updates data from x_filtered_ptr
+                lowpass_filter.run(state); // updates data from x_filtered_ptr
+                x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
+            }
+            else if(use_ekf)
+            {
+                ekf.predict(tau_full.data(), state);
+                x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
             }
             else
             {
-                x_filtered_ptr = x_measured.data();
+                x_filtered = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
             }
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ptr, 2 * N_DOF);
 
             // Logging joint states
             #ifdef DEBUG
@@ -114,13 +114,14 @@ namespace franka_example_controllers
                 x_prev = x_filtered;                      // Update the previous state
                 error_flag = controller.get_error_flag(); // Get the error flag
                 current_frequency = timer_mpc_solver.get_frequency();
+                
 
                 if (error_flag == ErrorFlag::NO_ERROR)
                 {
-                    tau_full_future = std::async(std::launch::async, [this]()
+                    tau_full_future = std::async(std::launch::async, [this, x_filtered]()
                                                  {
                                                     timer_mpc_solver.tic();
-                                                    Eigen::VectorXd tau_temp = controller.solveMPC(x_filtered_ptr);
+                                                    Eigen::VectorXd tau_temp = controller.solveMPC(x_filtered.data());
                                                     timer_mpc_solver.toc();
                                                     return tau_temp; });
                 }
@@ -174,6 +175,7 @@ namespace franka_example_controllers
                 }
             }
 
+            RCLCPP_WARN(get_node()->get_logger(), "time: %f", current_Time);
             // Send data to shared memory
             shm.write("read_state_data_full", state, global_traj_count);
             shm.write("read_control_data_full", tau_full.data(), global_traj_count);
@@ -196,14 +198,145 @@ namespace franka_example_controllers
         }
 
         // Logging torques
-        // #ifdef DEBUG
-        // RCLCPP_INFO(get_node()->get_logger(), "tau (Nm): [%f, %f, %f, %f, %f, %f, %f]",
-        //             tau_full[0], tau_full[1], tau_full[2],
-        //             tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
-        // #endif
+        #ifdef DEBUG
+        RCLCPP_INFO(get_node()->get_logger(), "tau (Nm): [%f, %f, %f, %f, %f, %f, %f]",
+                    tau_full[0], tau_full[1], tau_full[2],
+                    tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
+        #endif
 
         return controller_interface::return_type::OK;
     }
+#else
+    controller_interface::return_type ModelPredictiveControllerCasadi::update(
+        const rclcpp::Time & /*time*/,
+        const rclcpp::Duration & /*period*/)
+    {
+        
+        double state[2 * N_DOF];
+        
+        if (mpc_started)
+        {
+            timer_all.tic();
+        
+            controller.simulateModelRK4(x_measured.data(), tau_full.data(), Ts);
+            for (int i = 0; i < 2 * N_DOF; ++i)
+            {
+                state[i] = x_measured[i];
+            }
+
+            //TODO
+            Eigen::VectorXd x_filtered;
+            if(use_ekf && use_lowpass_filter)
+            {
+                ekf.predict(tau_full.data(), state);
+                lowpass_filter.run(x_filtered_ekf_ptr);
+                x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
+            }
+            else if(use_lowpass_filter)
+            {
+                lowpass_filter.run(state); // updates data from x_filtered_ptr
+                x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
+            }
+            else if(use_ekf)
+            {
+                ekf.predict(tau_full.data(), state);
+                x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
+            }
+            else
+            {
+                x_filtered = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
+            }
+
+            // Attempt to get the result (blocking call)
+            if (tau_full_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+            {
+                invalid_counter = 0;                      // Reset the counter on successful retrieval
+                tau_full = tau_full_future.get();         // Get the result
+                tau_prev = tau_full;                      // Update the previous torque
+                x_prev = x_filtered;                      // Update the previous state
+                error_flag = controller.get_error_flag(); // Get the error flag
+                current_frequency = timer_mpc_solver.get_frequency();
+                
+
+                if (error_flag == ErrorFlag::NO_ERROR)
+                {
+                    tau_full_future = std::async(std::launch::async, [this, x_filtered]()
+                                                 {
+                                                    timer_mpc_solver.tic();
+                                                    Eigen::VectorXd tau_temp = controller.solveMPC(x_filtered.data());
+                                                    timer_mpc_solver.toc();
+                                                    return tau_temp; });
+                }
+                else
+                {
+                    mpc_started = false;
+
+                    if (error_flag == ErrorFlag::JUMP_DETECTED)
+                    {
+                        RCLCPP_WARN(get_node()->get_logger(), "Jump in torque detected (tau (Nm): [%f, %f, %f, %f, %f, %f, %f]). Stopping the controller.",
+                                    tau_full[0], tau_full[1], tau_full[2],
+                                    tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
+                    }
+                    else if (error_flag == ErrorFlag::NAN_DETECTED)
+                    {
+                        RCLCPP_WARN(get_node()->get_logger(), "NaN in torque detected (tau (Nm): [%f, %f, %f, %f, %f, %f, %f]). Stopping the controller.",
+                                    tau_full[0], tau_full[1], tau_full[2],
+                                    tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
+                    }
+                    else if (error_flag == ErrorFlag::CASADI_ERROR)
+                    {
+                        RCLCPP_WARN(get_node()->get_logger(), "Error in Casadi function call. Stopping the controller.");
+                    }
+
+                    tau_full = Eigen::VectorXd::Zero(N_DOF);
+                }
+            }
+            else
+            {
+                current_frequency = 0.0;
+                controller.set_traj_count(global_traj_count); // sync the global trajectory count
+
+                if (invalid_counter < MAX_INVALID_COUNT)
+                {
+                    invalid_counter++;
+                    //Interpolate previous u_next
+                    // Eigen::VectorXd u_next = Eigen::Map<Eigen::VectorXd>(u_next_ptr, robot_config.nq_red);
+                    // if(invalid_counter <= static_cast<int>(N_step))
+                    // {
+                    //     tau_full = tau_prev + static_cast<double>(invalid_counter) / N_step * (torque_mapper->calc_full_torque(u_next, x_prev) - tau_prev);
+                    // }
+                    // tau_full = tau_prev;
+                    RCLCPP_WARN(get_node()->get_logger(), "No valid MPC data (%d/%d). Using previous torques.", invalid_counter, MAX_INVALID_COUNT);
+                }
+                else
+                {
+                    RCLCPP_ERROR(get_node()->get_logger(), "No valid MPC data %d times. Stopping the controller.", MAX_INVALID_COUNT);
+                    tau_full = Eigen::VectorXd::Zero(N_DOF);
+                    invalid_counter = 0;
+                    mpc_started = false;
+                }
+            }
+            timer_all.toc();
+            double current_Time = timer_all.get_time();
+            RCLCPP_WARN(get_node()->get_logger(), "time: %f", current_Time);
+            // Send data to shared memory
+            shm.write("read_state_data_full", state, global_traj_count);
+            shm.write("read_control_data_full", tau_full.data(), global_traj_count);
+            shm.write("read_traj_data_full", controller.get_act_traj_data(), global_traj_count);
+            shm.write("read_frequency_full", &current_frequency, global_traj_count);
+            shm.post_semaphore("shm_changed_semaphore");
+
+            if(global_traj_count < traj_len)
+                global_traj_count++;
+        }
+        else
+        {
+            tau_full = Eigen::VectorXd::Zero(N_DOF);
+        }
+
+        return controller_interface::return_type::OK;
+    }
+#endif
 
     CallbackReturn ModelPredictiveControllerCasadi::on_configure(
         const rclcpp_lifecycle::State & /*previous_state*/)
@@ -343,13 +476,6 @@ namespace franka_example_controllers
 
         response->status = "start flag set";
 
-        double state[2 * N_DOF];
-        for (int i = 0; i < 2 * N_DOF; ++i)
-        {
-            state[i] = state_interfaces_[i].get_value();
-        }
-        x_measured = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
-
         // Update general configuration
         nlohmann::json general_config = read_config(general_config_filename);
         use_lowpass_filter = general_config["use_lowpass_filter"];
@@ -362,52 +488,79 @@ namespace franka_example_controllers
         double omega_c_q = general_config["lowpass_filter_omega_c_q"];
         double omega_c_dq = general_config["lowpass_filter_omega_c_dq"];
 
-        if(use_ekf)
-        {
-            ekf.update_config();
-            ekf.initialize(x_measured.data());
-            x_filtered_ptr = ekf.get_x_k_plus_ptr();
-            if(use_lowpass_filter)
-            {
-                lowpass_filter.init(x_filtered_ptr, omega_c_q, omega_c_dq);
-                x_filtered_ptr = lowpass_filter.getFilteredOutputPtr();
-            }
-        }
-        else if(use_lowpass_filter)
-        {
-            lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
-            x_filtered_ptr = lowpass_filter.getFilteredOutputPtr();
-        }
-        else
-        {
-            x_filtered_ptr = x_measured.data();
-        }
-        
         controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
+
+        #ifndef SIMULATION_MODE
         controller.init_file_trajectory(traj_select, state, T_traj_start, T_traj_dur, T_traj_end);
+        #else
+        Eigen::VectorXd q_0_ref = Eigen::Map<const Eigen::VectorXd>(robot_config.q_0_ref, N_DOF);
+        Eigen::VectorXd q_0_p_ref = Eigen::Map<const Eigen::VectorXd>(robot_config.q_0_p_ref, N_DOF);
+        Eigen::VectorXd x0_ref = Eigen::VectorXd::Zero(2 * N_DOF);
+        x0_ref << q_0_ref, q_0_p_ref;
+        controller.init_file_trajectory(traj_select, x0_ref.data(), T_traj_start, T_traj_dur, T_traj_end);
+        #endif
         traj_len = controller.get_traj_data_real_len();
         N_step = controller.get_N_step();
-
-        #ifdef SIMULATION_MODE
-         const double* x0_init = controller.get_traj_x0_init(traj_select);
-        x_measured = Eigen::Map<const Eigen::VectorXd>(x0_init, 2 * N_DOF);
-        #endif
         
         controller.set_planner_mode(use_planner);
         controller.update_mpc_weights();
         traj_len = controller.get_traj_data_real_len();
 
+        double state[2 * N_DOF];
+
+        #ifndef SIMULATION_MODE
+        for (int i = 0; i < 2 * N_DOF; ++i)
+        {
+            state[i] = state_interfaces_[i].get_value();
+        }
+        #else
+        const double* x0_init = controller.get_traj_x0_init(traj_select);
+        x_measured = Eigen::Map<const Eigen::VectorXd>(x0_init, 2 * N_DOF);
+        for (int i = 0; i < 2 * N_DOF; ++i)
+        {
+            state[i] = x_measured[i];
+        }
+        #endif
+
+        if(use_ekf && use_lowpass_filter)
+        {
+            ekf.update_config();
+            ekf.initialize(state);
+            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
+            lowpass_filter.init(state, omega_c_q, omega_c_dq);
+            x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
+        }
+        else if(use_ekf)
+        {
+            lowpass_filter.init(state, omega_c_q, omega_c_dq);
+            x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
+            x_filtered_ekf_ptr = x_filtered_lowpass_ptr;
+        }
+        else if(use_lowpass_filter)
+        {
+            ekf.update_config();
+            ekf.initialize(state);
+            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
+            x_filtered_lowpass_ptr = x_filtered_ekf_ptr;
+        }
+        else
+        {
+            x_filtered_ekf_ptr = state;
+            x_filtered_lowpass_ptr = state;
+        }
+        // without previous data, we cannot filter
+
         shm.write("read_traj_length", &traj_len);
 
-        tau_full_future = std::async(std::launch::async, [this]()
+        tau_full_future = std::async(std::launch::async, [this, state]()
                                      {
-            Eigen::VectorXd tau_full_temp = controller.solveMPC(x_filtered_ptr);
+            Eigen::VectorXd tau_full_temp = controller.solveMPC(state);
             mpc_started = true;
             first_torque_read = false;
             int8_t readonly_mode = 1;
 
             shm.write("readonly_mode", &readonly_mode);
-            shm.write("read_state_data_full", x_filtered_ptr, global_traj_count);
+            shm.write("read_state_data_full", state, global_traj_count);
             shm.write("read_control_data_full", tau_full.data(), global_traj_count);
             shm.write("read_traj_data_full", controller.get_act_traj_data(), global_traj_count);
             shm.write("read_frequency_full", &current_frequency, global_traj_count);
@@ -436,7 +589,12 @@ namespace franka_example_controllers
         shm.write("data_from_simulink_stop", &flags.stop);
         shm.write("data_from_simulink_reset", &flags.reset);
 
-        controller.reset();
+        #ifdef SIMULATION_MODE
+        const double* x0_init = controller.get_traj_x0_init(traj_select);
+        x_measured = Eigen::Map<const Eigen::VectorXd>(x0_init, 2 * N_DOF);
+        controller.reset(x0_init);
+        #endif
+
         global_traj_count = 0;
 
         response->status = "reset flag set";

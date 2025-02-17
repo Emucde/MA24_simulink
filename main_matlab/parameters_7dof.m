@@ -36,8 +36,8 @@ fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 %trajectory_out_of_workspace = false; % TODO: einfach offset 0 setzten
 %x_traj_out_of_workspace_value = 0.1;
 
-full_reset_flag = ~true; % Please set this flag true after cloning or if a full reset should be  done.
-plot_trajectory               = ~true;
+full_reset_flag = false; % Please set this flag true after cloning or if a full reset should be  done.
+plot_trajectory               = true;
 overwrite_offline_traj_forced = ~false; % if true then init guess is also created
 warm_start = true;
 overwrite_init_guess = false; % but automatically true when overwrite_offline_traj_forced is true
@@ -98,7 +98,7 @@ init_MPC_weights; %% set MPC weights
 
 create_trajectories;
 % plot(param_traj_data(:,:,1).p_d')
-%create_mpc_init_guess;
+create_mpc_init_guess;
 
 change_simulink_traj_combo_box; % saves system!
 

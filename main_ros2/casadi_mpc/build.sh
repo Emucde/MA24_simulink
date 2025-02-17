@@ -213,7 +213,7 @@ else
     echo "Building using makefile..."
     if [ $STANDALONE_MAKEFILE == true ]; then
        cd "cpp_class_files"
-       time make BUILD_TYPE=$BUILD_TYPE -j8
+       time make BUILD_TYPE=$BUILD_TYPE -j2
        BUILD_STATUS=$?
        cd ..
     else

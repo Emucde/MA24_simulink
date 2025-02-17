@@ -112,23 +112,23 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
     return tau_full;
 }
 
-bool CasadiController::PlannerSolver::solveMPC(const casadi_real *const x_k_ptr)
+bool CasadiController::PlannerSolver::solveMPC(const casadi_real *const x_k_in)
 {
     // in case of planner only it uses active_mpc->solve_planner(), otherwise it uses active_mpc->solve()
     // for pseudo planner.
-    bool flag = solver->solveMPC(x_k_ptr);
+    bool flag = solver->solveMPC(x_k_in);
     Eigen::Map<Eigen::VectorXd> q_d(x_d_ptr, nq_red);
     Eigen::Map<Eigen::VectorXd> q_p_d(x_d_ptr + nq_red, nq_red);
     Eigen::Map<Eigen::VectorXd> q_pp_d(q_pp_d_ptr, nq_red);
 
-    Eigen::Map<const Eigen::VectorXd> q(x_k_ptr, nq_red);
-    Eigen::Map<const Eigen::VectorXd> q_p(x_k_ptr + nq_red, nq_red);
+    Eigen::Map<const Eigen::VectorXd> q(x_k_in, nq_red);
+    Eigen::Map<const Eigen::VectorXd> q_p(x_k_in + nq_red, nq_red);
 
     // use PD jointspace Controller
-    // robot_model.updateState(Eigen::Map<const Eigen::VectorXd>(x_k_ptr, nx_red)); // TODO: koennte man auch vom torque mapper holen
+    // robot_model.updateState(Eigen::Map<const Eigen::VectorXd>(x_k_in, nx_red)); // TODO: koennte man auch vom torque mapper holen
     // u_opt = robot_model.dynamicsData.M * (q_pp_d - K_D_q * (q_p - q_p_d) - K_P_q * (q - q_d)) +
     //                       robot_model.dynamicsData.C_rnea + robot_model.dynamicsData.g;
-    // robot_model.updateState(Eigen::Map<const Eigen::VectorXd>(x_k_ptr, nx_red)); // TODO: koennte man auch vom torque mapper holen
+    // robot_model.updateState(Eigen::Map<const Eigen::VectorXd>(x_k_in, nx_red)); // TODO: koennte man auch vom torque mapper holen
     u_opt = q_pp_d - K_D_q.cwiseProduct(q_p - q_p_d) - K_P_q.cwiseProduct(q - q_d);
     Eigen::VectorXd error = q - q_d;
     Eigen::VectorXd error_p = q_p - q_p_d;
@@ -350,9 +350,9 @@ void CasadiController::collinearity_weight_x(const casadi_real *const x_k)
     active_mpc->set_param("R_q_p", R_q_fin.data());
 }
 
-void CasadiController::reset()
+void CasadiController::reset(const casadi_real *const x_k_in)
 {
-    active_mpc->reset();
+    active_mpc->reset(x_k_in);
     tau_full_prev = Eigen::VectorXd::Zero(nq);
 }
 

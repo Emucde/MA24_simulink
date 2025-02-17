@@ -1,10 +1,13 @@
 addpath(genpath('./maple_generated/2_dof_system'));
 addpath(genpath('./utils_casadi'));
 % addpath('/media/daten/Anwendungen/casadi-3.6.4-linux64-matlab2018b/')
-[status,cmdout] = system('cat ~/.bashrc');
-cpath_cell = strsplit(cmdout, 'casadi_path=');
-casadi_path = cpath_cell{end};
-casadi_path = casadi_path(1:end-1);
+casadi_path=getenv('casadi_path');
+if isempty(casadi_path)
+    [status,cmdout] = system('cat ~/.bashrc');
+    cpath_cell = strsplit(cmdout, 'casadi_path=');
+    casadi_path = cpath_cell{end};
+    casadi_path = casadi_path(1:end-1);
+end
 addpath(casadi_path);
 import casadi.*
 

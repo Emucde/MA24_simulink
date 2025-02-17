@@ -34,7 +34,7 @@ if(full_reset_flag)
                 % ./s_functions/robot_name/mpc_settings
                 % ./s_functions/robot_name/trajectory_data
 
-                folder_names = {'casadi_functions', 'initial_guess', 'matlab_functions', 'mpc_c_sourcefiles', 'mpc_settings', 'trajectory_data'};
+                folder_names = {'casadi_functions', 'initial_guess', 'matlab_functions', 'mpc_c_sourcefiles', 'mpc_settings', 'trajectory_data', 'mpc_libraries'};
                 for i = 1:length(folder_names)
                     mkdir([s_fun_path, '/', folder_names{i}]);
                 end
@@ -88,7 +88,7 @@ if(full_reset_flag)
                 compile_sfun                    = true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
                 compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
                 iterate_all_mpc_sfunctions      = true;
-                mpc_source_selection            = 4; % (1: all MPCs, 2: only dynamic MPCs, 3: only kinematic MPCs, 4: only selected MPC)
+                mpc_source_selection            = 1; % (1: all MPCs, 2: only dynamic MPCs, 3: only kinematic MPCs, 4: only selected MPC)
                 coptimflags                     = '-Ofast -march=native -flto'; % Optimization flag for compilation
                 use_jit                         = false; % use jit for compilation (precompiles before each RUN!!!
                 generate_realtime_udp_c_fun     = true; % create SOURCEFILES
@@ -103,8 +103,8 @@ if(full_reset_flag)
 
                 reset_started_flag = false;
             end
-        catch
-            fprintf(2, 'Failed to reset. This happens sometimes, because matlab has problems with paths. running ''restoredefaultpath'' should do it. Please simply try it again.\n');
+        catch ME
+            fprintf(2, 'Failed to reset. Error: %s\n', ME.message);
             disp('Do you want to run it again? (y/n)');
             user_response = input('','s');
             if(strcmp(user_response, 'y'))

@@ -122,8 +122,8 @@ namespace franka_example_controllers
         Eigen::VectorXd tau_prev = Eigen::VectorXd::Zero(num_joints);
         Eigen::VectorXd x_prev = Eigen::VectorXd::Zero(2*num_joints);
         Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(2*num_joints);
-        Eigen::VectorXd x_filtered = Eigen::VectorXd::Zero(2*num_joints);
-        double* x_filtered_ptr = x_measured.data();
+        double* x_filtered_ekf_ptr = x_measured.data();
+        double* x_filtered_lowpass_ptr = x_measured.data();
         double* u_next_ptr = controller.get_u_next();
         uint N_step = controller.get_N_step();
         FullSystemTorqueMapper* torque_mapper = controller.get_torque_mapper();
@@ -157,6 +157,7 @@ namespace franka_example_controllers
 
         double current_frequency = 0.0;
         TicToc timer_mpc_solver;
+        TicToc timer_all;
 
         // rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;

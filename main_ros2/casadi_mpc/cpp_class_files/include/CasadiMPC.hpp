@@ -61,7 +61,6 @@ private:
     const Eigen::VectorXi y_d_p_rpy_rows = (Eigen::VectorXi(6) << trajectory_generator.p_d_p_rows, trajectory_generator.phi_d_p_rows).finished();  // Selecting p_d_p (3-5) and Phi_d_p (22-24)
     const Eigen::VectorXi y_d_pp_rpy_rows = (Eigen::VectorXi(6) << trajectory_generator.p_d_pp_rows, trajectory_generator.phi_d_pp_rows).finished(); // Selecting p_d_pp (6-8) and Phi_d_pp (25-27)
     
-
     const double* x_k_ptr = 0; // - Initial state (12 x 1);
     const double* t_k_ptr = 0; // - Time (1 x 1)
     const double* y_d_ptr = 0; // - Desired trajectory (7 x horizon_len)
@@ -111,7 +110,7 @@ public:
 
 
     // Method to switch the trajectory
-    void switch_traj(const casadi_real *const x_k_ptr);
+    void switch_traj(const casadi_real *const x_k_in);
 
     // if it solves too slow.
     void increase_traj_count()
@@ -125,7 +124,7 @@ public:
         traj_count = new_traj_count;
     }
 
-    void reset();
+    void reset(const casadi_real *const x_k_in);
 
     ///////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////
@@ -257,7 +256,7 @@ private:
     void set_row_vector(casadi_real *matrix_data, casadi_real *row_data, casadi_uint rows, casadi_uint length);
     void set_references(const casadi_real *const x_k_in);
 
-    void set_coldstart_init_guess(const casadi_real *const x_k_ptr);
+    void set_coldstart_init_guess(const casadi_real *const x_k_in);
     void init_references_and_pointers();
 
     void generate_trajectory_blocks();

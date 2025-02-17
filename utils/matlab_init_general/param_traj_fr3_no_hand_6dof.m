@@ -513,11 +513,16 @@ traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 
 %% Trajectory 9: Wrist Singularity, Polynomial
-single_sing_pose = readmatrix('./main_c/sorted_output_single.csv');
-idx1 = round(length(single_sing_pose)*rand(1));
-idx2 = round(length(single_sing_pose)*rand(1));
-q_0 = single_sing_pose(idx1, :);
-q_d = single_sing_pose(idx2, :);
+try
+    single_sing_pose = readmatrix('./main_c/sorted_output_single.csv');
+    idx1 = round(length(single_sing_pose)*rand(1));
+    idx2 = round(length(single_sing_pose)*rand(1));
+    q_0 = single_sing_pose(idx1, :);
+    q_d = single_sing_pose(idx2, :);
+catch
+    q_0=[0.042506 -0.637644 0 -1.13312 0.96853 1.90296 -0.936423];
+    q_d=[1.393712 -0.494812 0 -0.903915 1.501274 3.032111 1.63013];
+end
 
 disp('------------------------------------');
 fprintf('Trajectory %d\n\n', cnt);
@@ -658,14 +663,23 @@ cnt = cnt+1;
 
 
 %% Trajectory 11: Shoulder Singularity, Polynomial
-single_sing_pose = readmatrix('./main_c/sorted_output_single.csv');
-N_row = length(single_sing_pose)
-q0 = single_sing_pose(round(N_row*rand(1)), :);
-q1 = single_sing_pose(round(N_row*rand(1)), :);
-q2 = single_sing_pose(round(N_row*rand(1)), :);
-q3 = single_sing_pose(round(N_row*rand(1)), :);
-q4 = single_sing_pose(round(N_row*rand(1)), :);
-q5 = single_sing_pose(round(N_row*rand(1)), :);
+try
+    single_sing_pose = readmatrix('./main_c/sorted_output_single.csv');
+    N_row = length(single_sing_pose)
+    q0 = single_sing_pose(round(N_row*rand(1)), :);
+    q1 = single_sing_pose(round(N_row*rand(1)), :);
+    q2 = single_sing_pose(round(N_row*rand(1)), :);
+    q3 = single_sing_pose(round(N_row*rand(1)), :);
+    q4 = single_sing_pose(round(N_row*rand(1)), :);
+    q5 = single_sing_pose(round(N_row*rand(1)), :);
+catch
+    q0=[1.000342 -0.606696 0 -1.075555 1.078343 2.629348 1.173911];
+    q1=[1.230009 0.828349 0 -1.137286 1.226867 3.405086 1.439463];
+    q2=[1.232434 -0.668604 0 -1.217097 1.39176 2.155764 1.466212];
+    q3=[0.105523 -0.632875 0 -1.1298 1.039899 2.054842 -1.059827];
+    q4=[1.258925 -0.669717 0 -1.038616 0.358037 2.77123 1.476863];
+    q5=[1.366694 -0.494639 0 -0.900858 1.423274 2.936039 0.951906];
+end
 
 fprintf('q0=%s;\n', mat2str(q0));
 fprintf('q1=%s;\n', mat2str(q1));

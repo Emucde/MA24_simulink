@@ -31,7 +31,7 @@ public:
                                                nx_red(robot_config.nx_red)
     {
     }
-    virtual bool solveMPC(const casadi_real *const x_k_ptr) = 0;
+    virtual bool solveMPC(const casadi_real *const x_k_in) = 0;
     virtual void switch_controller(CasadiMPC *new_mpc) = 0;
     virtual casadi_real *get_optimal_control() = 0;
     virtual ~BaseSolver() = default;
@@ -125,7 +125,7 @@ public:
     void simulateModelRK4(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
 
     void collinearity_weight_x(const casadi_real *const x_k_ndof_ptr);
-    void reset();
+    void reset(const casadi_real *const x_k_in);
 
     // Getters and setters
     void setActiveMPC(CasadiMPCType mpc);
@@ -289,9 +289,9 @@ private:
                                                                   robot_model,
                                                                   param_mpc_weight,
                                                                   robot_config) {}
-        bool solveMPC(const casadi_real *const x_k_ptr) override
+        bool solveMPC(const casadi_real *const x_k_in) override
         {
-            return active_mpc->solve(x_k_ptr);
+            return active_mpc->solve(x_k_in);
         }
         void switch_controller(CasadiMPC *new_mpc) override
         {
@@ -317,7 +317,7 @@ private:
         {
             public:
                 Solver(CasadiMPC *active_mpc): active_mpc(active_mpc) {}
-                virtual bool solveMPC(const casadi_real *const x_k_ptr) = 0;
+                virtual bool solveMPC(const casadi_real *const x_k_in) = 0;
                 virtual void switch_controller(CasadiMPC *new_mpc) { active_mpc = new_mpc; }
                 CasadiMPC *active_mpc;
         };
@@ -336,13 +336,13 @@ private:
         {
             public:
                 PlannerAndControllerSolver(CasadiMPC *active_mpc): Solver(active_mpc) {}
-                bool solveMPC(const casadi_real *const x_k_ptr) override
+                bool solveMPC(const casadi_real *const x_k_in) override
                 {
-                    return active_mpc->solve(x_k_ptr);
+                    return active_mpc->solve(x_k_in);
                 }
         };
 
-        bool solveMPC(const casadi_real *const x_k_ptr) override;
+        bool solveMPC(const casadi_real *const x_k_in) override;
         void switch_controller(CasadiMPC *new_mpc) override;
         void update_planner_params();
         casadi_real *get_optimal_control() override

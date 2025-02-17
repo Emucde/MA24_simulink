@@ -102,8 +102,8 @@ f_opt = Function(casadi_func_name, input_vars_MX, output_vars_MX, f_opt_input_st
 %init_MPC_weights;
 param_weight_init = param_weight.(casadi_func_name);
 
-if(create_test_solve)
-    try
+try
+    if(create_test_solve)
         if(weights_and_limits_as_parameter)
             % Hint: If the init_guess is already the global minima, the solver
             % will get an Evaluation Failed because it get's NaN values due to
@@ -115,47 +115,48 @@ if(create_test_solve)
         else  % ohne extra parameter 5 % schneller (319s statt 335s)
             [u_opt_sol, xx_full_opt_sol] = f_opt(mpc_init_reference_values, init_guess_0);
         end
-    catch ME
-        try
-            solver.stats(1)
+
+        % x_full = full(reshape(xx_full_opt_sol(1:numel(x)), size(x)));
+        % u_full = full(reshape(xx_full_opt_sol(1+numel(x):numel(x)+numel(u)), size(u)));
+
+        u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
+        x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
+
+        disp(u_full);
+        disp(x_full);
+
+        % show stats
+
+        %z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z)), size(z)));
+        % z_t_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(zt)), size(zt)));
+        % z_r_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x)+numel(zt):numel(u)+numel(x)+numel(zt)+numel(z_qw)), size(z_qw)));
+        % alpha_t = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x)+numel(zt)+numel(z_qw):numel(u)+numel(x)+numel(zt)+numel(z_qw)+numel(zt(1:3,:))), size(zt(1:3,:))));
+        % alpha_r = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x)+numel(zt)+numel(z_qw)+numel(zt(1:3,:)):numel(u)+numel(x)+numel(zt)+numel(z_qw)+numel(zt(1:3,:))+numel(z_qw(1:3,:))), size(z_qw(1:3,:))));
+
+        %z_d_init_guess_0; % vs z_full?
+        %disp(solver.stats())
+
+        % set init guess
+        init_guess = full(xx_full_opt_sol);
+
+        if(any(isnan(full(xx_full_opt_sol))))
+            error('init_guess_0 contains NaN values!');
         end
-        error(getReport(ME));
-    end
 
-    % x_full = full(reshape(xx_full_opt_sol(1:numel(x)), size(x)));
-    % u_full = full(reshape(xx_full_opt_sol(1+numel(x):numel(x)+numel(u)), size(u)));
-
-    u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
-    x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
-
-    disp(u_full);
-    disp(x_full);
-
-    % show stats
-
-    %z_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(z)), size(z)));
-    % z_t_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x):numel(u)+numel(x)+numel(zt)), size(zt)));
-    % z_r_full = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x)+numel(zt):numel(u)+numel(x)+numel(zt)+numel(z_qw)), size(z_qw)));
-    % alpha_t = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x)+numel(zt)+numel(z_qw):numel(u)+numel(x)+numel(zt)+numel(z_qw)+numel(zt(1:3,:))), size(zt(1:3,:))));
-    % alpha_r = full(reshape(xx_full_opt_sol(1+numel(u)+numel(x)+numel(zt)+numel(z_qw)+numel(zt(1:3,:)):numel(u)+numel(x)+numel(zt)+numel(z_qw)+numel(zt(1:3,:))+numel(z_qw(1:3,:))), size(z_qw(1:3,:))));
-
-    %z_d_init_guess_0; % vs z_full?
-    %disp(solver.stats())
-
-    % set init guess
-    init_guess = full(xx_full_opt_sol);
-
-    if(any(isnan(full(xx_full_opt_sol))))
-        error('init_guess_0 contains NaN values!');
-    end
-
-    if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
-        disp(['J = ', num2str(full( sum([ cost_values_sol{:} ]) )) ]);
-        for i=1:length(cost_vars_names_cell)
-            disp([cost_vars_names_cell{i}, '= ', num2str(full( cost_values_sol{i} ))])
+        if(print_init_guess_cost_functions && weights_and_limits_as_parameter)
+            disp(['J = ', num2str(full( sum([ cost_values_sol{:} ]) )) ]);
+            for i=1:length(cost_vars_names_cell)
+                disp([cost_vars_names_cell{i}, '= ', num2str(full( cost_values_sol{i} ))])
+            end
         end
+    else
+        init_guess = init_guess_0;
     end
-else
+catch ME
+    try
+        solver.stats(1)
+    end
+    disp(getReport(ME));
     init_guess = init_guess_0;
 end
 
