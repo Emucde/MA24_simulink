@@ -32,10 +32,14 @@ find_package(pinocchio REQUIRED)
 set(MPC_SOURCE_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../../s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles)
 cmake_path(SET MPC_SOURCE_DIR NORMALIZE "${MPC_SOURCE_DIR_REL}")
 
+set(MPC_LIB_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../../s_functions/fr3_no_hand_6dof/mpc_libraries)
+cmake_path(SET MPC_LIB_DIR NORMALIZE "${MPC_LIB_DIR_REL}")
+
 set(MPC_UTILS_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../casadi_mpc/cpp_class_files)
 cmake_path(SET MPC_UTILS_DIR NORMALIZE "${MPC_UTILS_DIR_REL}")
 
 set(MPC_INCLUDE_DIR ${MPC_SOURCE_DIR})
+set(MPC_LIBRARY_DIR ${MPC_LIB_DIR})
 set(UTILS_SOURCE_DIR ${MPC_UTILS_DIR}/src)
 set(UTILS_INCLUDE_DIR ${MPC_UTILS_DIR}/include)
 
@@ -45,7 +49,7 @@ message(STATUS "MPC utils source directory: ${UTILS_SOURCE_DIR}")
 message(STATUS "MPC utils include directory: ${UTILS_INCLUDE_DIR}")
 
 # Find all MPC*.c files
-file(GLOB MPC_SOURCES "${MPC_SOURCE_DIR}/MPC*.c" "${MPC_SOURCE_DIR}/param_robot.c" "${UTILS_SOURCE_DIR}/*.cpp")
+file(GLOB MPC_SOURCES "${MPC_SOURCE_DIR}/MPC*.c" "${MPC_SOURCE_DIR}/param_robot.c" "${UTILS_SOURCE_DIR}/*.cpp" "${MPC_SOURCE_DIR}/fr3_ekf.c")
 set(MPC_ALL_LIBRARIES "")
 set(MPC_PARAM_LIBRARIES "")
 set(MPC_LIBRARIES "")
@@ -132,32 +136,32 @@ generate_parameter_library(franka_example_controllers_parameters src/model_examp
 
 find_library(CASADI_CONTROLLER_LIBRARY
     NAMES CasadiController
-    HINTS "${MPC_SOURCE_DIR}"
+    HINTS "${MPC_LIB_DIR_REL}"
 )
 
 find_library(CASADI_MPC_LIBRARY
     NAMES CasadiMPC
-    HINTS "${MPC_SOURCE_DIR}"
+    HINTS "${MPC_LIB_DIR_REL}"
 )
 
 find_library(SHARED_MEMORY_LIBRARY
     NAMES SharedMemory
-    HINTS "${MPC_SOURCE_DIR}"
+    HINTS "${MPC_LIB_DIR_REL}"
 )
 
 find_library(CASADI_EKF_LIBRARY
     NAMES CasadiEKF
-    HINTS "${MPC_SOURCE_DIR}"
+    HINTS "${MPC_LIB_DIR_REL}"
 )
 
 find_library(SIGNAL_FILTER_LIBRARY
     NAMES SignalFilter
-    HINTS "${MPC_SOURCE_DIR}"
+    HINTS "${MPC_LIB_DIR_REL}"
 )
 
 find_library(FULL_SYSTEM_TORQUE_MAPPER_LIB
     NAMES FullSystemTorqueMapper
-    HINTS "${MPC_SOURCE_DIR}"
+    HINTS "${MPC_LIB_DIR_REL}"
 )
 
 

@@ -56,6 +56,9 @@ set(MPC_SOURCE_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../s_functions/fr3_no_h
 cmake_path(SET MPC_SOURCE_DIR NORMALIZE "${MPC_SOURCE_DIR_REL}")
 message(STATUS "MPC source directory: ${MPC_SOURCE_DIR}")
 
+set(MPC_LIB_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../s_functions/fr3_no_hand_6dof/mpc_libraries)
+cmake_path(SET MPC_LIB_DIR NORMALIZE "${MPC_LIB_DIR_REL}")
+
 # Find all MPC*.c files
 file(GLOB MPC_SOURCES "${MPC_SOURCE_DIR}/MPC*.c" "${MPC_SOURCE_DIR}/param_robot.c" "${MPC_SOURCE_DIR}/fr3_ekf.c")
 set(MPC_ALL_LIBRARIES "")
@@ -63,7 +66,7 @@ set(MPC_PARAM_LIBRARIES "")
 set(MPC_LIBRARIES "")
 
 set(Boost_NO_BOOST_CMAKE ON)
-set(CASADI_PATH "/media/daten/Anwendungen/casadi-3.6.7-linux64-matlab2018b")
+set(CASADI_PATH $ENV{casadi_path})
 set(CASADI_INCLUDE_DIRS "${CASADI_PATH}/include")
 set(HIGHS_INCLUDE_DIRS "${CASADI_PATH}/include/highs")
 set(CASADI_LIBRARY_DIRS "${CASADI_PATH}")
@@ -73,7 +76,7 @@ set(CASADI_LIBRARY_DIRS "${CASADI_PATH}")
 message(STATUS "HIGHS_INCLUDE_DIRS: ${HIGHS_INCLUDE_DIRS}")
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(HIGHS REQUIRED highs)
+# pkg_check_modules(HIGHS REQUIRED highs)
 
 add_definitions(-DMASTERDIR="$ENV{masterdir}")
 
@@ -180,8 +183,8 @@ endif()
 
 list(APPEND CMAKE_PREFIX_PATH "$ENV{MAMBA_ROOT_PREFIX}/envs/ros_env/")
 
-set(Python_EXECUTABLE "/media/daten/Anwendungen/micromamba/envs/ros_env/bin/python")
-set(Python3_EXECUTABLE "/media/daten/Anwendungen/micromamba/envs/ros_env/bin/python3")
+set(Python_EXECUTABLE "$ENV{_colcon_cd_root}/bin/python")
+set(Python3_EXECUTABLE "$ENV{_colcon_cd_root}/bin/python3")
 
 message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 list(APPEND CMAKE_PREFIX_PATH "/opt/ros/humble")
