@@ -38,7 +38,7 @@ fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 
 full_reset_flag = ~true; % Please set this flag true after cloning or if a full reset should be  done.
 plot_trajectory               = ~true;
-overwrite_offline_traj_forced = false; % if true then init guess is also created
+overwrite_offline_traj_forced = ~false; % if true then init guess is also created
 warm_start = true;
 overwrite_init_guess = false; % but automatically true when overwrite_offline_traj_forced is true
 
@@ -97,8 +97,8 @@ bus_definitions;
 init_MPC_weights; %% set MPC weights
 
 create_trajectories;
-
-create_mpc_init_guess;
+% plot(param_traj_data(:,:,1).p_d')
+%create_mpc_init_guess;
 
 change_simulink_traj_combo_box; % saves system!
 

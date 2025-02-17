@@ -139,6 +139,21 @@ public:
         active_mpc->increase_traj_count();
     }
 
+    void set_traj_count(casadi_uint new_traj_count)
+    {
+        active_mpc->set_traj_count(new_traj_count);
+    }
+
+    casadi_real *get_u_next()
+    {
+        return active_mpc->get_u_next();
+    }
+
+    casadi_uint get_N_step()
+    {
+        return active_mpc->get_N_step();
+    }
+
     casadi_uint get_traj_count()
     {
         return active_mpc->get_traj_count();

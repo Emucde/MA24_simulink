@@ -546,6 +546,9 @@ try:
                         process_vis.daemon = True # this will kill the process if the main process is killed
                         process_vis.start()
 
+                    xs = np.zeros((N_traj, 2*n_dof))
+                    us = np.zeros((N_traj, n_dof))
+
                 if stop == 1:
                     data_from_simulink_stop[:] = 0
                     run_flag = False

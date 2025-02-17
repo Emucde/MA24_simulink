@@ -74,6 +74,30 @@
             }
         },
         {
+            "label": "Run ROS2 (Release)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-ic",
+                "./main_ros2/franka_ros2_ws/run_ros2.sh -r"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "none",
+                "isDefault": false
+            },
+            "dependsOn": [],
+            "detail": "run ros2 release",
+            "icon": {
+                "id": "vr"
+            }
+        },
+        {
             "label": "NodeJS run ROS2 GUI",
             "type": "shell",
             "command": "bash",

@@ -62,12 +62,20 @@ namespace franka_example_controllers
 
         if (mpc_started)
         {
+            #ifndef SIMULATION_MODE
             // Read states from joint state interface
             for (int i = 0; i < 2 * N_DOF; ++i)
             {
                 state[i] = state_interfaces_[i].get_value();
             }
             x_measured = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
+            #else
+            controller.simulateModelRK4(x_measured.data(), tau_full.data(), Ts);
+            for (int i = 0; i < 2 * N_DOF; ++i)
+            {
+                state[i] = x_measured[i];
+            }
+            #endif
 
             //TODO
             if(use_ekf)
@@ -107,7 +115,8 @@ namespace franka_example_controllers
                 if (error_flag == ErrorFlag::NO_ERROR)
                 {
                     tau_full_future = std::async(std::launch::async, [this]()
-                                                 {  timer_mpc_solver.tic();
+                                                 {
+                                                    timer_mpc_solver.tic();
                                                     Eigen::VectorXd tau_temp = controller.solveMPC(x_filtered_ptr);
                                                     timer_mpc_solver.toc();
                                                     return tau_temp; });
@@ -139,15 +148,15 @@ namespace franka_example_controllers
             else
             {
                 current_frequency = 0.0;
-                controller.increase_traj_count();
+                controller.set_traj_count(global_traj_count); // sync the global trajectory count
                 if (invalid_counter < MAX_INVALID_COUNT)
                 {
                     invalid_counter++;
-                    RCLCPP_WARN(get_node()->get_logger(), "No valid Python data (%d/%d). Using previous torques.", invalid_counter, MAX_INVALID_COUNT);
+                    RCLCPP_WARN(get_node()->get_logger(), "No valid MPC data (%d/%d). Using previous torques.", invalid_counter, MAX_INVALID_COUNT);
                 }
                 else
                 {
-                    RCLCPP_ERROR(get_node()->get_logger(), "No valid data received from Python %d times. Stopping the controller.", MAX_INVALID_COUNT);
+                    RCLCPP_ERROR(get_node()->get_logger(), "No valid MPC data %d times. Stopping the controller.", MAX_INVALID_COUNT);
                     tau_full = Eigen::VectorXd::Zero(N_DOF);
                     invalid_counter = 0;
                     mpc_started = false;
@@ -155,12 +164,14 @@ namespace franka_example_controllers
             }
 
             // Send data to shared memory
-            traj_count = controller.get_traj_count();
-            shm.write("read_state_data_full", state, traj_count);
-            shm.write("read_control_data_full", tau_full.data(), traj_count);
-            shm.write("read_traj_data_full", controller.get_act_traj_data(), traj_count);
-            shm.write("read_frequency_full", &current_frequency, traj_count);
+            shm.write("read_state_data_full", state, global_traj_count);
+            shm.write("read_control_data_full", tau_full.data(), global_traj_count);
+            shm.write("read_traj_data_full", controller.get_act_traj_data(), global_traj_count);
+            shm.write("read_frequency_full", &current_frequency, global_traj_count);
             shm.post_semaphore("shm_changed_semaphore");
+
+            if(global_traj_count < traj_len)
+                global_traj_count++;
         }
         else
         {
@@ -174,11 +185,11 @@ namespace franka_example_controllers
         }
 
         // Logging torques
-        #ifdef DEBUG
-        RCLCPP_INFO(get_node()->get_logger(), "tau (Nm): [%f, %f, %f, %f, %f, %f, %f]",
-                    tau_full[0], tau_full[1], tau_full[2],
-                    tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
-        #endif
+        // #ifdef DEBUG
+        // RCLCPP_INFO(get_node()->get_logger(), "tau (Nm): [%f, %f, %f, %f, %f, %f, %f]",
+        //             tau_full[0], tau_full[1], tau_full[2],
+        //             tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
+        // #endif
 
         return controller_interface::return_type::OK;
     }
@@ -363,9 +374,18 @@ namespace franka_example_controllers
         
         controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
         controller.init_file_trajectory(traj_select, state, T_traj_start, T_traj_dur, T_traj_end);
+        traj_len = controller.get_traj_data_real_len();
+        N_step = controller.get_N_step();
+
+        #ifdef SIMULATION_MODE
+         const double* x0_init = controller.get_traj_x0_init(traj_select);
+        x_measured = Eigen::Map<const Eigen::VectorXd>(x0_init, 2 * N_DOF);
+        #endif
+        
         controller.set_planner_mode(use_planner);
         controller.update_mpc_weights();
         traj_len = controller.get_traj_data_real_len();
+
         shm.write("read_traj_length", &traj_len);
 
         tau_full_future = std::async(std::launch::async, [this]()
@@ -373,15 +393,22 @@ namespace franka_example_controllers
             Eigen::VectorXd tau_full_temp = controller.solveMPC(x_filtered_ptr);
             mpc_started = true;
             first_torque_read = false;
+            int8_t readonly_mode = 1;
 
-            shm.write("read_state_data_full", x_filtered_ptr, traj_count);
-            shm.write("read_control_data_full", tau_full.data(), traj_count);
-            shm.write("read_traj_data_full", controller.get_act_traj_data(), traj_count);
-            shm.write("read_frequency_full", &current_frequency, traj_count);
+            shm.write("readonly_mode", &readonly_mode);
+            shm.write("read_state_data_full", x_filtered_ptr, global_traj_count);
+            shm.write("read_control_data_full", tau_full.data(), global_traj_count);
+            shm.write("read_traj_data_full", controller.get_act_traj_data(), global_traj_count);
+            shm.write("read_frequency_full", &current_frequency, global_traj_count);
             shm.post_semaphore("shm_changed_semaphore");
+
+            if(global_traj_count < traj_len)
+                global_traj_count++;
 
             RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC started");
             return tau_full_temp; });
+
+        RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC started!");
     }
 
     void ModelPredictiveControllerCasadi::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
@@ -399,6 +426,7 @@ namespace franka_example_controllers
         shm.write("data_from_simulink_stop", &flags.stop);
 
         controller.reset();
+        global_traj_count = 0;
 
         response->status = "reset flag set";
         mpc_started = false;

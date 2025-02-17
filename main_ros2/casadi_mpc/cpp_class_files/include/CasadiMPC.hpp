@@ -119,6 +119,12 @@ public:
         traj_count++;
     }
 
+    // if it solves too slow.
+    void set_traj_count(casadi_uint new_traj_count)
+    {
+        traj_count = new_traj_count;
+    }
+
     void reset();
 
     ///////////////////////////////////////////////////////////////////////////////////////
@@ -131,6 +137,16 @@ public:
     casadi_real *get_optimal_control()
     {
         return mpc_config.out.u_opt.ptr;
+    }
+
+    casadi_real *get_u_next()
+    {
+        return mpc_config.in.u.ptr+nq_red;
+    }
+
+    casadi_uint get_N_step()
+    {
+        return N_step;
     }
 
     // Method to get the initial state address at the begin of the prediction horizon
