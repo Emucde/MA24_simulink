@@ -48,6 +48,7 @@
 #include "casadi_types.h"
 #include "trajectory_settings.hpp"
 #include <Eigen/Dense>
+#include <random>
 
 #include <future> // Include the future and async library
 
@@ -103,6 +104,7 @@ namespace franka_example_controllers
     private:
         std::string arm_id_;
         const int num_joints = N_DOF;
+        double state[2 * N_DOF];
         int invalid_counter = 0;          // counter for invalid data, if exceeds MAX_INVALID_COUNT, terminate the controller
         uint global_traj_count = 0;
         bool mpc_started = false;
@@ -117,6 +119,9 @@ namespace franka_example_controllers
         bool use_planner = false;
         bool use_lowpass_filter = false;
         bool use_ekf = false;
+        #ifdef SIMULATION_MODE
+        bool use_noise=false;
+        #endif
         CasadiController controller = CasadiController(urdf_filename, casadi_mpc_config_filename, tcp_frame_name, use_gravity, use_planner);
         Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(num_joints);
         Eigen::VectorXd tau_prev = Eigen::VectorXd::Zero(num_joints);
@@ -159,6 +164,8 @@ namespace franka_example_controllers
         TicToc timer_mpc_solver;
         TicToc timer_all;
 
+        const Eigen::MatrixXd *current_trajectory;
+
         // rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr reset_mpc_service_;
@@ -181,4 +188,8 @@ namespace franka_example_controllers
                         std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Response> response);
         nlohmann::json read_config(std::string file_path);
     };
+
+    // #ifdef SIMULATION_MODE
+    // Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude);
+    // #endif
 } // namespace franka_example_controllers

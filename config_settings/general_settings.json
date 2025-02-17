@@ -10,7 +10,7 @@
     "transient_traj_start_time": 0.0,
     "transient_traj_duration": 0.0,
     "transient_traj_end_time": 0.0,
-    "default_controller": "Crocoddyl",
+    "default_controller": "Casadi",
     "available_controllers": [
         "Classic",
         "Casadi",
