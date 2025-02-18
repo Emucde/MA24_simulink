@@ -149,7 +149,7 @@ namespace franka_example_controllers
             else
             {
                 current_frequency = 0.0;
-                controller.set_traj_count(global_traj_count); // sync the global trajectory count
+                // controller.set_traj_count(global_traj_count); // sync the global trajectory count
 
                 if (invalid_counter < MAX_INVALID_COUNT)
                 {
@@ -203,6 +203,28 @@ namespace franka_example_controllers
 
         return controller_interface::return_type::OK;
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #else
     controller_interface::return_type ModelPredictiveControllerCasadi::update(
         const rclcpp::Time & /*time*/,
@@ -224,14 +246,15 @@ namespace franka_example_controllers
             {
                 invalid_counter = 0;                      // Reset the counter on successful retrieval
                 tau_full = tau_full_future.get();         // Get the result
+                tau_full_promise = std::promise<Eigen::VectorXd>();
+                tau_full_future = tau_full_promise.get_future(); // Create new 
+
                 tau_prev = tau_full;                      // Update the previous torque
                 error_flag = controller.get_error_flag(); // Get the error flag
                 current_frequency = timer_mpc_solver.get_frequency();
                 
                 // simulate one step
-                #ifndef SIMULATION_MODE
-                controller.simulateModelRK4(x_filtered.data(), tau_full.data(), Ts);
-                #else
+                #ifdef SIMULATION_MODE
                 controller.simulateModelRK4(state, tau_full.data(), Ts);
 
                 if(use_noise)
@@ -267,15 +290,17 @@ namespace franka_example_controllers
                 {
                     x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), 2 * N_DOF);
                 }
+
+                // controller.simulateModelRK4(x_filtered.data(), tau_full.data(), Ts);
                 
                 if (error_flag == ErrorFlag::NO_ERROR)
                 {
-                    tau_full_future = std::async(std::launch::async, [this, x_filtered]()
-                                                 {
-                                                    timer_mpc_solver.tic();
-                                                    Eigen::VectorXd tau_temp = controller.solveMPC(x_filtered.data());
-                                                    timer_mpc_solver.toc();
-                                                    return tau_temp; });
+                    boost::asio::post(thread_pool, [this, x_filtered]() {
+                        timer_mpc_solver.tic();
+                        Eigen::VectorXd tau_full_temp = controller.solveMPC(x_filtered.data());
+                        timer_mpc_solver.toc();
+                        tau_full_promise.set_value(tau_full_temp); // Fulfill the promise
+                    });
                 }
                 else
                 {
@@ -560,6 +585,8 @@ namespace franka_example_controllers
         }
         #endif
 
+        Eigen::VectorXd x_filtered;
+
         if(use_ekf && use_lowpass_filter)
         {
             ekf.update_config();
@@ -567,6 +594,7 @@ namespace franka_example_controllers
             x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
             ekf.initialize(x_measured.data());
             x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
         }
         else if(use_ekf)
         {
@@ -574,23 +602,28 @@ namespace franka_example_controllers
             ekf.initialize(x_measured.data());
             x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
             x_filtered_lowpass_ptr = x_filtered_ekf_ptr;
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
         }
         else if(use_lowpass_filter)
         {
             lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
             x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
             x_filtered_ekf_ptr = x_filtered_lowpass_ptr;
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
         }
         else
         {
             x_filtered_ekf_ptr = x_measured.data();
             x_filtered_lowpass_ptr = x_measured.data();
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), 2 * N_DOF);
         }
         // without previous data, we cannot filter
 
         shm.write("read_traj_length", &traj_len);
 
-        tau_full_future = std::async(std::launch::async, [this]()
+        tau_full_promise = std::promise<Eigen::VectorXd>();
+        tau_full_future = tau_full_promise.get_future(); // Create new 
+        boost::asio::post(thread_pool, [this, x_filtered]()
                                      {
             Eigen::VectorXd tau_full_temp = controller.solveMPC(x_measured.data());
             mpc_started = true;
@@ -598,9 +631,9 @@ namespace franka_example_controllers
             int8_t readonly_mode = 1;
 
             shm.write("readonly_mode", &readonly_mode);
-            shm.write("read_state_data_full", x_measured.data(), global_traj_count);
+            shm.write("read_state_data_full", x_filtered.data(), global_traj_count);
             shm.write("read_control_data_full", tau_full.data(), global_traj_count);
-            shm.write("read_traj_data_full", controller.get_act_traj_data(), global_traj_count);
+            shm.write("read_traj_data_full", current_trajectory->col(0).data(), global_traj_count);
             shm.write("read_frequency_full", &current_frequency, global_traj_count);
             shm.post_semaphore("shm_changed_semaphore");
 
@@ -608,7 +641,8 @@ namespace franka_example_controllers
                 global_traj_count++;
 
             RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC started");
-            return tau_full_temp; });
+            tau_full_promise.set_value(tau_full_temp); // Fulfill the promise
+            });
 
         RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC started!");
     }

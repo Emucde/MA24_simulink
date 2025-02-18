@@ -23,7 +23,7 @@
         "ID"
     ],
     "use_casadi_planner": false,
-    "default_casadi_mpc": "MPC8",
+    "default_casadi_mpc": "MPC17",
     "available_casadi_mpc": [
         "MPC01",
         "MPC6",

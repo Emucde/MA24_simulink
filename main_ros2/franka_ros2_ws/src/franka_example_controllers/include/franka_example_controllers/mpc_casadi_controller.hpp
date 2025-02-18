@@ -50,6 +50,8 @@
 #include <Eigen/Dense>
 #include <random>
 
+#include <boost/asio/thread_pool.hpp>
+#include <boost/asio/post.hpp>
 #include <future> // Include the future and async library
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
@@ -141,7 +143,9 @@ namespace franka_example_controllers
         CasadiEKF ekf = CasadiEKF(ekf_config_filename);
         SignalFilter lowpass_filter = SignalFilter(num_joints, Ts, state, 400, 400);
 
-        std::future<Eigen::VectorXd> tau_full_future;
+        boost::asio::thread_pool thread_pool=1; //thread pool with 1 thread
+        std::promise<Eigen::VectorXd> tau_full_promise; // Promise for async result
+        std::future<Eigen::VectorXd> tau_full_future = tau_full_promise.get_future();   // Future to retrieve result
         ErrorFlag error_flag = ErrorFlag::NO_ERROR;
 
         robot_config_t robot_config = get_robot_config();
