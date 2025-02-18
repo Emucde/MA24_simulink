@@ -122,6 +122,17 @@ def generate_launch_description():
              name='rviz2',
              arguments=['--display-config', rviz_file],
              condition=IfCondition(use_rviz)
-             )
+             ),
+
+        Node(
+            package='casadi_mpc_publisher',  # Replace with your actual package name
+            executable='casadi_mpc_publisher',  # The name of your executable
+            name='casadi_mpc_publisher_node',  # A name for the node instance
+            output='screen',
+            emulate_tty=True,
+            parameters=[
+                # Add any parameters here if needed
+            ]
+            )
 
     ] + spawn_controllers) # append my custom controllers

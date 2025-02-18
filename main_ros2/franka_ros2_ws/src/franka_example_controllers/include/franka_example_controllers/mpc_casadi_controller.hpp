@@ -30,6 +30,7 @@
 #include <rclcpp/duration.hpp>
 #include <rclcpp/time.hpp>
 #include "mpc_interfaces/msg/num.hpp"
+#include "mpc_interfaces/msg/control_array.hpp"
 #include "mpc_interfaces/srv/add_three_ints.hpp"
 #include "mpc_interfaces/srv/simple_command.hpp"
 #include "mpc_interfaces/srv/trajectory_command.hpp"
@@ -173,7 +174,7 @@ namespace franka_example_controllers
 
         const Eigen::MatrixXd *current_trajectory;
 
-        // rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;
+        rclcpp::Subscription<mpc_interfaces::msg::ControlArray>::SharedPtr subscription_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr reset_mpc_service_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr stop_mpc_service_;
@@ -182,7 +183,7 @@ namespace franka_example_controllers
 
         void open_shared_memories();
         void close_shared_memories();
-        // void topic_callback(const mpc_interfaces::msg::Num & msg);
+        void topic_callback(const mpc_interfaces::msg::ControlArray & msg);
         void start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
                        std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response);
         void reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,

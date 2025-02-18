@@ -398,8 +398,8 @@ namespace franka_example_controllers
 
         RCLCPP_INFO(get_node()->get_logger(), "Configuring MPC controller for %s arm", arm_id_.c_str());
 
-        // subscription_ = get_node()->create_subscription<mpc_interfaces::msg::Num>(
-        //     "topic", 10, std::bind(&ModelPredictiveControllerCasadi::topic_callback, this, _1));
+        subscription_ = get_node()->create_subscription<mpc_interfaces::msg::ControlArray>(
+            "topic", 10, std::bind(&ModelPredictiveControllerCasadi::topic_callback, this, _1));
 
         // RCLCPP_INFO(get_node()->get_logger(), "Subscribed to topic 'topic'");
 
@@ -508,10 +508,12 @@ namespace franka_example_controllers
         shm.close_semaphores();
     }
 
-    // void ModelPredictiveControllerCasadi::topic_callback(const mpc_interfaces::msg::Num & msg)
-    // {
-    //   RCLCPP_WARN(get_node()->get_logger(), "I heard: '%ld'", msg.num);
-    // }
+    void ModelPredictiveControllerCasadi::topic_callback(const mpc_interfaces::msg::ControlArray & msg)
+    {
+        Eigen::Map<const Eigen::VectorXd> u_k(msg.control_array.data(), msg.control_array.size());
+        RCUTILS_LOG_WARN("Received control array: [%f, %f, %f, %f, %f, %f]",
+                        u_k[0], u_k[1], u_k[2], u_k[3], u_k[4], u_k[5]);
+    }
 
     void ModelPredictiveControllerCasadi::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                     std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)

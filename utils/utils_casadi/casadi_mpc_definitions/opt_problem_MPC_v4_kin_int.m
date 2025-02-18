@@ -130,13 +130,13 @@ u_opt_indices = [q0_pp_idx, x1_idx, q1_pp_idx];
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-% ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
-% lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
 
 % Interessant: Wenn u auch im Horizont beschränkt wird, erhält man eine bleibende Regelabweichung (1e-5).
 % Hingegen wenn die u im Horizont nicht beschränkt werden, sondern nur das, dass ausgegeben wird, hat man das Problem nicht:
-ubw = [repmat(pp.u_max(n_indices), 1, 1);  inf(n_red*(N_MPC-1),1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
-lbw = [repmat(pp.u_min(n_indices), 1, 1); -inf(n_red*(N_MPC-1),1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
+% ubw = [repmat(pp.u_max(n_indices), 1, 1);  inf(n_red*(N_MPC-1),1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
+% lbw = [repmat(pp.u_min(n_indices), 1, 1); -inf(n_red*(N_MPC-1),1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
 
 % input parameter
 x_k    = SX.sym( 'x_k',     2*n_red, 1 ); % current x state = initial x state
