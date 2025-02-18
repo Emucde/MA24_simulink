@@ -104,7 +104,7 @@ namespace franka_example_controllers
     private:
         std::string arm_id_;
         const int num_joints = N_DOF;
-        double state[2 * N_DOF];
+        double state[2 * N_DOF]={0};
         int invalid_counter = 0;          // counter for invalid data, if exceeds MAX_INVALID_COUNT, terminate the controller
         uint global_traj_count = 0;
         bool mpc_started = false;
@@ -121,6 +121,7 @@ namespace franka_example_controllers
         bool use_ekf = false;
         #ifdef SIMULATION_MODE
         bool use_noise=false;
+        double mean_noise_amplitude = 0;
         #endif
         CasadiController controller = CasadiController(urdf_filename, casadi_mpc_config_filename, tcp_frame_name, use_gravity, use_planner);
         Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(num_joints);
@@ -131,13 +132,15 @@ namespace franka_example_controllers
         double* x_filtered_lowpass_ptr = x_measured.data();
         double* u_next_ptr = controller.get_u_next();
         uint N_step = controller.get_N_step();
-        FullSystemTorqueMapper* torque_mapper = controller.get_torque_mapper();
-        CasadiEKF ekf = CasadiEKF(ekf_config_filename);
-        SignalFilter lowpass_filter = SignalFilter(num_joints, Ts, 400, 400);
 
         double Ts = 0.001;
         double T1 = 1/400, A1 = std::exp(-Ts/T1), B1 = 1 - A1; // Lowpass Filter for q
         double T2 = 1/400, A2 = std::exp(-Ts/T2), B2 = 1 - A2; // Lowpass Filter for q_p
+
+        FullSystemTorqueMapper* torque_mapper = controller.get_torque_mapper();
+        CasadiEKF ekf = CasadiEKF(ekf_config_filename);
+        SignalFilter lowpass_filter = SignalFilter(num_joints, Ts, state, 400, 400);
+
         std::future<Eigen::VectorXd> tau_full_future;
         ErrorFlag error_flag = ErrorFlag::NO_ERROR;
 
@@ -187,6 +190,10 @@ namespace franka_example_controllers
         void mpc_switch(const std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Request> request,
                         std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Response> response);
         nlohmann::json read_config(std::string file_path);
+
+        #ifdef SIMULATION_MODE
+        Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude);
+        #endif
     };
 
     // #ifdef SIMULATION_MODE

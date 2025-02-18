@@ -506,12 +506,12 @@ try:
                     print('Reset MPC (data logging mode).')
 
                     # read data from shared memory
-                    xs = read_state_data_full.reshape(-1, 2*n_dof)
-                    us = read_control_data_full.reshape(-1, n_dof)
-                    freq_per_Ta_step = read_frequency_full
+                    xs = read_state_data_full.reshape(-1, 2*n_dof).copy()
+                    us = read_control_data_full.reshape(-1, n_dof).copy()
+                    freq_per_Ta_step = read_frequency_full.copy()
                     indices = np.arange(0, 19 * N_traj, 19)
-                    q_d_temp = read_traj_data_full[indices[:, None] + np.arange(9, 13)].T
-                    R_d_temp = quat2rotm_vec(q_d_temp)
+                    q_d_temp = read_traj_data_full[indices[:, None] + np.arange(9, 13)].T.copy()
+                    R_d_temp = quat2rotm_vec(q_d_temp).copy()
                     
                     transient_traj = {
                         't': np.linspace(0, N_traj*Ts, N_traj),
@@ -524,6 +524,11 @@ try:
                         'omega_d': read_traj_data_full[indices[:, None] + np.arange(13, 16)].T,
                         'omega_d_p': read_traj_data_full[indices[:, None] + np.arange(16, 19)].T
                     }
+
+                    read_state_data_full[:] = 0
+                    read_control_data_full[:] = 0
+                    read_frequency_full[:] = 0
+                    read_traj_data_full[:] = 0
 
                     if plot_sol:
                         if process_plot is not None and process_plot.is_alive():
@@ -574,15 +579,13 @@ try:
                     }
 
                 if run_flag is True:
-                    freq_per_Ta_step[i] = read_frequency_full[i]
-
                     if i < N_traj-1:
                         i += 1
                     else:
                         run_flag = False
 
                     if (i+1) % update_interval == 0:
-                        print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()} | {format_freq(freq_per_Ta_step[i-1], 2)}     ", end='\r')
+                        print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()} | {format_freq(read_frequency_full[i-1], 2)}     ", end='\r')
 
 
         if start_solving:
