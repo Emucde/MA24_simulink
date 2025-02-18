@@ -169,6 +169,16 @@ public:
         return &torque_mapper;
     }
 
+    casadi_uint get_traj_step()
+    {
+        return active_mpc->get_traj_step();
+    }
+
+    void set_torque_mapper_config(FullSystemTorqueMapper::Config &config)
+    {
+        torque_mapper.setConfiguration(config);
+    }
+
     // Method to switch the trajectory (for creating run init_trajectory)
     void switch_traj(casadi_uint traj_select);
 

@@ -31,7 +31,7 @@ CasadiMPC::CasadiMPC(CasadiMPCType mpc,
                                                                   mpc_traj_indices((Eigen::VectorXi(horizon_len) << ConstIntVectorMap(mpc_config.traj_indices, horizon_len)).finished()),
                                                                   N_step(static_cast<uint32_t>(mpc_config.N_step)),
                                                                   traj_data_per_horizon(mpc_config.traj_data_per_horizon),
-                                                                  traj_count(0), traj_select(1),
+                                                                  traj_count(0), traj_step(1), traj_select(1),
                                                                   mem(mpc_config.mem), dt(robot_config.dt)
 {
     // Check if the configuration is valid
@@ -117,7 +117,8 @@ int CasadiMPC::solve(const casadi_real *const x_k_in)
     if (!flag)
     {
         mpc_config.set_prev_to_out(w);
-        mpc_config.set_init_guess_out_to_in(w);
+        // mpc_config.set_init_guess_out_to_in(w);
+        predict_init_guess();
     }
     else
     {
@@ -170,9 +171,12 @@ void CasadiMPC::update_mpc_weights(nlohmann::json param_weight)
 
                 if (item.key() == "N_step")
                 {
-                    mpc_traj_indices = static_cast<int>(weight) * (mpc_traj_indices.array() / N_step);
-                    // mpc_traj_indices[1] = 1; // always start at Ta here (control frequency)
                     N_step = weight;
+                }
+
+                if (item.key() == "dt")
+                {
+                    dt = weight;
                 }
             }
             else
@@ -185,6 +189,57 @@ void CasadiMPC::update_mpc_weights(nlohmann::json param_weight)
             throw std::runtime_error("CasadiMPC::update_mpc_weights(): " + item.key() + " is not a valid parameter name.");
         }
     }
+
+    if(dt < robot_config.dt)
+    {
+        throw std::runtime_error("CasadiMPC::update_mpc_weights(): dt is too small. Expected dt > robot_config.dt.");
+    }
+    else
+    {
+        traj_step = static_cast<casadi_uint>(dt / robot_config.dt); // default dt is 1kHz
+        if(N_step == 1)
+        {
+            mpc_traj_indices = Eigen::VectorXi::LinSpaced(horizon_len, 0, horizon_len - 1);
+        }
+        else
+        {
+            Eigen::VectorXi temp_indices = traj_step * N_step * Eigen::VectorXi::LinSpaced(horizon_len-2, 1, horizon_len-2);
+            mpc_traj_indices << 0, traj_step, temp_indices;
+            // such that I have e.g. [0, 1, 5, 10, 15, 20] for N_step = 5 and N_MPC+1 = horizon_len = 6 and dt=1ms
+        }
+    }
+}
+
+// Init guess for optimal prediction: If the prediction is correct, then this approximation woud fit very well.
+// it can be seen as an alternative to the standard method
+void CasadiMPC::predict_init_guess()
+{
+    int u_rows = nq_red;
+    int x_rows = nx_red;
+    int u_cols = mpc_config.out.u_out.len / nq_red;
+    int x_cols = mpc_config.out.x_out.len / nx_red;
+
+    // ignore last coloumn
+    Eigen::Map<Eigen::MatrixXd> u1(mpc_config.out.u_out.ptr, u_rows, u_cols - 1);
+    Eigen::Map<Eigen::MatrixXd> x1(mpc_config.out.x_out.ptr, x_rows, x_cols - 1);
+
+    // ignore first coloumn
+    Eigen::Map<Eigen::MatrixXd> u2(mpc_config.out.u_out.ptr+nq_red, u_rows, u_cols - 1);
+    Eigen::Map<Eigen::MatrixXd> x2(mpc_config.out.x_out.ptr+nx_red, x_rows, x_cols - 1);
+
+    Eigen::MatrixXd du = u2 - u1;
+    Eigen::MatrixXd dx = x2 - x1;
+
+    Eigen::MatrixXd u_pred = u1 + du * dt;
+    Eigen::MatrixXd x_pred = x1 + dx * dt;
+
+    // write the predicted values to the init_guess
+    memcpy(mpc_config.in.u.ptr, u_pred.data(), u_pred.size() * sizeof(double));
+    memcpy(mpc_config.in.x.ptr, x_pred.data(), x_pred.size() * sizeof(double));
+
+    // the last u and x cannot be predicted. Therefore, the last value is copied from the last prediction
+    memcpy(mpc_config.in.u.ptr + u_pred.size(), mpc_config.out.u_out.ptr + u_pred.size(), nq_red * sizeof(double));
+    memcpy(mpc_config.in.x.ptr + x_pred.size(), mpc_config.out.x_out.ptr + x_pred.size(), nx_red * sizeof(double));
 }
 
 // Method for switching the trajectory
@@ -517,7 +572,7 @@ void CasadiMPC::set_references(const casadi_real *const x_k_in)
         {
             mpc_set_funcs[i](w, *mpc_data[i]);
         }
-        traj_count++;
+        traj_count += traj_step;
     }
 }
 

@@ -49,6 +49,7 @@ private:
     const std::string traj_file;             // Path to trajectory data file
     const casadi_uint traj_data_per_horizon; // Trajectory data per horizon
     casadi_uint traj_count;                  // Trajectory count
+    casadi_uint traj_step;                   // step width at which the trajectory is sampled
     int traj_select;                         // Trajectory selection
     int mem;                                 // Memory
     casadi_real dt;                          // Control sampling time
@@ -107,6 +108,7 @@ public:
     int solve_planner(); // mpc planner: open loop mpc
 
     void update_mpc_weights(nlohmann::json param_weight);
+    void predict_init_guess();
 
 
     // Method to switch the trajectory
@@ -146,6 +148,11 @@ public:
     casadi_uint get_N_step()
     {
         return N_step;
+    }
+
+    casadi_uint get_traj_step()
+    {
+        return traj_step;
     }
 
     // Method to get the initial state address at the begin of the prediction horizon

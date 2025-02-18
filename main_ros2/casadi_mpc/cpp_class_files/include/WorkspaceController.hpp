@@ -158,6 +158,11 @@ public:
         active_controller->set_controller_settings(controller_settings);
     }
 
+    void set_torque_mapper_config(FullSystemTorqueMapper::Config &config)
+    {
+        torque_mapper.setConfiguration(config);
+    }
+
 private:
     const std::string urdf_path;
     const std::string tcp_frame_name;

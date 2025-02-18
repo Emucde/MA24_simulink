@@ -541,6 +541,18 @@ namespace franka_example_controllers
         double omega_c_q = general_config["lowpass_filter_omega_c_q"];
         double omega_c_dq = general_config["lowpass_filter_omega_c_dq"];
 
+        auto torque_mapper_settings = general_config["torque_mapper_settings"];
+        FullSystemTorqueMapper::Config torque_mapper_config;
+        torque_mapper_config.K_d = Eigen::VectorXd::Map(torque_mapper_settings["K_d"].get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
+        torque_mapper_config.D_d = Eigen::VectorXd::Map(torque_mapper_settings["D_d"].get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
+        torque_mapper_config.K_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["K_d_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
+        torque_mapper_config.D_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["D_d_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
+        torque_mapper_config.q_ref_nq = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq"].get<std::vector<double>>().data(), robot_config.nq);
+        torque_mapper_config.q_ref_nq_fixed = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed);
+        torque_mapper_config.torque_limit = torque_mapper_settings["torque_limit"];
+
+        controller.set_torque_mapper_config(torque_mapper_config);
+
         controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
 
         #ifndef SIMULATION_MODE

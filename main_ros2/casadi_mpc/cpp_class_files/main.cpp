@@ -175,11 +175,13 @@ int main()
     robot_config_t robot_config = get_robot_config();
 
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
-    double Ts = 0.001;
+    double Ts = general_config["dt"];
+    double freq_multiplier = Ts / robot_config.dt;
     const casadi_uint nq = robot_config.nq;
     const casadi_uint nx = robot_config.nx;
     const casadi_uint nq_red = robot_config.nq_red;
     const casadi_uint nx_red = robot_config.nx_red;
+    const casadi_uint nq_fixed = robot_config.nq_fixed;
     const casadi_uint *n_indices_ptr = robot_config.n_indices;
     const casadi_uint *n_x_indices_ptr = robot_config.n_x_indices;
     Eigen::VectorXi n_indices_eig = ConstIntVectorMap(n_indices_ptr, nq_red);
@@ -212,6 +214,32 @@ int main()
     classic_controller.switchController(get_classic_controller_type(general_config["default_classic_controller"]));
     crocoddyl_controller.setActiveMPC(get_crocoddyl_controller_type(general_config["default_crocoddyl_mpc"]));
 
+    // TORQUE MAPPER CONFIG
+    /*
+        Eigen::MatrixXd K_d;            // Proportional gain matrix
+        Eigen::MatrixXd D_d;            // Derivative gain matrix
+        Eigen::MatrixXd K_d_fixed;      // For fixed proportional gain
+        Eigen::MatrixXd D_d_fixed;      // For fixed derivative gain
+        Eigen::VectorXd q_ref_nq;       // Reference joint positions
+        Eigen::VectorXd q_ref_nq_fixed; // Reference joint positions for fixed PD control
+        double torque_limit;            // Max allowable torque
+    */
+    auto torque_mapper_settings = general_config["torque_mapper_settings"];
+    FullSystemTorqueMapper::Config torque_mapper_config = {
+        .K_d = Eigen::VectorXd::Map(torque_mapper_settings["K_d"].get<std::vector<double>>().data(), nq).asDiagonal(),
+        .D_d = Eigen::VectorXd::Map(torque_mapper_settings["D_d"].get<std::vector<double>>().data(), nq).asDiagonal(),
+        .K_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["K_d_fixed"].get<std::vector<double>>().data(), nq_fixed).asDiagonal(),
+        .D_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["D_d_fixed"].get<std::vector<double>>().data(), nq_fixed).asDiagonal(),
+        .q_ref_nq = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq"].get<std::vector<double>>().data(), nq),
+        .q_ref_nq_fixed = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq_fixed"].get<std::vector<double>>().data(), nq_fixed),
+        .torque_limit = torque_mapper_settings["torque_limit"]
+    };
+
+    classic_controller.set_torque_mapper_config(torque_mapper_config);
+    casadi_controller.set_torque_mapper_config(torque_mapper_config);
+    crocoddyl_controller.set_torque_mapper_config(torque_mapper_config);
+
+    
     // PD CONTROLLER
     auto classic_ctl_settings = general_config["classic_controller_settings"];
     Eigen::MatrixXd K_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
@@ -233,7 +261,7 @@ int main()
     Eigen::VectorXd W_bar_N_nq = Eigen::VectorXd::Map(reg_settings["W_bar_N"].get<std::vector<double>>().data(), 7);
     Eigen::MatrixXd W_bar_N = W_bar_N_nq(n_indices_eig).asDiagonal();;
     Eigen::VectorXd W_E_nq = Eigen::VectorXd::Map(reg_settings["W_E"].get<std::vector<double>>().data(), 7);
-    Eigen::MatrixXd W_E = W_E_nq(n_indices_eig).asDiagonal();;
+    Eigen::MatrixXd W_E = W_E_nq(n_indices_eig).asDiagonal();
 
     ControllerSettings ctrl_settings = {
         .pd_plus_settings = {.D_d = D_d_pd, .K_d = K_d_pd},
@@ -404,7 +432,7 @@ int main()
             std::cout << "Switching to trajectory from data" << std::endl;
         }
 
-        current_frequency = timer_mpc_solver.get_frequency();
+        current_frequency = timer_mpc_solver.get_frequency()*freq_multiplier;
 
         // Write data to shm:
         shm.write("read_state_data_full", x_filtered_ptr_2, i);

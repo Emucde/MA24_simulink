@@ -28,6 +28,8 @@ CasadiController::CasadiController(const std::string &urdf_path,
         }
     }
 
+    update_mpc_weights();
+
     // 1. use force planner. If false it could be that the active mpc is planner only.
     // This case is handled in setActiveMPC method
 
@@ -225,6 +227,9 @@ void CasadiController::setActiveMPC(CasadiMPCType mpc_type)
         // 2. Planner has a active mpc now
         planner_solver.switch_controller(active_mpc);
         standard_solver.switch_controller(active_mpc);
+
+        //update mpc weights (maybe not necessary)
+        active_mpc->update_mpc_weights(param_mpc_weight[active_mpc->get_mpc_name()]);
 
         // 3. check if active mpc is a planner only. In this case ignore force planner flag.
         set_planner_mode(use_planner); // Set the planner mode

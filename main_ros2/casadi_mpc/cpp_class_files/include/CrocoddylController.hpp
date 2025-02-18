@@ -86,6 +86,11 @@ public:
         return error_flag;
     }
 
+    void set_torque_mapper_config(FullSystemTorqueMapper::Config &config)
+    {
+        torque_mapper.setConfiguration(config);
+    }
+
     ~CrocoddylController() {};
 
 private:

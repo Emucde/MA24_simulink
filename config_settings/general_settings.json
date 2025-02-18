@@ -3,6 +3,7 @@
     "use_lowpass_filter": false,
     "use_ekf": false,
     "use_noise": false,
+    "dt": 1e-3,
     "mean_noise_amplitude": 0.1e-3,
     "lowpass_filter_omega_c_q": 400,
     "lowpass_filter_omega_c_dq": 400,
@@ -44,6 +45,16 @@
     "available_crocoddyl_mpc": [
         "DynMPC_v1"
     ],
+    "torque_mapper_settings":
+    {
+        "K_d": [100, 100, 100, 100, 100, 100, 100],
+        "D_d": [20, 20, 20, 20, 20, 20, 20],
+        "K_d_fixed": [20],
+        "D_d_fixed": [6.34],
+        "q_ref_nq": [0, -0.7854, 0, -2.3562, 0, 1.5708, 0.7854],
+        "q_ref_nq_fixed": [0],
+        "torque_limit": 100.0
+    },
     "classic_controller_settings" :{
         "PD": {
             "K_d": [100, 100, 100, 20, 20, 20],

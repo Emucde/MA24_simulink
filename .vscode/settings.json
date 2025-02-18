@@ -120,7 +120,8 @@
     "mpc01_addressdef.h": "c",
     "valarray": "cpp",
     "subscription_content_filter_options.h": "c",
-    "ret_types.h": "c"
+    "ret_types.h": "c",
+    "coroutine": "cpp"
   },
   "editor.largeFileOptimizations": false,
   "C_Cpp_Runner.msvcBatchPath": "",

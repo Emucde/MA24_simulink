@@ -32,7 +32,7 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
 
     config.K_d = Eigen::MatrixXd::Zero(nq, nq); // Proportional gain matrix
     // Default configurations
-    config.K_d.diagonal() << 100, 200, 500, 200, 50, 50, 10;
+    config.K_d.diagonal() << 100, 100, 100, 100, 50, 50, 10;
     config.D_d = (2 * config.K_d).array().sqrt();
     config.K_d_fixed = config.K_d(n_indices_fixed, n_indices_fixed);
     config.D_d_fixed = config.D_d(n_indices_fixed, n_indices_fixed);

@@ -47,10 +47,13 @@
                 "focus": false,
                 "panel": "shared"
             },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "icon": {
+                "id": "play"
+            }
         },
         {
-            "label": "Python run main_crocoddyl_7DOF.py",
+            "label": "🐍 Python run main_crocoddyl_7DOF.py",
             "type": "shell",
             "command": "bash",
             "args": [
@@ -70,11 +73,11 @@
             "dependsOn": [],
             "detail": "run main_crocoddyl_7DOF.py",
             "icon": {
-                "id": "octoface"
+                "id": "play"
             }
         },
         {
-            "label": "Run ROS2 (Release)",
+            "label": "🤖 Run ROS2 (Release)",
             "type": "shell",
             "command": "bash",
             "args": [
@@ -94,11 +97,11 @@
             "dependsOn": [],
             "detail": "run ros2 release",
             "icon": {
-                "id": "vr"
+                "id": "play"
             }
         },
         {
-            "label": "NodeJS run ROS2 GUI",
+            "label": "📃 NodeJS run ROS2 GUI",
             "type": "shell",
             "command": "bash",
             "args": [
@@ -118,11 +121,11 @@
             "dependsOn": [],
             "detail": "run node ros2gui",
             "icon": {
-                "id": "json"
+                "id": "play"
             }
         },
         {
-            "label": "C++ Run (-O3)",
+            "label": "▶ C++ Run (-O3)",
             "type": "shell",
             "command": "bash",
             "args": [
@@ -187,7 +190,7 @@
             "detail": "Run include-what-you-use to check for redundant includes."
         },
         {
-            "label": "Build ALL (ROS2 Release)",
+            "label": "⮕ Build ALL (ROS2 Release)",
             "type": "shell",
             "command": "bash",
             "args": [
@@ -254,10 +257,6 @@
                 "isDefault": false
             },
             "dependsOn": [],
-            "detail": "run ros2 debug",
-            "icon": {
-                "id": "vr"
-            }
         },
         {
             "type": "cppbuild",
