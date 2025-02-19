@@ -176,7 +176,8 @@ int main()
 
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
     double Ts = general_config["dt"];
-    double freq_multiplier = Ts / robot_config.dt;
+    // double freq_multiplier = Ts / robot_config.dt;
+    casadi_uint solver_steps = 1;
     const casadi_uint nq = robot_config.nq;
     const casadi_uint nx = robot_config.nx;
     const casadi_uint nq_red = robot_config.nq_red;
@@ -187,7 +188,7 @@ int main()
     Eigen::VectorXi n_indices_eig = ConstIntVectorMap(n_indices_ptr, nq_red);
     Eigen::VectorXi n_x_indices_eig = ConstIntVectorMap(n_x_indices_ptr, nx_red);
     casadi_real x_k_ndof[nx] = {0};
-    const casadi_real *x0_init;
+    const casadi_real *x0_init=0;
     double current_frequency = 0.0;
     casadi_uint traj_len = 0;
     double mean_noise_amplitude = general_config["mean_noise_amplitude"];
@@ -213,6 +214,8 @@ int main()
     casadi_controller.update_mpc_weights();
     classic_controller.switchController(get_classic_controller_type(general_config["default_classic_controller"]));
     crocoddyl_controller.setActiveMPC(get_crocoddyl_controller_type(general_config["default_crocoddyl_mpc"]));
+
+    solver_steps = casadi_controller.get_traj_step();
 
     // TORQUE MAPPER CONFIG
     /*
@@ -367,7 +370,7 @@ int main()
     timer_total.tic();
 
     // Main loop for trajectory processing
-    for (casadi_uint i = 0; i < traj_len; i++)
+    for (casadi_uint i = 0; i < traj_len; i=i+solver_steps)
     {
         if(use_noise)
             x_measured << x_k_ndof_eig + generateNoiseVector(nx, Ts, mean_noise_amplitude);
@@ -432,26 +435,28 @@ int main()
             std::cout << "Switching to trajectory from data" << std::endl;
         }
 
-        current_frequency = timer_mpc_solver.get_frequency()*freq_multiplier;
+        for (casadi_uint j = 0; j < solver_steps; j++)
+        {
+            // Write data to shm:
+            current_frequency = timer_mpc_solver.get_frequency()*solver_steps;
+            shm.write("read_state_data_full", x_filtered_ptr_2, i+j);
+            shm.write("read_control_data_full", tau_full.data(), i+j);
+            shm.write("read_traj_data_full", act_data, i+j);
+            shm.write("read_frequency_full", &current_frequency, i+j);
+            shm.post_semaphore("shm_changed_semaphore");
 
-        // Write data to shm:
-        shm.write("read_state_data_full", x_filtered_ptr_2, i);
-        shm.write("read_control_data_full", tau_full.data(), i);
-        shm.write("read_traj_data_full", act_data, i);
-        shm.write("read_frequency_full", &current_frequency, i);
-        shm.post_semaphore("shm_changed_semaphore");
-
-        if ( controller_type == MainControllerType::Casadi )
-        {
-            casadi_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
-        }
-        else if ( controller_type == MainControllerType::Classic )
-        {
-            classic_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
-        }
-        else if ( controller_type == MainControllerType::Crocoddyl )
-        {
-            crocoddyl_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
+            if ( controller_type == MainControllerType::Casadi )
+            {
+                casadi_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
+            }
+            else if ( controller_type == MainControllerType::Classic )
+            {
+                classic_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
+            }
+            else if ( controller_type == MainControllerType::Crocoddyl )
+            {
+                crocoddyl_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
+            }
         }
 
         if (error_flag != ErrorFlag::NO_ERROR)

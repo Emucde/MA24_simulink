@@ -1,10 +1,40 @@
 const rclnodejs = require('rclnodejs');
 
-rclnodejs.init().then(() => {
+let node;
+
+async function initializeNode() {
+    if (!rclnodejs._initialized) {
+        await rclnodejs.init();
+    }
     console.log('ROS 2 Node initialized');
+    node = new rclnodejs.Node('web_ros_bridge');
+    node.spin();
+    return node;
+}
+
+async function restartNode() {
+    if (node) {
+      console.log('Shutting down existing node...');
+      node.destroy();
+    }
+    
+    if (rclnodejs.shutdown) {
+      console.log('Shutting down rclnodejs...');
+      rclnodejs.shutdown();
+    }
+    
+    await rclnodejs.init();
+    console.log('ROS 2 Node initialized');
+    node = new rclnodejs.Node('web_ros_bridge');
+    node.spin();
+    return node;
+  }
+  
+
+// Initial node start
+initializeNode().catch(error => {
+    console.error('Error initializing ROS 2 Node:', error);
 });
-const node = new rclnodejs.Node('web_ros_bridge');
-node.spin();
 
 // Service Call Handlers
 async function startService(active_controller_name) {
@@ -170,4 +200,4 @@ async function get_controller_info() {
     return { controller_names, controller_active_states, active_controller_idx, active_controller_name, ok: true };
 }
 
-module.exports = { startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, activate_control, get_controller_info, objectToString };
+module.exports = { restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, activate_control, get_controller_info, objectToString };

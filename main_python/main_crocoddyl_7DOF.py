@@ -416,6 +416,8 @@ try:
                             print(f'New Trajectory selected: {current_traj_select}')
 
                         if i == 0:
+                            measureTotal.reset()
+                            measureTotal.tic()
                             # update mpc settings and problem
                             ddp, xs, us, xs_init_guess, us_init_guess, TCP_frame_id, \
                             N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, \
@@ -561,6 +563,8 @@ try:
                     print('Stop MPC (data logging mode).')
 
                 if i == 0:
+                    measureTotal.reset()
+                    measureTotal.tic()
                     # reset data
                     freq_per_Ta_step = np.zeros(N_traj)
                     N_traj = read_traj_length[0]

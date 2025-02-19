@@ -49,7 +49,7 @@
             },
             "problemMatcher": [],
             "icon": {
-                "id": "play"
+                "id": "chevron-right"
             }
         },
         {
@@ -73,7 +73,7 @@
             "dependsOn": [],
             "detail": "run main_crocoddyl_7DOF.py",
             "icon": {
-                "id": "play"
+                "id": "chevron-right"
             }
         },
         {
@@ -97,11 +97,11 @@
             "dependsOn": [],
             "detail": "run ros2 release",
             "icon": {
-                "id": "play"
+                "id": "chevron-right"
             }
         },
         {
-            "label": "📃 NodeJS run ROS2 GUI",
+            "label": "{  } NodeJS run ROS2 GUI",
             "type": "shell",
             "command": "bash",
             "args": [
@@ -121,7 +121,7 @@
             "dependsOn": [],
             "detail": "run node ros2gui",
             "icon": {
-                "id": "play"
+                "id": "chevron-right"
             }
         },
         {
@@ -145,7 +145,7 @@
             "dependsOn": [],
             "detail": "Run the project without debug info.",
             "icon": {
-                "id": "play"
+                "id": "chevron-right"
             }
         },
         {
@@ -169,7 +169,7 @@
             "dependsOn": [],
             "detail": "Build and run the project without debug info.",
             "icon": {
-                "id": "play"
+                "id": "chevron-right"
             }
         },
         {
@@ -190,7 +190,7 @@
             "detail": "Run include-what-you-use to check for redundant includes."
         },
         {
-            "label": "⮕ Build ALL (ROS2 Release)",
+            "label": "🔴 Build ALL (ROS2 Release)",
             "type": "shell",
             "command": "bash",
             "args": [

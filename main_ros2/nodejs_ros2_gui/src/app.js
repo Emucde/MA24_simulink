@@ -2,7 +2,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const express = require('express');
 const path = require('path');
-const { startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, activate_control, get_controller_info, objectToString } = require('./ros_services');
+const { restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, activate_control, get_controller_info, objectToString } = require('./ros_services');
 const { searchTrajectoryNames } = require('./search_m_file');
 
 // Express setup to serve HTML files
@@ -277,7 +277,21 @@ async function main() {
             } catch (error)
             {
                 console.error('An error occurred:', error.message);
-                ws.send(JSON.stringify({ status: 'error', error: error.message }));
+                additional_string = "";
+                if(error.message.includes('Received undefined'))
+                {
+                    restartNode()
+                    .then(() => {
+                      console.log('Node restarted successfully');
+                      // Perform any necessary actions after restart
+                    })
+                    .catch(error => {
+                      console.error('Failed to restart node:', error);
+                      // Handle restart failure
+                    });
+                    additional_string=": ROS2 service node restarted";
+                }
+                ws.send(JSON.stringify({ status: 'error', error: error.message + additional_string }));
             }
         });
 

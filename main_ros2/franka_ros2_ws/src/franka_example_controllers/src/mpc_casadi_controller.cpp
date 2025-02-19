@@ -54,178 +54,6 @@ namespace franka_example_controllers
         return state_interfaces_config;
     }
 
-#ifndef SIMULATION_MODE
-    controller_interface::return_type ModelPredictiveControllerCasadi::update(
-        const rclcpp::Time & /*time*/,
-        const rclcpp::Duration & /*period*/)
-    {
-        if (mpc_started)
-        {
-            // Read states from joint state interface
-            for (int i = 0; i < 2 * N_DOF; ++i)
-            {
-                state[i] = state_interfaces_[i].get_value();
-            }
-            x_measured = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
-
-            //TODO
-            Eigen::VectorXd x_filtered;
-            if(use_ekf && use_lowpass_filter)
-            {
-                lowpass_filter.run(state);
-                ekf.predict(tau_full.data(), x_filtered_lowpass_ptr);
-                x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
-            }
-            else if(use_lowpass_filter)
-            {
-                lowpass_filter.run(state); // updates data from x_filtered_ptr
-                x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
-            }
-            else if(use_ekf)
-            {
-                ekf.predict(tau_full.data(), state);
-                x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
-            }
-            else
-            {
-                x_filtered = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
-            }
-
-            // Logging joint states
-            #ifdef DEBUG
-            RCLCPP_INFO(get_node()->get_logger(), "q (rad): [%f, %f, %f, %f, %f, %f, %f]",
-                        state[0], state[1], state[2],
-                        state[3], state[4], state[5], state[6]);
-
-            RCLCPP_INFO(get_node()->get_logger(), "q_p (rad/s): [%f, %f, %f, %f, %f, %f, %f]",
-                        state[N_DOF + 0], state[N_DOF + 1], state[N_DOF + 2],
-                        state[N_DOF + 3], state[N_DOF + 4], state[N_DOF + 5], state[N_DOF + 6]);
-            #endif
-
-            // Attempt to get the result (blocking call)
-            if (tau_full_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
-            {
-                invalid_counter = 0;                      // Reset the counter on successful retrieval
-                tau_full = tau_full_future.get();         // Get the result
-                tau_prev = tau_full;                      // Update the previous torque
-                x_prev = x_filtered;                      // Update the previous state
-                error_flag = controller.get_error_flag(); // Get the error flag
-                current_frequency = timer_mpc_solver.get_frequency();
-                
-
-                if (error_flag == ErrorFlag::NO_ERROR)
-                {
-                    tau_full_future = std::async(std::launch::async, [this, x_filtered]()
-                                                 {
-                                                    timer_mpc_solver.tic();
-                                                    Eigen::VectorXd tau_temp = controller.solveMPC(x_filtered.data());
-                                                    timer_mpc_solver.toc();
-                                                    return tau_temp; });
-                }
-                else
-                {
-                    mpc_started = false;
-
-                    if (error_flag == ErrorFlag::JUMP_DETECTED)
-                    {
-                        RCLCPP_WARN(get_node()->get_logger(), "Jump in torque detected (tau (Nm): [%f, %f, %f, %f, %f, %f, %f]). Stopping the controller.",
-                                    tau_full[0], tau_full[1], tau_full[2],
-                                    tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
-                    }
-                    else if (error_flag == ErrorFlag::NAN_DETECTED)
-                    {
-                        RCLCPP_WARN(get_node()->get_logger(), "NaN in torque detected (tau (Nm): [%f, %f, %f, %f, %f, %f, %f]). Stopping the controller.",
-                                    tau_full[0], tau_full[1], tau_full[2],
-                                    tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
-                    }
-                    else if (error_flag == ErrorFlag::CASADI_ERROR)
-                    {
-                        RCLCPP_WARN(get_node()->get_logger(), "Error in Casadi function call. Stopping the controller.");
-                    }
-
-                    tau_full = Eigen::VectorXd::Zero(N_DOF);
-                }
-            }
-            else
-            {
-                current_frequency = 0.0;
-                // controller.set_traj_count(global_traj_count); // sync the global trajectory count
-
-                if (invalid_counter < MAX_INVALID_COUNT)
-                {
-                    invalid_counter++;
-                    //Interpolate previous u_next
-                    // Eigen::VectorXd u_next = Eigen::Map<Eigen::VectorXd>(u_next_ptr, robot_config.nq_red);
-                    // if(invalid_counter <= static_cast<int>(N_step))
-                    // {
-                    //     tau_full = tau_prev + static_cast<double>(invalid_counter) / N_step * (torque_mapper->calc_full_torque(u_next, x_prev) - tau_prev);
-                    // }
-                    // tau_full = tau_prev;
-                    RCLCPP_WARN(get_node()->get_logger(), "No valid MPC data (%d/%d). Using previous torques.", invalid_counter, MAX_INVALID_COUNT);
-                }
-                else
-                {
-                    RCLCPP_ERROR(get_node()->get_logger(), "No valid MPC data %d times. Stopping the controller.", MAX_INVALID_COUNT);
-                    tau_full = Eigen::VectorXd::Zero(N_DOF);
-                    invalid_counter = 0;
-                    mpc_started = false;
-                }
-            }
-
-            RCLCPP_WARN(get_node()->get_logger(), "time: %f", current_Time);
-            // Send data to shared memory
-            shm.write("read_state_data_full", state, global_traj_count);
-            shm.write("read_control_data_full", tau_full.data(), global_traj_count);
-            shm.write("read_traj_data_full", controller.get_act_traj_data(), global_traj_count);
-            shm.write("read_frequency_full", &current_frequency, global_traj_count);
-            shm.post_semaphore("shm_changed_semaphore");
-
-            if(global_traj_count < traj_len)
-                global_traj_count++;
-        }
-        else
-        {
-            tau_full = Eigen::VectorXd::Zero(N_DOF);
-        }
-
-        // Wuse tau_full from last solution
-        for (int i = 0; i < N_DOF; ++i)
-        {
-            command_interfaces_[i].set_value(tau_full[i]);
-        }
-
-        // Logging torques
-        #ifdef DEBUG
-        RCLCPP_INFO(get_node()->get_logger(), "tau (Nm): [%f, %f, %f, %f, %f, %f, %f]",
-                    tau_full[0], tau_full[1], tau_full[2],
-                    tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
-        #endif
-
-        return controller_interface::return_type::OK;
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#else
     controller_interface::return_type ModelPredictiveControllerCasadi::update(
         const rclcpp::Time & /*time*/,
         const rclcpp::Duration & /*period*/)
@@ -237,124 +65,50 @@ namespace franka_example_controllers
         {
             state[i] = state_interfaces_[i].get_value();
         }
+        x_measured = Eigen::Map<const Eigen::VectorXd>(state, 2 * N_DOF);
+        #else
+        if(use_noise)
+        {
+            Eigen::Map<Eigen::VectorXd> state_eig(state, 2 * N_DOF);
+            x_measured = state_eig + generateNoiseVector(2*N_DOF, Ts, mean_noise_amplitude);
+        }
+        else
+        {
+            x_measured = Eigen::Map<const Eigen::VectorXd>(state, 2 * N_DOF);
+        }
+        #endif
+
+        x_filtered = filter_x_measured();
+
+        #ifdef DEBUG
+        RCLCPP_INFO(get_node()->get_logger(), "q (rad): [%f, %f, %f, %f, %f, %f, %f]",
+                    state[0], state[1], state[2],
+                    state[3], state[4], state[5], state[6]);
+
+        RCLCPP_INFO(get_node()->get_logger(), "q_p (rad/s): [%f, %f, %f, %f, %f, %f, %f]",
+                    state[N_DOF + 0], state[N_DOF + 1], state[N_DOF + 2],
+                        state[N_DOF + 3], state[N_DOF + 4], state[N_DOF + 5], state[N_DOF + 6]);
         #endif
 
         if (mpc_started)
         {
-            // Attempt to get the result (blocking call)
-            if (tau_full_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+            // timer_mpc_solver.tic();
+            // tau_full = controller.solveMPC(x_filtered.data());
+            // timer_mpc_solver.toc();
+
+            if(solver_step_counter % solver_steps == 0)
             {
-                invalid_counter = 0;                      // Reset the counter on successful retrieval
-                tau_full = tau_full_future.get();         // Get the result
-                tau_full_promise = std::promise<Eigen::VectorXd>();
-                tau_full_future = tau_full_promise.get_future(); // Create new 
-
-                tau_prev = tau_full;                      // Update the previous torque
-                error_flag = controller.get_error_flag(); // Get the error flag
-                current_frequency = timer_mpc_solver.get_frequency();
-                
-                // simulate one step
-                #ifdef SIMULATION_MODE
-                controller.simulateModelRK4(state, tau_full.data(), Ts);
-
-                if(use_noise)
-                {
-                    Eigen::Map<Eigen::VectorXd> state_eig(state, 2 * N_DOF);
-                    x_measured << state_eig + generateNoiseVector(2*N_DOF, Ts, mean_noise_amplitude);
-                }
-                else
-                {
-                    x_measured = Eigen::Map<const Eigen::VectorXd>(state, 2 * N_DOF);
-                }
-                #endif
-
-                Eigen::VectorXd x_filtered;
-                if(use_ekf && use_lowpass_filter)
-                {
-                    ekf.predict(tau_full.data(), x_measured.data());
-                    lowpass_filter.run(x_filtered_ekf_ptr);
-                    x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
-                }
-                else if(use_lowpass_filter)
-                {
-                    lowpass_filter.run(x_measured.data()); // updates data from x_filtered_ptr
-                    x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
-                }
-                else if(use_ekf)
-                {
-                    ekf.predict(tau_full.data(), x_measured.data());
-                    x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
-                    x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
-                }
-                else
-                {
-                    x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), 2 * N_DOF);
-                }
-
-                // controller.simulateModelRK4(x_filtered.data(), tau_full.data(), Ts);
-                
-                if (error_flag == ErrorFlag::NO_ERROR)
-                {
-                    boost::asio::post(thread_pool, [this, x_filtered]() {
-                        timer_mpc_solver.tic();
-                        Eigen::VectorXd tau_full_temp = controller.solveMPC(x_filtered.data());
-                        timer_mpc_solver.toc();
-                        tau_full_promise.set_value(tau_full_temp); // Fulfill the promise
-                    });
-                }
-                else
-                {
-                    mpc_started = false;
-
-                    if (error_flag == ErrorFlag::JUMP_DETECTED)
-                    {
-                        RCLCPP_WARN(get_node()->get_logger(), "Jump in torque detected (tau (Nm): [%f, %f, %f, %f, %f, %f, %f]). Stopping the controller.",
-                                    tau_full[0], tau_full[1], tau_full[2],
-                                    tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
-                    }
-                    else if (error_flag == ErrorFlag::NAN_DETECTED)
-                    {
-                        RCLCPP_WARN(get_node()->get_logger(), "NaN in torque detected (tau (Nm): [%f, %f, %f, %f, %f, %f, %f]). Stopping the controller.",
-                                    tau_full[0], tau_full[1], tau_full[2],
-                                    tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
-                    }
-                    else if (error_flag == ErrorFlag::CASADI_ERROR)
-                    {
-                        RCLCPP_WARN(get_node()->get_logger(), "Error in Casadi function call. Stopping the controller.");
-                    }
-
-                    tau_full = Eigen::VectorXd::Zero(N_DOF);
-                }
+                std::async(std::launch::async, &ModelPredictiveControllerCasadi::solve, this);
             }
-            else
+            
+            if(solver_step_counter >= 1000)
             {
-                current_frequency = 0.0;
-                controller.set_traj_count(global_traj_count); // sync the global trajectory count
-
-                if (invalid_counter < MAX_INVALID_COUNT)
-                {
-                    invalid_counter++;
-                    //Interpolate previous u_next
-                    // Eigen::VectorXd u_next = Eigen::Map<Eigen::VectorXd>(u_next_ptr, robot_config.nq_red);
-                    // if(invalid_counter <= static_cast<int>(N_step))
-                    // {
-                    //     tau_full = tau_prev + static_cast<double>(invalid_counter) / N_step * (torque_mapper->calc_full_torque(u_next, x_prev) - tau_prev);
-                    // }
-                    // tau_full = tau_prev;
-                    RCLCPP_WARN(get_node()->get_logger(), "No valid MPC data (%d/%d). Using previous torques.", invalid_counter, MAX_INVALID_COUNT);
-                }
-                else
-                {
-                    RCLCPP_ERROR(get_node()->get_logger(), "No valid MPC data %d times. Stopping the controller.", MAX_INVALID_COUNT);
-                    tau_full = Eigen::VectorXd::Zero(N_DOF);
-                    invalid_counter = 0;
-                    mpc_started = false;
-                }
-                
-                #ifdef SIMULATION_MODE
-                controller.simulateModelRK4(state, tau_full.data(), Ts);
-                #endif
+                solver_step_counter = 0;
             }
+            solver_step_counter++;
+
+
+            current_frequency = timer_mpc_solver.get_frequency()*solver_steps;
 
             shm.write("read_state_data_full", x_measured.data(), global_traj_count);
             shm.write("read_control_data_full", tau_full.data(), global_traj_count);
@@ -365,31 +119,70 @@ namespace franka_example_controllers
             if(global_traj_count < traj_len)
                 global_traj_count++;
 
+            error_flag = controller.get_error_flag(); // Get the error flag
+
+            if (error_flag != ErrorFlag::NO_ERROR)
+            {
+                if (error_flag == ErrorFlag::JUMP_DETECTED)
+                {
+                    RCLCPP_WARN(get_node()->get_logger(), "Jump in torque detected (tau (Nm): [%f, %f, %f, %f, %f, %f, %f]). Stopping the controller.",
+                                tau_full[0], tau_full[1], tau_full[2],
+                                tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
+                }
+                else if (error_flag == ErrorFlag::NAN_DETECTED)
+                {
+                    RCLCPP_WARN(get_node()->get_logger(), "NaN in torque detected (tau (Nm): [%f, %f, %f, %f, %f, %f, %f]). Stopping the controller.",
+                                tau_full[0], tau_full[1], tau_full[2],
+                                tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
+                }
+                else if (error_flag == ErrorFlag::CASADI_ERROR)
+                {
+                    RCLCPP_WARN(get_node()->get_logger(), "Error in Casadi function call. Stopping the controller.");
+                }
+
+                mpc_started = false;
+                tau_full = Eigen::VectorXd::Zero(N_DOF);
+            }
+
+
+
+            // if(current_frequency < 1000) // we were too slow
+            // {
+            //     int skipped_samples = static_cast<int>(1000.0 / current_frequency);
+
+            //     for(int i = 0; i < skipped_samples; i++)
+            //     {
+            //         if (invalid_counter < MAX_INVALID_COUNT)
+            //         {
+            //             invalid_counter++;
+            //             RCLCPP_WARN(get_node()->get_logger(), "No valid MPC data (%d/%d). Using previous torques.", invalid_counter, MAX_INVALID_COUNT);
+            //         }
+            //         else
+            //         {
+            //             RCLCPP_ERROR(get_node()->get_logger(), "No valid MPC data %d times. Stopping the controller.", MAX_INVALID_COUNT);
+            //             tau_full = Eigen::VectorXd::Zero(N_DOF);
+            //             invalid_counter = 0;
+            //             mpc_started = false;
+            //         }
+            //     }
+            // }
+            // else
+            // {
+            //     invalid_counter = 0;
+            // }
+
             #ifdef SIMULATION_MODE
             //controller.simulateModelRK4(state, tau_full.data(), Ts);
             #endif
+            controller.simulateModelRK4(state, tau_full.data(), Ts);
         }
         else
         {
             tau_full = Eigen::VectorXd::Zero(N_DOF);
-            // if(use_ekf && use_lowpass_filter)
-            // {
-            //     ekf.predict(tau_full.data(), state);
-            //     lowpass_filter.run(x_filtered_ekf_ptr);
-            // }
-            // else if(use_lowpass_filter)
-            // {
-            //     lowpass_filter.run(state); // updates data from x_filtered_ptr
-            // }
-            // else if(use_ekf)
-            // {
-            //     ekf.predict(tau_full.data(), state);
-            // }
         }
 
         return controller_interface::return_type::OK;
     }
-#endif
 
     CallbackReturn ModelPredictiveControllerCasadi::on_configure(
         const rclcpp_lifecycle::State & /*previous_state*/)
@@ -398,8 +191,8 @@ namespace franka_example_controllers
 
         RCLCPP_INFO(get_node()->get_logger(), "Configuring MPC controller for %s arm", arm_id_.c_str());
 
-        subscription_ = get_node()->create_subscription<mpc_interfaces::msg::ControlArray>(
-            "topic", 10, std::bind(&ModelPredictiveControllerCasadi::topic_callback, this, _1));
+        // subscription_ = get_node()->create_subscription<mpc_interfaces::msg::ControlArray>(
+        //     "topic", 10, std::bind(&ModelPredictiveControllerCasadi::topic_callback, this, _1));
 
         // RCLCPP_INFO(get_node()->get_logger(), "Subscribed to topic 'topic'");
 
@@ -508,12 +301,12 @@ namespace franka_example_controllers
         shm.close_semaphores();
     }
 
-    void ModelPredictiveControllerCasadi::topic_callback(const mpc_interfaces::msg::ControlArray & msg)
-    {
-        Eigen::Map<const Eigen::VectorXd> u_k(msg.control_array.data(), msg.control_array.size());
-        RCUTILS_LOG_WARN("Received control array: [%f, %f, %f, %f, %f, %f]",
-                        u_k[0], u_k[1], u_k[2], u_k[3], u_k[4], u_k[5]);
-    }
+    // void ModelPredictiveControllerCasadi::topic_callback(const mpc_interfaces::msg::ControlArray & msg)
+    // {
+    //     Eigen::Map<const Eigen::VectorXd> u_k(msg.control_array.data(), msg.control_array.size());
+    //     RCUTILS_LOG_WARN("Received control array: [%f, %f, %f, %f, %f, %f]",
+    //                     u_k[0], u_k[1], u_k[2], u_k[3], u_k[4], u_k[5]);
+    // }
 
     void ModelPredictiveControllerCasadi::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                     std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
@@ -570,10 +363,12 @@ namespace franka_example_controllers
         #endif
         traj_len = controller.get_traj_data_real_len();
         N_step = controller.get_N_step();
-        
-        current_trajectory = controller.get_trajectory();
+
         controller.set_planner_mode(use_planner);
         controller.update_mpc_weights();
+
+        solver_steps = controller.get_traj_step();
+        current_trajectory = controller.get_trajectory();
         traj_len = controller.get_traj_data_real_len();
 
         #ifndef SIMULATION_MODE
@@ -591,7 +386,7 @@ namespace franka_example_controllers
         if(use_noise)
         {
             Eigen::Map<Eigen::VectorXd> state_eig(state, 2 * N_DOF);
-            x_measured << state_eig + generateNoiseVector(2*N_DOF, Ts, mean_noise_amplitude);
+            x_measured = state_eig + generateNoiseVector(2*N_DOF, Ts, mean_noise_amplitude);
         }
         else
         {
@@ -633,32 +428,17 @@ namespace franka_example_controllers
         }
         // without previous data, we cannot filter
 
+        tau_full = controller.solveMPC(x_filtered.data());
+        controller.set_traj_count(0);
+        tau_full = controller.solveMPC(x_filtered.data());
+        int8_t readonly_mode = 1;
+
         shm.write("read_traj_length", &traj_len);
+        shm.write("readonly_mode", &readonly_mode);
 
-        tau_full_promise = std::promise<Eigen::VectorXd>();
-        tau_full_future = tau_full_promise.get_future(); // Create new 
-        boost::asio::post(thread_pool, [this, x_filtered]()
-                                     {
-            Eigen::VectorXd tau_full_temp = controller.solveMPC(x_measured.data());
-            mpc_started = true;
-            first_torque_read = false;
-            int8_t readonly_mode = 1;
-
-            shm.write("readonly_mode", &readonly_mode);
-            shm.write("read_state_data_full", x_filtered.data(), global_traj_count);
-            shm.write("read_control_data_full", tau_full.data(), global_traj_count);
-            shm.write("read_traj_data_full", current_trajectory->col(0).data(), global_traj_count);
-            shm.write("read_frequency_full", &current_frequency, global_traj_count);
-            shm.post_semaphore("shm_changed_semaphore");
-
-            if(global_traj_count < traj_len)
-                global_traj_count++;
-
-            RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC started");
-            tau_full_promise.set_value(tau_full_temp); // Fulfill the promise
-            });
-
-        RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC started!");
+        mpc_started = true;
+        first_torque_read = false;
+        controller.set_traj_count(0);
     }
 
     void ModelPredictiveControllerCasadi::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
@@ -763,6 +543,33 @@ namespace franka_example_controllers
         return jsonData;
     }
 
+    Eigen::VectorXd ModelPredictiveControllerCasadi::filter_x_measured()
+    {
+        Eigen::VectorXd x_filtered;
+        if(use_ekf && use_lowpass_filter)
+        {
+            ekf.predict(tau_full.data(), x_measured.data());
+            lowpass_filter.run(x_filtered_ekf_ptr);
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
+        }
+        else if(use_lowpass_filter)
+        {
+            lowpass_filter.run(x_measured.data()); // updates data from x_filtered_ptr
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
+        }
+        else if(use_ekf)
+        {
+            ekf.predict(tau_full.data(), x_measured.data());
+            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
+        }
+        else
+        {
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), 2 * N_DOF);
+        }
+        return x_filtered;
+    }
+
     #ifdef SIMULATION_MODE
     // Function to generate an Eigen vector of white noise
     Eigen::VectorXd ModelPredictiveControllerCasadi::generateNoiseVector(int n, double Ts, double mean_noise_amplitude) {
@@ -785,6 +592,13 @@ namespace franka_example_controllers
         return white_noise; // Return the generated noise vector
     }
     #endif
+
+    void ModelPredictiveControllerCasadi::solve()
+    {
+        timer_mpc_solver.tic();
+        tau_full = controller.solveMPC(x_filtered.data());
+        timer_mpc_solver.toc();
+    }
 
 } // namespace franka_example_controllers
 #include "pluginlib/class_list_macros.hpp"

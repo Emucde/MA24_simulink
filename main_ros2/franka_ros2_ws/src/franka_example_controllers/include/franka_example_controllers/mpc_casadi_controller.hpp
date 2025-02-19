@@ -104,6 +104,7 @@ namespace franka_example_controllers
         controller_interface::return_type update(const rclcpp::Time &time,
                                                  const rclcpp::Duration &period) override;
 
+        void solve();
     private:
         std::string arm_id_;
         const int num_joints = N_DOF;
@@ -125,12 +126,14 @@ namespace franka_example_controllers
         #ifdef SIMULATION_MODE
         bool use_noise=false;
         double mean_noise_amplitude = 0;
+        int solver_steps = 1;
+        int solver_step_counter = 0;
         #endif
         CasadiController controller = CasadiController(urdf_filename, casadi_mpc_config_filename, tcp_frame_name, use_gravity, use_planner);
         Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(num_joints);
-        Eigen::VectorXd tau_prev = Eigen::VectorXd::Zero(num_joints);
         Eigen::VectorXd x_prev = Eigen::VectorXd::Zero(2*num_joints);
         Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(2*num_joints);
+        Eigen::VectorXd x_filtered = Eigen::VectorXd::Zero(2*num_joints);
         double* x_filtered_ekf_ptr = x_measured.data();
         double* x_filtered_lowpass_ptr = x_measured.data();
         double* u_next_ptr = controller.get_u_next();
@@ -144,10 +147,11 @@ namespace franka_example_controllers
         CasadiEKF ekf = CasadiEKF(ekf_config_filename);
         SignalFilter lowpass_filter = SignalFilter(num_joints, Ts, state, 400, 400);
 
+        ErrorFlag error_flag = ErrorFlag::NO_ERROR;
+
         boost::asio::thread_pool thread_pool=1; //thread pool with 1 thread
         std::promise<Eigen::VectorXd> tau_full_promise; // Promise for async result
         std::future<Eigen::VectorXd> tau_full_future = tau_full_promise.get_future();   // Future to retrieve result
-        ErrorFlag error_flag = ErrorFlag::NO_ERROR;
 
         robot_config_t robot_config = get_robot_config();
         casadi_uint traj_len = controller.get_traj_data_real_len();
@@ -161,7 +165,8 @@ namespace franka_example_controllers
             {"read_traj_data_full", 19 * sizeof(casadi_real), traj_len},
             {"read_frequency_full", sizeof(casadi_real), traj_len},
             {"read_state_data_full", sizeof(casadi_real) * robot_config.nx, traj_len},
-            {"read_control_data_full", sizeof(casadi_real) * robot_config.nq, traj_len}};
+            {"read_control_data_full", sizeof(casadi_real) * robot_config.nq, traj_len},
+            {"data_from_python", sizeof(casadi_real) * robot_config.nq, 1}};
 
         const std::vector<std::string> sem_readwrite_names = {
             "shm_changed_semaphore",
@@ -174,7 +179,7 @@ namespace franka_example_controllers
 
         const Eigen::MatrixXd *current_trajectory;
 
-        rclcpp::Subscription<mpc_interfaces::msg::ControlArray>::SharedPtr subscription_;
+        // rclcpp::Subscription<mpc_interfaces::msg::ControlArray>::SharedPtr subscription_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr reset_mpc_service_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr stop_mpc_service_;
@@ -183,7 +188,7 @@ namespace franka_example_controllers
 
         void open_shared_memories();
         void close_shared_memories();
-        void topic_callback(const mpc_interfaces::msg::ControlArray & msg);
+        // void topic_callback(const mpc_interfaces::msg::ControlArray & msg);
         void start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
                        std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response);
         void reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
@@ -196,6 +201,7 @@ namespace franka_example_controllers
                         std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Response> response);
         nlohmann::json read_config(std::string file_path);
 
+        Eigen::VectorXd filter_x_measured();
         #ifdef SIMULATION_MODE
         Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude);
         #endif
