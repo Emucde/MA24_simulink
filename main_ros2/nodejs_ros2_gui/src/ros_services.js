@@ -100,7 +100,7 @@ async function switch_control(old_control_name, new_control_name) {
 
 async function switch_casadi_mpc(mpc_type) {
     const client = node.createClient('mpc_interfaces/srv/CasadiMPCTypeCommand', '/mpc_casadi_controller/mpc_switch_service');
-    return callService(client, { mpc_type: mpc_type });
+    return callService(client, { mpc_type: BigInt(mpc_type) });
 }
 
 async function activate_control(new_control_name) {
@@ -197,7 +197,8 @@ async function get_controller_info() {
     var controller_active_states = response.controller.map(controller => controller.state);
     var active_controller_idx = controller_active_states.findIndex(state => state === 'active');
     var active_controller_name = controller_names[active_controller_idx];
-    return { controller_names, controller_active_states, active_controller_idx, active_controller_name, ok: true };
+    var name = controller_names[active_controller_idx];
+    return { controller_names, controller_active_states, active_controller_idx, active_controller_name, ok: true, name: name };
 }
 
 module.exports = { restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, activate_control, get_controller_info, objectToString };

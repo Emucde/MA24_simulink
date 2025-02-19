@@ -62,6 +62,7 @@ function start() {
         const responseElement = document.getElementById('response');
         if (data.status === 'success') {
             result = data.result;
+            document.getElementById("status").style.backgroundColor="green";
             if (result.name == "traj_names") {
                 /*
                 add trajectories to the dropdown menu
@@ -81,6 +82,23 @@ function start() {
                 var a_iframe_plot = document.querySelector('a[_target=iframe_plot1]')
                 a_iframe_plot.textContent = result.trajectories[0];
                 change_button_positions();
+            }
+            else if (result.name == "casadi_mpcs") {
+                /*
+                add mpc types to the dropdown menu
+                <select id="casadi_mpcs">
+                    <option value="1">mpc1</option>
+                    <option value="2">mpc2</option>
+                </select>
+                */
+                const mpcSelect = document.getElementById('casadi_mpcs');
+                mpcSelect.innerHTML = '';
+                for (let i = 0; i < result.mpcs.length; i++) {
+                    const option = document.createElement('option');
+                    option.value = i; // starts at 1 !!
+                    option.textContent = result.mpcs[i];
+                    mpcSelect.appendChild(option);
+                }
             }
             else{
                 responseElement.textContent = `${result.name}: ${result.status}`;
@@ -107,6 +125,7 @@ function start() {
             }
         } else {
             responseElement.textContent = `Error: ${data.error}`;
+            document.getElementById("status").style.backgroundColor="red";
         }
     };
 }
@@ -115,14 +134,17 @@ document.getElementById('start').addEventListener('click', () => {
     var traj_num = get_trajectory();
     var active_controller_name = get_controller();
     var mpc_type = get_mpc();
+    document.getElementById("home_main").classList.remove("hide");
     ws.send(JSON.stringify({ command: 'start', controller_name: active_controller_name, mpc_type: mpc_type, traj_num: traj_num}));
 });
 
 document.getElementById('reset').addEventListener('click', () => {
+    document.getElementById("home_main").classList.add("hide");
     ws.send(JSON.stringify({ command: 'reset' }));
 });
 
 document.getElementById('stop').addEventListener('click', () => {
+    document.getElementById("home_main").classList.add("hide");
     ws.send(JSON.stringify({ command: 'stop' }));
 });
 

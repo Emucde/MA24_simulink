@@ -27,15 +27,16 @@
             <div class="status-indicator" id="labconncon"></div>
             <span id="labcon">ROS2 disconnected</span>
         </div>
+        <div class="status-item">
+            <div class="status-indicator" id="status" style="background-color: green;"></div>
+            <span id="statuscon">Status</span>
+        </div>
     </div>
     <br>
     <br>
     <div class="float_left">
         <p> Response: </p>
         <p class="margin_left" id="response" class="response"></p>
-        <div id="home_main" class="status-item hide">
-            <div class="status-indicator" id="homingdiv" style="animation: spin 1s infinite;"></div>
-        </div>
     </div>
     <br>
     <br>
@@ -47,6 +48,9 @@
         <button id="home">Home</button>
         <p id="homedelay_p" class="margin_left">Home Delay (ms):</p>
         <input class="margin_left delay_input" type="text" id="home_delay" value="5000">
+        <div id="home_main" class="status-item hide">
+            <div class="status-indicator" id="homingdiv" style="animation: spin 1s infinite;"></div>
+        </div>
     </div>
     <br><br>
     <select id="controller" onchange="controller_change()">

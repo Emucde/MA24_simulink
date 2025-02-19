@@ -361,6 +361,21 @@ void CasadiController::reset(const casadi_real *const x_k_in)
     tau_full_prev = Eigen::VectorXd::Zero(nq);
 }
 
+void CasadiController::reset()
+{
+    const casadi_real *const x_k_in = trajectory_generator.get_traj_x0_init()->data();
+    active_mpc->reset(x_k_in);
+    tau_full_prev = Eigen::VectorXd::Zero(nq);
+}
+
+Eigen::VectorXd CasadiController::get_traj_x0_red_init(casadi_uint traj_select)
+{
+    Eigen::VectorXd x0_init_ptr = *trajectory_generator.get_traj_file_x0_init(traj_select);
+    Eigen::VectorXd x0_init = Eigen::Map<Eigen::VectorXd>(x0_init_ptr.data(), nx);
+    Eigen::VectorXd x0_init_red = x0_init(n_x_indices);
+    return x0_init_red;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////// PRIVATE METHODS ///////////////////////////////////

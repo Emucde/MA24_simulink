@@ -67,15 +67,11 @@ namespace franka_example_controllers
         }
         x_measured = Eigen::Map<const Eigen::VectorXd>(state, 2 * N_DOF);
         #else
+        Eigen::Map<Eigen::VectorXd> state_eig(state, 2 * N_DOF);
         if(use_noise)
-        {
-            Eigen::Map<Eigen::VectorXd> state_eig(state, 2 * N_DOF);
             x_measured = state_eig + generateNoiseVector(2*N_DOF, Ts, mean_noise_amplitude);
-        }
         else
-        {
-            x_measured = Eigen::Map<const Eigen::VectorXd>(state, 2 * N_DOF);
-        }
+            x_measured = state_eig;
         #endif
 
         x_filtered = filter_x_measured();
@@ -92,24 +88,14 @@ namespace franka_example_controllers
 
         if (mpc_started)
         {
-            // timer_mpc_solver.tic();
-            // tau_full = controller.solveMPC(x_filtered.data());
-            // timer_mpc_solver.toc();
-
             if(solver_step_counter % solver_steps == 0)
-            {
                 std::async(std::launch::async, &ModelPredictiveControllerCasadi::solve, this);
-            }
             
             if(solver_step_counter >= 1000)
-            {
                 solver_step_counter = 0;
-            }
             solver_step_counter++;
 
-
             current_frequency = timer_mpc_solver.get_frequency()*solver_steps;
-
             shm.write("read_state_data_full", x_measured.data(), global_traj_count);
             shm.write("read_control_data_full", tau_full.data(), global_traj_count);
             shm.write("read_traj_data_full", current_trajectory->col(global_traj_count).data(), global_traj_count);
@@ -144,37 +130,9 @@ namespace franka_example_controllers
                 tau_full = Eigen::VectorXd::Zero(N_DOF);
             }
 
-
-
-            // if(current_frequency < 1000) // we were too slow
-            // {
-            //     int skipped_samples = static_cast<int>(1000.0 / current_frequency);
-
-            //     for(int i = 0; i < skipped_samples; i++)
-            //     {
-            //         if (invalid_counter < MAX_INVALID_COUNT)
-            //         {
-            //             invalid_counter++;
-            //             RCLCPP_WARN(get_node()->get_logger(), "No valid MPC data (%d/%d). Using previous torques.", invalid_counter, MAX_INVALID_COUNT);
-            //         }
-            //         else
-            //         {
-            //             RCLCPP_ERROR(get_node()->get_logger(), "No valid MPC data %d times. Stopping the controller.", MAX_INVALID_COUNT);
-            //             tau_full = Eigen::VectorXd::Zero(N_DOF);
-            //             invalid_counter = 0;
-            //             mpc_started = false;
-            //         }
-            //     }
-            // }
-            // else
-            // {
-            //     invalid_counter = 0;
-            // }
-
             #ifdef SIMULATION_MODE
-            //controller.simulateModelRK4(state, tau_full.data(), Ts);
-            #endif
             controller.simulateModelRK4(state, tau_full.data(), Ts);
+            #endif
         }
         else
         {
@@ -252,7 +210,9 @@ namespace franka_example_controllers
             return CallbackReturn::ERROR;
         }
 
-        controller.setActiveMPC(CasadiMPCType::MPC8);
+        timer_all.tic();
+        timer_mpc_solver.tic();
+
         RCLCPP_INFO(get_node()->get_logger(), "MPC controller initialized");
 
         return CallbackReturn::SUCCESS;
@@ -324,109 +284,15 @@ namespace franka_example_controllers
 
         response->status = "start flag set";
 
-        // Update general configuration
-        nlohmann::json general_config = read_config(general_config_filename);
-        use_lowpass_filter = general_config["use_lowpass_filter"];
-        use_ekf = general_config["use_ekf"];
-        traj_select = general_config["trajectory_selection"];
-        double T_traj_start = general_config["transient_traj_start_time"];
-        double T_traj_dur = general_config["transient_traj_duration"];
-        double T_traj_end = general_config["transient_traj_end_time"];
-        bool use_planner = general_config["use_casadi_planner"];
-        double omega_c_q = general_config["lowpass_filter_omega_c_q"];
-        double omega_c_dq = general_config["lowpass_filter_omega_c_dq"];
-
-        auto torque_mapper_settings = general_config["torque_mapper_settings"];
-        FullSystemTorqueMapper::Config torque_mapper_config;
-        torque_mapper_config.K_d = Eigen::VectorXd::Map(torque_mapper_settings["K_d"].get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
-        torque_mapper_config.D_d = Eigen::VectorXd::Map(torque_mapper_settings["D_d"].get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
-        torque_mapper_config.K_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["K_d_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
-        torque_mapper_config.D_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["D_d_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
-        torque_mapper_config.q_ref_nq = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq"].get<std::vector<double>>().data(), robot_config.nq);
-        torque_mapper_config.q_ref_nq_fixed = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed);
-        torque_mapper_config.torque_limit = torque_mapper_settings["torque_limit"];
-
-        controller.set_torque_mapper_config(torque_mapper_config);
-
-        controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
-
-        #ifndef SIMULATION_MODE
-        controller.init_file_trajectory(traj_select, state, T_traj_start, T_traj_dur, T_traj_end);
-        #else
-        mean_noise_amplitude = general_config["mean_noise_amplitude"];
-        use_noise = general_config["use_noise"];
-        Eigen::VectorXd q_0_ref = Eigen::Map<const Eigen::VectorXd>(robot_config.q_0_ref, N_DOF);
-        Eigen::VectorXd q_0_p_ref = Eigen::Map<const Eigen::VectorXd>(robot_config.q_0_p_ref, N_DOF);
-        Eigen::VectorXd x0_ref = Eigen::VectorXd::Zero(2 * N_DOF);
-        x0_ref << q_0_ref, q_0_p_ref;
-        controller.init_file_trajectory(traj_select, x0_ref.data(), T_traj_start, T_traj_dur, T_traj_end);
-        #endif
-        traj_len = controller.get_traj_data_real_len();
-        N_step = controller.get_N_step();
-
-        controller.set_planner_mode(use_planner);
-        controller.update_mpc_weights();
-
-        solver_steps = controller.get_traj_step();
-        current_trajectory = controller.get_trajectory();
-        traj_len = controller.get_traj_data_real_len();
-
         #ifndef SIMULATION_MODE
         for (int i = 0; i < 2 * N_DOF; ++i)
-        {
             state[i] = state_interfaces_[i].get_value();
-        }
-        #else
-        const double* x0_init = controller.get_traj_x0_init(traj_select);
-        for (int i = 0; i < 2 * N_DOF; ++i)
-        {
-            state[i] = x0_init[i];
-        }
-
-        if(use_noise)
-        {
-            Eigen::Map<Eigen::VectorXd> state_eig(state, 2 * N_DOF);
-            x_measured = state_eig + generateNoiseVector(2*N_DOF, Ts, mean_noise_amplitude);
-        }
-        else
-        {
-            x_measured = Eigen::Map<const Eigen::VectorXd>(state, 2 * N_DOF);
-        }
+        x_measured = Eigen::Map<const Eigen::VectorXd>(state, 2 * N_DOF);
         #endif
 
-        Eigen::VectorXd x_filtered;
+        init_controller();
 
-        if(use_ekf && use_lowpass_filter)
-        {
-            ekf.update_config();
-            lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
-            x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
-            ekf.initialize(x_measured.data());
-            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
-        }
-        else if(use_ekf)
-        {
-            ekf.update_config();
-            ekf.initialize(x_measured.data());
-            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
-            x_filtered_lowpass_ptr = x_filtered_ekf_ptr;
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
-        }
-        else if(use_lowpass_filter)
-        {
-            lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
-            x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
-            x_filtered_ekf_ptr = x_filtered_lowpass_ptr;
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
-        }
-        else
-        {
-            x_filtered_ekf_ptr = x_measured.data();
-            x_filtered_lowpass_ptr = x_measured.data();
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), 2 * N_DOF);
-        }
-        // without previous data, we cannot filter
+        filter_x_measured(); // uses x_measured
 
         tau_full = controller.solveMPC(x_filtered.data());
         controller.set_traj_count(0);
@@ -455,17 +321,7 @@ namespace franka_example_controllers
         shm.write("data_from_simulink_stop", &flags.stop);
         shm.write("data_from_simulink_reset", &flags.reset);
 
-        #ifdef SIMULATION_MODE
-        const double* x0_init = controller.get_traj_x0_init(traj_select);
-        controller.reset(x0_init);
-        for(int i = 0; i < 2 * N_DOF; ++i)
-        {
-            state[i] = x0_init[i];
-            tau_full = Eigen::VectorXd::Zero(N_DOF);
-        }
-        #endif
-
-        global_traj_count = 0;
+        reset_mpc_trajectory();
 
         response->status = "reset flag set";
         mpc_started = false;
@@ -498,18 +354,8 @@ namespace franka_example_controllers
     {
         traj_select = request->traj_select; // it is later used at start_mpc() in init_trajectory
 
-        // shm_flags flags = {
-        //     0, // start
-        //     1, // reset
-        //     0, // stop
-        //     0  // torques_valid
-        // };
-
-        // shm.write("data_from_simulink_stop", &flags.stop);
-        // shm.write("data_from_simulink_reset", &flags.reset);
-        // shm.write("data_from_simulink_start", &flags.start);
-        // shm.post_semaphore("shm_changed_semaphore");
         controller.switch_traj(traj_select);
+        reset_mpc_trajectory();
 
         response->status = "trajectory " + std::to_string(traj_select) + " selected";
         mpc_started = false;
@@ -522,6 +368,7 @@ namespace franka_example_controllers
     {
         CasadiMPCType mpc_type = static_cast<CasadiMPCType>(request->mpc_type);
         controller.setActiveMPC(mpc_type);
+        reset_mpc_trajectory();
 
         response->status = "MPC type " + std::to_string(request->mpc_type) + " selected";
         std::string status_message = "Switched to Casadi " + casadi_mpctype_to_string(mpc_type);
@@ -598,6 +445,114 @@ namespace franka_example_controllers
         timer_mpc_solver.tic();
         tau_full = controller.solveMPC(x_filtered.data());
         timer_mpc_solver.toc();
+    }
+
+    void ModelPredictiveControllerCasadi::init_filter(double omega_c_q, double omega_c_dq)
+    {
+        if(use_ekf && use_lowpass_filter)
+        {
+            ekf.update_config();
+            lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
+            x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
+            ekf.initialize(x_measured.data());
+            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
+        }
+        else if(use_ekf)
+        {
+            ekf.update_config();
+            ekf.initialize(x_measured.data());
+            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
+            x_filtered_lowpass_ptr = x_filtered_ekf_ptr;
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
+        }
+        else if(use_lowpass_filter)
+        {
+            lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
+            x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
+            x_filtered_ekf_ptr = x_filtered_lowpass_ptr;
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
+        }
+        else
+        {
+            x_filtered_ekf_ptr = x_measured.data();
+            x_filtered_lowpass_ptr = x_measured.data();
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), 2 * N_DOF);
+        }
+        // without previous data, we cannot filter
+    }
+
+    void ModelPredictiveControllerCasadi::init_controller()
+    {
+        // Update general configuration
+        nlohmann::json general_config = read_config(general_config_filename);
+        use_lowpass_filter = general_config["use_lowpass_filter"];
+        use_ekf = general_config["use_ekf"];
+        // Is set by using the nodejs gui
+        // traj_select = general_config["trajectory_selection"];
+
+        bool use_planner = general_config["use_casadi_planner"];
+        double omega_c_q = general_config["lowpass_filter_omega_c_q"];
+        double omega_c_dq = general_config["lowpass_filter_omega_c_dq"];
+
+        //////// TORQUE MAPPER CONFIG ////////
+        auto torque_mapper_settings = general_config["torque_mapper_settings"];
+        FullSystemTorqueMapper::Config torque_mapper_config;
+        torque_mapper_config.K_d = Eigen::VectorXd::Map(torque_mapper_settings["K_d"].get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
+        torque_mapper_config.D_d = Eigen::VectorXd::Map(torque_mapper_settings["D_d"].get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
+        torque_mapper_config.K_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["K_d_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
+        torque_mapper_config.D_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["D_d_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
+        torque_mapper_config.q_ref_nq = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq"].get<std::vector<double>>().data(), robot_config.nq);
+        torque_mapper_config.q_ref_nq_fixed = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed);
+        torque_mapper_config.torque_limit = torque_mapper_settings["torque_limit"];
+        controller.set_torque_mapper_config(torque_mapper_config);
+
+        /////// SET ACTIVE MPC ///////
+        // Is set by using the nodejs gui
+        // controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
+
+        /////// INIT FILE TRAJECTORY ///////
+        double T_traj_start = general_config["transient_traj_start_time"];
+        double T_traj_dur = general_config["transient_traj_duration"];
+        double T_traj_end = general_config["transient_traj_end_time"];
+        controller.init_file_trajectory(traj_select, state, T_traj_start, T_traj_dur, T_traj_end);
+
+        traj_len = controller.get_traj_data_real_len();
+        N_step = controller.get_N_step();
+
+        controller.set_planner_mode(use_planner);
+        controller.update_mpc_weights();
+
+        solver_steps = controller.get_traj_step();
+        current_trajectory = controller.get_trajectory();
+        traj_len = controller.get_traj_data_real_len();
+
+        #ifdef SIMULATION_MODE
+        mean_noise_amplitude = general_config["mean_noise_amplitude"];
+        use_noise = general_config["use_noise"];
+        Eigen::Map<Eigen::VectorXd> state_eig(state, 2 * N_DOF);
+        if(use_noise)
+            x_measured = state_eig + generateNoiseVector(2*N_DOF, Ts, mean_noise_amplitude);
+        else
+            x_measured = state_eig;
+        #endif
+
+        init_filter(omega_c_q, omega_c_dq); // uses x_measured
+    }
+
+    void ModelPredictiveControllerCasadi::reset_mpc_trajectory()
+    {
+        Eigen::VectorXd x0_red_init = controller.get_traj_x0_red_init(traj_select);
+        controller.reset(x0_red_init.data());
+
+        #ifdef SIMULATION_MODE
+        const double *x0_init = controller.get_traj_x0_init(traj_select);
+        for(int i = 0; i < 2 * N_DOF; ++i)
+            state[i] = x0_init[i];
+        #endif
+
+        tau_full = Eigen::VectorXd::Zero(N_DOF);
+        global_traj_count = 0;
     }
 
 } // namespace franka_example_controllers

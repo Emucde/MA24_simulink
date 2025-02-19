@@ -1752,7 +1752,25 @@ def plot_trajectory(traj_data):
     plt.tight_layout()
     plt.show()
 
-def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, frep_per_Ta_step, param_robot):
+def generate_multiples(start, end):
+        # Start with the smallest power of 2 greater than or equal to start
+        current = 2 ** np.ceil(np.log2(start))
+        
+        # Generate powers of 2 going down to 0.25
+        multiples = [current]
+        while current / 2 >= 0.25:
+            current /= 2
+            multiples.insert(0, current)
+        
+        # Generate powers of 2 going up
+        current = multiples[-1]
+        while current * 2 <= end:
+            current *= 2
+            multiples.append(current)
+        
+        return np.array(multiples)
+
+def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, freq_per_Ta_step, param_robot):
     # detect nan in us and xs and set them to zero
     if np.isnan(us).any():
         print('Warning: NaN values detected in us array, set to zero!')
@@ -1814,7 +1832,23 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
 
     window_length = 301
     poly_order = 2
-    frep_per_Ta_step_mean = smooth_signal_savgol(frep_per_Ta_step, window_length, poly_order)
+    freq_per_Ta_step_mean = smooth_signal_savgol(freq_per_Ta_step, window_length, poly_order)
+
+    # calculate resulting controller frequency
+    dt = t[1] - t[0]
+    # the controller frequency must be a multiple of the frequency of the trajectory
+    # otherwise the trajectory is not followed exactly
+    # this means it cant be 3/dt, 2/dt 1/dt, 0.5/dt, 0.25/dt, 0.125/dt, ...
+    given_numbers = freq_per_Ta_step.copy()
+
+    Ts = 1/dt
+
+    given_numbers[given_numbers > Ts] = Ts * np.floor(given_numbers[given_numbers > Ts] / Ts)
+    numbers_gt0 = given_numbers[given_numbers > 0]
+    numbers_gt0[numbers_gt0 < Ts] = Ts / np.ceil(Ts / numbers_gt0[numbers_gt0 < Ts])
+    given_numbers[given_numbers > 0] = numbers_gt0
+
+    control_frequency = given_numbers
 
     for i in range(N):
         q[i] = xs[i, 0:n]
@@ -2060,11 +2094,11 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
                 'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(0,0,255)', 'rgb(255,0,0)', 'rgb(0,127,0)']}
     
     subplot20 = {'title': 'freq per Ta step (Hz)',
-                'sig_labels': ['frep_per_Ta_step', 'frep_per_Ta_step_mean'],
+                'sig_labels': ['control_frequency', 'freq_per_Ta_step', 'freq_per_Ta_step_mean'],
                 'sig_xdata': t,
-                'sig_ydata': [frep_per_Ta_step, frep_per_Ta_step_mean],
-                'sig_linestyles': ['-', '-'],
-                'sig_colors': ['rgb(255,255,17)', 'rgb(255,0,0)']}
+                'sig_ydata': [control_frequency, freq_per_Ta_step, freq_per_Ta_step_mean],
+                'sig_linestyles': ['-', '-', '-'],
+                'sig_colors': ['rgb(0,255,0)', 'rgb(255,255,17)', 'rgb(255,0,0)']}
     
     subplot21 = {'title': 'quat_err',
                 'sig_labels': ['quat_err_2', 'quat_err_3', 'quat_err_4'],

@@ -18,6 +18,9 @@ var active_controller_name = null;
 var enable_control = false;
 var ros_running = false;
 var traj_path = path.join(__dirname, '..', '..', '..', 'utils', 'matlab_init_general', 'param_traj_fr3_no_hand_6dof.m');
+var general_config_path = path.join(__dirname, '..', '..', '..', 'config_settings', 'general_settings.json');
+var general_config = require(general_config_path);
+var available_casadi_mpcs = general_config['available_casadi_mpc'];
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
@@ -94,19 +97,7 @@ async function check(result, checked_command, data)
             break;
         case 'switch_casadi_mpc':
             if (result.ok) {
-                switch(mpc_type) {
-                    case 0: status += 'Switched to Casadi MPC01 '; break;
-                    case 1: status += 'Switched to Casadi MPC6 '; break;
-                    case 2: status += 'Switched to Casadi MPC7 '; break;
-                    case 3: status += 'Switched to Casadi MPC8 '; break;
-                    case 4: status += 'Switched to Casadi MPC9 '; break;
-                    case 5: status += 'Switched to Casadi MPC10 '; break;
-                    case 6: status += 'Switched to Casadi MPC11 '; break;
-                    case 7: status += 'Switched to Casadi MPC12 '; break;
-                    case 8: status += 'Switched to Casadi MPC13 '; break;
-                    case 9: status += 'Switched to Casadi MPC14 '; break;
-                    default: status += 'Switched to Casadi MPC01 '; break;
-                }
+                status += 'Switched to Casadi ' + available_casadi_mpcs[data.mpc_type];
             }
             else
                 status += 'Error while switching Casadi MPC';
@@ -157,6 +148,12 @@ async function check(result, checked_command, data)
             else
                 status += 'Error while stopping controller: ' + result.status;
             name = 'ros_service';
+            break;
+        case 'update':
+            name = 'ros_service';
+            break;
+        default:
+            name = result.name;
             break;
     }
     return { ok: result.ok, status: status, name: name };
@@ -213,7 +210,7 @@ async function main() {
                             if (!log_check.ok)
                                 break;
 
-                            if(active_controller_name === 'mpc_casad_controller')
+                            if(active_controller_name === 'mpc_casadi_controller')
                             {
                                 result = await switch_casadi_mpc(data.mpc_type);
                                 log_check = await check(result, 'switch_casadi_mpc', data)
@@ -304,6 +301,9 @@ async function main() {
             .catch(err => {
                 console.error(err);
             });
+
+        // Send available Casadi MPCs
+        ws.send(JSON.stringify({ status: 'success', result: { name: 'casadi_mpcs', mpcs: available_casadi_mpcs } }));
     });
 
     function broadcast(message) {

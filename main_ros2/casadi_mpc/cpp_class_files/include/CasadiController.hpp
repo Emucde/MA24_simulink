@@ -126,6 +126,7 @@ public:
 
     void collinearity_weight_x(const casadi_real *const x_k_ndof_ptr);
     void reset(const casadi_real *const x_k_in);
+    void reset();
 
     // Getters and setters
     void setActiveMPC(CasadiMPCType mpc);
@@ -284,6 +285,8 @@ public:
     {
         return trajectory_generator.get_traj_file_x0_init(traj_select)->data();
     }
+
+    Eigen::VectorXd get_traj_x0_red_init(casadi_uint traj_select);
 
 private:
     // Private methods

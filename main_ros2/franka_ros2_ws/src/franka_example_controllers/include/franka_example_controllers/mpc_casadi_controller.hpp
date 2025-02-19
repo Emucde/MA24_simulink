@@ -205,6 +205,9 @@ namespace franka_example_controllers
         #ifdef SIMULATION_MODE
         Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude);
         #endif
+        void init_filter(double omega_c_q, double omega_c_dq);
+        void init_controller();
+        void reset_mpc_trajectory();
     };
 
     // #ifdef SIMULATION_MODE

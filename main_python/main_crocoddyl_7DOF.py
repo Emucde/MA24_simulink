@@ -516,7 +516,7 @@ try:
                     R_d_temp = quat2rotm_vec(q_d_temp).copy()
                     
                     transient_traj = {
-                        't': np.linspace(0, N_traj*Ts, N_traj),
+                        't': np.linspace(0, (N_traj - 1)*Ts, N_traj),
                         'N_traj': N_traj,
                         'p_d': read_traj_data_full[indices[:, None] + np.arange(3)].T,
                         'p_d_p': read_traj_data_full[indices[:, None] + np.arange(3, 6)].T,
@@ -571,7 +571,7 @@ try:
                     xs = np.zeros((N_traj, 2*n_dof))
                     us = np.zeros((N_traj, n_dof))
                     transient_traj = {
-                        't': np.linspace(0, N_traj*Ts, N_traj),
+                        't': np.linspace(0, (N_traj - 1)*Ts, N_traj),
                         'N_traj': N_traj,
                         'p_d': np.zeros((3, N_traj)),
                         'p_d_p': np.zeros((3, N_traj)),
