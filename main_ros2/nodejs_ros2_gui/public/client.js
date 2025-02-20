@@ -205,10 +205,14 @@ function controller_change()
 {
     var current_element = document.querySelector('#controller');
     var active_controller_name = current_element.value;
+    if(active_controller_name != 'mpc_casadi_controller')
+      document.getElementById("casadi_mpcs").classList.add("hide");
+    if(active_controller_name != 'workspace_controller')
+      document.getElementById("workspace_controller").classList.add("hide");
     if(active_controller_name == 'mpc_casadi_controller')
       document.getElementById("casadi_mpcs").classList.remove("hide");
-    else
-      document.getElementById("casadi_mpcs").classList.add("hide");
+    if(active_controller_name == 'workspace_controller')
+      document.getElementById("workspace_controller").classList.remove("hide");
 }
 
 function get_mpc(current_element) {

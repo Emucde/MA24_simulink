@@ -103,6 +103,7 @@ add_library(
         ${PROJECT_NAME}
         SHARED
         src/gravity_compensation_example_controller.cpp
+        src/conventional_workspace_controller.cpp
         src/mpc_pinocchio_controller.cpp
         src/mpc_casadi_controller.cpp
         src/shared_memory.cpp
@@ -163,6 +164,16 @@ find_library(SIGNAL_FILTER_LIBRARY
 
 find_library(FULL_SYSTEM_TORQUE_MAPPER_LIB
     NAMES FullSystemTorqueMapper
+    HINTS "${MPC_LIB_DIR_REL}"
+)
+
+find_library(CROCODDYLCONTROLLER_LIB
+    NAMES CrocoddylController
+    HINTS "${MPC_LIB_DIR_REL}"
+)
+
+find_library(WORKSPACECONTROLLER_LIB
+    NAMES WorkspaceController
     HINTS "${MPC_LIB_DIR_REL}"
 )
 

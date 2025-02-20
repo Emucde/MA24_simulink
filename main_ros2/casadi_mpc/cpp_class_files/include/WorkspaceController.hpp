@@ -84,7 +84,20 @@ public:
                         const std::string &tcp_frame_name,
                         bool use_gravity);
 
+    ControllerType get_classic_controller_type(const std::string &controller_type_str);
+    std::string get_classic_controller_string(ControllerType controller_type);
     void switchController(ControllerType type);
+
+    void increase_traj_count()
+    {
+        active_controller->traj_count++;
+    }
+
+    void set_traj_count(casadi_uint new_traj_count)
+    {
+        active_controller->traj_count = new_traj_count;
+    }
+
     void switch_traj(uint traj_select)
     {
         trajectory_generator.switch_traj(traj_select);
@@ -92,6 +105,12 @@ public:
     void simulateModelEuler(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
     void simulateModelRK4(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
     Eigen::VectorXd update(const double *const x_nq);
+    void reset()
+    {
+        active_controller->traj_count = 0;
+        tau_full_prev = Eigen::VectorXd::Zero(nq);
+        inverse_dyn_controller.init = true;
+    }
 
     ControllerSettings init_default_controller_settings();
     RegularizationSettings init_default_regularization_settings();
@@ -127,6 +146,11 @@ public:
         return error_flag;
     }
 
+    const Eigen::MatrixXd *get_trajectory()
+    {
+        return trajectory_generator.get_traj_data();
+    }
+
     const double *get_act_traj_data()
     {
         uint traj_count = active_controller->traj_count;
@@ -158,10 +182,17 @@ public:
         active_controller->set_controller_settings(controller_settings);
     }
 
+    FullSystemTorqueMapper* get_torque_mapper()
+    {
+        return &torque_mapper;
+    }
+
     void set_torque_mapper_config(FullSystemTorqueMapper::Config &config)
     {
         torque_mapper.setConfiguration(config);
     }
+
+    Eigen::VectorXd get_traj_x0_red_init(casadi_uint traj_select);
 
 private:
     const std::string urdf_path;
@@ -223,6 +254,5 @@ private:
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
     Eigen::VectorXd tau_full_prev = Eigen::VectorXd::Zero(nq);
     double tau_max_jump = 5.0; // Maximum jump in torque (Nm/dt)
-
     void error_check(Eigen::VectorXd &tau_full);
 };

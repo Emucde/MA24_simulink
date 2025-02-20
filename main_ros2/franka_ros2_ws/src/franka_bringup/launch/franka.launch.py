@@ -62,6 +62,7 @@ def generate_launch_description():
         "gravity_compensation_example_controller",
         "mpc_pinocchio_controller",
         "mpc_casadi_controller",
+        "conventional_workspace_controller",
         "move_to_start_example_controller"
     ]
 

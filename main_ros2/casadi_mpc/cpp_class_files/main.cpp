@@ -114,22 +114,6 @@ MainControllerType get_controller_type(const std::string &controller_type_str)
     }
 }
 
-// get controller type of classic controller
-ControllerType get_classic_controller_type(const std::string &controller_type_str)
-{
-    if (controller_type_str == "PD")
-        return ControllerType::PDPlus;
-    else if (controller_type_str == "CT")
-        return ControllerType::CT;
-    else if (controller_type_str == "ID")
-        return ControllerType::InverseDynamics;
-    else
-    {
-        throw std::invalid_argument("Invalid controller type");
-        return ControllerType::PDPlus;
-    }
-}
-
 // get controller type of casadi controller
 
 
@@ -212,7 +196,7 @@ int main()
     MainControllerType controller_type = get_controller_type(general_config["default_controller"]);
     casadi_controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
     casadi_controller.update_mpc_weights();
-    classic_controller.switchController(get_classic_controller_type(general_config["default_classic_controller"]));
+    classic_controller.switchController(classic_controller.get_classic_controller_type(general_config["default_classic_controller"]));
     crocoddyl_controller.setActiveMPC(get_crocoddyl_controller_type(general_config["default_crocoddyl_mpc"]));
 
     if (controller_type == MainControllerType::Casadi)

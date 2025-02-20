@@ -2,7 +2,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const express = require('express');
 const path = require('path');
-const { restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, activate_control, get_controller_info, objectToString } = require('./ros_services');
+const { restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, activate_control, get_controller_info, objectToString } = require('./ros_services');
 const { searchTrajectoryNames } = require('./search_m_file');
 
 // Express setup to serve HTML files
@@ -21,6 +21,7 @@ var traj_path = path.join(__dirname, '..', '..', '..', 'utils', 'matlab_init_gen
 var general_config_path = path.join(__dirname, '..', '..', '..', 'config_settings', 'general_settings.json');
 var general_config = require(general_config_path);
 var available_casadi_mpcs = general_config['available_casadi_mpc'];
+var available_workspace_controller = general_config['available_classic_controller'];
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
@@ -98,6 +99,14 @@ async function check(result, checked_command, data)
         case 'switch_casadi_mpc':
             if (result.ok) {
                 status += 'Switched to Casadi ' + available_casadi_mpcs[data.mpc_type];
+            }
+            else
+                status += 'Error while switching Casadi MPC';
+            name = 'ros_service';
+            break;
+        case 'switch_workspace_controller':
+            if (result.ok) {
+                status += 'Switched to ' + available_workspace_controller[data.workspace_controller_type] + ' Workspace Controller';
             }
             else
                 status += 'Error while switching Casadi MPC';
@@ -214,6 +223,14 @@ async function main() {
                             {
                                 result = await switch_casadi_mpc(data.mpc_type);
                                 log_check = await check(result, 'switch_casadi_mpc', data)
+                                if (!log_check.ok)
+                                    break;
+                            }
+
+                            if(active_controller_name === 'conventional_workspace_controller')
+                            {
+                                result = await switch_workspace_controller(data.workspace_controller_type);
+                                log_check = await check(result, 'switch_workspace_controller', data)
                                 if (!log_check.ok)
                                     break;
                             }

@@ -20,6 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SimpleCommand.srv"
   "srv/TrajectoryCommand.srv"
   "srv/CasadiMPCTypeCommand.srv"
+  "srv/WorkspaceControllerTypeCommand.srv"
   DEPENDENCIES geometry_msgs
 )
 

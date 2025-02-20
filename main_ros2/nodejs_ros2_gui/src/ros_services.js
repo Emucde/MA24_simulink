@@ -103,6 +103,11 @@ async function switch_casadi_mpc(mpc_type) {
     return callService(client, { mpc_type: BigInt(mpc_type) });
 }
 
+async function switch_workspace_controller(workspace_controller_type) {
+    const client = node.createClient('mpc_interfaces/srv/WorkspaceControllerTypeCommand', '/conventional_workspace_controller/workspace_controller_switch_service');
+    return callService(client, { workspace_controller_type: BigInt(workspace_controller_type) });
+}
+
 async function activate_control(new_control_name) {
     const client = node.createClient('controller_manager_msgs/srv/SwitchController', 'controller_manager/switch_controller');
     return callService(client, { activate_controllers: [new_control_name], strictness: 2 });
@@ -201,4 +206,4 @@ async function get_controller_info() {
     return { controller_names, controller_active_states, active_controller_idx, active_controller_name, ok: true, name: name };
 }
 
-module.exports = { restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, activate_control, get_controller_info, objectToString };
+module.exports = { restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, activate_control, get_controller_info, objectToString };

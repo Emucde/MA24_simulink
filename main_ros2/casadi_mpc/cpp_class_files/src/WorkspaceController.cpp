@@ -439,6 +439,35 @@ Eigen::VectorXd WorkspaceController::PDPlusController::control(const Eigen::Vect
     return tau;
 }
 
+ControllerType WorkspaceController::get_classic_controller_type(const std::string &controller_type_str)
+{
+    if (controller_type_str == "PD")
+        return ControllerType::PDPlus;
+    else if (controller_type_str == "CT")
+        return ControllerType::CT;
+    else if (controller_type_str == "ID")
+        return ControllerType::InverseDynamics;
+    else
+    {
+        throw std::invalid_argument("Invalid controller type");
+        return ControllerType::PDPlus;
+    }
+}
+
+std::string WorkspaceController::get_classic_controller_string(ControllerType controller_type)
+{
+    switch (controller_type)
+    {
+        case ControllerType::PDPlus:
+            return "PD";
+        case ControllerType::CT:
+            return "CT";
+        case ControllerType::InverseDynamics:
+            return "ID";
+        default:
+            throw std::invalid_argument("Invalid controller type");
+    }
+}
 
 void WorkspaceController::switchController(ControllerType type)
 {
@@ -550,6 +579,13 @@ RegularizationSettings WorkspaceController::init_default_regularization_settings
     return regularization_settings_default;
 }
 
+Eigen::VectorXd WorkspaceController::get_traj_x0_red_init(casadi_uint traj_select)
+{
+    Eigen::VectorXd x0_init_ptr = *trajectory_generator.get_traj_file_x0_init(traj_select);
+    Eigen::VectorXd x0_init = Eigen::Map<Eigen::VectorXd>(x0_init_ptr.data(), nx);
+    Eigen::VectorXd x0_init_red = x0_init(n_x_indices);
+    return x0_init_red;
+}
 
 void WorkspaceController::error_check(Eigen::VectorXd &tau_full)
 {
