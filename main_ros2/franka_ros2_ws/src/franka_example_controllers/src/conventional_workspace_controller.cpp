@@ -496,7 +496,7 @@ namespace franka_example_controllers
         controller.set_torque_mapper_config(torque_mapper_config);
 
         // PD CONTROLLER
-        auto classic_ctl_settings = general_config["controller_settings"];
+        auto classic_ctl_settings = general_config["classic_controller_settings"];
         Eigen::MatrixXd K_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
         Eigen::MatrixXd D_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
 
@@ -510,6 +510,7 @@ namespace franka_example_controllers
 
         Eigen::MatrixXd K_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
         Eigen::MatrixXd D_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
+        
         // REGULARIZATION SETTINGS
         Eigen::Map<const Eigen::VectorXi> n_indices_eig(reinterpret_cast<int *>(const_cast<uint32_t *>(robot_config.n_indices)), robot_config.nx_red);
         auto reg_settings = classic_ctl_settings["regularization_settings"];
@@ -536,7 +537,7 @@ namespace franka_example_controllers
         ctrl_settings.regularization_settings.lambda_min = reg_settings["lambda_min"];
 
         controller.set_controller_settings(ctrl_settings);
-        controller.switchController(controller.get_classic_controller_type(general_config["default_classic_controller"]));
+        // controller.switchController(controller.get_classic_controller_type(general_config["default_classic_controller"]));
 
         /////// INIT FILE TRAJECTORY ///////
         double T_traj_start = general_config["transient_traj_start_time"];
