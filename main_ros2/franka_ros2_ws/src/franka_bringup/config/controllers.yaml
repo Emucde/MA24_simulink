@@ -11,6 +11,9 @@ controller_manager:
     mpc_casadi_controller:
       type: franka_example_controllers/ModelPredictiveControllerCasadi
 
+    conventional_workspace_controller:
+      type: conventional_workspace_controller/ConventionalWorkspaceController
+
     move_to_start_example_controller:
       type: franka_example_controllers/MoveToStartExampleController
 

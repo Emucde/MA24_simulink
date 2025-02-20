@@ -56,7 +56,7 @@
     <select id="controller" onchange="controller_change()">
         <option value="mpc_pinocchio_controller">Pinocchio MPC</option>
         <option value="mpc_casadi_controller">Casadi MPC</option>
-        <option value="workspace_controller">Workspace Controller</option>
+        <option value="conventional_workspace_controller">Workspace Controller</option>
         <option value="move_to_start_example_controller">Jointspace Homing Controller</option>
         <option value="gravity_compensation_example_controller">Gravity Controller</option>
     </select>
@@ -72,7 +72,7 @@
         <option value="8">MPC13</option>
         <option value="9">MPC14</option>
     </select>
-    <select id="workspace_controller" class="hide">
+    <select id="conventional_workspace_controller" class="hide">
         <option value="0" selected>Cartesian compliance controller (PD+)</option>
         <option value="1">Computed torque controller (CT)</option>
         <option value="2">Inverse dynamics controller (ID)</option>

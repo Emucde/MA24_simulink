@@ -17,6 +17,12 @@
             A Model Predictive Controller by using CasADi
         </description>
     </class>
+    <class name="conventional_workspace_controller/ConventionalWorkspaceController"
+           type="franka_example_controllers::ConventionalWorkspaceController" base_class_type="controller_interface::ControllerInterface">
+        <description>
+            A Conventional Workspace Controller (PD, CT, ID)
+        </description>
+    </class>
     <class name="franka_example_controllers/MoveToStartExampleController"
            type="franka_example_controllers::MoveToStartExampleController" base_class_type="controller_interface::ControllerInterface">
         <description>

@@ -510,7 +510,6 @@ namespace franka_example_controllers
 
         Eigen::MatrixXd K_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
         Eigen::MatrixXd D_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
-
         // REGULARIZATION SETTINGS
         Eigen::Map<const Eigen::VectorXi> n_indices_eig(reinterpret_cast<int *>(const_cast<uint32_t *>(robot_config.n_indices)), robot_config.nx_red);
         auto reg_settings = classic_ctl_settings["regularization_settings"];
@@ -537,7 +536,6 @@ namespace franka_example_controllers
         ctrl_settings.regularization_settings.lambda_min = reg_settings["lambda_min"];
 
         controller.set_controller_settings(ctrl_settings);
-
         controller.switchController(controller.get_classic_controller_type(general_config["default_classic_controller"]));
 
         /////// INIT FILE TRAJECTORY ///////
@@ -545,7 +543,6 @@ namespace franka_example_controllers
         double T_traj_dur = general_config["transient_traj_duration"];
         double T_traj_end = general_config["transient_traj_end_time"];
         controller.init_file_trajectory(traj_select, state.data(), T_traj_start, T_traj_dur, T_traj_end);
-
         traj_len = controller.get_traj_data_real_len();
 
         current_trajectory = controller.get_trajectory();

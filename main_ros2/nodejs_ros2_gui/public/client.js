@@ -133,10 +133,23 @@ function start() {
 document.getElementById('start').addEventListener('click', () => {
     var traj_num = get_trajectory();
     var active_controller_name = get_controller();
-    var mpc_type = get_mpc();
     document.getElementById("home_main").classList.remove("hide");
-    ws.send(JSON.stringify({ command: 'start', controller_name: active_controller_name, mpc_type: mpc_type, traj_num: traj_num}));
-});
+
+    if(active_controller_name == 'mpc_casadi_controller')
+    {
+      var mpc_type = get_mpc();
+      ws.send(JSON.stringify({ command: 'start', controller_name: active_controller_name, mpc_type: mpc_type, traj_num: traj_num}));
+    }
+    if(active_controller_name == 'conventional_workspace_controller')
+    {
+      workspace_controller_type = document.getElementById("conventional_workspace_controller").value;
+      ws.send(JSON.stringify({ command: 'start', controller_name: active_controller_name, workspace_controller_type: workspace_controller_type, traj_num: traj_num}));
+    }
+    else
+    {
+      ws.send(JSON.stringify({ command: 'start', controller_name: active_controller_name, traj_num: traj_num}));
+    }
+  });
 
 document.getElementById('reset').addEventListener('click', () => {
     document.getElementById("home_main").classList.add("hide");
@@ -207,12 +220,12 @@ function controller_change()
     var active_controller_name = current_element.value;
     if(active_controller_name != 'mpc_casadi_controller')
       document.getElementById("casadi_mpcs").classList.add("hide");
-    if(active_controller_name != 'workspace_controller')
-      document.getElementById("workspace_controller").classList.add("hide");
+    if(active_controller_name != 'conventional_workspace_controller')
+      document.getElementById("conventional_workspace_controller").classList.add("hide");
     if(active_controller_name == 'mpc_casadi_controller')
       document.getElementById("casadi_mpcs").classList.remove("hide");
-    if(active_controller_name == 'workspace_controller')
-      document.getElementById("workspace_controller").classList.remove("hide");
+    if(active_controller_name == 'conventional_workspace_controller')
+      document.getElementById("conventional_workspace_controller").classList.remove("hide");
 }
 
 function get_mpc(current_element) {
