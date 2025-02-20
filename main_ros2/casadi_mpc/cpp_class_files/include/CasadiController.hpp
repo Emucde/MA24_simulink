@@ -254,6 +254,11 @@ public:
         return error_flag;
     }
 
+    void reset_error_flag()
+    {
+        error_flag = ErrorFlag::NO_ERROR;
+    }
+
     // Method to get w pointer
     casadi_real *get_w()
     {

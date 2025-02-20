@@ -147,35 +147,41 @@ void CrocoddylController::setActiveMPC(CrocoddylMPCType mpc_type)
 void CrocoddylController::simulateModelEuler(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt)
 {
     Eigen::Map<Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
-    Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
-    torque_mapper.simulateModelEuler(x_k_ndof, tau, dt);
 
     // Check for errors
     if (x_k_ndof.hasNaN())
     {
         error_flag = ErrorFlag::NAN_DETECTED;
         std::cerr << "NaN values detected in the joint vector!" << std::endl;
+        return;
     }
+
+    Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
+    torque_mapper.simulateModelEuler(x_k_ndof, tau, dt);
 }
+
 
 void CrocoddylController::simulateModelRK4(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt)
 {
     Eigen::Map<Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
-    Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
-    torque_mapper.simulateModelRK4(x_k_ndof, tau, dt);
 
     // Check for errors
     if (x_k_ndof.hasNaN())
     {
         error_flag = ErrorFlag::NAN_DETECTED;
         std::cerr << "NaN values detected in the joint vector!" << std::endl;
+        return;
     }
+
+    Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
+    torque_mapper.simulateModelRK4(x_k_ndof, tau, dt);
 }
 
 void CrocoddylController::reset(const casadi_real *const x_k_in)
 {
     active_mpc->reset(Eigen::Map<const Eigen::VectorXd>(x_k_in, nx_red));
     tau_full_prev = Eigen::VectorXd::Zero(nq);
+    reset_error_flag();
 }
 
 void CrocoddylController::reset()
@@ -183,6 +189,7 @@ void CrocoddylController::reset()
     const casadi_real *const x_k_in = trajectory_generator.get_traj_x0_init()->data();
     active_mpc->reset(Eigen::Map<const Eigen::VectorXd>(x_k_in, nx_red));
     tau_full_prev = Eigen::VectorXd::Zero(nq);
+    reset_error_flag();
 }
 
 Eigen::VectorXd CrocoddylController::get_traj_x0_red_init(casadi_uint traj_select)

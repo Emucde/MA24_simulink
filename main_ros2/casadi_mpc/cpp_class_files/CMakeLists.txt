@@ -153,6 +153,7 @@ foreach(SOURCE_FILE ${MPC_SOURCES})
         )
 
     target_link_libraries(${FILE_NAME} PRIVATE 
+        m
         ${CASADI_LIBRARY_DIRS}/libipopt.so
         ${CASADI_LIBRARY_DIRS}/libfatrop.so
         ${CASADI_LIBRARY_DIRS}/libblasfeo.so

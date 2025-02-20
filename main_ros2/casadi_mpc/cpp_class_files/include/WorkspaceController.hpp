@@ -105,12 +105,7 @@ public:
     void simulateModelEuler(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
     void simulateModelRK4(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
     Eigen::VectorXd update(const double *const x_nq);
-    void reset()
-    {
-        active_controller->traj_count = 0;
-        tau_full_prev = Eigen::VectorXd::Zero(nq);
-        inverse_dyn_controller.init = true;
-    }
+    void reset();
 
     ControllerSettings init_default_controller_settings();
     RegularizationSettings init_default_regularization_settings();
@@ -144,6 +139,11 @@ public:
     ErrorFlag get_error_flag()
     {
         return error_flag;
+    }
+
+    void reset_error_flag()
+    {
+        error_flag = ErrorFlag::NO_ERROR;
     }
 
     const Eigen::MatrixXd *get_trajectory()

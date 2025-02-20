@@ -268,3 +268,10 @@ select:focus {
 .hide {
     display: none;
 }
+
+#graph {
+    height: 370px;
+    width: 500px;
+    float: right;
+    margin-right: 50px;
+}

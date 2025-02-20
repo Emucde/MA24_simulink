@@ -92,6 +92,11 @@ public:
         return error_flag;
     }
 
+    void reset_error_flag()
+    {
+        error_flag = ErrorFlag::NO_ERROR;
+    }
+
     std::vector< Eigen::VectorXd > &get_u_opt_full()
     {
         return active_mpc->get_u_opt_full();
