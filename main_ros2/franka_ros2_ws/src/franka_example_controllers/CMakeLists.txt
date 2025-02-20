@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(franka_example_controllers)
 
+set(OPT_FLAG "-Ofast;-march=x86-64;-mtune=generic;")
+
 # Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
         set(CMAKE_CXX_STANDARD 17)
@@ -170,6 +172,8 @@ target_link_libraries(
         franka_example_controllers_parameters
         ${MPC_ALL_LIBRARIES}
 )
+
+target_compile_options(${PROJECT_NAME} PRIVATE -fdiagnostics-color=always ${MPC_OPT_FLAG})
 
 pluginlib_export_plugin_description_file(
         controller_interface franka_example_controllers.xml
