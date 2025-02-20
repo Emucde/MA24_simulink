@@ -35,9 +35,11 @@ void CrocoddylMPC::init_config()
     mpc_settings = jsonData["mpc_settings"];
     param_mpc_weight = jsonData["param_mpc_weight"];
 
+    int_method = get_setting<std::string>("int_method");
     N_MPC = get_setting<uint>("N_MPC");
     dt = get_setting<double>("Ts");
-    N_step = static_cast<uint>( get_setting<double>("Ts_MPC") / dt );
+    dt_MPC = get_setting<double>("Ts_MPC");
+    N_step = static_cast<uint>( dt_MPC / dt );
     N_solver_steps = get_setting<uint>("solver_steps");
     traj_step = static_cast<casadi_uint>(dt / trajectory_generator.get_dt());
     mpc_traj_indices = traj_step * Eigen::VectorXi::LinSpaced(N_MPC+1, 0, N_MPC * N_step);
@@ -191,7 +193,6 @@ void CrocoddylMPC::generate_trajectory_blocks()
 void CrocoddylMPC::create_mpc_solver()
 {
     // Build the MPC problem
-    std::string int_method = get_setting<std::string>("int_method");
     std::shared_ptr<BaseCrocoddylIntegrator> integrator = create_integrator(int_method);
 
     // get robot model
@@ -358,7 +359,7 @@ void CrocoddylMPC::create_mpc_solver()
             state, actuationModel, runningDifferentialCostModel);
 
             // integrate the differential cost models
-            auto IAM = integrator->integrate(DAM, dt);
+            auto IAM = integrator->integrate(DAM, dt_MPC);
             runningCostModels.push_back(
                 boost::static_pointer_cast<crocoddyl::ActionModelAbstract>(IAM));
         }
@@ -430,7 +431,7 @@ void CrocoddylMPC::create_mpc_solver()
             auto terminalDAM = boost::make_shared<crocoddyl::DifferentialActionModelFreeFwdDynamics>(
                 state, actuationModel, terminalDifferentialCostModel);
 
-            auto terminalIAM = integrator->integrate(terminalDAM, dt);
+            auto terminalIAM = integrator->integrate(terminalDAM, dt_MPC);
 
             terminalCostModel = boost::static_pointer_cast<crocoddyl::ActionModelAbstract>(terminalIAM);
         }
