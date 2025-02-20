@@ -42,7 +42,7 @@ quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs
 M = rk_iter; % RK4 steps per interval
 N_step = pp.N_step;
 
-DT_ctl = param_global.Ta/M;
+DT_ctl = pp.dt/M;
 DT = N_step * DT_ctl; % = Ts_MPC
 DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 
@@ -137,10 +137,10 @@ for i = 0:N_MPC-2
 end
 
 MPC_traj_indices = time_points/DT_ctl + 1;
-MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});
+MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step, DT_ctl}, {MPC_traj_indices});
 dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
 
-MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC)));
+MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC, param_global.Ta)));
 
 % Robot System: Initial guess
 q_0_red    = q_0(n_indices);
@@ -153,7 +153,7 @@ u_k_0  = q_0_red_pp;
 u_init_guess_0 = ones(1, N_MPC).*u_k_0;
 x_init_guess_0 = ones(1, N_MPC+1).*x_0_0;
 
-t_init_guess = (MPC_traj_indices_val-1)*DT_ctl;
+t_init_guess = (MPC_traj_indices_val-1)*param_global.Ta;
 theta_init_guess_0 = t_init_guess/T;
 theta_0 = theta_init_guess_0(1);
 v_init_guess_0 = zeros(1, N_MPC);
@@ -227,11 +227,11 @@ mpc_init_reference_values = [x_0_0(:); 0; x_init_guess_0(:); theta_init_guess_0(
 theta_d = (t_k+t_init_guess)/T;
 
 if(theta_sys)
-    lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1); -inf(numel(theta), 1); -inf(numel(v), 1)];
     ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1);  inf(numel(theta), 1);  inf(numel(v), 1)];
+    lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1); -inf(numel(theta), 1); -inf(numel(v), 1)];
 else
-    lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1); -inf(numel(theta), 1)];
     ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1);  inf(numel(theta), 1)];
+    lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1); -inf(numel(theta), 1)];
     % lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); repmat(pp.x_min([n_indices, n_indices+n]), size(x, 2), 1); theta_d'+pp.d_theta_min];
     % ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1); repmat(pp.x_max([n_indices, n_indices+n]), size(x, 2), 1); theta_d'+pp.d_theta_max];
 end

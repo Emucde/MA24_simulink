@@ -50,7 +50,7 @@ quat_fun_red = Function('quat_fun_red', {q_red}, {quat_endeffector_py_fun(q_subs
 M = 1; % RK4 steps per interval
 N_step = pp.N_step;
 
-DT_ctl = param_global.Ta/M;
+DT_ctl = pp.dt/M;
 DT = N_step * DT_ctl; % = Ts_MPC
 DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 
@@ -125,10 +125,10 @@ for i = 0:N_MPC-2
 end
 
 MPC_traj_indices = time_points/DT_ctl + 1;
-MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});
+MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step, DT_ctl}, {MPC_traj_indices});
 dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
 
-MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC)));
+MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC, param_global.Ta)));
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices_val ); % (y_0 ... y_N)
 q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices_val ); % (q_0 ... q_N)
 y_d_0 = [p_d_0; q_d_0];
@@ -143,7 +143,7 @@ u_k_0  = q_0_red_pp;
 
 u_init_guess_0 = ones(n_red, N_MPC).*u_k_0;
 x_init_guess_0 = ones(2*n_red, N_MPC+1).*x_0_0;
-t_init_guess = (MPC_traj_indices_val-1)*DT_ctl;
+t_init_guess = (MPC_traj_indices_val-1)*param_global.Ta;
 theta_init_guess_0 = t_init_guess/T;
 theta_0 = theta_init_guess_0(1);
 
@@ -185,8 +185,8 @@ u_opt_indices = [q0_pp_idx, x1_idx, q1_pp_idx];
 % optimization variables cellarray w
 % [TODO]: es wird nicht geprüft ob d/dt q auch die limits einhält!!!
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1); -inf(numel(theta), 1)];
 ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1);  inf(numel(theta), 1)];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1); -inf(numel(theta), 1)];
 
 % input parameter
 x_k  = SX.sym( 'x_k',  2*n_red,       1 ); % current x state = initial x state

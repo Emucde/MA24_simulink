@@ -111,7 +111,7 @@ f_red = Function('f_red', {x_red, tau_red}, {d_dt_x([n_indices n_indices+n])});
 M = rk_iter; % RK4 steps per interval
 N_step = pp.N_step;
 
-DT_ctl = param_global.Ta/M;
+DT_ctl = pp.dt/M;
 DT = N_step * DT_ctl; % = Ts_MPC
 DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 
@@ -129,11 +129,11 @@ for i = 0:N_MPC-2
 end
 
 MPC_traj_indices = time_points/DT_ctl + 1;
-MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});
+MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step, DT_ctl}, {MPC_traj_indices});
 dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
 
 % Get trajectory data for initial guess
-MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC)));
+MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC, param_global.Ta)));
 
 p_d_0    = param_trajectory.p_d(    1:3, MPC_traj_indices_val ); % (y_0 ... y_N)
 p_d_p_0  = param_trajectory.p_d_p(  1:3, MPC_traj_indices_val ); % (y_p_0 ... y_p_N)
@@ -418,18 +418,18 @@ else
     J_yr = 0;
     for i=1:N_MPC
         % Hier werden nicht Euler Winkel sondern Fehler um Achsen gewichtet!!
-        yr_ref = y_d(4:6, 1 + (i));
+        % yr_ref = y_d(4:6, 1 + (i));
         % R_y_yr = R_e_arr{1 + (i)}' * rpy2rotm_casadi(yr_ref);
         % % % %q_y_y_err = rotation2quaternion_casadi( R_y_yr );
         % rpy_err = [R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];
 
-        R_y_yr = R_e_arr{1 + (i)}' * rpy2rotm_casadi(yr_ref) - rpy2rotm_casadi(yr_ref)' * R_e_arr{1 + (i)};
-        rpy_err = [R_y_yr(3,2); R_y_yr(1,3); R_y_yr(2,1)];
+        % R_y_yr = R_e_arr{1 + (i)}' * rpy2rotm_casadi(yr_ref) - rpy2rotm_casadi(yr_ref)' * R_e_arr{1 + (i)};
+        % rpy_err = [R_y_yr(3,2); R_y_yr(1,3); R_y_yr(2,1)];
         % q_rpy_err = quat_R_endeffector_py_fun(R_y_yr);
         % rpy_err = q_rpy_err(2:4);
         
         % interessanterweise wird es nur instabil wenn yr_indices=[1 2 3] ist, wenn es nur eine oder zwei Winkel sind, dann ist es stabil
-        % rpy_err = y(3+yr_indices, 1 + (i)) - yr_ref; % das sollte eig gehen??? wird aber immer instabil [TODO]
+        rpy_err = y(3+yr_indices, 1 + (i)) - y_ref(3+yr_indices, 1 + (i)); % das sollte eig gehen??? wird aber immer instabil [TODO]
         
         if(i < N_MPC)
             J_yr = J_yr + Q_norm_square( rpy_err(yr_indices) , pp.Q_y(3+yr_indices)  ); % Die Gewichtung sind die Fehler um eine Achse nicht die der RPY Winkel!!

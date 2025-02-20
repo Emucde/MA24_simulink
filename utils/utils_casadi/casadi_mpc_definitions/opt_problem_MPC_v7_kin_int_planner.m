@@ -40,7 +40,7 @@ f_red = Function('f_red', {x_red, u_red}, {[x_red(n_red+1:2*n_red); u_red]});
 M = rk_iter; % RK4 steps per interval
 N_step = pp.N_step;
 
-DT_ctl = param_global.Ta/M;
+DT_ctl = pp.dt/M;
 DT = N_step * DT_ctl; % = Ts_MPC
 DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 
@@ -51,17 +51,17 @@ F = integrate_casadi(f_red, DT, M, int_method); % runs with Ts_MPC
 %% Calculate Initial Guess
 %Get trajectory data for initial guess
 time_points = SX(1, N_MPC+1);
-time_points(1:2) = [0; DT_ctl];
+time_points(1:3) = [0; DT_ctl; 2*DT_ctl];
 
-for i = 0:N_MPC-2
-    time_points(i+3) = DT_ctl + DT2 + i * DT; % Concatenate each term
+for i = 0:N_MPC-3
+    time_points(i+4) = if_else(N_step < 3, 2*DT_ctl, DT_ctl) + DT2 + i * DT; % Concatenate each term
 end
 
 MPC_traj_indices = time_points/DT_ctl + 1;
-MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});
+MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step, DT_ctl}, {MPC_traj_indices});
 dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
 
-MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC)));
+MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC, param_global.Ta)));
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices_val ); % (y_0 ... y_N)
 q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices_val ); % (q_0 ... q_N)
 y_d_0 = [p_d_0; q_d_0];
@@ -107,8 +107,8 @@ u_opt_indices = [q0_pp_idx, q1_pp_idx];
 
 % optimization variables cellarray w
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')';
-lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
 ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1)];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1)];
 
 % Interessant: Wenn u auch im Horizont beschränkt wird, erhält man eine bleibende Regelabweichung (1e-5).
 % Hingegen wenn die u im Horizont nicht beschränkt werden, sondern nur das, dass ausgegeben wird, hat man das Problem nicht:

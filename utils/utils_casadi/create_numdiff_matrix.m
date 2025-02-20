@@ -1,6 +1,6 @@
 function D = create_numdiff_matrix(T_a, n, N, variant, T_a_MPC, MPC_traj_indices, param_golay)
 arguments
-    T_a (1,1) double
+    T_a (1,1)
     n (1,1) double
     N (1,1) double
     variant char {mustBeMember(variant, {'fwdbwdcentral', 'bwd', 'savgol', 'savgol_notequidist', 'fwdbwdcentraltwotimes', 'fwdbwdcentralthreetimes'})} = 'fwdbwdcentral'

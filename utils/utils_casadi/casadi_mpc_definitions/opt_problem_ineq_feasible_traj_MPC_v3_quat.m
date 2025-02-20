@@ -108,7 +108,7 @@ f_red = Function('f_red', {x_red, tau_red}, {d_dt_x([n_indices n_indices+n])});
 M = rk_iter; % RK4 steps per interval
 N_step = pp.N_step;
 
-DT_ctl = param_global.Ta/M;
+DT_ctl = pp.dt/M;
 DT = N_step * DT_ctl; % = Ts_MPC
 DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 
@@ -126,11 +126,11 @@ for i = 0:N_MPC-2
 end
 
 MPC_traj_indices = time_points/DT_ctl + 1;
-MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});
+MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step, DT_ctl}, {MPC_traj_indices});
 dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
 
 % Get trajectory data for initial guess
-MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC)));
+MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC, param_global.Ta)));
 
 p_d_0    = param_trajectory.p_d(    1:3, MPC_traj_indices_val ); % (y_0 ... y_N)
 p_d_p_0  = param_trajectory.p_d_p(  1:3, MPC_traj_indices_val ); % (y_p_0 ... y_p_N)

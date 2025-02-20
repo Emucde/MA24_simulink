@@ -45,7 +45,7 @@ f = Function('f', {x, u}, {[x(n+1:2*n); u]});
 M = rk_iter; % RK4 steps per interval
 N_step = pp.N_step;
 
-DT_ctl = param_global.Ta/M;
+DT_ctl = pp.dt/M;
 DT = N_step * DT_ctl; % = Ts_MPC
 DT2 = if_else(N_step > 1, DT - DT_ctl, DT_ctl); % = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
 
@@ -63,27 +63,18 @@ P = lyap(A, Q); % V = x'Px => Idea: Use V as end cost term
 
 use_first_Ta_step = true; % (true: is much more precise!)
 
-if(use_first_Ta_step)
-    time_points = SX(1, N_MPC+1);
-    time_points(1:2) = [0; DT_ctl];
+time_points = SX(1, N_MPC+1);
+time_points(1:2) = [0; DT_ctl];
 
-    for i = 0:N_MPC-2
-        time_points(i+3) = DT_ctl + DT2 + i * DT; % Concatenate each term
-    end
-else
-    time_points = SX(1, N_MPC+1);
-    for i = 0:N_MPC
-        time_points(i+1) = i * DT; % Concatenate each term
-    end
+for i = 0:N_MPC-2
+    time_points(i+3) = DT_ctl + DT2 + i * DT; % Concatenate each term
 end
 
-
-
 MPC_traj_indices = time_points/DT_ctl + 1;
-MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step}, {MPC_traj_indices});
+MPC_traj_indices_fun = Function('MPC_traj_indices_fun', {N_step, DT_ctl}, {MPC_traj_indices});
 dt_int_arr = (MPC_traj_indices(2:end) - MPC_traj_indices(1:end-1))*DT_ctl;
 
-MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC)));
+MPC_traj_indices_val = round(full(MPC_traj_indices_fun(N_step_MPC, param_global.Ta)));
 p_d_0 = param_trajectory.p_d( 1:3, MPC_traj_indices_val ); % (y_0 ... y_N)
 q_d_0 = param_trajectory.q_d( 1:4, MPC_traj_indices_val ); % (q_0 ... q_N)
 y_d_0 = [p_d_0; q_d_0];
