@@ -31,7 +31,7 @@ namespace franka_example_controllers
         controller_interface::InterfaceConfiguration config;
         config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-        for (int i = 1; i <= N_DOF; ++i)
+        for (int i = 1; i <= nq; ++i)
         {
             config.names.push_back(arm_id_ + "_joint" + std::to_string(i) + "/effort");
         }
@@ -43,11 +43,11 @@ namespace franka_example_controllers
     {
         controller_interface::InterfaceConfiguration state_interfaces_config;
         state_interfaces_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
-        for (int i = 1; i <= N_DOF; ++i)
+        for (int i = 1; i <= nq; ++i)
         {
             state_interfaces_config.names.push_back(arm_id_ + "_joint" + std::to_string(i) + "/position");
         }
-        for (int i = 1; i <= N_DOF; ++i)
+        for (int i = 1; i <= nq; ++i)
         {
             state_interfaces_config.names.push_back(arm_id_ + "_joint" + std::to_string(i) + "/velocity");
         }
@@ -61,17 +61,16 @@ namespace franka_example_controllers
         
         #ifndef SIMULATION_MODE
         // Read states from joint state interface
-        for (int i = 0; i < 2 * N_DOF; ++i)
+        for (int i = 0; i < nx; ++i)
         {
             state[i] = state_interfaces_[i].get_value();
         }
-        x_measured = Eigen::Map<const Eigen::VectorXd>(state, 2 * N_DOF);
+        x_measured = state;
         #else
-        Eigen::Map<Eigen::VectorXd> state_eig(state, 2 * N_DOF);
         if(use_noise)
-            x_measured = state_eig + generateNoiseVector(2*N_DOF, Ts, mean_noise_amplitude);
+            x_measured = state + generateNoiseVector(nx, Ts, mean_noise_amplitude);
         else
-            x_measured = state_eig;
+            x_measured = state;
         #endif
 
         x_filtered = filter_x_measured();
@@ -82,8 +81,8 @@ namespace franka_example_controllers
                     state[3], state[4], state[5], state[6]);
 
         RCLCPP_INFO(get_node()->get_logger(), "q_p (rad/s): [%f, %f, %f, %f, %f, %f, %f]",
-                    state[N_DOF + 0], state[N_DOF + 1], state[N_DOF + 2],
-                        state[N_DOF + 3], state[N_DOF + 4], state[N_DOF + 5], state[N_DOF + 6]);
+                    state[nq + 0], state[nq + 1], state[nq + 2],
+                        state[nq + 3], state[nq + 4], state[nq + 5], state[nq + 6]);
         #endif
 
         if (mpc_started)
@@ -127,16 +126,16 @@ namespace franka_example_controllers
                 }
 
                 mpc_started = false;
-                tau_full = Eigen::VectorXd::Zero(N_DOF);
+                tau_full = Eigen::VectorXd::Zero(nq);
             }
 
             #ifdef SIMULATION_MODE
-            controller.simulateModelRK4(state, tau_full.data(), Ts);
+            controller.simulateModelRK4(state.data(), tau_full.data(), Ts);
             #endif
         }
         else
         {
-            tau_full = Eigen::VectorXd::Zero(N_DOF);
+            tau_full = Eigen::VectorXd::Zero(nq);
         }
 
         return controller_interface::return_type::OK;
@@ -285,9 +284,9 @@ namespace franka_example_controllers
         response->status = "start flag set";
 
         #ifndef SIMULATION_MODE
-        for (int i = 0; i < 2 * N_DOF; ++i)
+        for (int i = 0; i < nx; ++i)
             state[i] = state_interfaces_[i].get_value();
-        x_measured = Eigen::Map<const Eigen::VectorXd>(state, 2 * N_DOF);
+        x_measured = state;
         #endif
 
         init_controller();
@@ -303,7 +302,6 @@ namespace franka_example_controllers
         shm.write("readonly_mode", &readonly_mode);
 
         mpc_started = true;
-        first_torque_read = false;
         controller.set_traj_count(0);
     }
 
@@ -397,22 +395,22 @@ namespace franka_example_controllers
         {
             ekf.predict(tau_full.data(), x_measured.data());
             lowpass_filter.run(x_filtered_ekf_ptr);
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, nx);
         }
         else if(use_lowpass_filter)
         {
             lowpass_filter.run(x_measured.data()); // updates data from x_filtered_ptr
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, nx);
         }
         else if(use_ekf)
         {
             ekf.predict(tau_full.data(), x_measured.data());
             x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, nx);
         }
         else
         {
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), 2 * N_DOF);
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), nx);
         }
         return x_filtered;
     }
@@ -456,7 +454,7 @@ namespace franka_example_controllers
             x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
             ekf.initialize(x_measured.data());
             x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, nx);
         }
         else if(use_ekf)
         {
@@ -464,20 +462,20 @@ namespace franka_example_controllers
             ekf.initialize(x_measured.data());
             x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
             x_filtered_lowpass_ptr = x_filtered_ekf_ptr;
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, 2 * N_DOF);
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, nx);
         }
         else if(use_lowpass_filter)
         {
             lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
             x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
             x_filtered_ekf_ptr = x_filtered_lowpass_ptr;
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, 2 * N_DOF);
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, nx);
         }
         else
         {
             x_filtered_ekf_ptr = x_measured.data();
             x_filtered_lowpass_ptr = x_measured.data();
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), 2 * N_DOF);
+            x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), nx);
         }
         // without previous data, we cannot filter
     }
@@ -515,7 +513,7 @@ namespace franka_example_controllers
         double T_traj_start = general_config["transient_traj_start_time"];
         double T_traj_dur = general_config["transient_traj_duration"];
         double T_traj_end = general_config["transient_traj_end_time"];
-        controller.init_file_trajectory(traj_select, state, T_traj_start, T_traj_dur, T_traj_end);
+        controller.init_file_trajectory(traj_select, state.data(), T_traj_start, T_traj_dur, T_traj_end);
 
         traj_len = controller.get_traj_data_real_len();
         N_step = controller.get_N_step();
@@ -530,11 +528,10 @@ namespace franka_example_controllers
         #ifdef SIMULATION_MODE
         mean_noise_amplitude = general_config["mean_noise_amplitude"];
         use_noise = general_config["use_noise"];
-        Eigen::Map<Eigen::VectorXd> state_eig(state, 2 * N_DOF);
         if(use_noise)
-            x_measured = state_eig + generateNoiseVector(2*N_DOF, Ts, mean_noise_amplitude);
+            x_measured = state + generateNoiseVector(nx, Ts, mean_noise_amplitude);
         else
-            x_measured = state_eig;
+            x_measured = state;
         #endif
 
         init_filter(omega_c_q, omega_c_dq); // uses x_measured
@@ -547,11 +544,10 @@ namespace franka_example_controllers
 
         #ifdef SIMULATION_MODE
         const double *x0_init = controller.get_traj_x0_init(traj_select);
-        for(int i = 0; i < 2 * N_DOF; ++i)
-            state[i] = x0_init[i];
+        state = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
         #endif
 
-        tau_full = Eigen::VectorXd::Zero(N_DOF);
+        tau_full = Eigen::VectorXd::Zero(nq);
         global_traj_count = 0;
     }
 

@@ -103,6 +103,8 @@ public:
     int get_traj_data_real_len() const { return traj_data_file_real_len; } // without extra samples for last prediction horizon
     int get_transient_traj_len() const { return traj_data_transient.cols(); }
 
+    double get_dt() const { return dt; }
+
     // Setters
 
 private:

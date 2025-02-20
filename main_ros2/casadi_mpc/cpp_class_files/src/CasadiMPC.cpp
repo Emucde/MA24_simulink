@@ -199,7 +199,7 @@ void CasadiMPC::update_mpc_weights(nlohmann::json param_weight)
         traj_step = static_cast<casadi_uint>(dt / robot_config.dt); // default dt is 1kHz
         if(N_step == 1)
         {
-            mpc_traj_indices = Eigen::VectorXi::LinSpaced(horizon_len, 0, horizon_len - 1);
+            mpc_traj_indices = traj_step * Eigen::VectorXi::LinSpaced(horizon_len, 0, horizon_len - 1);
         }
         else
         {

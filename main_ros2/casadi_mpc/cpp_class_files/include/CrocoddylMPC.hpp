@@ -86,13 +86,17 @@ public:
     bool solve(const Eigen::VectorXd &x_k);
     void reset(const Eigen::VectorXd &x_k);
     void set_coldstart_init_guess(const Eigen::VectorXd &x_k);
-    void increase_traj_count() { traj_count++; }
     void init_config();
     void switch_traj(const Eigen::VectorXd &x_k);
 
-    casadi_real *get_optimal_control()
+    double *get_optimal_control()
     {
         return us_init_guess[0].data();
+    }
+
+    std::vector< Eigen::VectorXd > &get_u_opt_full()
+    {
+        return us_init_guess;
     }
 
     const casadi_real *get_act_traj_data()
@@ -100,9 +104,30 @@ public:
         return traj_data->col((traj_count > 0 ? traj_count-1 : traj_count)).data();
     }
 
+    uint get_traj_count()
+    {
+        return traj_count;
+    }
+
     casadi_uint get_traj_step()
     {
         return traj_step;
+    }
+
+    uint get_N_step()
+    {
+        return N_step;
+    }
+
+    // increase counter from mpc if it solves too slow
+    void increase_traj_count()
+    {
+        traj_count++;
+    }
+
+    void set_traj_count(uint new_traj_count)
+    {
+        traj_count = new_traj_count;
     }
 
 private:
@@ -112,7 +137,8 @@ private:
     nlohmann::json param_mpc_weight;
     TrajectoryGenerator &trajectory_generator;
     const int nq, nx; // this is nq_red and nx_red!!!
-    double dt;
+    double dt, dt_MPC;
+    std::string int_method;
     uint N_MPC, N_step, N_solver_steps;
     Eigen::VectorXd x_min, x_max, x_mean;
     Eigen::VectorXd u_min, u_max;

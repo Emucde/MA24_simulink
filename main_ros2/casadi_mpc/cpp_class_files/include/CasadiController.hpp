@@ -150,6 +150,11 @@ public:
         return active_mpc->get_u_next();
     }
 
+    casadi_real *get_u_opt_full()
+    {
+        return active_mpc->get_optimal_control();
+    }
+
     casadi_uint get_N_step()
     {
         return active_mpc->get_N_step();
@@ -165,14 +170,14 @@ public:
         return robot_config.n_indices;
     }
 
-    FullSystemTorqueMapper* get_torque_mapper()
-    {
-        return &torque_mapper;
-    }
-
     casadi_uint get_traj_step()
     {
         return active_mpc->get_traj_step();
+    }
+
+    FullSystemTorqueMapper* get_torque_mapper()
+    {
+        return &torque_mapper;
     }
 
     void set_torque_mapper_config(FullSystemTorqueMapper::Config &config)

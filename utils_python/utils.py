@@ -1635,6 +1635,18 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
         extra_indices = np.arange(0, N_Ts_samples+1)
         MPC_traj_indices = np.hstack([extra_indices, MPC_traj_indices])
 
+    # N_step = int(Ts_MPC/Ts)
+    # DT_ctl = Ts
+    # DT = N_step * DT_ctl  # = Ts_MPC
+    # DT2 = DT - DT_ctl if N_step > 1 else DT_ctl  # = (N_step_MPC - 1) * DT_ctl = (N_MPC-1) * Ta/M = Ts_MPC - Ta
+
+    # time_points = np.zeros(N_MPC + 1)
+    # time_points[0:2] = [0, DT_ctl]
+
+    # time_points[2:] = DT_ctl + DT2 + np.arange(N_MPC - 1) * DT
+
+    # MPC_traj_indices = np.astype(time_points/DT_ctl, int) + 1
+
     MPC_int_time = (np.hstack((MPC_traj_indices[1::] - MPC_traj_indices[0:-1], MPC_traj_indices[-1] - MPC_traj_indices[-2])))*Ts
 
     T_horizon = MPC_traj_indices[-1]*Ts

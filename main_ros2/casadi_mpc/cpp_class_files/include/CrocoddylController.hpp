@@ -55,11 +55,6 @@ public:
     void reset(const casadi_real *const x_k_in);
     void reset();
 
-    void increase_traj_count()
-    {
-        active_mpc->increase_traj_count();
-    }
-
     uint get_traj_data_len()
     {
         return trajectory_generator.get_traj_data_len();
@@ -90,16 +85,57 @@ public:
         return trajectory_generator.get_traj_data();
     }
 
-    Eigen::VectorXd get_traj_x0_red_init(casadi_uint traj_select);
+    Eigen::VectorXd get_traj_x0_red_init(uint traj_select);
 
     ErrorFlag get_error_flag()
     {
         return error_flag;
     }
 
+    std::vector< Eigen::VectorXd > &get_u_opt_full()
+    {
+        return active_mpc->get_u_opt_full();
+    }
+
+    uint get_traj_count()
+    {
+        return active_mpc->get_traj_count();
+    }
+
+    uint get_traj_step()
+    {
+        return active_mpc->get_traj_step();
+    }
+
+    uint get_N_step()
+    {
+        return active_mpc->get_N_step();
+    }
+
+    const uint *get_n_indices()
+    {
+        return robot_config.n_indices;
+    }
+
+    FullSystemTorqueMapper* get_torque_mapper()
+    {
+        return &torque_mapper;
+    }
+
     void set_torque_mapper_config(FullSystemTorqueMapper::Config &config)
     {
         torque_mapper.setConfiguration(config);
+    }
+
+    // increase counter from mpc if it solves too slow
+    void increase_traj_count()
+    {
+        active_mpc->increase_traj_count();
+    }
+
+    void set_traj_count(uint new_traj_count)
+    {
+        active_mpc->set_traj_count(new_traj_count);
     }
 
     ~CrocoddylController() {};

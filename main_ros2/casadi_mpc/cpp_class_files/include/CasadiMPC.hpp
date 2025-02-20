@@ -142,7 +142,7 @@ public:
 
     casadi_real *get_u_next()
     {
-        return mpc_config.in.u.ptr+nq_red;
+        return mpc_config.out.u_out.ptr+nq_red;
     }
 
     casadi_uint get_N_step()

@@ -19,7 +19,6 @@
 
 #define SIMULATION_MODE 1
 
-#define N_DOF 7
 #define MAX_INVALID_COUNT 100
 
 #include <string>
@@ -107,13 +106,14 @@ namespace franka_example_controllers
         void solve();
     private:
         std::string arm_id_;
-        const int num_joints = N_DOF;
-        double state[2 * N_DOF]={0};
+        robot_config_t robot_config = get_robot_config();
+        const int nq = robot_config.nq;
+        const int nx = robot_config.nx;
+        Eigen::VectorXd state = Eigen::VectorXd::Zero(nq * 2);
         int invalid_counter = 0;          // counter for invalid data, if exceeds MAX_INVALID_COUNT, terminate the controller
         uint global_traj_count = 0;
         bool mpc_started = false;
         int8_t traj_select = 1; // default trajectory
-        bool first_torque_read = false;
         const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
         const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand.json";
         const std::string general_config_filename = std::string(MASTERDIR) + "/config_settings/general_settings.json";
@@ -130,13 +130,13 @@ namespace franka_example_controllers
         int solver_step_counter = 0;
         #endif
         CasadiController controller = CasadiController(urdf_filename, casadi_mpc_config_filename, tcp_frame_name, use_gravity, use_planner);
-        Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(num_joints);
-        Eigen::VectorXd x_prev = Eigen::VectorXd::Zero(2*num_joints);
-        Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(2*num_joints);
-        Eigen::VectorXd x_filtered = Eigen::VectorXd::Zero(2*num_joints);
+        Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
+        Eigen::VectorXd x_prev = Eigen::VectorXd::Zero(nx);
+        Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nx);
+        Eigen::VectorXd x_filtered = Eigen::VectorXd::Zero(nx);
         double* x_filtered_ekf_ptr = x_measured.data();
         double* x_filtered_lowpass_ptr = x_measured.data();
-        double* u_next_ptr = controller.get_u_next();
+        double* u_opt_full_ptr = controller.get_u_opt_full();
         uint N_step = controller.get_N_step();
 
         double Ts = 0.001;
@@ -145,15 +145,10 @@ namespace franka_example_controllers
 
         FullSystemTorqueMapper* torque_mapper = controller.get_torque_mapper();
         CasadiEKF ekf = CasadiEKF(ekf_config_filename);
-        SignalFilter lowpass_filter = SignalFilter(num_joints, Ts, state, 400, 400);
+        SignalFilter lowpass_filter = SignalFilter(nq, Ts, state.data(), 400, 400);
 
         ErrorFlag error_flag = ErrorFlag::NO_ERROR;
 
-        boost::asio::thread_pool thread_pool=1; //thread pool with 1 thread
-        std::promise<Eigen::VectorXd> tau_full_promise; // Promise for async result
-        std::future<Eigen::VectorXd> tau_full_future = tau_full_promise.get_future();   // Future to retrieve result
-
-        robot_config_t robot_config = get_robot_config();
         casadi_uint traj_len = controller.get_traj_data_real_len();
 
         const std::vector<SharedMemoryInfo> shm_readwrite_infos = {

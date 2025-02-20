@@ -215,7 +215,8 @@ int main()
     classic_controller.switchController(get_classic_controller_type(general_config["default_classic_controller"]));
     crocoddyl_controller.setActiveMPC(get_crocoddyl_controller_type(general_config["default_crocoddyl_mpc"]));
 
-    solver_steps = casadi_controller.get_traj_step();
+    if (controller_type == MainControllerType::Casadi)
+        solver_steps = casadi_controller.get_traj_step();
 
     // TORQUE MAPPER CONFIG
     /*
