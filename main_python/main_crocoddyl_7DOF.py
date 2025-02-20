@@ -479,7 +479,6 @@ try:
                         if visualize_sol:
                             if process_vis is not None and process_vis.is_alive():
                                 process_vis.terminate()
-                                kill_process_on_port(7000)
                             def vis_sol_act():
                                 visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
                                                     xs[:, :n_dof], transient_traj, Ts,

@@ -3,9 +3,6 @@ var ws;//aktuelle websocket sitzung
 window.onload = start;
 
 function start() {
-	//ZEIT aktualisieren:
-  createdygraph(dataLength);
-  setInterval(updateGraph, 100); // Update graph every 100 ms
 	document.getElementById("timeconn").innerHTML=new Date().getTime();
 
         try{
@@ -392,41 +389,4 @@ function click_fun(element, number) {
       el.style.display = 'initial';
     });
     console.log(document.querySelectorAll('.hide_video_button'))
-  }
-
-  var plotdata = [];
-  var g;
-  var dataLength = 500; // Number of data points to keep
-
-  // Generate random data
-  function generateRandomData() {
-      return Math.random() * 100; // Random number between 0 and 100
-  }
-
-  function createdygraph(size) {
-      // Initialize the graph data with `size` points
-      for (var i = 0; i < size; i++) {
-          plotdata.push([i, generateRandomData()]); // Start x values from 0
-      }
-
-      g = new Dygraph(document.getElementById("graph"), plotdata, {
-          drawPoints: true,
-          labels: ['X', 'Y'],
-          xRange: [0, dataLength] // Set the x-range
-      });
-  }
-
-  function updateGraph() {
-      let newYVal = generateRandomData(); // Generate random y value
-      // Shift the entire data block to the left
-      for (let i = 0; i < plotdata.length - 1; i++) {
-          plotdata[i][0] = i; // Update x value
-          plotdata[i][1] = plotdata[i + 1][1]; // Copy y value from the next point
-      }
-
-      // Add new data point at the end
-      plotdata[plotdata.length - 1][1] = newYVal; // Set the new Y value for the last point
-
-      // Update the graph
-      g.updateOptions({ file: plotdata });
   }

@@ -121,7 +121,8 @@ namespace franka_example_controllers
             }
 
             #ifdef SIMULATION_MODE
-            controller.simulateModelRK4(state.data(), tau_full.data(), Ts);
+            if (error_flag == ErrorFlag::NO_ERROR)
+                controller.simulateModelRK4(state.data(), tau_full.data(), Ts);
             #endif
         }
         else

@@ -504,6 +504,7 @@ void WorkspaceController::simulateModelEuler(double *const x_k_ndof_ptr, const d
     // Check for errors
     if (x_k_ndof.hasNaN())
     {
+        reset();
         error_flag = ErrorFlag::NAN_DETECTED;
         std::cerr << "NaN values detected in the joint vector!" << std::endl;
         return;
@@ -521,6 +522,7 @@ void WorkspaceController::simulateModelRK4(double *const x_k_ndof_ptr, const dou
     // Check for errors
     if (x_k_ndof.hasNaN())
     {
+        reset();
         error_flag = ErrorFlag::NAN_DETECTED;
         std::cerr << "NaN values detected in the joint vector!" << std::endl;
         return;
@@ -605,6 +607,7 @@ void WorkspaceController::error_check(Eigen::VectorXd &tau_full)
     // Check for NaN values in the torque vector
     if (tau_full.hasNaN())
     {
+        reset();
         error_flag = ErrorFlag::NAN_DETECTED;
         std::cerr << "NaN values detected in the torque vector!" << std::endl;
     }
