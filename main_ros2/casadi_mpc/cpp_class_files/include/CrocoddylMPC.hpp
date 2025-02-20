@@ -84,6 +84,7 @@ public:
     void create_mpc_solver();
     void set_references(const Eigen::VectorXd &x_k);
     bool solve(const Eigen::VectorXd &x_k);
+    void reset(const Eigen::VectorXd &x_k);
     void set_coldstart_init_guess(const Eigen::VectorXd &x_k);
     void increase_traj_count() { traj_count++; }
     void init_config();
@@ -97,6 +98,11 @@ public:
     const casadi_real *get_act_traj_data()
     {
         return traj_data->col((traj_count > 0 ? traj_count-1 : traj_count)).data();
+    }
+
+    casadi_uint get_traj_step()
+    {
+        return traj_step;
     }
 
 private:
@@ -134,6 +140,7 @@ private:
     std::vector<Eigen::MatrixXd> p_d_blocks;
     std::vector<std::vector<Eigen::Matrix3d>> R_d_blocks;
     uint traj_count;
+    uint traj_step;                   // step width at which the trajectory is sampled
 public:
     bool is_kinematic;
 };

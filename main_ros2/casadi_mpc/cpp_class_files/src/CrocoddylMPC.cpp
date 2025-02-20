@@ -36,9 +36,11 @@ void CrocoddylMPC::init_config()
     param_mpc_weight = jsonData["param_mpc_weight"];
 
     N_MPC = get_setting<uint>("N_MPC");
-    N_step = static_cast<uint>( get_setting<double>("Ts_MPC") / get_setting<double>("Ts") );
+    dt = get_setting<double>("Ts");
+    N_step = static_cast<uint>( get_setting<double>("Ts_MPC") / dt );
     N_solver_steps = get_setting<uint>("solver_steps");
-    mpc_traj_indices = Eigen::VectorXi::LinSpaced(N_MPC+1, 0, N_MPC * N_step);
+    traj_step = static_cast<casadi_uint>(dt / trajectory_generator.get_dt());
+    mpc_traj_indices = traj_step * Eigen::VectorXi::LinSpaced(N_MPC+1, 0, N_MPC * N_step);
     is_kinematic = get_setting<bool>("is_kinematic");
 
     robot_config_t &robot_config = robot_model.robot_config;
@@ -109,6 +111,12 @@ bool CrocoddylMPC::solve(const Eigen::VectorXd &x_k)
     xs_init_guess = ddp->get_xs();
 
     return hasConverged;
+}
+
+void CrocoddylMPC::reset(const Eigen::VectorXd &x_k)
+{
+    traj_count = 0;
+    set_coldstart_init_guess(x_k);
 }
 
 void CrocoddylMPC::set_coldstart_init_guess(const Eigen::VectorXd &x_k)
@@ -184,8 +192,6 @@ void CrocoddylMPC::create_mpc_solver()
 {
     // Build the MPC problem
     std::string int_method = get_setting<std::string>("int_method");
-    uint N_MPC = get_setting<uint>("N_MPC");
-    dt = get_setting<double>("Ts_MPC");
     std::shared_ptr<BaseCrocoddylIntegrator> integrator = create_integrator(int_method);
 
     // get robot model
@@ -449,5 +455,5 @@ void CrocoddylMPC::set_references(const Eigen::VectorXd &x_k)
             residual_control_models[i]["ctrlPrev"]->set_reference(us_init_guess[i]); // init guess
     }
     problem_reference->set_x0(x_k);
-    traj_count++;
+    traj_count += traj_step;
 }

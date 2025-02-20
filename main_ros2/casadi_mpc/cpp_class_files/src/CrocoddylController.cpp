@@ -118,6 +118,17 @@ Eigen::VectorXd CrocoddylController::solveMPC(const double *const x_k_ndof_ptr)
     return tau_full;
 }
 
+void CrocoddylController::update_mpc_weights()
+{
+    for (int i = 0; i < static_cast<int>(CrocoddylMPCType::COUNT); ++i)
+    {
+        if (static_cast<CrocoddylMPCType>(i) != CrocoddylMPCType::INVALID)
+        {
+            crocoddyl_mpcs[i].init_config();
+        }
+    }
+}
+
 void CrocoddylController::setActiveMPC(CrocoddylMPCType mpc_type)
 {
     if (mpc_type != CrocoddylMPCType::INVALID)
@@ -159,4 +170,25 @@ void CrocoddylController::simulateModelRK4(double *const x_k_ndof_ptr, const dou
         error_flag = ErrorFlag::NAN_DETECTED;
         std::cerr << "NaN values detected in the joint vector!" << std::endl;
     }
+}
+
+void CrocoddylController::reset(const casadi_real *const x_k_in)
+{
+    active_mpc->reset(Eigen::Map<const Eigen::VectorXd>(x_k_in, nx_red));
+    tau_full_prev = Eigen::VectorXd::Zero(nq);
+}
+
+void CrocoddylController::reset()
+{
+    const casadi_real *const x_k_in = trajectory_generator.get_traj_x0_init()->data();
+    active_mpc->reset(Eigen::Map<const Eigen::VectorXd>(x_k_in, nx_red));
+    tau_full_prev = Eigen::VectorXd::Zero(nq);
+}
+
+Eigen::VectorXd CrocoddylController::get_traj_x0_red_init(casadi_uint traj_select)
+{
+    Eigen::VectorXd x0_init_ptr = *trajectory_generator.get_traj_file_x0_init(traj_select);
+    Eigen::VectorXd x0_init = Eigen::Map<Eigen::VectorXd>(x0_init_ptr.data(), nx);
+    Eigen::VectorXd x0_init_red = x0_init(n_x_indices);
+    return x0_init_red;
 }

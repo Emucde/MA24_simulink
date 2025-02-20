@@ -34,6 +34,8 @@ public:
 
     Eigen::VectorXd solveMPC(const double *const x_k_ndof_ptr);
 
+    void update_mpc_weights();
+
     // Initialize trajectory data
     void init_file_trajectory(uint traj_select, const double *x_k_ndof_ptr,
                               double T_start, double T_poly, double T_end);
@@ -50,6 +52,8 @@ public:
     // Method to simulate the robot model
     void simulateModelEuler(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
     void simulateModelRK4(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
+    void reset(const casadi_real *const x_k_in);
+    void reset();
 
     void increase_traj_count()
     {
@@ -80,6 +84,13 @@ public:
     {
         return trajectory_generator.get_traj_file_x0_init(traj_select)->data();
     }
+
+    const Eigen::MatrixXd *get_trajectory()
+    {
+        return trajectory_generator.get_traj_data();
+    }
+
+    Eigen::VectorXd get_traj_x0_red_init(casadi_uint traj_select);
 
     ErrorFlag get_error_flag()
     {
