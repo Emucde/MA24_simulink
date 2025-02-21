@@ -186,16 +186,22 @@ void CrocoddylController::reset(const casadi_real *const x_k_in)
 
 void CrocoddylController::reset()
 {
-    const casadi_real *const x_k_in = trajectory_generator.get_traj_x0_init()->data();
-    active_mpc->reset(Eigen::Map<const Eigen::VectorXd>(x_k_in, nx_red));
+    Eigen::VectorXd x0_init = get_act_traj_x0_red_init();
+    active_mpc->reset(x0_init);
     tau_full_prev = Eigen::VectorXd::Zero(nq);
     reset_error_flag();
 }
 
 Eigen::VectorXd CrocoddylController::get_traj_x0_red_init(casadi_uint traj_select)
 {
-    Eigen::VectorXd x0_init_ptr = *trajectory_generator.get_traj_file_x0_init(traj_select);
-    Eigen::VectorXd x0_init = Eigen::Map<Eigen::VectorXd>(x0_init_ptr.data(), nx);
+    Eigen::VectorXd x0_init = *trajectory_generator.get_traj_file_x0_init(traj_select);
+    Eigen::VectorXd x0_init_red = x0_init(n_x_indices);
+    return x0_init_red;
+}
+
+Eigen::VectorXd CrocoddylController::get_act_traj_x0_red_init()
+{
+    Eigen::VectorXd x0_init = *trajectory_generator.get_traj_x0_init();
     Eigen::VectorXd x0_init_red = x0_init(n_x_indices);
     return x0_init_red;
 }

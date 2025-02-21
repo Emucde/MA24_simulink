@@ -297,6 +297,7 @@ public:
     }
 
     Eigen::VectorXd get_traj_x0_red_init(casadi_uint traj_select);
+    Eigen::VectorXd get_act_traj_x0_red_init();
 
 private:
     // Private methods

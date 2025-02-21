@@ -303,9 +303,11 @@ void WorkspaceController::reset()
 {
     active_controller->traj_count = 0;
     tau_full_prev = Eigen::VectorXd::Zero(nq);
+
+    Eigen::VectorXd x_0_init = get_act_traj_x0_red_init();
+    inverse_dyn_controller.q_d_prev = x_0_init.head(nq_red);
+    inverse_dyn_controller.q_p_d_prev = x_0_init.tail(nq_red);
     inverse_dyn_controller.init = true;
-    inverse_dyn_controller.q_d_prev = Eigen::VectorXd::Zero(nq_red);
-    inverse_dyn_controller.q_p_d_prev = Eigen::VectorXd::Zero(nq_red);
     reset_error_flag();
 }
 
@@ -668,8 +670,14 @@ RegularizationSettings WorkspaceController::init_default_regularization_settings
 
 Eigen::VectorXd WorkspaceController::get_traj_x0_red_init(casadi_uint traj_select)
 {
-    Eigen::VectorXd x0_init_ptr = *trajectory_generator.get_traj_file_x0_init(traj_select);
-    Eigen::VectorXd x0_init = Eigen::Map<Eigen::VectorXd>(x0_init_ptr.data(), nx);
+    Eigen::VectorXd x0_init = *trajectory_generator.get_traj_file_x0_init(traj_select);
+    Eigen::VectorXd x0_init_red = x0_init(n_x_indices);
+    return x0_init_red;
+}
+
+Eigen::VectorXd WorkspaceController::get_act_traj_x0_red_init()
+{
+    Eigen::VectorXd x0_init = *trajectory_generator.get_traj_x0_init();
     Eigen::VectorXd x0_init_red = x0_init(n_x_indices);
     return x0_init_red;
 }
