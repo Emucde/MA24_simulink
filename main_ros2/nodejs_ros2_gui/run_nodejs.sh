@@ -18,4 +18,12 @@ PYTHONPATH=""
 source $CONDA_PREFIX/etc/profile.d/conda.sh
 conda activate mpc
 
-node $masterdir/main_ros2/nodejs_ros2_gui/src/app.js
+while true; do
+    node $masterdir/main_ros2/nodejs_ros2_gui/src/app.js
+    if [ $? -eq 0 ]; then
+        echo "nodejs launched successfully."
+        break
+    else
+        echo "nodejs crashed. Restarting..."
+    fi
+done

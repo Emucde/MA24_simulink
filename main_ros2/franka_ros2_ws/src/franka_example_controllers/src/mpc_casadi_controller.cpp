@@ -138,6 +138,13 @@ namespace franka_example_controllers
             tau_full = Eigen::VectorXd::Zero(nq);
         }
 
+        #ifndef SIMULATION_MODE
+        // Write torques to shared memory (send data to robot)
+        for (int i = 0; i < nq; ++i) {
+            command_interfaces_[i].set_value(tau_full[i]);
+        }
+        #endif
+
         return controller_interface::return_type::OK;
     }
 

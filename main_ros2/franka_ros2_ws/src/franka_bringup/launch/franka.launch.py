@@ -17,12 +17,34 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, Shutdown
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, Shutdown, ExecuteProcess, LogInfo, EmitEvent
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution, ThisLaunchFile
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+
+# Spawn custom controllers
+spawn_controllers = []
+controller_names = [
+    "gravity_compensation_example_controller",
+    "mpc_pinocchio_controller",
+    "mpc_casadi_controller",
+    "conventional_workspace_controller",
+    "move_to_start_example_controller"
+    ]
+
+def on_custom_exit(event, context):
+    if event.returncode != 0:
+        return [
+            LogInfo(msg=f"ros2_control_node exited with {event.returncode}. Shutting down and restarting."),
+            EmitEvent(event=Shutdown(reason='ros2_control_node failed')),
+            ExecuteProcess(
+                cmd=['ros2', 'launch', 'franka_bringup', 'gravity_compensation_example_controller.launch.py'],
+                shell=True  # Ensure you have shell=True only if necessary
+            )
+        ]
+    return []
 
 
 def generate_launch_description():
@@ -55,16 +77,6 @@ def generate_launch_description():
             'controllers.yaml',
         ]
     )
-    
-    # Spawn custom controllers
-    spawn_controllers = []
-    controller_names = [
-        "gravity_compensation_example_controller",
-        "mpc_pinocchio_controller",
-        "mpc_casadi_controller",
-        "conventional_workspace_controller",
-        "move_to_start_example_controller"
-    ]
 
     # load and configure controllers without activating them
     for controller in controller_names:
@@ -115,7 +127,8 @@ def generate_launch_description():
             
             # alternativ (untested):
             # https://github.com/ms-iot/vscode-ros/blob/master/doc/debug-support.md
-            on_exit=Shutdown(),
+            # on_exit=Shutdown(),
+            on_exit=on_custom_exit,
         ),
 
         Node(package='rviz2',

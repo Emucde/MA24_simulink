@@ -15,6 +15,9 @@ param_EKF.Qk_FR3 = ekf_settings.param_EKF.Qk_FR3;
 % param_EKF.Qk_FR3 = diag([1e5*ones(1,7), 1e5*ones(1,7)]);
 param_EKF.P0 = diag([1e0*ones(1,7), 1e0*ones(1,7)]);
 
+% Rauschamplitude von 6µrad, 4mrad/s bei FR3
+% q Rk: 0.5655e-10, 0.2513e-4 bei fr3
+
 % q Rk: 4.85e-12 bei fr3
 
 % Rk = cov(v) ... cov measurement noise
