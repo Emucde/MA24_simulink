@@ -2,6 +2,18 @@ var ws;//aktuelle websocket sitzung
 
 window.onload = start;
 
+function get_formatted_date() {
+  return new Date().toLocaleString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    second: '2-digit'
+});
+}
+
 function start() {
 	document.getElementById("timeconn").innerHTML=new Date().getTime();
 
@@ -31,15 +43,7 @@ function start() {
       console.log("NodeJs connected");
       document.getElementById("connected").innerHTML = "NodeJs connected @ ";
       // Format the date nicely
-      const formattedDate = new Date().toLocaleString('en-US', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric', 
-          hour: '2-digit', 
-          minute: '2-digit', 
-          second: '2-digit'
-      });
+      const formattedDate = get_formatted_date();
       document.getElementById("timeconn").innerHTML = formattedDate; // Display the formatted date
       document.getElementById("conncon").style.backgroundColor = "green";
 
@@ -52,13 +56,15 @@ function start() {
         console.log("NodeJs disconnected");
         //bringt da nix:
         //datarunning = 0;//falls repetetive messung laeuft.
+        const formattedDate = get_formatted_date();
         document.getElementById("connected").innerHTML="NodeJs disconnected @";
-        document.getElementById("timeconn").innerHTML=new Date();
+        document.getElementById("timeconn").innerHTML=formattedDate;
         document.getElementById("conncon").style.backgroundColor="red";
 
         //ROS2 ebenfalls disconnected
         document.getElementById("labconncon").style.backgroundColor="red";
-        document.getElementById("labcon").innerHTML="ROS2 disconnected @ " + new Date();
+        document.getElementById("labcon").innerHTML="ROS2 disconnected @";
+        document.getElementById("labtimeconn").innerHTML=formattedDate;
 
         //Reconnect every 5000 seconds
         setTimeout(function(){start()}, 5000);
@@ -115,16 +121,20 @@ function start() {
             }
             else{
                 responseElement.textContent = `${result.name}: ${result.status}`;
-                if(result.name == "ros_service"){
+                if(result.name == "ros_service" || result.name == "ros2_alive"){
                     var ros_connected_col_el = document.getElementById("labconncon");
                     var ros_connected_text_el = document.getElementById("labcon");
+                    var ros_timeconnected_text_el = document.getElementById("labtimeconn");
+                    const formattedDate = get_formatted_date();
                     if(result.status.includes("timed out")){
                       ros_connected_col_el.style.backgroundColor = "red";
-                      ros_connected_text_el.textContent = "ROS2 disconnected";
+                      ros_connected_text_el.textContent = "ROS2 disconnected @";
+                      ros_timeconnected_text_el.textContent = formattedDate;
                     }
                     else {
                       ros_connected_col_el.style.backgroundColor = "green";
-                      ros_connected_text_el.textContent = "ROS2 connected";
+                      ros_connected_text_el.textContent = "ROS2 connected @";
+                      ros_timeconnected_text_el.textContent = formattedDate;
                     }
                     if(result.status.includes("Homing in progress"))
                     {
@@ -139,6 +149,15 @@ function start() {
         } else {
             responseElement.textContent = `Error: ${data.error}`;
             document.getElementById("status").style.backgroundColor="red";
+            if(data.error.includes("ROS2 not connected")){
+                var ros_connected_col_el = document.getElementById("labconncon");
+                var ros_connected_text_el = document.getElementById("labcon");
+                var ros_timeconnected_text_el = document.getElementById("labtimeconn");
+                ros_connected_col_el.style.backgroundColor = "red";
+                const formattedDate = get_formatted_date();
+                ros_connected_text_el.textContent = "ROS2 disconnected @";
+                ros_timeconnected_text_el.textContent = formattedDate;
+            }
         }
     };
 }

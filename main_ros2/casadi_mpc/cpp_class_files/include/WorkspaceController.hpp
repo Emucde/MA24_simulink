@@ -44,6 +44,7 @@ public:
     virtual Eigen::VectorXd control(const Eigen::VectorXd &x) = 0; // Pure virtual function
     virtual Eigen::MatrixXd computeJacobianRegularization();       // Common method in BaseWorkspaceController
     virtual void calculateControlData(const Eigen::VectorXd &x);   // Common method in BaseWorkspaceController
+    virtual void calculateControlDataID(const Eigen::VectorXd &x, const Eigen::VectorXd &x_d);   // Common method in BaseWorkspaceController
     virtual void set_singularity_robustness_mode(RegularizationMode sing_method) { this->sing_method = sing_method; }
     virtual void set_regularization_settings(RegularizationSettings regularization_settings)
     {

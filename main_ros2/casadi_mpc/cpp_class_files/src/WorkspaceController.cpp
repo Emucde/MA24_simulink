@@ -373,6 +373,75 @@ void BaseWorkspaceController::calculateControlData(const Eigen::VectorXd &x)
     traj_count++;
 }
 
+void BaseWorkspaceController::calculateControlDataID(const Eigen::VectorXd &x, const Eigen::VectorXd &x_d)
+{
+    robot_model.jointData.q = x.head(nq);
+    robot_model.jointData.q_p = x.tail(nq);
+    robot_model.computeKinematics();
+
+    // Parameters
+    q = robot_model.jointData.q;     // Time derivative of generalized coordinates
+    q_p = robot_model.jointData.q_p; // Time derivative of generalized coordinates
+
+    // Current pose of end-effector
+    Eigen::Vector3d p = robot_model.kinematicsData.p;
+    Eigen::VectorXd y_p = J * q_p;
+
+    Eigen::Vector3d p_p = y_p.head(3);     // Linear velocity of the end-effector
+    Eigen::Vector3d omega_e = y_p.tail(3); // Angular velocity of the end-effector
+
+    // Desired trajectory
+    Eigen::VectorXd p_d = trajectory_generator.p_d.col(traj_count);
+    Eigen::VectorXd p_d_p = trajectory_generator.p_d_p.col(traj_count);
+    Eigen::VectorXd p_d_pp = trajectory_generator.p_d_pp.col(traj_count);
+
+    Eigen::Quaterniond q_d = vec2quat<double>(trajectory_generator.q_d.col(traj_count));
+    Eigen::VectorXd omega_d = trajectory_generator.omega_d.col(traj_count);
+    Eigen::VectorXd omega_d_p = trajectory_generator.omega_d_p.col(traj_count);
+
+    // Errors
+    Eigen::Matrix3d R_d = q_d.toRotationMatrix();
+    Eigen::Matrix3d R = robot_model.kinematicsData.R;
+    Eigen::Matrix3d dR = R * R_d.transpose();
+    // Eigen::Quaterniond q_err_tmp(dR);
+
+    // Eigen::Quaterniond quat = robot_model.kinematicsData.quat;
+    // Eigen::Quaterniond q_err_tmp = quat * q_d.conjugate();
+    // Eigen::Vector3d q_err = q_err_tmp.vec(); // Only the orientation error part
+    
+    Eigen::Vector4d q_err_tmp = rotm2quat_v4<double>(dR);
+    Eigen::Vector3d q_err = q_err_tmp.tail(3); // Only the orientation error part
+
+    x_err = Eigen::VectorXd::Zero(6);
+    x_err << (p - p_d), q_err; // Error as quaternion
+
+    x_err_p = Eigen::VectorXd::Zero(6);
+    x_err_p << (p_p - p_d_p), (omega_e - omega_d);
+
+    x_d_p = Eigen::VectorXd::Zero(6);
+    x_d_p << p_d_p, omega_d;
+
+    x_d_pp = Eigen::VectorXd::Zero(6);
+    x_d_pp << p_d_pp, omega_d_p;
+
+    // Update the robot model state with joint positions and velocities
+    robot_model.updateState(x_d);
+
+    // Get matrices and variables from the robot model
+    M = robot_model.dynamicsData.M; // Inertia matrix
+    C = robot_model.dynamicsData.C; // Coriolis matrix
+    C_rnea = robot_model.dynamicsData.C_rnea; // Coriolis matrix computed with RNEA
+    g = robot_model.dynamicsData.g; // Gravitational forces
+
+    J = robot_model.kinematicsData.J;     // Geometric Jacobian to end-effector
+    J_p = robot_model.kinematicsData.J_p; // Time derivative of geometric Jacobian
+    //Eigen::Matrix3d R = robot_model.kinematicsData.R;     // Rotation matrix of end-effector
+
+    J_pinv = computeJacobianRegularization();
+
+    traj_count++;
+}
+
 
 Eigen::VectorXd WorkspaceController::CTController::control(const Eigen::VectorXd &x)
 {
@@ -399,7 +468,10 @@ Eigen::VectorXd WorkspaceController::InverseDynamicsController::control(const Ei
     Eigen::MatrixXd D_d = controller_settings.id_settings.D_d;
     Eigen::MatrixXd K_d = controller_settings.id_settings.K_d;
 
-    calculateControlData(x);
+    Eigen::VectorXd x_d = Eigen::VectorXd::Zero(nx);
+    x_d << q_d_prev, q_p_d_prev;
+
+    calculateControlDataID(x, x_d);
 
     if (init)
     {

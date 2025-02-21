@@ -203,7 +203,7 @@ input[type="text"]:focus {
 }
 
 /* Status Text Styling */
-#connected, #labcon {
+#connected, #labcon, #statuscon {
     font-weight: bold; /* Make the status text bold */
     color: white; /* White text for visibility */
 }

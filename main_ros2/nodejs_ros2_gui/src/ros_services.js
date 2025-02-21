@@ -36,6 +36,21 @@ initializeNode().catch(error => {
     console.error('Error initializing ROS 2 Node:', error);
 });
 
+async function checkROSConnection() {
+    try {
+        // Get the list of available topics
+        const nodeNames = node.getNodeNames();
+
+        if(nodeNames.includes('controller_manager'))
+            return true;
+        else
+            return false;
+    } catch (error) {
+        console.error('ROS connection is not available:', error.message);
+        return false;
+    }
+  }
+
 // Service Call Handlers
 async function startService(active_controller_name) {
     console.log("start");
@@ -206,4 +221,4 @@ async function get_controller_info() {
     return { controller_names, controller_active_states, active_controller_idx, active_controller_name, ok: true, name: name };
 }
 
-module.exports = { restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, activate_control, get_controller_info, objectToString };
+module.exports = { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, activate_control, get_controller_info, objectToString };

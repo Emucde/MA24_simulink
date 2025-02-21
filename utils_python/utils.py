@@ -1862,6 +1862,9 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
 
     control_frequency = given_numbers
 
+    non_zero_min = np.min(given_numbers[given_numbers > 0]) if np.any(given_numbers > 0) else 0
+    control_frequency_real = np.full_like(given_numbers, non_zero_min)
+
     for i in range(N):
         q[i] = xs[i, 0:n]
         q_p[i] = xs[i, n:2 * n]
@@ -2106,11 +2109,11 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
                 'sig_colors': ['rgb(255,255,17)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(0,0,255)', 'rgb(255,0,0)', 'rgb(0,127,0)']}
     
     subplot20 = {'title': 'freq per Ta step (Hz)',
-                'sig_labels': ['control_frequency', 'freq_per_Ta_step', 'freq_per_Ta_step_mean'],
+                'sig_labels': ['control_frequency', 'control_frequency_real', 'freq_per_Ta_step', 'freq_per_Ta_step_mean'],
                 'sig_xdata': t,
-                'sig_ydata': [control_frequency, freq_per_Ta_step, freq_per_Ta_step_mean],
-                'sig_linestyles': ['-', '-', '-'],
-                'sig_colors': ['rgb(0,255,0)', 'rgb(255,255,17)', 'rgb(255,0,0)']}
+                'sig_ydata': [control_frequency, control_frequency_real, freq_per_Ta_step, freq_per_Ta_step_mean],
+                'sig_linestyles': ['-', '--', '-', '-'],
+                'sig_colors': ['rgb(0,255,0)', 'rgb(255,19,166)', 'rgb(255,255,17)', 'rgb(255,0,0)']}
     
     subplot21 = {'title': 'quat_err',
                 'sig_labels': ['quat_err_2', 'quat_err_3', 'quat_err_4'],

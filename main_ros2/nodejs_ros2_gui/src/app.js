@@ -2,7 +2,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const express = require('express');
 const path = require('path');
-const { restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, activate_control, get_controller_info, objectToString } = require('./ros_services');
+const { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, activate_control, get_controller_info, objectToString } = require('./ros_services');
 const { searchTrajectoryNames } = require('./search_m_file');
 
 // Express setup to serve HTML files
@@ -17,6 +17,7 @@ var active_controller_idx = null;
 var active_controller_name = null;
 var enable_control = false;
 var ros_running = false;
+var init_ros_running = false;
 var traj_path = path.join(__dirname, '..', '..', '..', 'utils', 'matlab_init_general', 'param_traj_fr3_no_hand_6dof.m');
 var general_config_path = path.join(__dirname, '..', '..', '..', 'config_settings', 'general_settings.json');
 var general_config = require(general_config_path);
@@ -46,6 +47,8 @@ async function init_ros() {
                 enable_control = (active_controller_name === 'mpc_pinocchio_controller' || active_controller_name === 'mpc_casadi_controller');
                 console.log("Currently active controllers: ", active_controller_name);
                 ros_running = true;
+                init_ros_running = false;
+                broadcast(JSON.stringify({ status: 'success', result: { name: 'ros2_alive', status: 'ROS2 connected!' } }));
             })
             .catch((error) => {
                 console.log("Error while getting loaded controllers. It seems that ROS2 crashed.");
@@ -56,6 +59,18 @@ async function init_ros() {
         console.log("Error while getting loaded controllers. ROS2 was not started. Retrying in 2 seconds.");
         setTimeout(init_ros, 2000);
     }
+}
+
+async function check_ros_connection() {
+    setInterval(async function () {
+        var is_alive = await checkROSConnection();
+        if(!is_alive && !init_ros_running)
+        {
+            broadcast(JSON.stringify({ status: 'error', error: 'ROS2 not connected!' }));
+            init_ros();
+            init_ros_running = true;
+        }
+    }, 5000);
 }
 
 async function update() {
@@ -168,13 +183,18 @@ async function check(result, checked_command, data)
     return { ok: result.ok, status: status, name: name };
 }
 
+function broadcast(message) {
+    clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
+    });
+}
+
 async function main() {
-    try {
-        init_ros(); // Initialize ROS2
-    }
-    catch (error) {
-        console.log("Error while getting loaded controllers. It seems that ROS2 crashed.'");
-    }
+    wss.on('listening', (ws) => {
+        check_ros_connection();
+    });
 
     wss.on('connection', (ws) => {
         clients.add(ws);
@@ -273,7 +293,7 @@ async function main() {
                                             if (log_check.ok)
                                                 ws.send(JSON.stringify({ status: 'success', result: { name: 'ros_service', status: 'Homing done' } }));
                                             else
-                                                ws.send(JSON.stringify({ status: 'error', result: { name: 'ros_service', status: log_check.status } }));
+                                                ws.send(JSON.stringify({ status: 'error', error: { name: 'ros_service', status: log_check.status } }));
                                         }
                                     }, data.delay);
                                 }
@@ -287,7 +307,7 @@ async function main() {
                 if(log_check.ok)
                     ws.send(JSON.stringify({ status: 'success', result: { name: log_check.name, status: log_check.status } }));
                 else
-                    ws.send(JSON.stringify({ status: 'error', result: { name: log_check.name, status: log_check.status } }));
+                    ws.send(JSON.stringify({ status: 'error', error: { name: log_check.name, status: log_check.status } }));
             } catch (error)
             {
                 console.error('An error occurred:', error.message);
@@ -322,14 +342,6 @@ async function main() {
         // Send available Casadi MPCs
         ws.send(JSON.stringify({ status: 'success', result: { name: 'casadi_mpcs', mpcs: available_casadi_mpcs } }));
     });
-
-    function broadcast(message) {
-        clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(message);
-            }
-        });
-    }
 
     const terminator = (signal) => {
         console.log(`Received ${signal} - terminating app`);
