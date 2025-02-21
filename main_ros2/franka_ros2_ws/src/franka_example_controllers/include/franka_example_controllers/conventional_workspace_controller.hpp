@@ -199,7 +199,4 @@ namespace franka_example_controllers
         void reset_mpc_trajectory();
     };
 
-    // #ifdef SIMULATION_MODE
-    // Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude);
-    // #endif
 } // namespace franka_example_controllers
