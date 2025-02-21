@@ -151,10 +151,10 @@ namespace franka_example_controllers
             {"data_from_simulink_stop", sizeof(int8_t), 1},
             {"readonly_mode", sizeof(int8_t), 1},
             {"read_traj_length", sizeof(casadi_uint), 1},
-            {"read_traj_data_full", 19 * sizeof(casadi_real), traj_len},
-            {"read_frequency_full", sizeof(casadi_real), traj_len},
-            {"read_state_data_full", sizeof(casadi_real) * robot_config.nx, traj_len},
-            {"read_control_data_full", sizeof(casadi_real) * robot_config.nq, traj_len},
+            {"read_traj_data_full", 19 * sizeof(casadi_real), 20000},
+            {"read_frequency_full", sizeof(casadi_real), 20000},
+            {"read_state_data_full", sizeof(casadi_real) * robot_config.nx, 20000},
+            {"read_control_data_full", sizeof(casadi_real) * robot_config.nq, 20000},
             {"data_from_python", sizeof(casadi_real) * robot_config.nq, 1}};
 
         const std::vector<std::string> sem_readwrite_names = {
