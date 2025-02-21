@@ -15,8 +15,12 @@ function [files_changed_out] = generate_mpc_sourcefiles(casadi_fun, casadi_opt_p
     if(~exist(checksum_opt_prob_file_name, 'file'))
         calculate_checksums_with_md5sum(casadi_opt_problem_paths, checksum_opt_prob_file_name);
     end
-
     checksum_opt_prob_data = readtable(checksum_opt_prob_file_name, 'Delimiter', '  ', 'ReadVariableNames', true, 'FileType', 'text');
+    if(isempty(checksum_opt_prob_data))
+        calculate_checksums_with_md5sum(casadi_opt_problem_paths, checksum_opt_prob_file_name);
+        checksum_opt_prob_data = readtable(checksum_opt_prob_file_name, 'Delimiter', '  ', 'ReadVariableNames', true, 'FileType', 'text');
+    end
+    
     % fileID = fopen(checksum_opt_prob_file_name, 'r');
     % checksum_opt_prob_data = textscan(fileID, '%s  %s', 'Delimiter', '  ');
     % checksum_opt_prob_data = reshape(checksum_opt_prob_data{1}(3:end), 2, [])';

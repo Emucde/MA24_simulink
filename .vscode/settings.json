@@ -221,6 +221,6 @@
   "workbench.editor.enablePreview": false,
   "python.terminal.activateEnvironment": false,
   "C_Cpp.dimInactiveRegions": false,
-  "MATLAB.startDebuggerAutomatically": true,
   "debug.focusWindowOnBreak": false,
+  "editor.codeLens": true,
 }

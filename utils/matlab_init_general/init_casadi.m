@@ -8,6 +8,7 @@ if(isempty(casadi_path))
     path_cell = path_cell{end};
     path_cell = strsplit(path_cell, '\n');
     casadi_path = path_cell{1};
+    casadi_path = strrep(casadi_path, '"', '');
 end
 addpath(casadi_path);
 import casadi.*

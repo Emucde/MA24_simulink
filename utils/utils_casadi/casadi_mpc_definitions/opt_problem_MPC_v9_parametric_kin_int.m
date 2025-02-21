@@ -167,36 +167,25 @@ y    = SX( 7, N_MPC+1 ); % TCP pose:      (y_0 ... y_N)
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 for i=0:N_MPC
-    % calculate trajectory values (y_0 ... y_N)
+    % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
     t_k = time_points(1 + (i));
     q_i = q(x_k, t_k, theta);
     q_p_i = q_p(x_k, t_k, theta);
     q_pp_i = q_pp(t_k, theta);
-    
+    x_k_i = [q_i; q_p_i];
+
+    % calculate trajectory values (y_0 ... y_N)
     H_e = H_red(x(1:n_red, 1 + (i)));
-    R_e = H_e(1:3, 1:3);
     y(1:3,   1 + (i)) = H_e(1:3, 4);
     y(4:7,   1 + (i)) = quat_fun_red(x(1:n_red, 1 + (i)));
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
     
-    x_k_i = [q_i; q_p_i];
-
-    g_x(1, 1 + (i)) = {x(:, 1 + (i)) - x_k_i};
-
     if(i < N_MPC)
-        % Caclulate state trajectory: Given: x_0: (x_1 ... xN)
-        % if(i == 0)
-        %     g_x(1, 1 + (0)) = {x_k - x(:, 1 + (0))}; % x0 = xk
-        % end
-
-        % if(i == 0 || i == 1)
-        %     g_x(1, 1 + (i+1))  = { F_kp1(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk = x(t0) = tilde x0 to xk+1 = x(t0+Ta)
-        % elseif(i == 2)
-        %     g_x(1, 1 + (i+1))  = { F2(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for xk+1 = x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
-        % else
-        %     g_x(1, 1 + (i+1))  = { F(  x_k_i, q_pp_i ) - x( :, 1 + (i+1)) }; % Set the state constraints for x(t0+Ts_MPC*i) to x(t0+Ts_MPC*(i+1))
-        % end
-        g_u(1, 1 + (i))   = {u(:, 1 + (i)) - q_pp_i};
+        if(i==0)
+            g_x(  1, 1 + (0)) = {x_k_i - x(:, 1 + (0))}; % x0 = xk
+        end
+        g_x(1, 1 + (i+1))   = {F(  x_k_i, q_pp_i ) - x( :, 1 + (i+1))};
+        g_u(1, 1 + (i))   = {u( :, 1 + (i)) - q_pp_i};
         g_u_prev(1, 1 + (i)) = {u(:, 1 + (i)) - u_prev(:, 1 + (i))};
     end
 end

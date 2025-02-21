@@ -129,6 +129,7 @@ end
 
 % constraints conditions cellarray g
 g_x  = cell(1, N_MPC+2);
+g_u_prev = cell(1, N_MPC);
 g_u  = cell(1, N_MPC);
 
 if(weights_and_limits_as_parameter)

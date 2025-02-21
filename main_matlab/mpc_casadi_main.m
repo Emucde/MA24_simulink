@@ -26,11 +26,11 @@ if(~use_extern_flags)
     fullsimu                        = false; % make full mpc simulation and plot results
     traj_select_mpc                 = 1; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
     create_init_guess_for_all_traj  = ~true; % create init guess for all trajectories
-    create_test_solve               = true; % create init guess for all trajectories
+    create_test_solve               = ~true; % create init guess for all trajectories
     compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
     compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
     iterate_all_mpc_sfunctions      = true;
-    mpc_source_selection            = 1; % (1: all MPCs, 2: only dynamic MPCs, 3: only kinematic MPCs, 4: only selected MPC, 5: custom list)
+    mpc_source_selection            = 5; % (1: all MPCs, 2: only dynamic MPCs, 3: only kinematic MPCs, 4: only selected MPC, 5: custom list)
     coptimflags                     = '-Ofast -march=native -flto'; % Optimization flag for compilation
     use_jit                         = false; % use jit for compilation (precompiles before each RUN!!!
     generate_realtime_udp_c_fun     = true; % create SOURCEFILES
@@ -39,7 +39,7 @@ if(~use_extern_flags)
 end
 
 % MPC TO COMPILE FOR SIMULINK
-SELECTED_MPC_NAME = 'MPC15LL';
+SELECTED_MPC_NAME = 'MPC10';
 
 % Compile Mode:
 % compile_mode = 1 | nlpsol-sfun | fast compile time | very accurate,          | sometimes slower exec
@@ -112,7 +112,7 @@ param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version = 'opt_problem_MPC_v5_kin_dev'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
-param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).N_MPC   = 30;
 param_casadi_fun_name.(MPC).compile_mode = 2; %1: nlpsol-sfun, 2: opti-sfun
 param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
 param_casadi_fun_name.(MPC).int_method = 'Euler'; % is ignored here
@@ -220,8 +220,12 @@ param_casadi_fun_struct = param_casadi_fun_name.(SELECTED_MPC_NAME);
 
 [mpc_source_selection_list, param_mpc_source_selection] = get_mpc_param_list(param_casadi_fun_name, param_casadi_fun_struct, mpc_source_selection, iterate_all_mpc_sfunctions); % sets param_casadi_fun_struct_list
 
+if(mpc_source_selection == 5)
+    [param_weight_init, param_weight] = init_mpc_weights_fr3_no_hand_6dof('./config_settings/casadi_mpc_weights_fr3_no_hand_custom_list.json');
+end
+
 if(iterate_all_mpc_sfunctions)
-    param_casadi_fun_struct_list = struct2cell(param_casadi_fun_name);
+    param_casadi_fun_struct_list = param_mpc_source_selection;
 else
     param_casadi_fun_struct_list = {param_casadi_fun_struct};
 end

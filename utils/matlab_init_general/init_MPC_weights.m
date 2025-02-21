@@ -3,7 +3,7 @@ if(strcmp(robot_name, 'fr3_7dof'))
 elseif(strcmp(robot_name, 'fr3_6dof'))
     init_mpc_weights_fr3_6dof;
 elseif(strcmp(robot_name, 'fr3_no_hand_6dof'))
-    init_mpc_weights_fr3_no_hand_6dof;
+    [param_weight_init, param_weight] = init_mpc_weights_fr3_no_hand_6dof();
 elseif(strcmp(robot_name, 'ur5e_6dof'))
     init_mpc_weights_ur5e_6dof;
 else
