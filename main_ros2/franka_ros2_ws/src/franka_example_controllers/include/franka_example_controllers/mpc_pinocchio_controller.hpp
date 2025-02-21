@@ -123,11 +123,11 @@ namespace franka_example_controllers
         bool use_planner = false;
         bool use_lowpass_filter = false;
         bool use_ekf = false;
+        int solver_steps = 1;
+        int solver_step_counter = 0;
         #ifdef SIMULATION_MODE
         bool use_noise=false;
         double mean_noise_amplitude = 0;
-        int solver_steps = 1;
-        int solver_step_counter = 0;
         #endif
         CrocoddylController controller = CrocoddylController(urdf_filename, crocoddyl_config_filename, tcp_frame_name, use_gravity);
         Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
