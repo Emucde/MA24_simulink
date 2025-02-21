@@ -5,10 +5,16 @@
             The gravity compensation controller only sends zero torques so that the robot does gravity compensation
         </description>
     </class>
-    <class name="franka_example_controllers/ModelPredictiveControllerPinocchio"
-           type="franka_example_controllers::ModelPredictiveControllerPinocchio" base_class_type="controller_interface::ControllerInterface">
+    <class name="franka_example_controllers/ModelPredictiveControllerCrocoddyl"
+           type="franka_example_controllers::ModelPredictiveControllerCrocoddyl" base_class_type="controller_interface::ControllerInterface">
         <description>
-            A Model Predictive Controller by using Pinocchio
+            A Model Predictive Controller by using Crocoddyl
+        </description>
+    </class>
+    <class name="franka_example_controllers/ModelPredictiveControllerCrocoddylSHM"
+           type="franka_example_controllers::ModelPredictiveControllerCrocoddylSHM" base_class_type="controller_interface::ControllerInterface">
+        <description>
+            A Model Predictive Controller by using Crocoddyl and Shared Memory
         </description>
     </class>
     <class name="franka_example_controllers/ModelPredictiveControllerCasadi"

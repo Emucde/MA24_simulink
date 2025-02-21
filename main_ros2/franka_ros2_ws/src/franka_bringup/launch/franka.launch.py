@@ -28,7 +28,8 @@ from launch_ros.substitutions import FindPackageShare
 spawn_controllers = []
 controller_names = [
     "gravity_compensation_example_controller",
-    "mpc_pinocchio_controller",
+    "mpc_crocoddyl_controller",
+    "mpc_crocoddyl_controller_shm",
     "mpc_casadi_controller",
     "conventional_workspace_controller",
     "move_to_start_example_controller"

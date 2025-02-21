@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <franka_example_controllers/mpc_pinocchio_controller_shm.hpp>
+#include <franka_example_controllers/mpc_crocoddyl_controller_shm.hpp>
 
 #include <exception>
 #include <string>
@@ -28,7 +28,7 @@ namespace franka_example_controllers
 {
 
     controller_interface::InterfaceConfiguration
-    ModelPredictiveControllerPinocchio::command_interface_configuration() const
+    ModelPredictiveControllerCrocoddylSHM::command_interface_configuration() const
     {
         controller_interface::InterfaceConfiguration config;
         config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
@@ -41,7 +41,7 @@ namespace franka_example_controllers
     }
 
     controller_interface::InterfaceConfiguration
-    ModelPredictiveControllerPinocchio::state_interface_configuration() const
+    ModelPredictiveControllerCrocoddylSHM::state_interface_configuration() const
     {
         controller_interface::InterfaceConfiguration state_interfaces_config;
         state_interfaces_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
@@ -56,7 +56,7 @@ namespace franka_example_controllers
         return state_interfaces_config;
     }
 
-    controller_interface::return_type ModelPredictiveControllerPinocchio::update(
+    controller_interface::return_type ModelPredictiveControllerCrocoddylSHM::update(
         const rclcpp::Time & /*time*/,
         const rclcpp::Duration & /*period*/)
     {
@@ -182,7 +182,7 @@ namespace franka_example_controllers
         return controller_interface::return_type::OK;
     }
 
-    CallbackReturn ModelPredictiveControllerPinocchio::on_configure(
+    CallbackReturn ModelPredictiveControllerCrocoddylSHM::on_configure(
         const rclcpp_lifecycle::State & /*previous_state*/)
     {
         arm_id_ = get_node()->get_parameter("arm_id").as_string();
@@ -190,7 +190,7 @@ namespace franka_example_controllers
         RCLCPP_INFO(get_node()->get_logger(), "Configuring MPC controller for %s arm", arm_id_.c_str());
 
         // subscription_ = get_node()->create_subscription<mpc_interfaces::msg::Num>(
-        //     "topic", 10, std::bind(&ModelPredictiveControllerPinocchio::topic_callback, this, _1));
+        //     "topic", 10, std::bind(&ModelPredictiveControllerCrocoddylSHM::topic_callback, this, _1));
 
         // RCLCPP_INFO(get_node()->get_logger(), "Subscribed to topic 'topic'");
 
@@ -199,26 +199,26 @@ namespace franka_example_controllers
 
         start_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
             service_prefix + "start_mpc_service",
-            std::bind(&ModelPredictiveControllerPinocchio::start_mpc, this, std::placeholders::_1, std::placeholders::_2));
+            std::bind(&ModelPredictiveControllerCrocoddylSHM::start_mpc, this, std::placeholders::_1, std::placeholders::_2));
 
         reset_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
             service_prefix + "reset_mpc_service",
-            std::bind(&ModelPredictiveControllerPinocchio::reset_mpc, this, std::placeholders::_1, std::placeholders::_2));
+            std::bind(&ModelPredictiveControllerCrocoddylSHM::reset_mpc, this, std::placeholders::_1, std::placeholders::_2));
 
         stop_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
             service_prefix + "stop_mpc_service",
-            std::bind(&ModelPredictiveControllerPinocchio::stop_mpc, this, std::placeholders::_1, std::placeholders::_2));
+            std::bind(&ModelPredictiveControllerCrocoddylSHM::stop_mpc, this, std::placeholders::_1, std::placeholders::_2));
 
         traj_switch_service_ = get_node()->create_service<mpc_interfaces::srv::TrajectoryCommand>(
             service_prefix + "traj_switch_service",
-            std::bind(&ModelPredictiveControllerPinocchio::traj_switch, this, std::placeholders::_1, std::placeholders::_2));
+            std::bind(&ModelPredictiveControllerCrocoddylSHM::traj_switch, this, std::placeholders::_1, std::placeholders::_2));
 
         RCLCPP_INFO(get_node()->get_logger(), "Services created");
 
         return CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerPinocchio::on_init()
+    CallbackReturn ModelPredictiveControllerCrocoddylSHM::on_init()
     {
         rcutils_ret_t ret = rcutils_logging_set_logger_level(
             get_node()->get_logger().get_name(), MY_LOG_LEVEL);
@@ -246,18 +246,18 @@ namespace franka_example_controllers
             return CallbackReturn::ERROR;
         }
 
-        RCLCPP_INFO(get_node()->get_logger(), "Pinocchio MPC controller initialized.");
+        RCLCPP_INFO(get_node()->get_logger(), "Crocoddyl MPC SHM controller initialized.");
         return CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerPinocchio::on_deactivate(const rclcpp_lifecycle::State &)
+    CallbackReturn ModelPredictiveControllerCrocoddylSHM::on_deactivate(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
         RCLCPP_INFO(get_node()->get_logger(), "on_deactivate: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerPinocchio::on_activate(const rclcpp_lifecycle::State &)
+    CallbackReturn ModelPredictiveControllerCrocoddylSHM::on_activate(const rclcpp_lifecycle::State &)
     {
         open_shared_memories();
         int8_t readonly_mode = 0;
@@ -266,21 +266,21 @@ namespace franka_example_controllers
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerPinocchio::on_cleanup(const rclcpp_lifecycle::State &)
+    CallbackReturn ModelPredictiveControllerCrocoddylSHM::on_cleanup(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
         RCLCPP_INFO(get_node()->get_logger(), "on_cleanup: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerPinocchio::on_shutdown(const rclcpp_lifecycle::State &)
+    CallbackReturn ModelPredictiveControllerCrocoddylSHM::on_shutdown(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
         RCLCPP_INFO(get_node()->get_logger(), "on_shutdown: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    void ModelPredictiveControllerPinocchio::open_shared_memories()
+    void ModelPredictiveControllerCrocoddylSHM::open_shared_memories()
     {
         // Open shared memory for writing states to crocddyl
         shm_states = open_write_shm("data_from_simulink", get_node()->get_logger());
@@ -299,7 +299,7 @@ namespace franka_example_controllers
         RCLCPP_INFO(get_node()->get_logger(), "Shared memory opened successfully.");
     }
 
-    void ModelPredictiveControllerPinocchio::close_shared_memories()
+    void ModelPredictiveControllerCrocoddylSHM::close_shared_memories()
     {
         if (shm_states != -1)
             close(shm_states);
@@ -321,12 +321,12 @@ namespace franka_example_controllers
             sem_close(shm_changed_semaphore);
     }
 
-    // void ModelPredictiveControllerPinocchio::topic_callback(const mpc_interfaces::msg::Num & msg)
+    // void ModelPredictiveControllerCrocoddylSHM::topic_callback(const mpc_interfaces::msg::Num & msg)
     // {
     //   RCLCPP_WARN(get_node()->get_logger(), "I heard: '%ld'", msg.num);
     // }
 
-    void ModelPredictiveControllerPinocchio::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
+    void ModelPredictiveControllerCrocoddylSHM::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                        std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -354,10 +354,10 @@ namespace franka_example_controllers
         mpc_started = true;
         first_torque_read = false;
         sem_post(shm_changed_semaphore);
-        RCLCPP_INFO(get_node()->get_logger(), "Pinocchio MPC started");
+        RCLCPP_INFO(get_node()->get_logger(), "Crocoddyl MPC SHM started");
     }
 
-    void ModelPredictiveControllerPinocchio::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
+    void ModelPredictiveControllerCrocoddylSHM::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                        std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -375,10 +375,10 @@ namespace franka_example_controllers
         response->status = "reset flag set";
         mpc_started = false;
         sem_post(shm_changed_semaphore);
-        RCLCPP_INFO(get_node()->get_logger(), "Pinocchio MPC reset");
+        RCLCPP_INFO(get_node()->get_logger(), "Crocoddyl MPC SHM reset");
     }
 
-    void ModelPredictiveControllerPinocchio::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
+    void ModelPredictiveControllerCrocoddylSHM::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                       std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -396,10 +396,10 @@ namespace franka_example_controllers
         response->status = "stop flag set";
         mpc_started = false;
         sem_post(shm_changed_semaphore);
-        RCLCPP_INFO(get_node()->get_logger(), "Pinocchio MPC stopped");
+        RCLCPP_INFO(get_node()->get_logger(), "Crocoddyl MPC SHM stopped");
     }
 
-    void ModelPredictiveControllerPinocchio::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
+    void ModelPredictiveControllerCrocoddylSHM::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
                                                          std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response)
     {
         int8_t traj_select = request->traj_select;
@@ -419,11 +419,11 @@ namespace franka_example_controllers
         response->status = "trajectory " + std::to_string(traj_select) + " selected";
         mpc_started = false;
         sem_post(shm_changed_semaphore);
-        RCLCPP_INFO(get_node()->get_logger(), "Pinocchio MPC trajectory %d selected", traj_select);
+        RCLCPP_INFO(get_node()->get_logger(), "Crocoddyl MPC SHM trajectory %d selected", traj_select);
     }
 
 } // namespace franka_example_controllers
 #include "pluginlib/class_list_macros.hpp"
 // NOLINTNEXTLINE
-PLUGINLIB_EXPORT_CLASS(franka_example_controllers::ModelPredictiveControllerPinocchio,
+PLUGINLIB_EXPORT_CLASS(franka_example_controllers::ModelPredictiveControllerCrocoddylSHM,
                        controller_interface::ControllerInterface)

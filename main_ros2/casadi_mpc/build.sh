@@ -269,7 +269,7 @@ else
 
         # Run the cmake build command and capture its output
         start_build_time=$(date +%s)
-        time cmake --build "$CMAKE_BUILD_PATH" -j8;
+        time cmake --build "$CMAKE_BUILD_PATH" -j$(($(nproc) - 1 ));
         BUILD_STATUS=$?
         end_build_time=$(date +%s)
 

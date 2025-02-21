@@ -69,7 +69,7 @@ def generate_launch_description():
         ),
 
         ExecuteProcess(
-            cmd=['ros2', 'control', 'switch_controllers', '--activate', 'mpc_pinocchio_controller'],
+            cmd=['ros2', 'control', 'switch_controllers', '--activate', 'mpc_crocoddyl_controller_shm'],
             output='screen'
         )
     ])

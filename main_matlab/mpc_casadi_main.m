@@ -222,6 +222,9 @@ param_casadi_fun_struct = param_casadi_fun_name.(SELECTED_MPC_NAME);
 
 if(mpc_source_selection == 5)
     [param_weight_init, param_weight] = init_mpc_weights_fr3_no_hand_6dof('./config_settings/casadi_mpc_weights_fr3_no_hand_custom_list.json');
+    ekf_fun_path = [s_fun_path, '/casadi_functions/ekf_fun_no_gravity_py.casadi'];
+    ekf_fun = Function.load(ekf_fun_path);
+    create_only_source(ekf_fun, [s_fun_path, '/mpc_c_sourcefiles/']); % create source from ekf_fun_no_gravity_py
 end
 
 if(iterate_all_mpc_sfunctions)

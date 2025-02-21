@@ -43,7 +43,7 @@ namespace franka_example_controllers
          * The gravity compensation controller only sends zero torques so that the robot does gravity
          * compensation
          */
-        class ModelPredictiveControllerPinocchio : public controller_interface::ControllerInterface
+        class ModelPredictiveControllerCrocoddylSHM : public controller_interface::ControllerInterface
         {
         public:
                 FRANKA_EXAMPLE_CONTROLLERS_PUBLIC

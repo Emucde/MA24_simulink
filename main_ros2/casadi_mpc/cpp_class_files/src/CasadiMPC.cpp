@@ -77,7 +77,11 @@ CasadiMPC::CasadiMPC(CasadiMPCType mpc,
     // Check whether quaternions or rpy angles are used
     // in case of mpc_config.in.z_k.len == 0 or mpc_config.in.z_k.len == 13 a quaternion is used
     // only in case of mpc_config.in.z_k.len == 12 rpy angles are used for y_d, y_d_p, y_d_pp
+    #ifdef USE_REFERENCE_SYS_MPC
     use_quat = (mpc_config.in.z_k.len != 12);
+    #else
+    use_quat = true;
+    #endif
 
 #ifdef DEBUG
     std::cout << "w: ";
@@ -288,7 +292,7 @@ void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_k_in)
 
     // set all x_prev reference values to the current state
     set_row_vector(mpc_config.in.x_prev.ptr, mpc_config.in.x_k.ptr, mpc_config.in.x_k.len, mpc_config.in.x_prev.len);
-
+    #ifdef USE_REFERENCE_SYS_MPC
     if (mpc_config.in.z.len != 0)
     {
         const Eigen::VectorXi z_d_quat_rows = (Eigen::VectorXi(10) << trajectory_generator.p_d_rows, trajectory_generator.q_d_rows, trajectory_generator.p_d_p_rows).finished();                                     // Selecting p_d (0-2), q_d (9-12), p_d_p (3-5)
@@ -332,6 +336,9 @@ void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_k_in)
         mpc_config.in.alpha.set(w, alpha_d.data());
         mpc_config.in.alpha_prev.set(w, alpha_d.data());
     }
+    #endif
+
+    #ifdef USE_PATH_FOLLOWING_MPC
     if (mpc_config.in.traj_select.len != 0)
     {
         double traj_select_double = static_cast<double>(traj_select);
@@ -342,6 +349,7 @@ void CasadiMPC::set_coldstart_init_guess(const casadi_real *const x_k_in)
         mpc_config.in.theta.set(w, init_guess_theta.data());
         mpc_config.in.theta_prev.set(w, init_guess_theta.data());
     }
+    #endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -435,6 +443,7 @@ void CasadiMPC::init_references_and_pointers()
                 count++;                                           // Increment count
             }
             break;
+        #ifdef USE_PATH_FOLLOWING_MPC
         case MPCInput::t_k:
             if (mpc_config.in.t_k.len != 0)
             {
@@ -443,6 +452,7 @@ void CasadiMPC::init_references_and_pointers()
                 count++;
             }
             break;
+        #endif
         case MPCInput::y_d:
             if (mpc_config.in.y_d.len != 0)
             {
@@ -451,6 +461,7 @@ void CasadiMPC::init_references_and_pointers()
                 count++;
             }
             break;
+        #ifdef USE_REFERENCE_SYS_MPC
         case MPCInput::y_d_p:
             if (mpc_config.in.y_d_p.len != 0)
             {
@@ -467,6 +478,7 @@ void CasadiMPC::init_references_and_pointers()
                 count++;
             }
             break;
+        #endif
         default:
             break;
         }

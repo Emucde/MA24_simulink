@@ -10,23 +10,43 @@
     "lowpass_filter_omega_c_dq": 1000,
     "trajectory_selection": 1,
     "transient_traj_start_time": 0.0,
-    "transient_traj_duration": 0.0,
-    "transient_traj_end_time": 0.0,
+    "transient_traj_duration": 2.0,
+    "transient_traj_end_time": 2.0,
     "default_controller": "Crocoddyl",
     "available_controllers": [
         "Classic",
         "Casadi",
         "Crocoddyl"
     ],
-    "default_classic_controller": "CT",
+    "default_classic_controller": "PD",
     "available_classic_controller": [
         "PD",
         "CT",
         "ID"
     ],
     "use_casadi_planner": false,
-    "default_casadi_mpc": "MPC17",
+    "default_casadi_mpc": "MPC1_dyn_classic_N_MPC_3",
     "available_casadi_mpc": [
+        "MPC1_dyn_classic_N_MPC_3",
+        "MPC1_dyn_classic_N_MPC_5",
+        "MPC2_dyn_parametric_N_MPC_3",
+        "MPC2_dyn_parametric_N_MPC_5",
+        "MPC2_dyn_parametric_N_MPC_10",
+        "MPC3_kin_int_thelenberg_N_MPC_5",
+        "MPC3_kin_int_thelenberg_N_MPC_10",
+        "MPC3_kin_int_thelenberg_N_MPC_15",
+        "MPC3_kin_int_thelenberg_N_MPC_20",
+        "MPC3_kin_int_thelenberg_N_MPC_30",
+        "MPC4_kin_int_planner_N_MPC_5",
+        "MPC4_kin_int_planner_N_MPC_10",
+        "MPC4_kin_int_planner_N_MPC_15",
+        "MPC4_kin_int_planner_N_MPC_20",
+        "MPC4_kin_int_planner_N_MPC_30",
+        "MPC5_kin_dev_planner_N_MPC_10",
+        "MPC5_kin_dev_planner_N_MPC_20",
+        "MPC5_kin_dev_planner_N_MPC_30"
+    ],
+    "available_casadi_mpc_simulink": [
         "MPC01",
         "MPC6",
         "MPC7",
@@ -62,8 +82,8 @@
             "D_d": [20, 20, 20, 8.944, 8.944, 8.944]
         },
         "CT": {
-            "Kp1": [100, 100, 100, 50, 50, 50],
-            "Kd1": [20, 20, 20, 14.142, 14.142, 14.142]
+            "Kp1": [100, 100, 100, 20, 20, 20],
+            "Kd1": [20, 20, 20, 8.944, 8.944, 8.944]
         },
         "ID": {
             "Kp1": [100, 100, 100, 50, 50, 50],

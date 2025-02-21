@@ -145,7 +145,7 @@ int main()
     const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
     const std::string ekf_config_filename = std::string(MASTERDIR) + "/config_settings/ekf_settings.json";
     const std::string general_config_filename = std::string(MASTERDIR) + "/config_settings/general_settings.json";
-    const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand.json";
+    const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand_custom_list.json";
     const std::string tcp_frame_name = "fr3_link8_tcp";
 
     nlohmann::json general_config = read_config(general_config_filename);

@@ -223,4 +223,5 @@
   "C_Cpp.dimInactiveRegions": false,
   "debug.focusWindowOnBreak": false,
   "editor.codeLens": true,
+  "MATLAB.startDebuggerAutomatically": false,
 }

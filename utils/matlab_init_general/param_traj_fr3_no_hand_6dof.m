@@ -733,5 +733,59 @@ traj_struct.name = 'Random Traj, Polynomial, Workspace';
 traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 
+%% Trajectory 12: Smooth Singularity, Polynomial
+% Define the joint configurations as a cell array
+try
+    single_sing_pose = readmatrix('./main_c/sorted_output_single.csv');
+    N_row = length(single_sing_pose);
+    N_points = 10;
+    start_index = N_row-10;
+    end_index = N_row;
+    stepwidth = round((end_index-start_index)/N_points);
+    indices = start_index:stepwidth:end_index;
+    start_time = 0;
+    end_time = 10;
+    time = linspace(start_time, end_time, N_points);
+    q = single_sing_pose(indices, :);
+catch
+    q = {
+        [1.000342 -0.606696 0 -1.075555 1.078343 2.629348 1.173911];
+        [1.230009 0.828349 0 -1.137286 1.226867 3.405086 1.439463];
+        [1.232434 -0.668604 0 -1.217097 1.39176 2.155764 1.466212];
+        [0.105523 -0.632875 0 -1.1298 1.039899 2.054842 -1.059827];
+        [1.258925 -0.669717 0 -1.038616 0.358037 2.77123 1.476863];
+        [1.366694 -0.494639 0 -0.900858 1.423274 2.936039 0.951906];
+    };
+end
+
+disp('------------------------------------');
+fprintf('Trajectory %d\n\n', cnt);
+
+% Preallocate variables for poses and rotation matrices
+x = zeros(7, N_points);  % Assume an appropriate size according to your output
+R = zeros(3, 3, N_points); % For rotation matrices
+
+for i = 1:N_points
+    H = hom_transform_endeffector_py(q(i, :));
+    R(:,:,i) = H(1:3, 1:3);
+    x(:, i) = [H(1:3, 4); quat_R_endeffector_py(R(:,:,i))];
+end
+
+traj_struct = struct;
+traj_struct.N = N_points;
+traj_struct.q_0 = q0;
+traj_struct.q_0_p = zeros(n,1);
+traj_struct.q_0_pp = zeros(n,1);
+traj_struct.joint_points = -ones(n,traj_struct.N);
+traj_struct.pose = x;
+traj_struct.rotation = R;
+traj_struct.time = time;
+traj_struct.traj_type = [traj_mode.polynomial];
+traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -3.5); % Param differential filter 5th order trajectory
+traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
+traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
+traj_struct.name = 'Multipoint 2, Polynomial, Workspace';
+traj_cell{cnt} = traj_struct;
+cnt = cnt+1;
 
 end

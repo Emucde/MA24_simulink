@@ -115,7 +115,7 @@ namespace franka_example_controllers
         bool mpc_started = false;
         int8_t traj_select = 1; // default trajectory
         const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
-        const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand.json";
+        const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand_custom_list.json";
         const std::string general_config_filename = std::string(MASTERDIR) + "/config_settings/general_settings.json";
         const std::string ekf_config_filename = std::string(MASTERDIR) + "/config_settings/ekf_settings.json";
         const std::string tcp_frame_name = "fr3_link8_tcp";
