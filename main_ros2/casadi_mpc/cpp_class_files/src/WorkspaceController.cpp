@@ -1,35 +1,27 @@
 #include "WorkspaceController.hpp"
 
 
-WorkspaceController::WorkspaceController(
-    const std::string &urdf_path,
+WorkspaceController::WorkspaceController(const std::string &urdf_path,
+    const std::string &workspace_config_path,
     const std::string &tcp_frame_name,
-    bool use_gravity) : urdf_path(urdf_path),
+    bool use_gravity) : urdf_path(urdf_path), workspace_config_path(workspace_config_path),
                         tcp_frame_name(tcp_frame_name),
                         robot_config(get_robot_config()),
                         n_indices(ConstIntVectorMap(robot_config.n_indices, robot_config.nq_red)),
                         n_x_indices(ConstIntVectorMap(robot_config.n_x_indices, robot_config.nx_red)),
                         nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
-                        controller_settings(init_default_controller_settings()),
                         robot_model(urdf_path, tcp_frame_name, robot_config, use_gravity, true),
                         torque_mapper(urdf_path, tcp_frame_name, robot_config, use_gravity, false),
                         trajectory_generator(torque_mapper, robot_config.dt),
-                        sing_method(RegularizationMode::None),
-                        ct_controller(robot_model, sing_method, controller_settings, trajectory_generator),
-                        pd_plus_controller(robot_model, sing_method, controller_settings, trajectory_generator),
-                        inverse_dyn_controller(robot_model, sing_method, controller_settings, trajectory_generator),
+                        ct_controller(robot_model, workspace_config_path, trajectory_generator),
+                        pd_plus_controller(robot_model, workspace_config_path, trajectory_generator),
+                        inverse_dyn_controller(robot_model, workspace_config_path, trajectory_generator),
                         active_controller(&ct_controller)
 {
 }
 
-
 Eigen::MatrixXd BaseWorkspaceController::computeJacobianRegularization()
 {
-    // Assume necessary member variables exist:
-    // `J` (the reduced Jacobian matrix), `x_err` (the error vector),
-    // `nq` (dimensions), `sing_method` (regularization method),
-    // `ctrl_param` (contains the regularization parameters)
-
     Eigen::MatrixXd J = robot_model.kinematicsData.J;
     Eigen::MatrixXd J_pinv = Eigen::MatrixXd::Zero(J.cols(), J.rows());
 
@@ -280,35 +272,64 @@ Eigen::MatrixXd BaseWorkspaceController::computeJacobianRegularization()
     return J_pinv;
 }
 
-
-
-Eigen::VectorXd WorkspaceController::update(const double *const x_nq)
+nlohmann::json BaseWorkspaceController::read_config(std::string file_path)
 {
-    double x_nq_red[nx_red];
-
-    // Convert nx to nx_red state
-    for (int i = 0; i < nx_red; i++)
+    std::ifstream file(file_path);
+    if (!file.is_open())
     {
-        x_nq_red[i] = x_nq[n_x_indices[i]];
+        std::cerr << "Error: Could not open JSON file." << std::endl;
+        return {};
     }
-
-    Eigen::Map<const Eigen::VectorXd> x_nq_vec(x_nq, nx);
-    Eigen::Map<const Eigen::VectorXd> x_nq_red_vec(x_nq_red, nx_red);
-    Eigen::VectorXd tau_red = active_controller->control(x_nq_red_vec);
-    Eigen::VectorXd tau_full = torque_mapper.calc_full_torque(tau_red, x_nq_vec);
-    return tau_full;
+    nlohmann::json jsonData;
+    file >> jsonData; // Parse JSON file
+    file.close();
+    return jsonData;
 }
 
-void WorkspaceController::reset()
+void BaseWorkspaceController::update_controller_settings()
 {
-    active_controller->traj_count = 0;
-    tau_full_prev = Eigen::VectorXd::Zero(nq);
+    nlohmann::json general_config = read_config(workspace_config_path);
+// PD CONTROLLER
+    auto classic_ctl_settings = general_config["classic_controller_settings"];
+    Eigen::MatrixXd K_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
+    Eigen::MatrixXd D_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
 
-    Eigen::VectorXd x_0_init = get_act_traj_x0_red_init();
-    inverse_dyn_controller.q_d_prev = x_0_init.head(nq_red);
-    inverse_dyn_controller.q_p_d_prev = x_0_init.tail(nq_red);
-    inverse_dyn_controller.init = true;
-    reset_error_flag();
+    // CT CONTROLLER
+    Eigen::MatrixXd Kp1_ct = Eigen::VectorXd::Map(classic_ctl_settings["CT"]["Kp1"].get<std::vector<double>>().data(), 6).asDiagonal();
+    Eigen::MatrixXd Kd1_ct = Eigen::VectorXd::Map(classic_ctl_settings["CT"]["Kd1"].get<std::vector<double>>().data(), 6).asDiagonal();
+
+    // ID CONTROLLER
+    Eigen::MatrixXd Kp1_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["Kp1"].get<std::vector<double>>().data(), 6).asDiagonal();
+    Eigen::MatrixXd Kd1_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["Kd1"].get<std::vector<double>>().data(), 6).asDiagonal();
+
+    Eigen::MatrixXd K_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
+    Eigen::MatrixXd D_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
+
+    // REGULARIZATION SETTINGS
+    auto reg_settings = classic_ctl_settings["regularization_settings"];
+    Eigen::VectorXd W_bar_N_nq = Eigen::VectorXd::Map(reg_settings["W_bar_N"].get<std::vector<double>>().data(), 7);
+    Eigen::MatrixXd W_bar_N = W_bar_N_nq(n_indices).asDiagonal();;
+    Eigen::VectorXd W_E_nq = Eigen::VectorXd::Map(reg_settings["W_E"].get<std::vector<double>>().data(), 7);
+    Eigen::MatrixXd W_E = W_E_nq(n_indices).asDiagonal();
+
+    controller_settings.pd_plus_settings.D_d = D_d_pd;
+    controller_settings.pd_plus_settings.K_d = K_d_pd;
+    controller_settings.ct_settings.Kd1 = Kd1_ct;
+    controller_settings.ct_settings.Kp1 = Kp1_ct;
+    controller_settings.id_settings.Kd1 = Kd1_id;
+    controller_settings.id_settings.Kp1 = Kp1_id;
+    controller_settings.id_settings.D_d = D_d_id;
+    controller_settings.id_settings.K_d = K_d_id;
+    controller_settings.regularization_settings.mode = stringToRegularizationMode<std::string>(reg_settings["mode"]);
+    controller_settings.regularization_settings.k = reg_settings["k"];
+    controller_settings.regularization_settings.W_bar_N = W_bar_N;
+    controller_settings.regularization_settings.W_E = W_E;
+    controller_settings.regularization_settings.eps = reg_settings["eps"];
+    controller_settings.regularization_settings.eps_collinear = reg_settings["eps_collinear"];
+    controller_settings.regularization_settings.lambda_min = reg_settings["lambda_min"];
+
+    regularization_settings = controller_settings.regularization_settings;
+    sing_method = controller_settings.regularization_settings.mode;
 }
 
 void BaseWorkspaceController::calculateControlData(const Eigen::VectorXd &x)
@@ -444,6 +465,43 @@ void BaseWorkspaceController::calculateControlDataID(const Eigen::VectorXd &x, c
     traj_count++;
 }
 
+Eigen::VectorXd WorkspaceController::update(const double *const x_nq)
+{
+    double x_nq_red[nx_red];
+
+    // Convert nx to nx_red state
+    for (int i = 0; i < nx_red; i++)
+    {
+        x_nq_red[i] = x_nq[n_x_indices[i]];
+    }
+
+    Eigen::Map<const Eigen::VectorXd> x_nq_vec(x_nq, nx);
+    Eigen::Map<const Eigen::VectorXd> x_nq_red_vec(x_nq_red, nx_red);
+    Eigen::VectorXd tau_red = active_controller->control(x_nq_red_vec);
+    Eigen::VectorXd tau_full = torque_mapper.calc_full_torque(tau_red, x_nq_vec);
+
+    error_check(tau_full);
+
+    return tau_full;
+}
+
+void WorkspaceController::reset(const casadi_real *const x_k_in)
+{
+    Eigen::Map<const Eigen::VectorXd> x_k(x_k_in, nx_red);
+    active_controller->traj_count = 0;
+    tau_full_prev = Eigen::VectorXd::Zero(nq);
+
+    inverse_dyn_controller.q_d_prev = x_k.head(nq_red);
+    inverse_dyn_controller.q_p_d_prev = x_k.tail(nq_red);
+    inverse_dyn_controller.init = true;
+    reset_error_flag();
+}
+
+void WorkspaceController::reset()
+{
+    Eigen::VectorXd x_0_init = get_act_traj_x0_red_init();
+    reset(x_0_init.data());
+}
 
 Eigen::VectorXd WorkspaceController::CTController::control(const Eigen::VectorXd &x)
 {
@@ -606,68 +664,6 @@ void WorkspaceController::simulateModelRK4(double *const x_k_ndof_ptr, const dou
     torque_mapper.simulateModelRK4(x_k_ndof, tau, dt);
 }
 
-
-ControllerSettings WorkspaceController::init_default_controller_settings()
-{
-    // Initialize the default configuration
-    Eigen::MatrixXd K_d = Eigen::DiagonalMatrix<double, 6>(100, 100, 100, 20, 20, 20);
-    Eigen::MatrixXd D_d = (2 * K_d).array().sqrt();
-
-    Eigen::MatrixXd Kp1 = Eigen::DiagonalMatrix<double, 6>(100, 100, 100, 50, 50, 50);
-    Eigen::MatrixXd Kd1 = (2 * Kp1).array().sqrt();
-
-    ControllerSettings controller_settings_default;
-
-    controller_settings_default.id_settings.Kd1 = Kd1;
-    controller_settings_default.id_settings.Kp1 = Kp1;
-    controller_settings_default.id_settings.D_d = D_d;
-    controller_settings_default.id_settings.K_d = K_d;
-
-    controller_settings_default.pd_plus_settings.D_d = D_d;
-    controller_settings_default.pd_plus_settings.K_d = K_d;
-
-    controller_settings_default.ct_settings.Kd1 = Kd1;
-    controller_settings_default.ct_settings.Kp1 = Kp1;
-
-    controller_settings_default.regularization_settings = init_default_regularization_settings();
-
-    return controller_settings_default;
-}
-
-
-RegularizationSettings WorkspaceController::init_default_regularization_settings()
-{
-    // Initialize the default configuration
-    RegularizationSettings regularization_settings_default;
-
-    Eigen::MatrixXd W_bar_N = Eigen::MatrixXd::Identity(nq_red, nq_red);
-    Eigen::Map<const Eigen::VectorXd>sugihara_limb_vector(robot_config.sugihara_limb_vector, nq);
-    W_bar_N.diagonal() << sugihara_limb_vector(n_indices);
-    // Eigen::Map<Eigen::VectorXd>(W_bar_N.diagonal().data(), nq_red) = Eigen::Map<const Eigen::VectorXd>(robot_config.sugihara_limb_vector, robot_config.nq)(n_indices);
-    Eigen::MatrixXd W_E = Eigen::MatrixXd::Identity(nq_red, nq_red);
-
-    regularization_settings_default.mode = RegularizationMode::None; // Regularization mode
-    // RegularizationMode::Damping
-    regularization_settings_default.k = 1e-5;             // Regularization parameter J_pinv = (J^T J + k I)^-1 J^T
-
-    // Sugihara Method, not implemented
-    regularization_settings_default.W_bar_N = W_bar_N;    // Parameter for singularity robustness (sugihara)
-    regularization_settings_default.W_E = W_E;            // Weight matrix for the error (sugihara)
-    
-    // RegularizationMode::TikhonovRegularization
-    // RegularizationMode::ThresholdSmallSingularValues
-    // RegularizationMode::RegularizationBySingularValues
-    regularization_settings_default.eps = 1e-3;           // Regularization parameter for singular values
-    
-    // RegularizationMode::SimpleCollinearity
-    regularization_settings_default.eps_collinear = 1e-3; // Threshold for collinear joints
-    
-    // RegularizationMode::SteinboeckCollinearity
-    regularization_settings_default.lambda_min = 1e-2;    // Minimum eigenvalue for regularization
-    
-    return regularization_settings_default;
-}
-
 Eigen::VectorXd WorkspaceController::get_traj_x0_red_init(casadi_uint traj_select)
 {
     Eigen::VectorXd x0_init = *trajectory_generator.get_traj_file_x0_init(traj_select);
@@ -709,7 +705,4 @@ void WorkspaceController::error_check(Eigen::VectorXd &tau_full)
         error_flag = ErrorFlag::NO_ERROR;
         tau_full_prev = tau_full; // Update previous torque
     }
-
-    // Check for Inf values in the torque vector
-
 }
