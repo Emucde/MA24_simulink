@@ -8,7 +8,7 @@
     "mean_noise_amplitude": 0.1e-3,
     "lowpass_filter_omega_c_q": 1000,
     "lowpass_filter_omega_c_dq": 1000,
-    "trajectory_selection": 1,
+    "trajectory_selection": 2,
     "transient_traj_start_time": 0.0,
     "transient_traj_duration": 2.0,
     "transient_traj_end_time": 2.0,
@@ -18,15 +18,15 @@
         "Casadi",
         "Crocoddyl"
     ],
-    "default_classic_controller": "PD",
+    "default_classic_controller": "ID",
     "available_classic_controller": [
         "PD",
         "CT",
         "ID"
     ],
     "use_casadi_planner": false,
-    "default_casadi_mpc": "MPC1_dyn_classic_N_MPC_3",
-    "available_casadi_mpc": [
+    "default_casadi_mpc": "MPC01",
+    "available_casadi_mpc_simulink": [
         "MPC1_dyn_classic_N_MPC_3",
         "MPC1_dyn_classic_N_MPC_5",
         "MPC2_dyn_parametric_N_MPC_3",
@@ -46,7 +46,7 @@
         "MPC5_kin_dev_planner_N_MPC_20",
         "MPC5_kin_dev_planner_N_MPC_30"
     ],
-    "available_casadi_mpc_simulink": [
+    "available_casadi_mpc": [
         "MPC01",
         "MPC6",
         "MPC7",
@@ -68,10 +68,10 @@
     ],
     "torque_mapper_settings":
     {
-        "K_d": [100, 100, 100, 100, 100, 100, 100],
-        "D_d": [20, 20, 20, 20, 20, 20, 20],
-        "K_d_fixed": [20],
-        "D_d_fixed": [6.34],
+        "K_d": [500, 500, 500, 500, 500, 500, 500],
+        "D_d": [31.62, 31.62, 31.62, 31.62, 31.62, 31.62, 31.62],
+        "K_d_fixed": [500],
+        "D_d_fixed": [31.62],
         "q_ref_nq": [0, -0.7854, 0, -2.3562, 0, 1.5708, 0.7854],
         "q_ref_nq_fixed": [0],
         "torque_limit": 100.0

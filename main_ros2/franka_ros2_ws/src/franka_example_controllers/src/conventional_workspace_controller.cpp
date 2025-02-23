@@ -87,7 +87,7 @@ namespace franka_example_controllers
 
         if (controller_started)
         {
-            std::async(std::launch::async, &ConventionalWorkspaceController::solve, this);
+            solve();
 
             current_frequency = timer_mpc_solver.get_frequency();
             shm.write("read_state_data_full", x_measured.data(), global_traj_count);
@@ -226,6 +226,7 @@ namespace franka_example_controllers
     CallbackReturn ConventionalWorkspaceController::on_activate(const rclcpp_lifecycle::State &)
     {
         open_shared_memories();
+        init_controller();
         int8_t readonly_mode = 1;
         shm.write("readonly_mode", &readonly_mode);
         RCLCPP_INFO(get_node()->get_logger(), "on_activate: Shared memory opened successfully.");
@@ -483,74 +484,17 @@ namespace franka_example_controllers
     {
         // Update general configuration
         nlohmann::json general_config = read_config(general_config_filename);
-        use_lowpass_filter = general_config["use_lowpass_filter"];
-        use_ekf = general_config["use_ekf"];
+        use_lowpass_filter = get_config_value<bool>(general_config, "use_lowpass_filter");
+        use_ekf = get_config_value<bool>(general_config, "use_ekf");
         // Is set by using the nodejs gui
-        // traj_select = general_config["trajectory_selection"];
-
-        double omega_c_q = general_config["lowpass_filter_omega_c_q"];
-        double omega_c_dq = general_config["lowpass_filter_omega_c_dq"];
-
-        //////// TORQUE MAPPER CONFIG ////////
-        auto torque_mapper_settings = general_config["torque_mapper_settings"];
-        FullSystemTorqueMapper::Config torque_mapper_config;
-        torque_mapper_config.K_d = Eigen::VectorXd::Map(torque_mapper_settings["K_d"].get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
-        torque_mapper_config.D_d = Eigen::VectorXd::Map(torque_mapper_settings["D_d"].get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
-        torque_mapper_config.K_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["K_d_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
-        torque_mapper_config.D_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["D_d_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
-        torque_mapper_config.q_ref_nq = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq"].get<std::vector<double>>().data(), robot_config.nq);
-        torque_mapper_config.q_ref_nq_fixed = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed);
-        torque_mapper_config.torque_limit = torque_mapper_settings["torque_limit"];
-        controller.set_torque_mapper_config(torque_mapper_config);
-
-        // PD CONTROLLER
-        auto classic_ctl_settings = general_config["classic_controller_settings"];
-        Eigen::MatrixXd K_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
-        Eigen::MatrixXd D_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
-
-        // CT CONTROLLER
-        Eigen::MatrixXd Kp1_ct = Eigen::VectorXd::Map(classic_ctl_settings["CT"]["Kp1"].get<std::vector<double>>().data(), 6).asDiagonal();
-        Eigen::MatrixXd Kd1_ct = Eigen::VectorXd::Map(classic_ctl_settings["CT"]["Kd1"].get<std::vector<double>>().data(), 6).asDiagonal();
-
-        // ID CONTROLLER
-        Eigen::MatrixXd Kp1_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["Kp1"].get<std::vector<double>>().data(), 6).asDiagonal();
-        Eigen::MatrixXd Kd1_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["Kd1"].get<std::vector<double>>().data(), 6).asDiagonal();
-
-        Eigen::MatrixXd K_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
-        Eigen::MatrixXd D_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
-        
-        // REGULARIZATION SETTINGS
-        Eigen::Map<const Eigen::VectorXi> n_indices_eig(reinterpret_cast<int *>(const_cast<uint32_t *>(robot_config.n_indices)), robot_config.nx_red);
-        auto reg_settings = classic_ctl_settings["regularization_settings"];
-        Eigen::VectorXd W_bar_N_nq = Eigen::VectorXd::Map(reg_settings["W_bar_N"].get<std::vector<double>>().data(), 7);
-        Eigen::MatrixXd W_bar_N = W_bar_N_nq(n_indices_eig).asDiagonal();;
-        Eigen::VectorXd W_E_nq = Eigen::VectorXd::Map(reg_settings["W_E"].get<std::vector<double>>().data(), 7);
-        Eigen::MatrixXd W_E = W_E_nq(n_indices_eig).asDiagonal();
-
-        ControllerSettings ctrl_settings;
-        ctrl_settings.pd_plus_settings.D_d = D_d_pd;
-        ctrl_settings.pd_plus_settings.K_d = K_d_pd;
-        ctrl_settings.ct_settings.Kd1 = Kd1_ct;
-        ctrl_settings.ct_settings.Kp1 = Kp1_ct;
-        ctrl_settings.id_settings.Kd1 = Kd1_id;
-        ctrl_settings.id_settings.Kp1 = Kp1_id;
-        ctrl_settings.id_settings.D_d = D_d_id;
-        ctrl_settings.id_settings.K_d = K_d_id;
-        ctrl_settings.regularization_settings.mode = stringToRegularizationMode<std::string>(reg_settings["mode"]);
-        ctrl_settings.regularization_settings.k = reg_settings["k"];
-        ctrl_settings.regularization_settings.W_bar_N = W_bar_N;
-        ctrl_settings.regularization_settings.W_E = W_E;
-        ctrl_settings.regularization_settings.eps = reg_settings["eps"];
-        ctrl_settings.regularization_settings.eps_collinear = reg_settings["eps_collinear"];
-        ctrl_settings.regularization_settings.lambda_min = reg_settings["lambda_min"];
-
-        controller.set_controller_settings(ctrl_settings);
-        // controller.switchController(controller.get_classic_controller_type(general_config["default_classic_controller"]));
+        // traj_select = get_config_value<int>(general_config, "trajectory_selection");
+        double omega_c_q = get_config_value<double>(general_config, "lowpass_filter_omega_c_q");
+        double omega_c_dq = get_config_value<double>(general_config, "lowpass_filter_omega_c_dq");
 
         /////// INIT FILE TRAJECTORY ///////
-        double T_traj_start = general_config["transient_traj_start_time"];
-        double T_traj_dur = general_config["transient_traj_duration"];
-        double T_traj_end = general_config["transient_traj_end_time"];
+        double T_traj_start = get_config_value<double>(general_config, "transient_traj_start_time");
+        double T_traj_dur = get_config_value<double>(general_config, "transient_traj_duration");
+        double T_traj_end = get_config_value<double>(general_config, "transient_traj_end_time");
         controller.init_file_trajectory(traj_select, state.data(), T_traj_start, T_traj_dur, T_traj_end);
         traj_len = controller.get_traj_data_real_len();
 

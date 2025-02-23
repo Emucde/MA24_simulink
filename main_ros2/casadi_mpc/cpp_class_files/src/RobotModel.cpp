@@ -4,12 +4,11 @@
 
 // Constructor
 RobotModel::RobotModel(const std::string &urdf_filename,
-               const std::string &tcp_frame_name,
                robot_config_t &robot_config,
-               bool use_gravity,
+                const std::string &general_config_file,
                bool reduced_model)
                : urdf_filename(urdf_filename),
-                 tcp_frame_name(tcp_frame_name),
+                 general_config_file(general_config_file),
                  robot_config(robot_config)
 {
     pinocchio::Model robot_model_full;
@@ -44,6 +43,10 @@ RobotModel::RobotModel(const std::string &urdf_filename,
     // Initialize the corresponding robot_data structure
     robot_data = pinocchio::Data(robot_model);
 
+    nlohmann::json general_config = read_config(general_config_file);
+    bool use_gravity = get_config_value<bool>(general_config, "use_gravity");
+    tcp_frame_name = get_config_value<std::string>(general_config, "tcp_frame_name");
+
     if (use_gravity)
     {
         robot_model.gravity.linear() << 0.0, 0.0, -9.81;
@@ -55,6 +58,20 @@ RobotModel::RobotModel(const std::string &urdf_filename,
 
     // Initialize the TCP frame Id
     tcp_frame_id = robot_model.getFrameId(tcp_frame_name);
+}
+
+nlohmann::json RobotModel::read_config(std::string file_path)
+{
+    std::ifstream file(file_path);
+    if (!file.is_open())
+    {
+        std::cerr << "Error: Could not open JSON file." << std::endl;
+        return {};
+    }
+    nlohmann::json jsonData;
+    file >> jsonData; // Parse JSON file
+    file.close();
+    return jsonData;
 }
 
 // Update state with joint positions and velocities

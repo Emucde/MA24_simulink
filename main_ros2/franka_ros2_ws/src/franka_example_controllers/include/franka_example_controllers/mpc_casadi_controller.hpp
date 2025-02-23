@@ -17,7 +17,7 @@
 // #define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_WARN
 #define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_INFO
 
-// #define SIMULATION_MODE 1
+#define SIMULATION_MODE 1
 
 #define MAX_INVALID_COUNT 100
 
@@ -115,7 +115,7 @@ namespace franka_example_controllers
         bool mpc_started = false;
         int8_t traj_select = 1; // default trajectory
         const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
-        const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand_custom_list.json";
+        const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand_simulink.json";
         const std::string general_config_filename = std::string(MASTERDIR) + "/config_settings/general_settings.json";
         const std::string ekf_config_filename = std::string(MASTERDIR) + "/config_settings/ekf_settings.json";
         const std::string tcp_frame_name = "fr3_link8_tcp";
@@ -129,7 +129,7 @@ namespace franka_example_controllers
         bool use_noise=false;
         double mean_noise_amplitude = 0;
         #endif
-        CasadiController controller = CasadiController(urdf_filename, casadi_mpc_config_filename, tcp_frame_name, use_gravity, use_planner);
+        CasadiController controller = CasadiController(urdf_filename, casadi_mpc_config_filename, general_config_filename);
         Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
         Eigen::VectorXd x_prev = Eigen::VectorXd::Zero(nx);
         Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nx);

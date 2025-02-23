@@ -24,9 +24,9 @@ class BaseWorkspaceController
 {
 public:
     BaseWorkspaceController(RobotModel &robot_model,
-                   const std::string &workspace_config_path,
+                   const std::string &general_config_filename,
                    TrajectoryGenerator &trajectory_generator)
-        : robot_model(robot_model), workspace_config_path(workspace_config_path),
+        : robot_model(robot_model), general_config_filename(general_config_filename),
           trajectory_generator(trajectory_generator),
           nq(robot_model.nq), nx(robot_model.nx),
           J(Eigen::MatrixXd::Zero(6, nq)), J_pinv(Eigen::MatrixXd::Zero(nq, 6)), J_p(Eigen::MatrixXd::Zero(6, nq)),
@@ -49,7 +49,7 @@ public:
     virtual ~BaseWorkspaceController() = default; // Virtual destructor
 protected:
     RobotModel &robot_model;
-    std::string workspace_config_path;
+    std::string general_config_filename;
     ControllerSettings controller_settings;
     RegularizationSettings regularization_settings;
     RegularizationMode sing_method;
@@ -74,9 +74,7 @@ class WorkspaceController
 public:
     // Constructor
     WorkspaceController(const std::string &urdf_path,
-                        const std::string &workspace_config_path,
-                        const std::string &tcp_frame_name,
-                        bool use_gravity);
+                        const std::string &general_config_filename);
 
     ControllerType get_classic_controller_type(const std::string &controller_type_str);
     std::string get_classic_controller_string(ControllerType controller_type);
@@ -194,8 +192,7 @@ public:
 
 private:
     const std::string urdf_path;
-    const std::string workspace_config_path;
-    const std::string tcp_frame_name;
+    const std::string general_config_filename;
     robot_config_t robot_config;
     const Eigen::VectorXi n_indices, n_x_indices;
     const int nq, nx, nq_red, nx_red;
@@ -208,9 +205,9 @@ private:
     {
     public:
         CTController(RobotModel &robot_model,
-                     const std::string &workspace_config_path,
+                     const std::string &general_config_filename,
                      TrajectoryGenerator &trajectory_generator)
-            : BaseWorkspaceController(robot_model, workspace_config_path, trajectory_generator) {}
+            : BaseWorkspaceController(robot_model, general_config_filename, trajectory_generator) {}
         Eigen::VectorXd control(const Eigen::VectorXd &x) override;
         ~CTController() override = default;
     };
@@ -219,9 +216,9 @@ private:
     {
     public:
         PDPlusController(RobotModel &robot_model,
-                         const std::string &workspace_config_path,
+                         const std::string &general_config_filename,
                          TrajectoryGenerator &trajectory_generator)
-            : BaseWorkspaceController(robot_model, workspace_config_path, trajectory_generator) {}
+            : BaseWorkspaceController(robot_model, general_config_filename, trajectory_generator) {}
         Eigen::VectorXd control(const Eigen::VectorXd &x) override;
         ~PDPlusController() override = default;
     };
@@ -230,9 +227,9 @@ private:
     {
     public:
         InverseDynamicsController(RobotModel &robot_model,
-                                  const std::string &workspace_config_path,
+                                  const std::string &general_config_filename,
                                   TrajectoryGenerator &trajectory_generator)
-            : BaseWorkspaceController(robot_model, workspace_config_path, trajectory_generator) {}
+            : BaseWorkspaceController(robot_model, general_config_filename, trajectory_generator) {}
         Eigen::VectorXd control(const Eigen::VectorXd &x) override;
         Eigen::VectorXd q_d_prev, q_p_d_prev;
         bool init = true;

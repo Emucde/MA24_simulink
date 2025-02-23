@@ -1037,7 +1037,9 @@ def get_int_type(int_type):
 def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=False):
     int_type = mpc_settings['int_method']
     N_MPC = mpc_settings['N_MPC']
-    Ts_MPC = mpc_settings['Ts_MPC']
+    N_step = mpc_settings['N_step']
+    Ts = mpc_settings['Ts']
+    Ts_MPC = Ts*N_step
     use_dt_scale = mpc_settings['use_dt_scale']
     int_time = param_traj['int_time']
 
@@ -1203,7 +1205,9 @@ def ocp_problem_v3(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
 
     int_type = mpc_settings['int_method']
     N_MPC = mpc_settings['N_MPC']
-    Ts_MPC = mpc_settings['Ts_MPC']
+    N_step = mpc_settings['N_step']
+    Ts = mpc_settings['Ts']
+    Ts_MPC = Ts*N_step
     int_time = param_traj['int_time']
 
     IntegratedActionModel = get_int_type(int_type)
@@ -1596,28 +1600,22 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
     opt_type = mpc_settings['version']
     N_solver_steps = mpc_settings['solver_steps']
     N_MPC = mpc_settings['N_MPC']
+    N_step = mpc_settings['N_step']
 
-    Ts = mpc_settings['Ts']  # Time step of control
+    Ts = mpc_settings['Ts']
     N_Ts_samples = mpc_settings['N_extra_Ts_samples']  # Time step of control
     use_T_horizon = mpc_settings['use_T_horizon']
 
     if use_T_horizon:
         T_horizon = mpc_settings['T_horizon']
     else:
-        Ts_MPC = mpc_settings['Ts_MPC']
-        T_horizon = Ts_MPC*(N_MPC-N_Ts_samples)
+        T_horizon = Ts*N_step*N_MPC
 
-    # find smalles multiple of T_horizon and N_MPC:
-    if np.mod(T_horizon, Ts) != 0:
-        print('T_horizon is not a multiple of Ts, T_horizon rounded to nearest Ts multiple!')
     max_time_index = np.round(T_horizon/Ts).astype(int)
-
-    N_step = (max_time_index - N_Ts_samples)//(N_MPC-N_Ts_samples)
 
     if use_T_horizon:
         MPC_traj_indices = np.round(np.linspace(N_Ts_samples + N_step, max_time_index, N_MPC-N_Ts_samples)).astype(int)
     else:
-        N_step = int(Ts_MPC/Ts)
         if N_Ts_samples >= N_step:
             print('N_Ts_samples > N_step, N_Ts_samples set to 0!')
             N_Ts_samples = 0
@@ -1631,7 +1629,7 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
     
     if N_step <= 1:
         MPC_traj_indices = np.arange(0, N_MPC+1)
-    else:       
+    else:
         extra_indices = np.arange(0, N_Ts_samples+1)
         MPC_traj_indices = np.hstack([extra_indices, MPC_traj_indices])
 

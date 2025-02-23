@@ -29,11 +29,10 @@ class CrocoddylController
 public:
     CrocoddylController(const std::string &urdf_path,
                         const std::string &crocoddyl_config_path,
-                        const std::string &tcp_frame_name,
-                        bool use_gravity);
+                        const std::string &general_config_file);
 
     Eigen::VectorXd solveMPC(const double *const x_k_ndof_ptr);
-
+    nlohmann::json read_config(std::string file_path);
     void update_mpc_weights();
 
     // Initialize trajectory data
@@ -54,6 +53,11 @@ public:
     void simulateModelRK4(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
     void reset(const casadi_real *const x_k_in);
     void reset();
+
+    void set_tau_max_jump(double tau_jump)
+    {
+        tau_max_jump = tau_jump;
+    }
 
     uint get_traj_data_len()
     {
@@ -149,7 +153,7 @@ public:
 private:
     const std::string urdf_path;
     const std::string crocoddyl_config_path;
-    const std::string tcp_frame_name;
+    const std::string general_config_file;
     robot_config_t robot_config;
     const Eigen::VectorXi n_indices, n_x_indices;
     const int nq, nx, nq_red, nx_red;
@@ -166,6 +170,8 @@ private:
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
     Eigen::VectorXd tau_full_prev = Eigen::VectorXd::Zero(nq);
     double tau_max_jump = 5.0; // Maximum jump in torque (Nm/dt)
+
+    void error_check(Eigen::VectorXd &tau_full);
 };
 
 #endif // CROCODYL_CONTROLLER_HPP

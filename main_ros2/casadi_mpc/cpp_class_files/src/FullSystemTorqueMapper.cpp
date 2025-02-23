@@ -2,18 +2,13 @@
 #include "eigen_templates.hpp"
 
 FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
-                                               const std::string &tcp_frame_name,
-                                               robot_config_t &robot_config,
-                                               bool use_gravity,
-                                               bool is_kinematic_mpc)
-    : urdf_filename(urdf_filename),
-      tcp_frame_name(tcp_frame_name),
+                                              robot_config_t &robot_config,
+                                              const std::string &general_config_file)
+    : urdf_filename(urdf_filename), general_config_filename(general_config_file),
       robot_config(robot_config),
-      is_kinematic_mpc(is_kinematic_mpc),
-      nq(robot_config.nq),
-      nx(robot_config.nx),
-      nq_red(robot_config.nq_red),
-      nx_red(robot_config.nx_red),
+      is_kinematic_mpc(false),
+      nq(robot_config.nq), nx(robot_config.nx),
+      nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
       nq_fixed(robot_config.nq_fixed),
       n_indices(ConstIntVectorMap(robot_config.n_indices, nq_red)),
       n_indices_fixed(ConstIntVectorMap(robot_config.n_indices_fixed, nq_fixed)),
@@ -23,23 +18,14 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
     // Initialize the function pointer based on the type of MPC
     setFeedforwardTorqueFunction(is_kinematic_mpc);
 
+    update_config();
+
     // Initialize the robot model and data using the URDF
     initRobot(urdf_filename, tcp_frame_name, robot_model_full, robot_data_full, use_gravity);
 
     // Initialize member matrices, biases, etc.
     tau_full = Eigen::VectorXd::Zero(nq);
     q_pp = Eigen::VectorXd::Zero(nq);
-
-    config.K_d = Eigen::MatrixXd::Zero(nq, nq); // Proportional gain matrix
-    // Default configurations
-    config.K_d.diagonal() << 100, 100, 100, 100, 50, 50, 10;
-    config.D_d = (2 * config.K_d).array().sqrt();
-    config.K_d_fixed = config.K_d(n_indices_fixed, n_indices_fixed);
-    config.D_d_fixed = config.D_d(n_indices_fixed, n_indices_fixed);
-    config.q_ref_nq = q_ref_nq;
-    config.q_ref_nq_fixed = q_ref_fixed;
-
-    config.torque_limit = 100.0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -56,6 +42,36 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
 /////                                                                             /////
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
+
+nlohmann::json FullSystemTorqueMapper::read_config(std::string file_path)
+{
+    std::ifstream file(file_path);
+    if (!file.is_open())
+    {
+        std::cerr << "Error: Could not open JSON file." << std::endl;
+        return {};
+    }
+    nlohmann::json jsonData;
+    file >> jsonData; // Parse JSON file
+    file.close();
+    return jsonData;
+}
+
+void FullSystemTorqueMapper::update_config(){
+    nlohmann::json general_config = read_config(general_config_filename);
+
+    use_gravity = get_config_value<bool>(general_config, "use_gravity");
+    tcp_frame_name = get_config_value<std::string>(general_config, "tcp_frame_name");
+
+    auto torque_mapper_settings = get_config_value<nlohmann::json>(general_config, "torque_mapper_settings");
+    config.K_d = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "K_d").get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
+    config.D_d = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "D_d").get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
+    config.K_d_fixed = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "K_d_fixed").get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
+    config.D_d_fixed = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "D_d_fixed").get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
+    config.q_ref_nq = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "q_ref_nq").get<std::vector<double>>().data(), robot_config.nq);
+    config.q_ref_nq_fixed = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "q_ref_nq_fixed").get<std::vector<double>>().data(), robot_config.nq_fixed);
+    config.torque_limit = get_config_value<double>(torque_mapper_settings, "torque_limit");
+}
 
 // Implementation of kinematic torque mapping
 Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueKinematic(
@@ -120,8 +136,8 @@ Eigen::VectorXd FullSystemTorqueMapper::enforceTorqueLimits(const Eigen::VectorX
 
 Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &u, const Eigen::VectorXd &x_k_ndof)
 {
-    Eigen::Ref<const Eigen::VectorXd> q = x_k_ndof.head(nq);
-    Eigen::Ref<const Eigen::VectorXd> q_p = x_k_ndof.tail(nq);
+    Eigen::Map<const Eigen::VectorXd> q(x_k_ndof.head(nq).data(), nq);
+    Eigen::Map<const Eigen::VectorXd> q_p(x_k_ndof.tail(nq).data(), nq);
     tau_full = (this->*calcFeedforwardTorqueFunPtr)(u, q, q_p);
     tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed));
 

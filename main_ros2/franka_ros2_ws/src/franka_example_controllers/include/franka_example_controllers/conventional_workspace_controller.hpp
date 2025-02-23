@@ -17,7 +17,7 @@
 // #define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_WARN
 #define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_INFO
 
-// #define SIMULATION_MODE 1
+#define SIMULATION_MODE 1
 
 #define MAX_INVALID_COUNT 100
 
@@ -125,7 +125,7 @@ namespace franka_example_controllers
         bool use_noise=false;
         double mean_noise_amplitude = 0;
         #endif
-        WorkspaceController controller = WorkspaceController(urdf_filename, tcp_frame_name, use_gravity);
+        WorkspaceController controller = WorkspaceController(urdf_filename, general_config_filename);
         Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
         Eigen::VectorXd x_prev = Eigen::VectorXd::Zero(nx);
         Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nx);

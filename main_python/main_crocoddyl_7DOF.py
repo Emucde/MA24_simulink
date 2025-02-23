@@ -30,8 +30,8 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = True
-manual_traj_select = 12
+use_data_from_simulink = False
+manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
 use_gravity = False
@@ -56,8 +56,8 @@ use_custom_trajectory = False
 param_traj_poly = {}
 if not use_custom_trajectory:
     param_traj_poly['T_start'] = 0
-    param_traj_poly['T_poly'] = 0
-    param_traj_poly['T_end'] = 0
+    param_traj_poly['T_poly'] = 2
+    param_traj_poly['T_end'] = 2
 else:
     param_traj_poly['T_start'] = 0
     param_traj_poly['T_poly'] = 10

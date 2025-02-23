@@ -4,6 +4,7 @@
 #include <vector>
 #include "param_robot.h"
 #include <iostream>
+#include "json.hpp"
 #include <pinocchio/algorithm/crba.hpp>
 #include <pinocchio/algorithm/rnea.hpp>
 #include "pinocchio/algorithm/frames.hpp"
@@ -24,6 +25,10 @@ public:
                            bool use_gravity,
                            bool is_kinematic_mpc);
 
+    FullSystemTorqueMapper(const std::string &urdf_filename,
+                           robot_config_t &robot_config,
+                           const std::string &general_config_file);
+
     // Function pointer to feedforward function
     using FeedforwardTorqueFunc = Eigen::VectorXd (FullSystemTorqueMapper::*)(const Eigen::VectorXd &, const Eigen::VectorXd &, const Eigen::VectorXd &);
     FeedforwardTorqueFunc calcFeedforwardTorqueFunPtr; // Function pointer to torque calculation method
@@ -39,6 +44,9 @@ public:
         Eigen::VectorXd q_ref_nq_fixed; // Reference joint positions for fixed PD control
         double torque_limit;            // Max allowable torque
     };
+
+    nlohmann::json read_config(std::string file_path);
+    void update_config();
 
     // Functions
     Eigen::VectorXd calcFeedforwardTorqueKinematic(const Eigen::VectorXd &u,
@@ -83,9 +91,11 @@ public:
 
 private:
     const std::string urdf_filename;
-    const std::string tcp_frame_name;
+    const std::string general_config_filename;
+    std::string tcp_frame_name;
     robot_config_t &robot_config;
     bool is_kinematic_mpc; // Kinematic MPC flag
+    bool use_gravity;      // Flag to use gravity in the simulation
     uint nq;        // Number of degrees of freedom
     uint nx;        // Number of degrees of freedom
     uint nq_red;    // Number of reduced degrees of freedom

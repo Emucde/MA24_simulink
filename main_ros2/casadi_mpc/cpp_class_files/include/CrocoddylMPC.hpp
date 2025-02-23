@@ -61,13 +61,13 @@ public:
     template <typename T>
     T get_param(const std::string &name)
     {
-        return param_mpc_weight[name].get<T>();
+        return get_config_value<nlohmann::json>(param_mpc_weight, name).get<T>();
     }
 
     template <typename T>
     T get_setting(const std::string &name)
     {
-        return mpc_settings[name].get<T>();
+        return get_config_value<nlohmann::json>(mpc_settings, name).get<T>();
     }
 
     template <typename T = Eigen::VectorXd,

@@ -15,16 +15,17 @@
 #include <pinocchio/multibody/data.hpp>
 #include <pinocchio/parsers/urdf.hpp>
 #include <string>
+#include "json.hpp"
 
 class RobotModel
 {
 public:
-    // Constructor for full model
     RobotModel(const std::string &urdf_filename,
-               const std::string &tcp_frame_name,
                robot_config_t &robot_config,
-               bool use_gravity,
+               const std::string &general_config_file,
                bool reduced_model = false);
+
+    nlohmann::json read_config(std::string file_path);
 
     // Update state with joint positions and velocities
     void updateState(const Eigen::VectorXd &x);
@@ -41,8 +42,9 @@ public:
     KinematicsData kinematicsData;     // Kinematics data structure
     DynamicsData dynamicsData;         // Dynamics data structure
 
-    const std::string &urdf_filename; // TCP frame name
-    const std::string &tcp_frame_name; // TCP frame name
+    const std::string urdf_filename; // TCP frame name
+    const std::string general_config_file; // TCP frame name
+    std::string tcp_frame_name; // TCP frame name
     robot_config_t &robot_config;
 
     // methods for calculations

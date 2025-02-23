@@ -88,7 +88,7 @@ namespace franka_example_controllers
         if (mpc_started)
         {
             if(solver_step_counter % solver_steps == 0)
-                std::async(std::launch::async, &ModelPredictiveControllerCrocoddyl::solve, this);
+                solve();
             
             if(solver_step_counter >= 1000)
                 solver_step_counter = 0;
@@ -231,6 +231,7 @@ namespace franka_example_controllers
     CallbackReturn ModelPredictiveControllerCrocoddyl::on_activate(const rclcpp_lifecycle::State &)
     {
         open_shared_memories();
+        init_controller();
         int8_t readonly_mode = 1;
         shm.write("readonly_mode", &readonly_mode);
         RCLCPP_INFO(get_node()->get_logger(), "on_activate: Shared memory opened successfully.");
@@ -482,18 +483,6 @@ namespace franka_example_controllers
 
         double omega_c_q = general_config["lowpass_filter_omega_c_q"];
         double omega_c_dq = general_config["lowpass_filter_omega_c_dq"];
-
-        //////// TORQUE MAPPER CONFIG ////////
-        auto torque_mapper_settings = general_config["torque_mapper_settings"];
-        FullSystemTorqueMapper::Config torque_mapper_config;
-        torque_mapper_config.K_d = Eigen::VectorXd::Map(torque_mapper_settings["K_d"].get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
-        torque_mapper_config.D_d = Eigen::VectorXd::Map(torque_mapper_settings["D_d"].get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
-        torque_mapper_config.K_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["K_d_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
-        torque_mapper_config.D_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["D_d_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
-        torque_mapper_config.q_ref_nq = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq"].get<std::vector<double>>().data(), robot_config.nq);
-        torque_mapper_config.q_ref_nq_fixed = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed);
-        torque_mapper_config.torque_limit = torque_mapper_settings["torque_limit"];
-        controller.set_torque_mapper_config(torque_mapper_config);
 
         controller.setActiveMPC(CrocoddylMPCType::DynMPC_v1);
 

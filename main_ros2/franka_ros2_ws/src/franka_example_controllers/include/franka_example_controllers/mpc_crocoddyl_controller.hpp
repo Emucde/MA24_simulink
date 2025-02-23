@@ -17,7 +17,7 @@
 // #define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_WARN
 #define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_INFO
 
-// #define SIMULATION_MODE 1
+#define SIMULATION_MODE 1
 
 #define MAX_INVALID_COUNT 100
 
@@ -129,7 +129,7 @@ namespace franka_example_controllers
         bool use_noise=false;
         double mean_noise_amplitude = 0;
         #endif
-        CrocoddylController controller = CrocoddylController(urdf_filename, crocoddyl_config_filename, tcp_frame_name, use_gravity);
+        CrocoddylController controller = CrocoddylController(urdf_filename, crocoddyl_config_filename, general_config_filename);
         Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
         Eigen::VectorXd x_prev = Eigen::VectorXd::Zero(nx);
         Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nx);
@@ -168,6 +168,9 @@ namespace franka_example_controllers
         };
         SharedMemory shm;
 
+        bool semaphore_initialized = false;
+        sem_t solve_start_semaphore;
+
         double current_frequency = 0.0;
         TicToc timer_mpc_solver;
         TicToc timer_all;
@@ -203,6 +206,9 @@ namespace franka_example_controllers
         void init_filter(double omega_c_q, double omega_c_dq);
         void init_controller();
         void reset_mpc_trajectory();
+
+        void init_semaphores();
+        void destroy_semaphores();
     };
 
     // #ifdef SIMULATION_MODE

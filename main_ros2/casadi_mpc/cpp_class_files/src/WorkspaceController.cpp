@@ -2,20 +2,18 @@
 
 
 WorkspaceController::WorkspaceController(const std::string &urdf_path,
-    const std::string &workspace_config_path,
-    const std::string &tcp_frame_name,
-    bool use_gravity) : urdf_path(urdf_path), workspace_config_path(workspace_config_path),
-                        tcp_frame_name(tcp_frame_name),
+    const std::string &general_config_filename) 
+                      : urdf_path(urdf_path), general_config_filename(general_config_filename),
                         robot_config(get_robot_config()),
                         n_indices(ConstIntVectorMap(robot_config.n_indices, robot_config.nq_red)),
                         n_x_indices(ConstIntVectorMap(robot_config.n_x_indices, robot_config.nx_red)),
                         nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
-                        robot_model(urdf_path, tcp_frame_name, robot_config, use_gravity, true),
-                        torque_mapper(urdf_path, tcp_frame_name, robot_config, use_gravity, false),
+                        robot_model(urdf_path, robot_config, general_config_filename, true),
+                        torque_mapper(urdf_path, robot_config, general_config_filename),
                         trajectory_generator(torque_mapper, robot_config.dt),
-                        ct_controller(robot_model, workspace_config_path, trajectory_generator),
-                        pd_plus_controller(robot_model, workspace_config_path, trajectory_generator),
-                        inverse_dyn_controller(robot_model, workspace_config_path, trajectory_generator),
+                        ct_controller(robot_model, general_config_filename, trajectory_generator),
+                        pd_plus_controller(robot_model, general_config_filename, trajectory_generator),
+                        inverse_dyn_controller(robot_model, general_config_filename, trajectory_generator),
                         active_controller(&ct_controller)
 {
 }
@@ -288,7 +286,7 @@ nlohmann::json BaseWorkspaceController::read_config(std::string file_path)
 
 void BaseWorkspaceController::update_controller_settings()
 {
-    nlohmann::json general_config = read_config(workspace_config_path);
+    nlohmann::json general_config = read_config(general_config_filename);
 // PD CONTROLLER
     auto classic_ctl_settings = general_config["classic_controller_settings"];
     Eigen::MatrixXd K_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
@@ -320,13 +318,13 @@ void BaseWorkspaceController::update_controller_settings()
     controller_settings.id_settings.Kp1 = Kp1_id;
     controller_settings.id_settings.D_d = D_d_id;
     controller_settings.id_settings.K_d = K_d_id;
-    controller_settings.regularization_settings.mode = stringToRegularizationMode<std::string>(reg_settings["mode"]);
-    controller_settings.regularization_settings.k = reg_settings["k"];
+    controller_settings.regularization_settings.mode = stringToRegularizationMode<std::string>(get_config_value<std::string>(reg_settings, "mode"));
+    controller_settings.regularization_settings.k = get_config_value<double>(reg_settings, "k");
     controller_settings.regularization_settings.W_bar_N = W_bar_N;
     controller_settings.regularization_settings.W_E = W_E;
-    controller_settings.regularization_settings.eps = reg_settings["eps"];
-    controller_settings.regularization_settings.eps_collinear = reg_settings["eps_collinear"];
-    controller_settings.regularization_settings.lambda_min = reg_settings["lambda_min"];
+    controller_settings.regularization_settings.eps = get_config_value<double>(reg_settings, "eps");
+    controller_settings.regularization_settings.eps_collinear = get_config_value<double>(reg_settings, "eps_collinear");
+    controller_settings.regularization_settings.lambda_min = get_config_value<double>(reg_settings, "lambda_min");
 
     regularization_settings = controller_settings.regularization_settings;
     sing_method = controller_settings.regularization_settings.mode;

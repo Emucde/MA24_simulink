@@ -3,20 +3,23 @@
 
 CasadiController::CasadiController(const std::string &urdf_path,
                                    const std::string &casadi_mpc_weights_file,
-                                   const std::string &tcp_frame_name,
-                                   bool use_gravity,
-                                   bool use_planner)
+                                   const std::string &general_config_file)
     : robot_config(get_robot_config()),
       nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
       n_indices(ConstIntVectorMap(robot_config.n_indices, nq_red)),
       n_x_indices(ConstIntVectorMap(robot_config.n_x_indices, nx_red)),
-      torque_mapper(urdf_path, tcp_frame_name, robot_config, use_gravity, true),
-      robot_model(urdf_path, tcp_frame_name, robot_config, use_gravity, true),
+      torque_mapper(urdf_path, robot_config, general_config_file),
+      robot_model(urdf_path, robot_config, general_config_file, true),
       trajectory_generator(torque_mapper, robot_config.dt),
       casadi_mpc_weights_file(casadi_mpc_weights_file),
-      param_mpc_weight(read_mpc_weights()), use_planner(use_planner), 
-      standard_solver(nullptr, robot_model, param_mpc_weight, robot_config), planner_solver(nullptr, robot_model, param_mpc_weight, robot_config)
+      param_mpc_weight(read_config(casadi_mpc_weights_file)),
+      standard_solver(nullptr, robot_config), planner_solver(nullptr, param_mpc_weight, robot_config)
 {
+    nlohmann::json general_config = read_config(general_config_file);
+    use_planner = get_config_value<bool>(general_config, "use_casadi_planner");
+    CasadiMPCType default_active_mpc = string_to_casadi_mpctype(get_config_value<std::string>(general_config, "default_casadi_mpc"));
+    casadi_uint default_traj_select = get_config_value<casadi_uint>(general_config, "trajectory_selection");
+
     // Initialize MPC objects
     for (int i = 0; i < static_cast<int>(CasadiMPCType::COUNT); ++i)
     {
@@ -33,8 +36,8 @@ CasadiController::CasadiController(const std::string &urdf_path,
     // 1. use force planner. If false it could be that the active mpc is planner only.
     // This case is handled in setActiveMPC method
 
-    setActiveMPC(static_cast<CasadiMPCType>(0)); // Set the default MPC
-    switch_traj(1);                              // Set the default trajectory
+    setActiveMPC(default_active_mpc); // Set the default MPC
+    switch_traj(default_traj_select); // Set the default trajectory
 
     // Initialize the previous torque
     tau_full_prev = Eigen::VectorXd::Zero(nq);
@@ -83,33 +86,7 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
 
     tau_full = torque_mapper.calc_full_torque(u_k, x_k_ndof);
 
-    if (!tau_full.allFinite())
-    {
-        std::cout << "NaN in torque detected (tau = " << tau_full.transpose() << "). Output zero torque." << std::endl;
-        tau_full.setZero(); // Set torque to zero
-        error_flag = ErrorFlag::NAN_DETECTED;
-    }
-    else
-    {
-        // Check for a jump in torque
-        Eigen::VectorXd delta_u = tau_full - tau_full_prev;
-
-        // Conditions for jumps
-        bool condition1 = (delta_u.array() > 0 && delta_u.array() > tau_max_jump).any();
-        bool condition2 = (delta_u.array() < 0 && delta_u.array() < -tau_max_jump).any();
-
-        if (condition1 || condition2)
-        {
-            error_flag = ErrorFlag::JUMP_DETECTED;
-            std::cout << "Jump in torque detected (tau = " << tau_full.transpose() << "). Output zero torque." << std::endl;
-            tau_full.setZero(); // Set torque to zero
-        }
-        else
-        {
-            error_flag = ErrorFlag::NO_ERROR;
-            tau_full_prev = tau_full; // Update previous torque
-        }
-    }
+    error_check(tau_full);
 
     return tau_full;
 }
@@ -130,33 +107,28 @@ bool CasadiController::PlannerSolver::solveMPC(const casadi_real *const x_k_in)
     // robot_model.updateState(Eigen::Map<const Eigen::VectorXd>(x_k_in, nx_red)); // TODO: koennte man auch vom torque mapper holen
     // u_opt = robot_model.dynamicsData.M * (q_pp_d - K_D_q * (q_p - q_p_d) - K_P_q * (q - q_d)) +
     //                       robot_model.dynamicsData.C_rnea + robot_model.dynamicsData.g;
-    // robot_model.updateState(Eigen::Map<const Eigen::VectorXd>(x_k_in, nx_red)); // TODO: koennte man auch vom torque mapper holen
     u_opt = q_pp_d - K_D_q.cwiseProduct(q_p - q_p_d) - K_P_q.cwiseProduct(q - q_d);
-    Eigen::VectorXd error = q - q_d;
-    Eigen::VectorXd error_p = q_p - q_p_d;
 
     return flag;
 }
 
-nlohmann::json CasadiController::read_mpc_weights()
+nlohmann::json CasadiController::read_config(std::string file_path)
 {
-    std::ifstream file(casadi_mpc_weights_file);
+    std::ifstream file(file_path);
     if (!file.is_open())
     {
         std::cerr << "Error: Could not open JSON file." << std::endl;
         return {};
     }
-
-    nlohmann::json param_mpc_weight_temp;
-    file >> param_mpc_weight_temp; // Parse JSON file
+    nlohmann::json jsonData;
+    file >> jsonData; // Parse JSON file
     file.close();
-
-    return param_mpc_weight_temp;
+    return jsonData;
 }
 
 void CasadiController::update_mpc_weights()
 {
-    param_mpc_weight = read_mpc_weights();
+    param_mpc_weight = read_config(casadi_mpc_weights_file);
 
     for (int i = 0; i < static_cast<int>(CasadiMPCType::COUNT); ++i)
     {
@@ -288,7 +260,7 @@ void CasadiController::PlannerSolver::switch_controller(CasadiMPC *new_mpc)
 
 void CasadiController::PlannerSolver::update_planner_params()
 {
-    u_k_ptr = active_mpc->get_optimal_control();
+    double* u_k_ptr = active_mpc->get_optimal_control();
     planner_mpc = active_mpc->is_planner_mpc;
     if (planner_mpc) // then u_k_ptr shows to [x_d_0, q_pp_d_0]
     {
@@ -370,8 +342,6 @@ void CasadiController::reset()
 {
     Eigen::VectorXd x0_init = get_act_traj_x0_red_init();
     active_mpc->reset(x0_init.data());
-    tau_full_prev = Eigen::VectorXd::Zero(nq);
-    reset_error_flag();
 }
 
 Eigen::VectorXd CasadiController::get_traj_x0_red_init(casadi_uint traj_select)
@@ -402,3 +372,32 @@ Eigen::VectorXd CasadiController::get_act_traj_x0_red_init()
 /////                                                                             /////
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
+
+void CasadiController::error_check(Eigen::VectorXd &tau_full)
+{
+    // Check for NaN values in the torque vector
+    if (tau_full.hasNaN())
+    {
+        reset();
+        error_flag = ErrorFlag::NAN_DETECTED;
+        std::cerr << "NaN values detected in the torque vector!" << std::endl;
+    }
+
+    Eigen::VectorXd delta_u = tau_full - tau_full_prev;
+
+    // Conditions for jumps
+    bool condition1 = (delta_u.array() > 0 && delta_u.array() > tau_max_jump).any();
+    bool condition2 = (delta_u.array() < 0 && delta_u.array() < -tau_max_jump).any();
+
+    if (condition1 || condition2)
+    {
+        error_flag = ErrorFlag::JUMP_DETECTED;
+        std::cout << "Jump in torque detected (tau = " << tau_full.transpose() << "). Output zero torque." << std::endl;
+        tau_full.setZero(); // Set torque to zero
+    }
+    else
+    {
+        error_flag = ErrorFlag::NO_ERROR;
+        tau_full_prev = tau_full; // Update previous torque
+    }
+}

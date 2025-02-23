@@ -5,7 +5,20 @@
 #include <cmath>
 #include <array>
 #include <type_traits>
+#include "json.hpp"
 
+// Template function to safely get a config value from nlohmann::json
+template<typename T>
+T get_config_value(const nlohmann::json& config, const std::string& key) {
+    if (config.find(key) == config.end()) {
+        throw std::runtime_error("JSON object key '" + key + "' does not exist!");
+    }
+    try {
+        return config[key].get<T>();
+    } catch (const nlohmann::detail::type_error& e) {
+        throw std::runtime_error("JSON object key '" + key + "' exists but has incompatible type. Expected type: " + std::string(typeid(T).name()) + ". Error: " + e.what());
+    }
+}
 
 template <typename T>
 Eigen::Map<const Eigen::VectorXi> ConstIntVectorMap(T *ptr, int size)

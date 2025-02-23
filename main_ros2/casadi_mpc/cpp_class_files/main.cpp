@@ -145,28 +145,30 @@ int main()
     const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
     const std::string ekf_config_filename = std::string(MASTERDIR) + "/config_settings/ekf_settings.json";
     const std::string general_config_filename = std::string(MASTERDIR) + "/config_settings/general_settings.json";
+    #ifdef CUSTOM_LIST
     const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand_custom_list.json";
-    const std::string tcp_frame_name = "fr3_link8_tcp";
+    #else
+    const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand_simulink.json";
+    #endif
 
     nlohmann::json general_config = read_config(general_config_filename);
 
     // Configuration flags
-    bool use_gravity = general_config["use_gravity"];
-    bool use_lowpass_filter = general_config["use_lowpass_filter"];
-    bool use_ekf = general_config["use_ekf"];
-    bool use_noise = general_config["use_noise"];
+    const std::string tcp_frame_name = get_config_value<std::string>(general_config, "tcp_frame_name");
+    bool use_lowpass_filter = get_config_value<bool>(general_config, "use_lowpass_filter");
+    bool use_ekf = get_config_value<bool>(general_config, "use_ekf");
+    bool use_noise = get_config_value<bool>(general_config, "use_noise");
 
     robot_config_t robot_config = get_robot_config();
 
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
-    double Ts = general_config["dt"];
+    double Ts = get_config_value<double>(general_config, "dt");
     // double freq_multiplier = Ts / robot_config.dt;
     casadi_uint solver_steps = 1;
     const casadi_uint nq = robot_config.nq;
     const casadi_uint nx = robot_config.nx;
     const casadi_uint nq_red = robot_config.nq_red;
     const casadi_uint nx_red = robot_config.nx_red;
-    const casadi_uint nq_fixed = robot_config.nq_fixed;
     const casadi_uint *n_indices_ptr = robot_config.n_indices;
     const casadi_uint *n_x_indices_ptr = robot_config.n_x_indices;
     Eigen::VectorXi n_indices_eig = ConstIntVectorMap(n_indices_ptr, nq_red);
@@ -175,111 +177,44 @@ int main()
     const casadi_real *x0_init=0;
     double current_frequency = 0.0;
     casadi_uint traj_len = 0;
-    double mean_noise_amplitude = general_config["mean_noise_amplitude"];
-    double trajectory_selection = general_config["trajectory_selection"];
-    double T_traj_start = general_config["transient_traj_start_time"];
-    double T_traj_dur = general_config["transient_traj_duration"];
-    double T_traj_end = general_config["transient_traj_end_time"];
-    double omega_c_q = general_config["lowpass_filter_omega_c_q"];
-    double omega_c_dq = general_config["lowpass_filter_omega_c_dq"];
-    bool use_planner = general_config["use_casadi_planner"];
+    double mean_noise_amplitude = get_config_value<double>(general_config, "mean_noise_amplitude");
+    double trajectory_selection = get_config_value<double>(general_config, "trajectory_selection");
+    double T_traj_start = get_config_value<double>(general_config, "transient_traj_start_time");
+    double T_traj_dur = get_config_value<double>(general_config, "transient_traj_duration");
+    double T_traj_end = get_config_value<double>(general_config, "transient_traj_end_time");
+    double omega_c_q = get_config_value<double>(general_config, "lowpass_filter_omega_c_q");
+    double omega_c_dq = get_config_value<double>(general_config, "lowpass_filter_omega_c_dq");
     Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nx);
 
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
     Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
 
-    WorkspaceController classic_controller(urdf_filename, tcp_frame_name, use_gravity);
-    CasadiController casadi_controller(urdf_filename, casadi_mpc_config_filename, tcp_frame_name, use_gravity, use_planner);
-    CrocoddylController crocoddyl_controller(urdf_filename, crocoddyl_config_filename, tcp_frame_name, use_gravity);
+    WorkspaceController classic_controller(urdf_filename, general_config_filename);
+    CasadiController casadi_controller(urdf_filename, casadi_mpc_config_filename, general_config_filename);
+    CrocoddylController crocoddyl_controller(urdf_filename, crocoddyl_config_filename, general_config_filename);
     
-    MainControllerType controller_type = get_controller_type(general_config["default_controller"]);
-    casadi_controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
+    MainControllerType controller_type = get_controller_type(get_config_value<std::string>(general_config, "default_controller"));
+    casadi_controller.setActiveMPC(string_to_casadi_mpctype(get_config_value<std::string>(general_config, "default_casadi_mpc")));
     casadi_controller.update_mpc_weights();
-    classic_controller.switchController(classic_controller.get_classic_controller_type(general_config["default_classic_controller"]));
-    crocoddyl_controller.setActiveMPC(get_crocoddyl_controller_type(general_config["default_crocoddyl_mpc"]));
-
-    if (controller_type == MainControllerType::Casadi)
-        solver_steps = casadi_controller.get_traj_step();
-
-    // TORQUE MAPPER CONFIG
-    /*
-        Eigen::MatrixXd K_d;            // Proportional gain matrix
-        Eigen::MatrixXd D_d;            // Derivative gain matrix
-        Eigen::MatrixXd K_d_fixed;      // For fixed proportional gain
-        Eigen::MatrixXd D_d_fixed;      // For fixed derivative gain
-        Eigen::VectorXd q_ref_nq;       // Reference joint positions
-        Eigen::VectorXd q_ref_nq_fixed; // Reference joint positions for fixed PD control
-        double torque_limit;            // Max allowable torque
-    */
-    auto torque_mapper_settings = general_config["torque_mapper_settings"];
-    FullSystemTorqueMapper::Config torque_mapper_config = {
-        .K_d = Eigen::VectorXd::Map(torque_mapper_settings["K_d"].get<std::vector<double>>().data(), nq).asDiagonal(),
-        .D_d = Eigen::VectorXd::Map(torque_mapper_settings["D_d"].get<std::vector<double>>().data(), nq).asDiagonal(),
-        .K_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["K_d_fixed"].get<std::vector<double>>().data(), nq_fixed).asDiagonal(),
-        .D_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["D_d_fixed"].get<std::vector<double>>().data(), nq_fixed).asDiagonal(),
-        .q_ref_nq = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq"].get<std::vector<double>>().data(), nq),
-        .q_ref_nq_fixed = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq_fixed"].get<std::vector<double>>().data(), nq_fixed),
-        .torque_limit = torque_mapper_settings["torque_limit"]
-    };
-
-    classic_controller.set_torque_mapper_config(torque_mapper_config);
-    casadi_controller.set_torque_mapper_config(torque_mapper_config);
-    crocoddyl_controller.set_torque_mapper_config(torque_mapper_config);
-
-    
-    // PD CONTROLLER
-    auto classic_ctl_settings = general_config["classic_controller_settings"];
-    Eigen::MatrixXd K_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
-    Eigen::MatrixXd D_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
-
-    // CT CONTROLLER
-    Eigen::MatrixXd Kp1_ct = Eigen::VectorXd::Map(classic_ctl_settings["CT"]["Kp1"].get<std::vector<double>>().data(), 6).asDiagonal();
-    Eigen::MatrixXd Kd1_ct = Eigen::VectorXd::Map(classic_ctl_settings["CT"]["Kd1"].get<std::vector<double>>().data(), 6).asDiagonal();
-
-    // ID CONTROLLER
-    Eigen::MatrixXd Kp1_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["Kp1"].get<std::vector<double>>().data(), 6).asDiagonal();
-    Eigen::MatrixXd Kd1_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["Kd1"].get<std::vector<double>>().data(), 6).asDiagonal();
-
-    Eigen::MatrixXd K_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
-    Eigen::MatrixXd D_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
-
-    // REGULARIZATION SETTINGS
-    auto reg_settings = classic_ctl_settings["regularization_settings"];
-    Eigen::VectorXd W_bar_N_nq = Eigen::VectorXd::Map(reg_settings["W_bar_N"].get<std::vector<double>>().data(), 7);
-    Eigen::MatrixXd W_bar_N = W_bar_N_nq(n_indices_eig).asDiagonal();;
-    Eigen::VectorXd W_E_nq = Eigen::VectorXd::Map(reg_settings["W_E"].get<std::vector<double>>().data(), 7);
-    Eigen::MatrixXd W_E = W_E_nq(n_indices_eig).asDiagonal();
-
-    ControllerSettings ctrl_settings = {
-        .pd_plus_settings = {.D_d = D_d_pd, .K_d = K_d_pd},
-        .ct_settings = {.Kd1 = Kd1_ct, .Kp1 = Kp1_ct},
-        .id_settings = {.Kd1 = Kd1_id, .Kp1 = Kp1_id, .D_d = D_d_id, .K_d = K_d_id},
-        .regularization_settings = {
-            .mode = stringToRegularizationMode<std::string>(reg_settings["mode"]),
-            .k = reg_settings["k"], // RegularizationMode::Damping
-            .W_bar_N = W_bar_N, // Sugihara Method, not implemented
-            .W_E = W_E, // Sugihara Method, not implemented
-            .eps = reg_settings["eps"], // ThresholdSmallSingularValues, TikhonovRegularization, RegularizationBySingularValues
-            .eps_collinear = reg_settings["eps_collinear"], // RegularizationMode::SimpleCollinearity
-            .lambda_min = reg_settings["lambda_min"] // RegularizationMode::SteinboeckCollinearity
-        }};
-
-    classic_controller.set_controller_settings(ctrl_settings);
-
+    classic_controller.switchController(classic_controller.get_classic_controller_type(get_config_value<std::string>(general_config, "default_classic_controller")));
+    crocoddyl_controller.setActiveMPC(get_crocoddyl_controller_type(get_config_value<std::string>(general_config, "default_crocoddyl_mpc")));
 
     if (controller_type == MainControllerType::Casadi)
     {
+        solver_steps = casadi_controller.get_traj_step();
         traj_len = casadi_controller.get_traj_data_real_len();
         x0_init = casadi_controller.get_traj_x0_init(trajectory_selection);
     }
     else if(controller_type == MainControllerType::Classic)
     {
+        solver_steps = 1;
         traj_len = classic_controller.get_traj_data_real_len();
         x0_init = classic_controller.get_traj_x0_init(trajectory_selection);
     }
     else if(controller_type == MainControllerType::Crocoddyl)
     {
+        solver_steps = crocoddyl_controller.get_traj_step();
         traj_len = crocoddyl_controller.get_traj_data_real_len();
         x0_init = crocoddyl_controller.get_traj_x0_init(trajectory_selection);
     }
@@ -390,7 +325,7 @@ int main()
             act_data = classic_controller.get_act_traj_data();
             error_flag = classic_controller.get_error_flag();
         }
-        else if ( controller_type == MainControllerType::Crocoddyl )
+        else// if ( controller_type == MainControllerType::Crocoddyl )
         {
             timer_mpc_solver.tic();
             tau_full = crocoddyl_controller.solveMPC(x_filtered_ptr_2);

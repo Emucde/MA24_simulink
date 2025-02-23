@@ -10,6 +10,7 @@
 #include "json.hpp"
 #include "fr3_ekf.h"
 #include "fr3_ekf_addressdef.h"
+#include "eigen_templates.hpp"
 
 class CasadiEKF
 {
@@ -24,7 +25,7 @@ public:
               typename std::enable_if<std::is_same<T, Eigen::MatrixXd>::value, int>::type = 0>
     Eigen::MatrixXd get_param_matrix(const std::string &name)
     {
-        std::vector<std::vector<double>> matrix_data = ekf_settings[name].get<std::vector<std::vector<double>>>();
+        std::vector<std::vector<double>> matrix_data = get_config_value<nlohmann::json>(ekf_settings, name).get<std::vector<std::vector<double>>>();
         Eigen::MatrixXd eigen_matrix(matrix_data.size(), matrix_data[0].size());
         for (size_t i = 0; i < matrix_data.size(); ++i)
         {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <franka_example_controllers/mpc_casadi_controller.hpp>
+#include <franka_example_controllers/common_base_controller.hpp>
 
 #include <exception>
 #include <string>
@@ -26,7 +26,7 @@ using std::placeholders::_1;
 namespace franka_example_controllers
 {
     controller_interface::InterfaceConfiguration
-    ModelPredictiveControllerCasadi::command_interface_configuration() const
+    CommonBaseController::command_interface_configuration() const
     {
         controller_interface::InterfaceConfiguration config;
         config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
@@ -39,7 +39,7 @@ namespace franka_example_controllers
     }
 
     controller_interface::InterfaceConfiguration
-    ModelPredictiveControllerCasadi::state_interface_configuration() const
+    CommonBaseController::state_interface_configuration() const
     {
         controller_interface::InterfaceConfiguration state_interfaces_config;
         state_interfaces_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
@@ -54,7 +54,7 @@ namespace franka_example_controllers
         return state_interfaces_config;
     }
 
-    controller_interface::return_type ModelPredictiveControllerCasadi::update(
+    controller_interface::return_type CommonBaseController::update(
         const rclcpp::Time & /*time*/,
         const rclcpp::Duration & /*period*/)
     {   
@@ -85,16 +85,16 @@ namespace franka_example_controllers
                         state[nq + 3], state[nq + 4], state[nq + 5], state[nq + 6]);
         #endif
 
-        if (mpc_started)
+        if (controller_started)
         {
             if(solver_step_counter % solver_steps == 0)
-                solve();
+                std::async(std::launch::async, &CommonBaseController::solve, this);
             
             if(solver_step_counter >= 1000)
                 solver_step_counter = 0;
             solver_step_counter++;
 
-            current_frequency = timer_mpc_solver.get_frequency()*solver_steps;
+            double current_frequency = timer_mpc_solver.get_frequency()*solver_steps;
             shm.write("read_state_data_full", x_measured.data(), global_traj_count);
             shm.write("read_control_data_full", tau_full.data(), global_traj_count);
             shm.write("read_traj_data_full", current_trajectory->col(global_traj_count).data(), global_traj_count);
@@ -124,8 +124,12 @@ namespace franka_example_controllers
                 {
                     RCLCPP_WARN(get_node()->get_logger(), "Error in Casadi function call. Stopping the controller.");
                 }
+                else if (error_flag == ErrorFlag::CROCODDYL_ERROR)
+                {
+                    RCLCPP_WARN(get_node()->get_logger(), "Error in Crocoddyl function call. Stopping the controller.");
+                }
 
-                mpc_started = false;
+                controller_started = false;
                 tau_full = Eigen::VectorXd::Zero(nq);
             }
 
@@ -148,7 +152,7 @@ namespace franka_example_controllers
         return controller_interface::return_type::OK;
     }
 
-    CallbackReturn ModelPredictiveControllerCasadi::on_configure(
+    CallbackReturn CommonBaseController::on_configure(
         const rclcpp_lifecycle::State & /*previous_state*/)
     {
         arm_id_ = get_node()->get_parameter("arm_id").as_string();
@@ -156,39 +160,39 @@ namespace franka_example_controllers
         RCLCPP_INFO(get_node()->get_logger(), "Configuring MPC controller for %s arm", arm_id_.c_str());
 
         // subscription_ = get_node()->create_subscription<mpc_interfaces::msg::ControlArray>(
-        //     "topic", 10, std::bind(&ModelPredictiveControllerCasadi::topic_callback, this, _1));
+        //     "topic", 10, std::bind(&CommonBaseController::topic_callback, this, _1));
 
         // RCLCPP_INFO(get_node()->get_logger(), "Subscribed to topic 'topic'");
 
         std::string node_name = get_node()->get_name();
         std::string service_prefix = "/" + node_name + "/";
 
-        start_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
-            service_prefix + "start_mpc_service",
-            std::bind(&ModelPredictiveControllerCasadi::start_mpc, this, std::placeholders::_1, std::placeholders::_2));
+        start_controller_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
+            service_prefix + "start_controller_service",
+            std::bind(&CommonBaseController::start_controller, this, std::placeholders::_1, std::placeholders::_2));
 
-        reset_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
-            service_prefix + "reset_mpc_service",
-            std::bind(&ModelPredictiveControllerCasadi::reset_mpc, this, std::placeholders::_1, std::placeholders::_2));
+        reset_controller_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
+            service_prefix + "reset_controller_service",
+            std::bind(&CommonBaseController::reset_controller, this, std::placeholders::_1, std::placeholders::_2));
 
-        stop_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
-            service_prefix + "stop_mpc_service",
-            std::bind(&ModelPredictiveControllerCasadi::stop_mpc, this, std::placeholders::_1, std::placeholders::_2));
+        stop_controller_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
+            service_prefix + "stop_controller_service",
+            std::bind(&CommonBaseController::stop_controller, this, std::placeholders::_1, std::placeholders::_2));
 
         traj_switch_service_ = get_node()->create_service<mpc_interfaces::srv::TrajectoryCommand>(
             service_prefix + "traj_switch_service",
-            std::bind(&ModelPredictiveControllerCasadi::traj_switch, this, std::placeholders::_1, std::placeholders::_2));
+            std::bind(&CommonBaseController::traj_switch, this, std::placeholders::_1, std::placeholders::_2));
 
         mpc_switch_service_ = get_node()->create_service<mpc_interfaces::srv::CasadiMPCTypeCommand>(
             service_prefix + "mpc_switch_service",
-            std::bind(&ModelPredictiveControllerCasadi::mpc_switch, this, std::placeholders::_1, std::placeholders::_2));
+            std::bind(&CommonBaseController::mpc_switch, this, std::placeholders::_1, std::placeholders::_2));
 
         RCLCPP_INFO(get_node()->get_logger(), "Services created");
 
         return CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCasadi::on_init()
+    CallbackReturn CommonBaseController::on_init()
     {
         rcutils_ret_t ret = rcutils_logging_set_logger_level(
             get_node()->get_logger().get_name(), MY_LOG_LEVEL);
@@ -224,58 +228,57 @@ namespace franka_example_controllers
         return CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCasadi::on_deactivate(const rclcpp_lifecycle::State &)
+    CallbackReturn CommonBaseController::on_deactivate(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
         RCLCPP_INFO(get_node()->get_logger(), "on_deactivate: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCasadi::on_activate(const rclcpp_lifecycle::State &)
+    CallbackReturn CommonBaseController::on_activate(const rclcpp_lifecycle::State &)
     {
         open_shared_memories();
-        init_controller();
         int8_t readonly_mode = 1;
         shm.write("readonly_mode", &readonly_mode);
         RCLCPP_INFO(get_node()->get_logger(), "on_activate: Shared memory opened successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCasadi::on_cleanup(const rclcpp_lifecycle::State &)
+    CallbackReturn CommonBaseController::on_cleanup(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
         RCLCPP_INFO(get_node()->get_logger(), "on_cleanup: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCasadi::on_shutdown(const rclcpp_lifecycle::State &)
+    CallbackReturn CommonBaseController::on_shutdown(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
         RCLCPP_INFO(get_node()->get_logger(), "on_shutdown: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    void ModelPredictiveControllerCasadi::open_shared_memories()
+    void CommonBaseController::open_shared_memories()
     {
         shm.open_readwrite_shms(shm_readwrite_infos);
         shm.open_readwrite_sems(sem_readwrite_names);
         RCLCPP_INFO(get_node()->get_logger(), "Shared memory opened successfully.");
     }
 
-    void ModelPredictiveControllerCasadi::close_shared_memories()
+    void CommonBaseController::close_shared_memories()
     {
         shm.close_shared_memories();
         shm.close_semaphores();
     }
 
-    // void ModelPredictiveControllerCasadi::topic_callback(const mpc_interfaces::msg::ControlArray & msg)
+    // void CommonBaseController::topic_callback(const mpc_interfaces::msg::ControlArray & msg)
     // {
     //     Eigen::Map<const Eigen::VectorXd> u_k(msg.control_array.data(), msg.control_array.size());
     //     RCUTILS_LOG_WARN("Received control array: [%f, %f, %f, %f, %f, %f]",
     //                     u_k[0], u_k[1], u_k[2], u_k[3], u_k[4], u_k[5]);
     // }
 
-    void ModelPredictiveControllerCasadi::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
+    void CommonBaseController::start_controller(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                     std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -309,11 +312,11 @@ namespace franka_example_controllers
         shm.write("read_traj_length", &traj_len);
         shm.write("readonly_mode", &readonly_mode);
 
-        mpc_started = true;
+        controller_started = true;
         controller.set_traj_count(0);
     }
 
-    void ModelPredictiveControllerCasadi::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
+    void CommonBaseController::reset_controller(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                     std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -327,15 +330,15 @@ namespace franka_example_controllers
         shm.write("data_from_simulink_stop", &flags.stop);
         shm.write("data_from_simulink_reset", &flags.reset);
 
-        reset_mpc_trajectory();
+        reset_controller_trajectory();
 
         response->status = "reset flag set";
-        mpc_started = false;
+        controller_started = false;
         shm.post_semaphore("shm_changed_semaphore");
         RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC reset");
     }
 
-    void ModelPredictiveControllerCasadi::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
+    void CommonBaseController::stop_controller(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                    std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -351,30 +354,30 @@ namespace franka_example_controllers
         shm.post_semaphore("shm_changed_semaphore");
 
         response->status = "stop flag set";
-        mpc_started = false;
+        controller_started = false;
         RCLCPP_INFO(get_node()->get_logger(), "CasAdi MPC stopped");
     }
 
-    void ModelPredictiveControllerCasadi::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
+    void CommonBaseController::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
                                                       std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response)
     {
-        traj_select = request->traj_select; // it is later used at start_mpc() in init_trajectory
+        traj_select = request->traj_select; // it is later used at start_controller() in init_trajectory
 
         controller.switch_traj(traj_select);
-        reset_mpc_trajectory();
+        reset_controller_trajectory();
 
         response->status = "trajectory " + std::to_string(traj_select) + " selected";
-        mpc_started = false;
+        controller_started = false;
         
         RCLCPP_INFO(get_node()->get_logger(), "Trajectory %d selected", traj_select);
     }
 
-    void ModelPredictiveControllerCasadi::mpc_switch(const std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Request> request,
+    void CommonBaseController::mpc_switch(const std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Request> request,
                                                          std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Response> response)
     {
         CasadiMPCType mpc_type = static_cast<CasadiMPCType>(request->mpc_type);
         controller.setActiveMPC(mpc_type);
-        reset_mpc_trajectory();
+        reset_controller_trajectory();
 
         response->status = "MPC type " + std::to_string(request->mpc_type) + " selected";
         std::string status_message = "Switched to Casadi " + casadi_mpctype_to_string(mpc_type);
@@ -382,7 +385,7 @@ namespace franka_example_controllers
         response->status = status_message;
     }
 
-    nlohmann::json ModelPredictiveControllerCasadi::read_config(std::string file_path)
+    nlohmann::json CommonBaseController::read_config(std::string file_path)
     {
         std::ifstream file(file_path);
         if (!file.is_open())
@@ -396,7 +399,7 @@ namespace franka_example_controllers
         return jsonData;
     }
 
-    Eigen::VectorXd ModelPredictiveControllerCasadi::filter_x_measured()
+    Eigen::VectorXd CommonBaseController::filter_x_measured()
     {
         Eigen::VectorXd x_filtered;
         if(use_ekf && use_lowpass_filter)
@@ -425,7 +428,7 @@ namespace franka_example_controllers
 
     #ifdef SIMULATION_MODE
     // Function to generate an Eigen vector of white noise
-    Eigen::VectorXd ModelPredictiveControllerCasadi::generateNoiseVector(int n, double Ts, double mean_noise_amplitude) {
+    Eigen::VectorXd CommonBaseController::generateNoiseVector(int n, double Ts, double mean_noise_amplitude) {
         // Calculate noise power
         double noise_power = 1 / (2*Ts) * (Ts / 2) * M_PI * std::pow(mean_noise_amplitude, 2);
 
@@ -446,14 +449,14 @@ namespace franka_example_controllers
     }
     #endif
 
-    void ModelPredictiveControllerCasadi::solve()
+    void CommonBaseController::solve()
     {
         timer_mpc_solver.tic();
         tau_full = controller.solveMPC(x_filtered.data());
         timer_mpc_solver.toc();
     }
 
-    void ModelPredictiveControllerCasadi::init_filter(double omega_c_q, double omega_c_dq)
+    void CommonBaseController::init_filter(double omega_c_q, double omega_c_dq)
     {
         if(use_ekf && use_lowpass_filter)
         {
@@ -488,52 +491,54 @@ namespace franka_example_controllers
         // without previous data, we cannot filter
     }
 
-    void ModelPredictiveControllerCasadi::init_controller()
+    void CommonBaseController::init_controller()
     {
         // Update general configuration
         nlohmann::json general_config = read_config(general_config_filename);
-        use_lowpass_filter = get_config_value<bool>(general_config, "use_lowpass_filter");
-        use_ekf = get_config_value<bool>(general_config, "use_ekf");
-        // Is set by using the nodejs gui
-        // traj_select = general_config["trajectory_selection"];
+        use_lowpass_filter = general_config["use_lowpass_filter"];
+        use_ekf = general_config["use_ekf"];
 
-        bool use_planner = get_config_value<bool>(general_config, "use_casadi_planner");
-        double omega_c_q = get_config_value<double>(general_config, "lowpass_filter_omega_c_q");
-        double omega_c_dq = get_config_value<double>(general_config, "lowpass_filter_omega_c_dq");
+        double omega_c_q = general_config["lowpass_filter_omega_c_q"];
+        double omega_c_dq = general_config["lowpass_filter_omega_c_dq"];
 
-        /////// SET ACTIVE MPC ///////
-        // Is set by using the nodejs gui
-        // controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
+        //////// TORQUE MAPPER CONFIG ////////
+        auto torque_mapper_settings = general_config["torque_mapper_settings"];
+        FullSystemTorqueMapper::Config torque_mapper_config;
+        torque_mapper_config.K_d = Eigen::VectorXd::Map(torque_mapper_settings["K_d"].get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
+        torque_mapper_config.D_d = Eigen::VectorXd::Map(torque_mapper_settings["D_d"].get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
+        torque_mapper_config.K_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["K_d_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
+        torque_mapper_config.D_d_fixed = Eigen::VectorXd::Map(torque_mapper_settings["D_d_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
+        torque_mapper_config.q_ref_nq = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq"].get<std::vector<double>>().data(), robot_config.nq);
+        torque_mapper_config.q_ref_nq_fixed = Eigen::VectorXd::Map(torque_mapper_settings["q_ref_nq_fixed"].get<std::vector<double>>().data(), robot_config.nq_fixed);
+        torque_mapper_config.torque_limit = torque_mapper_settings["torque_limit"];
+        controller.set_torque_mapper_config(torque_mapper_config);
 
         /////// INIT FILE TRAJECTORY ///////
-        double T_traj_start = get_config_value<double>(general_config, "transient_traj_start_time");
-        double T_traj_dur = get_config_value<double>(general_config, "transient_traj_duration");
-        double T_traj_end = get_config_value<double>(general_config, "transient_traj_end_time");
+        double T_traj_start = general_config["transient_traj_start_time"];
+        double T_traj_dur = general_config["transient_traj_duration"];
+        double T_traj_end = general_config["transient_traj_end_time"];
         controller.init_file_trajectory(traj_select, state.data(), T_traj_start, T_traj_dur, T_traj_end);
-
         traj_len = controller.get_traj_data_real_len();
-        N_step = controller.get_N_step();
-
-        controller.set_planner_mode(use_planner);
-        controller.update_mpc_weights();
 
         solver_steps = controller.get_traj_step();
         current_trajectory = controller.get_trajectory();
         traj_len = controller.get_traj_data_real_len();
 
         #ifdef SIMULATION_MODE
-        mean_noise_amplitude = get_config_value<double>(general_config, "mean_noise_amplitude");
-        use_noise = get_config_value<bool>(general_config, "use_noise");
+        mean_noise_amplitude = general_config["mean_noise_amplitude"];
+        use_noise = general_config["use_noise"];
         if(use_noise)
             x_measured = state + generateNoiseVector(nx, Ts, mean_noise_amplitude);
         else
             x_measured = state;
         #endif
 
+        controller.custom_init(general_config);
+
         init_filter(omega_c_q, omega_c_dq); // uses x_measured
     }
 
-    void ModelPredictiveControllerCasadi::reset_mpc_trajectory()
+    void CommonBaseController::reset_controller_trajectory()
     {
         Eigen::VectorXd x0_red_init = controller.get_traj_x0_red_init(traj_select);
         controller.reset(x0_red_init.data());
@@ -550,5 +555,5 @@ namespace franka_example_controllers
 } // namespace franka_example_controllers
 #include "pluginlib/class_list_macros.hpp"
 // NOLINTNEXTLINE
-PLUGINLIB_EXPORT_CLASS(franka_example_controllers::ModelPredictiveControllerCasadi,
+PLUGINLIB_EXPORT_CLASS(franka_example_controllers::CommonBaseController,
                        controller_interface::ControllerInterface)

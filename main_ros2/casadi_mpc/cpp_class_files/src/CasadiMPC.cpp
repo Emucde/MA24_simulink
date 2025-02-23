@@ -6,6 +6,9 @@
 #include <memory> // for std::make_unique
 #include "eigen_templates.hpp"
 
+#define USE_PATH_FOLLOWING_MPC
+#define USE_REFERENCE_SYS_MPC
+
 // #define DEBUG 1
 
 mpc_config_t invalid_config(const std::string &mpc_name)
