@@ -500,6 +500,7 @@ namespace franka_example_controllers
 
         current_trajectory = controller.get_trajectory();
         traj_len = controller.get_traj_data_real_len();
+        controller.update_controller_settings();
 
         #ifdef SIMULATION_MODE
         mean_noise_amplitude = general_config["mean_noise_amplitude"];
