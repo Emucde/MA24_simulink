@@ -8,7 +8,7 @@ CrocoddylMPC::CrocoddylMPC(CrocoddylMPCType mpc_type,
           robot_model(robot_model),
           crocoddyl_config_path(crocoddyl_config_path),
           trajectory_generator(trajectory_generator),
-          nq(robot_model.nq), nx(robot_model.nx), // this is nq_red and nx_red!!!
+          nq_red(robot_model.nq), nx_red(robot_model.nx), // this is nq_red and nx_red!!!
           traj_data(trajectory_generator.get_traj_data()),
           traj_data_real_len(trajectory_generator.get_traj_data_real_len()),
           traj_rows(trajectory_generator.get_traj_data()->rows()), 
@@ -56,10 +56,10 @@ void CrocoddylMPC::init_config()
     Eigen::VectorXd q_max = Eigen::Map<const Eigen::VectorXd>(robot_config.q_limit_upper, robot_config.nq);
     Eigen::VectorXd q_p_max = Eigen::Map<const Eigen::VectorXd>(robot_config.q_p_limit_upper, robot_config.nq);
 
-    x_min = Eigen::VectorXd::Zero(nx); // robot_config.nx = 14, nx here is 12
-    x_max = Eigen::VectorXd::Zero(nx); // robot_config.nx = 14, nx here is 12
+    x_min = Eigen::VectorXd::Zero(nx_red); // robot_config.nx = 14, nx here is 12
+    x_max = Eigen::VectorXd::Zero(nx_red); // robot_config.nx = 14, nx here is 12
 
-    x_mean = Eigen::VectorXd::Zero(nx); // nx here is 12
+    x_mean = Eigen::VectorXd::Zero(nx_red); // nx here is 12
     x_mean << (q_min(n_indices) + q_max(n_indices)) / 2, (q_p_min(n_indices) + q_p_max(n_indices)) / 2;
 
     x_min << q_min(n_indices), q_p_min(n_indices);
@@ -68,8 +68,8 @@ void CrocoddylMPC::init_config()
     Eigen::VectorXd u_min_ndof = Eigen::Map<const Eigen::VectorXd>(robot_config.torque_limit_lower, robot_config.nq);
     Eigen::VectorXd u_max_ndof = Eigen::Map<const Eigen::VectorXd>(robot_config.torque_limit_upper, robot_config.nq);
 
-    u_min = Eigen::VectorXd::Zero(nq); // robot_config.nx = 14, nx here is 12
-    u_min = Eigen::VectorXd::Zero(nq); // robot_config.nx = 14, nx here is 12
+    u_min = Eigen::VectorXd::Zero(nq_red); // robot_config.nx = 14, nx here is 12
+    u_min = Eigen::VectorXd::Zero(nq_red); // robot_config.nx = 14, nx here is 12
 
     u_min = u_min_ndof(n_indices);
     u_max = u_max_ndof(n_indices);
@@ -253,7 +253,7 @@ void CrocoddylMPC::create_mpc_solver()
         state, x_mean); // r = x_mean - x
         residual_state_models[i]["stateRegBound"] = residual_xreg_bound;
         auto residual_ureg_bound = boost::make_shared<crocoddyl::ResidualModelControl>(
-            state, Eigen::VectorXd::Zero(nq)); // r = u
+            state, Eigen::VectorXd::Zero(nq_red)); // r = u
         residual_control_models[i]["ctrlRegBound"] = residual_ureg_bound;
         auto residual_q_yt = boost::make_shared<crocoddyl::ResidualModelFrameTranslation>(
             state, robot_model.tcp_frame_id, p_d); // r = p_d - p
@@ -262,19 +262,19 @@ void CrocoddylMPC::create_mpc_solver()
             state, robot_model.tcp_frame_id, R_d); // r = R_d^T * R
         residual_frame_rotation_models[i]["TCP_rot"] = residual_q_yr;
         auto residual_q_qp = boost::make_shared<crocoddyl::ResidualModelState>(
-            state, Eigen::VectorXd::Zero(nx)); // r = q_p
+            state, Eigen::VectorXd::Zero(nx_red)); // r = q_p
         residual_state_models[i]["q_pReg"] = residual_q_qp;
         auto residual_q_qpp = boost::make_shared<crocoddyl::ResidualModelJointAcceleration>(
-            state, Eigen::VectorXd::Zero(nq)); // r = q_pp
+            state, Eigen::VectorXd::Zero(nq_red)); // r = q_pp
         residual_joint_acceleration_models[i]["q_ppReg"] = residual_q_qpp;
         auto residual_xprev = boost::make_shared<crocoddyl::ResidualModelState>(
-            state, Eigen::VectorXd::Zero(nx)); // r = x_prev - x_prev_ref (is later set)
+            state, Eigen::VectorXd::Zero(nx_red)); // r = x_prev - x_prev_ref (is later set)
         residual_state_models[i]["xprevReg"] = residual_xprev;
         auto residual_u = boost::make_shared<crocoddyl::ResidualModelControl>(
-            state, Eigen::VectorXd::Zero(nq)); // r = u
+            state, Eigen::VectorXd::Zero(nq_red)); // r = u
         residual_control_models[i]["ctrlReg"] = residual_u;
         auto residual_u_prev = boost::make_shared<crocoddyl::ResidualModelControl>(
-            state, Eigen::VectorXd::Zero(nq)); // r = u - u_prev (is later set)
+            state, Eigen::VectorXd::Zero(nq_red)); // r = u - u_prev (is later set)
         residual_control_models[i]["ctrlPrev"] = residual_u_prev;
         auto xRegBoundCost = boost::make_shared<crocoddyl::CostModelResidual>(
             state, activation_state_bound, residual_xreg_bound);
@@ -437,7 +437,7 @@ void CrocoddylMPC::create_mpc_solver()
         }
     }
 
-    auto problem = boost::make_shared<crocoddyl::ShootingProblem>(Eigen::VectorXd::Zero(nx), runningCostModels, terminalCostModel);
+    auto problem = boost::make_shared<crocoddyl::ShootingProblem>(Eigen::VectorXd::Zero(nx_red), runningCostModels, terminalCostModel);
 
     problem_reference = problem;
 

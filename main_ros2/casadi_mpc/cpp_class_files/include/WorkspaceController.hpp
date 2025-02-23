@@ -1,3 +1,7 @@
+#ifndef WORKSPACE_CONTROLLER_HPP
+#define WORKSPACE_CONTROLLER_HPP
+
+#include "CommonBaseController.hpp"
 #include "param_robot.h"
 #include "robot_data.hpp"
 #include "workspace_controller_config.hpp"
@@ -69,11 +73,11 @@ public:
     uint traj_count;
 };
 
-class WorkspaceController
+class WorkspaceController : public CommonBaseController
 {
 public:
     // Constructor
-    WorkspaceController(const std::string &urdf_path,
+    WorkspaceController(const std::string &urdf_filename,
                         const std::string &general_config_filename);
 
     ControllerType get_classic_controller_type(const std::string &controller_type_str);
@@ -85,45 +89,28 @@ public:
         pd_plus_controller.update_controller_settings();
         inverse_dyn_controller.update_controller_settings();
     }
+    void update_trajectory_data(const double *x_k_ndof_ptr) override;
+    void update_config() override;
 
-    void increase_traj_count()
+    void increase_traj_count() override
     {
         active_controller->traj_count++;
     }
 
-    void set_traj_count(casadi_uint new_traj_count)
+    void set_traj_count(casadi_uint new_traj_count) override
     {
         active_controller->traj_count = new_traj_count;
     }
 
-    void switch_traj(uint traj_select)
+    void switch_traj(uint traj_select) override
     {
         trajectory_generator.switch_traj(traj_select);
     }
-    void simulateModelEuler(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
-    void simulateModelRK4(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
+
     Eigen::VectorXd update(const double *const x_nq);
-    void reset();
-    void reset(const casadi_real *const x_k_in);
 
-    // Initialize trajectory data
-    void init_file_trajectory(uint traj_select, const double *x_k_ndof_ptr,
-                              double T_start, double T_poly, double T_end)
-    {
-        trajectory_generator.init_file_trajectory(traj_select, x_k_ndof_ptr, T_start, T_poly, T_end);
-    }
-
-    // Method for creating a custom trajectory with extra samples for the last prediction horizon
-    void init_custom_trajectory(ParamPolyTrajectory param_target)
-    {
-        trajectory_generator.init_custom_trajectory(param_target);
-    }
-
-    // Method to set the maximum torque jump
-    void set_tau_max_jump(double tau_jump)
-    {
-        tau_max_jump = tau_jump;
-    }
+    void reset() override;
+    void reset(const casadi_real *const x_k_in) override;
 
     // Method to get the error flag
     ErrorFlag get_error_flag()
@@ -131,74 +118,28 @@ public:
         return error_flag;
     }
 
-    void reset_error_flag()
-    {
-        error_flag = ErrorFlag::NO_ERROR;
-    }
-
-    uint get_traj_count()
+    uint get_traj_count() override
     {
         return active_controller->traj_count;
     }
 
-    uint get_traj_step()
+    uint get_traj_step() override
     {
         return 1; // always 1 because it is extremely fast
     }
 
-    uint get_N_step()
+    uint get_N_step() override
     {
         return 1;
     }
 
-    const Eigen::MatrixXd *get_trajectory()
-    {
-        return trajectory_generator.get_traj_data();
-    }
-
-    const double *get_act_traj_data()
+    const double *get_act_traj_data() override
     {
         uint traj_count = active_controller->traj_count;
         return trajectory_generator.get_traj_data()->col((traj_count > 0 ? traj_count - 1 : traj_count)).data();
     }
 
-    int get_traj_data_real_len()
-    {
-        return trajectory_generator.get_traj_data_real_len();
-    }
-
-    uint get_transient_traj_len()
-    {
-        return trajectory_generator.get_transient_traj_len();
-    }
-
-    const double *get_traj_x0_init(uint traj_select)
-    {
-        return trajectory_generator.get_traj_file_x0_init(traj_select)->data();
-    }
-
-    FullSystemTorqueMapper* get_torque_mapper()
-    {
-        return &torque_mapper;
-    }
-
-    void set_torque_mapper_config(FullSystemTorqueMapper::Config &config)
-    {
-        torque_mapper.setConfiguration(config);
-    }
-
-    Eigen::VectorXd get_traj_x0_red_init(casadi_uint traj_select);
-    Eigen::VectorXd get_act_traj_x0_red_init();
-
 private:
-    const std::string urdf_path;
-    const std::string general_config_filename;
-    robot_config_t robot_config;
-    const Eigen::VectorXi n_indices, n_x_indices;
-    const int nq, nx, nq_red, nx_red;
-    RobotModel robot_model;
-    FullSystemTorqueMapper torque_mapper;
-    TrajectoryGenerator trajectory_generator;
 
     // Nested classes inheriting from BaseWorkspaceController
     class CTController : public BaseWorkspaceController
@@ -241,9 +182,6 @@ private:
     PDPlusController pd_plus_controller;              // Instance of PDPlusController
     InverseDynamicsController inverse_dyn_controller; // Instance of InverseDynamicsController
     BaseWorkspaceController *active_controller=0;     // I do not need a smart pointer because I store all instances in the class.
-
-    ErrorFlag error_flag = ErrorFlag::NO_ERROR;
-    Eigen::VectorXd tau_full_prev = Eigen::VectorXd::Zero(nq);
-    double tau_max_jump = 5.0; // Maximum jump in torque (Nm/dt)
-    void error_check(Eigen::VectorXd &tau_full);
 };
+
+#endif

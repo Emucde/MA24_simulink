@@ -1,6 +1,7 @@
 #ifndef CASADICONTROLLER_HPP
 #define CASADICONTROLLER_HPP
 
+#include "CommonBaseController.hpp"
 #include "json.hpp"
 #include <iostream>
 #include <fstream>
@@ -39,10 +40,9 @@ protected:
     Eigen::VectorXd u_opt = Eigen::VectorXd::Zero(nq_red);
 };
 
-class CasadiController // : public TrajectoryGenerator
+class CasadiController : public CommonBaseController
 {
 private:
-    robot_config_t robot_config;                       // Robot configuration
     std::vector<CasadiMPC> casadi_mpcs;                // MPC objects
     CasadiMPCType selected_mpc_type;                   // Active MPC type
     CasadiMPC *active_mpc;                             // Active MPC object
@@ -52,19 +52,8 @@ private:
     std::string traj_file;    // Path to trajectory data file
     std::string x0_init_file; // Path to initial state data of trajectories
 
-public:
-    const casadi_uint nq;     // Number of degrees of freedom
-    const casadi_uint nx;     // Number of reduced degrees of freedom
-    const casadi_uint nq_red; // Number of reduced degrees of freedom
-    const casadi_uint nx_red; // Number of reduced degrees of freedom
-
 private:
-    const Eigen::VectorXi n_indices;
-    const Eigen::VectorXi n_x_indices;
-    FullSystemTorqueMapper torque_mapper;      // Torque mapper
-    RobotModel robot_model;                    // Robot model
-    TrajectoryGenerator trajectory_generator;  // Trajectory generator
-    const std::string casadi_mpc_weights_file; // Path to the casadi mpc weights file
+    const std::string mpc_config_filename; // Path to the casadi mpc weights file
     nlohmann::json param_mpc_weight;
     bool use_planner;
 
@@ -73,7 +62,6 @@ private:
     casadi_real *w_ptr;                // Workspace real address
     casadi_uint traj_data_per_horizon; // Trajectory data per horizon
     casadi_uint *mpc_traj_indices;     // Trajectory indices for not equidistant sampling
-    casadi_real dt;
 
     // std::map<std::string, double> param_transient_traj_poly;
     // casadi_uint traj_rows;
@@ -88,36 +76,22 @@ private:
     // casadi_uint traj_len;
     // casadi_uint traj_real_len; // number of columns of the singular trajectory data without additional samples for last prediction horizon
 
-    Eigen::VectorXd tau_full_prev;
-    ErrorFlag error_flag = ErrorFlag::NO_ERROR;
-    double tau_max_jump = 5.0;
-
 public:
     // Constructor
-    CasadiController(const std::string &urdf_path,
-                     const std::string &casadi_mpc_weights_file,
-                     const std::string &general_config_file);
+    CasadiController(const std::string &urdf_filename,
+                     const std::string &mpc_config_filename,
+                     const std::string &general_config_filename);
 
     // CasadiController: solve the MPC
     Eigen::VectorXd solveMPC(const casadi_real *const x_k_ndof_ptr);
 
     nlohmann::json read_config(std::string file_path);
     void update_mpc_weights();
-
-    // Initialize trajectory data
-    void init_file_trajectory(casadi_uint traj_select, const casadi_real *x_k_ndof_ptr,
-                              double T_start, double T_poly, double T_end);
-
-    // Method for creating a custom trajectory with extra samples for the last prediction horizon
-    void init_custom_trajectory(ParamPolyTrajectory param);
-
-    // Method to simulate the robot model
-    void simulateModelEuler(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
-    void simulateModelRK4(casadi_real *const x_k_ndof_ptr, const casadi_real *const tau_ptr, double dt);
+    void update_config() override;
 
     void collinearity_weight_x(const casadi_real *const x_k_ndof_ptr);
-    void reset(const casadi_real *const x_k_in);
-    void reset();
+    void reset(const double *const x_k_in) override;
+    void reset() override;
 
     // Getters and setters
     void setActiveMPC(CasadiMPCType mpc);
@@ -126,12 +100,12 @@ public:
     void set_planner_mode(bool use_planner_new);
 
     // increase counter from casadi mpc if it solves too slow
-    void increase_traj_count()
+    void increase_traj_count() override
     {
         active_mpc->increase_traj_count();
     }
 
-    void set_traj_count(casadi_uint new_traj_count)
+    void set_traj_count(uint new_traj_count) override
     {
         active_mpc->set_traj_count(new_traj_count);
     }
@@ -146,56 +120,23 @@ public:
         return active_mpc->get_optimal_control();
     }
 
-    casadi_uint get_N_step()
+    casadi_uint get_N_step() override
     {
         return active_mpc->get_N_step();
     }
 
-    uint get_traj_count()
+    uint get_traj_count() override
     {
         return active_mpc->get_traj_count();
     }
 
-    const casadi_uint *get_n_indices()
-    {
-        return robot_config.n_indices;
-    }
-
-    casadi_uint get_traj_step()
+    casadi_uint get_traj_step() override
     {
         return active_mpc->get_traj_step();
     }
 
-    FullSystemTorqueMapper* get_torque_mapper()
-    {
-        return &torque_mapper;
-    }
-
-    void set_torque_mapper_config(FullSystemTorqueMapper::Config &config)
-    {
-        torque_mapper.setConfiguration(config);
-    }
-
     // Method to switch the trajectory (for creating run init_trajectory)
-    void switch_traj(casadi_uint traj_select);
-
-    // Method to get n_x_indices
-    const casadi_uint *get_n_x_indices()
-    {
-        return robot_config.n_x_indices;
-    }
-
-    // Method to get n_indices_fixed
-    const casadi_uint *get_n_indices_fixed()
-    {
-        return robot_config.n_indices_fixed;
-    }
-
-    // Method to get n_x_indices_fixed
-    const casadi_uint *get_n_x_indices_fixed()
-    {
-        return robot_config.n_x_indices_fixed;
-    }
+    void switch_traj(uint traj_select) override;
 
     // Method to output the optimal control
     casadi_real *get_optimal_control()
@@ -209,45 +150,10 @@ public:
         return active_mpc->get_x_k();
     }
 
-    // Method to get the real length of the trajectory data (= length of the trajectory data without additional samples for last prediction horizon)
-    casadi_uint get_traj_data_real_len()
-    {
-        return trajectory_generator.get_traj_data_real_len();
-    }
-
-    // Method to get the length of the trajectory data
-    casadi_uint get_traj_data_len()
-    {
-        return trajectory_generator.get_traj_data_len();
-    }
-
-    // Method to get transient trajectory data
-    const Eigen::MatrixXd *get_transient_traj_data()
-    {
-        return trajectory_generator.get_transient_traj_data();
-    }
-
-    // Method to get the transient trajectory length
-    casadi_uint get_transient_traj_len()
-    {
-        return trajectory_generator.get_transient_traj_len();
-    }
-
     // Method to get the is kinematic mpc flag
     bool get_is_kinematic_mpc()
     {
         return active_mpc->is_kinematic_mpc;
-    }
-
-    // Method to get the error flag
-    ErrorFlag get_error_flag()
-    {
-        return error_flag;
-    }
-
-    void reset_error_flag()
-    {
-        error_flag = ErrorFlag::NO_ERROR;
     }
 
     // Method to get w pointer
@@ -256,44 +162,19 @@ public:
         return active_mpc->get_w();
     }
 
-    // Method to set the maximum torque jump
-    void set_tau_max_jump(double tau_jump)
-    {
-        tau_max_jump = tau_jump;
-    }
-
     const casadi_real *get_q_ref_nq()
     {
         return robot_config.q_0_ref;
     }
 
-    const Eigen::MatrixXd *get_trajectory()
-    {
-        return trajectory_generator.get_traj_data();
-    }
-
-    const casadi_real *get_act_traj_data()
+    const casadi_real *get_act_traj_data() override
     {
         return active_mpc->get_act_traj_data();
     }
 
-    const casadi_real *get_act_traj_x0_init()
-    {
-        return trajectory_generator.get_act_traj_x0_init()->data();
-    }
-
-    const casadi_real *get_traj_x0_init(casadi_uint traj_select)
-    {
-        return trajectory_generator.get_traj_file_x0_init(traj_select)->data();
-    }
-
-    Eigen::VectorXd get_traj_x0_red_init(casadi_uint traj_select);
-    Eigen::VectorXd get_act_traj_x0_red_init();
-
 private:
     // Private methods
-    void update_trajectory_data(const casadi_real *const x_k_ndof_ptr);
-    void error_check(Eigen::VectorXd &tau_full);
+    void update_trajectory_data(const casadi_real *const x_k_ndof_ptr) override;
 
     class StandardSolver : public BaseSolver
     {

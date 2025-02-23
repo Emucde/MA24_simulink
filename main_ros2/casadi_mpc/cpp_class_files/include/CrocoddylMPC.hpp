@@ -136,7 +136,7 @@ private:
     nlohmann::json mpc_settings;
     nlohmann::json param_mpc_weight;
     TrajectoryGenerator &trajectory_generator;
-    const int nq, nx; // this is nq_red and nx_red!!!
+    const int nq_red, nx_red; // this is nq_red_red and nx_red!!!
     double dt, dt_MPC;
     std::string int_method;
     uint N_MPC, N_step, N_solver_steps;

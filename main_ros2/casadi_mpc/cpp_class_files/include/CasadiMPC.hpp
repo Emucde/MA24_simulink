@@ -1,6 +1,7 @@
 #ifndef CASADIMPC_HPP
 #define CASADIMPC_HPP
 
+#include "CommonBaseMPC.hpp"
 #include "json.hpp"
 #include <iostream>
 #include "mpc_config_types.h"
@@ -15,22 +16,14 @@
 
 // #define DEBUG 1
 
-class CasadiMPC
+class CasadiMPC : public CommonBaseMPC
 {
 private:
     const std::string mpc_name; // MPC name
     mpc_config_t mpc_config;
-    robot_config_t &robot_config;
-    TrajectoryGenerator &trajectory_generator;    // Trajectory generator
-    const Eigen::MatrixXd *traj_data;        // Trajectory data
-    casadi_uint traj_data_real_len;          // Real length of the singular trajectory data without additional samples for last prediction horizon
 public:
     bool is_kinematic_mpc; // Kinematic MPC flag
     const bool is_planner_mpc; // Kinematic MPC flag
-    const casadi_uint nq;        // Number of degrees of freedom
-    const casadi_uint nx;        // Number of reduced degrees of freedom
-    const casadi_uint nq_red;    // Number of reduced degrees of freedom
-    const casadi_uint nx_red;    // Number of reduced degrees of freedom
 
 private:
     CasadiFunPtr_t casadi_fun;                                                                  // MPC Function pointer
@@ -39,20 +32,11 @@ private:
     casadi_int *iw;                                                                             // Workspace integer
     casadi_real *w;                                                                             // Workspace real
     casadi_real *w_end;                                                                         // End address for w
-    std::streamoff traj_data_startbyte;                                                         // Trajectory data start byte
-    casadi_uint traj_rows;                                                                      // Trajectory rows (normally 7, xyzquat)
-    casadi_uint traj_cols;                                                                      // Total length of trajectory data (transient traj + singular traj)        Eigen::VectorXi selected_rows(7);
 
     const casadi_uint horizon_len;           // Needed trajectory samples in a prediction horizon.
     Eigen::VectorXi mpc_traj_indices;        // MPC stepwidth indices for sampling trajectory data
-    casadi_uint N_step;
-    const std::string traj_file;             // Path to trajectory data file
     const casadi_uint traj_data_per_horizon; // Trajectory data per horizon
-    casadi_uint traj_count;                  // Trajectory count
-    casadi_uint traj_step;                   // step width at which the trajectory is sampled
-    int traj_select;                         // Trajectory selection
     int mem;                                 // Memory
-    casadi_real dt;                          // Control sampling time
 
     const Eigen::VectorXi y_d_quat_rows = (Eigen::VectorXi(7) << trajectory_generator.p_d_rows, trajectory_generator.q_d_rows).finished(); // Selecting p_d (0-2) and q_d (9-12)
     const Eigen::VectorXi y_d_p_quat_rows = (Eigen::VectorXi(6) << trajectory_generator.p_d_p_rows, trajectory_generator.omega_d_rows).finished();  // Selecting p_d_p (3-5) and omega_d (13-15)
@@ -112,21 +96,9 @@ public:
 
 
     // Method to switch the trajectory
-    void switch_traj(const casadi_real *const x_k_in);
+    void switch_traj(const double *const x_k_in) override;
 
-    // if it solves too slow.
-    void increase_traj_count()
-    {
-        traj_count++;
-    }
-
-    // if it solves too slow.
-    void set_traj_count(casadi_uint new_traj_count)
-    {
-        traj_count = new_traj_count;
-    }
-
-    void reset(const casadi_real *const x_k_in);
+    void reset(const double *const x_k_in) override;
 
     ///////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////
@@ -143,16 +115,6 @@ public:
     casadi_real *get_u_next()
     {
         return mpc_config.out.u_out.ptr+nq_red;
-    }
-
-    casadi_uint get_N_step()
-    {
-        return N_step;
-    }
-
-    casadi_uint get_traj_step()
-    {
-        return traj_step;
     }
 
     // Method to get the initial state address at the begin of the prediction horizon
@@ -185,11 +147,6 @@ public:
         return traj_cols * traj_rows;
     }
 
-    casadi_uint get_traj_count()
-    {
-        return traj_count;
-    }
-
     // Method to get the control sampling time dt
     casadi_real get_dt()
     {
@@ -211,18 +168,6 @@ public:
     const casadi_uint *get_mpc_traj_indices()
     {
         return (const casadi_uint *)mpc_traj_indices.data();
-    }
-
-    // Method to get the trajectory file path
-    const std::string &get_traj_file()
-    {
-        return traj_file;
-    }
-
-    // Method to get the current trajectory data
-    const casadi_real *get_act_traj_data()
-    {
-        return traj_data->col((traj_count > 0 ? traj_count-1 : traj_count)).data();
     }
 
     casadi_real* get_param_ptr(std::string key);

@@ -1,5 +1,21 @@
 #include "CommonBaseController.hpp"
 
+CommonBaseController::CommonBaseController(const std::string &urdf_filename,
+                        const std::string &mpc_config_filename,
+                        const std::string &general_config_filename)
+                        : urdf_filename(urdf_filename), mpc_config_filename(mpc_config_filename), general_config_filename(general_config_filename),
+                        robot_config(get_robot_config()),
+                        n_indices(ConstIntVectorMap(robot_config.n_indices, robot_config.nq_red)),
+                        n_x_indices(ConstIntVectorMap(robot_config.n_x_indices, robot_config.nx_red)),
+                        nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
+                        robot_model(urdf_filename, robot_config, general_config_filename, true),
+                        torque_mapper(urdf_filename, robot_config, general_config_filename),
+                        trajectory_generator(torque_mapper, robot_config.dt),
+                        error_flag(ErrorFlag::NO_ERROR)
+                        {
+
+                        }
+
 void CommonBaseController::simulateModelEuler(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt)
 {
     Eigen::Map<Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);

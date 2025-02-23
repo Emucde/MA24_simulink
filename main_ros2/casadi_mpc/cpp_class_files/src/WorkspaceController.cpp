@@ -1,16 +1,9 @@
 #include "WorkspaceController.hpp"
 
 
-WorkspaceController::WorkspaceController(const std::string &urdf_path,
-    const std::string &general_config_filename) 
-                      : urdf_path(urdf_path), general_config_filename(general_config_filename),
-                        robot_config(get_robot_config()),
-                        n_indices(ConstIntVectorMap(robot_config.n_indices, robot_config.nq_red)),
-                        n_x_indices(ConstIntVectorMap(robot_config.n_x_indices, robot_config.nx_red)),
-                        nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
-                        robot_model(urdf_path, robot_config, general_config_filename, true),
-                        torque_mapper(urdf_path, robot_config, general_config_filename),
-                        trajectory_generator(torque_mapper, robot_config.dt),
+WorkspaceController::WorkspaceController(const std::string &urdf_filename,
+                                         const std::string &general_config_filename) 
+                      : CommonBaseController(urdf_filename, "", general_config_filename),
                         ct_controller(robot_model, general_config_filename, trajectory_generator),
                         pd_plus_controller(robot_model, general_config_filename, trajectory_generator),
                         inverse_dyn_controller(robot_model, general_config_filename, trajectory_generator),
@@ -288,26 +281,26 @@ void BaseWorkspaceController::update_controller_settings()
 {
     nlohmann::json general_config = read_config(general_config_filename);
 // PD CONTROLLER
-    auto classic_ctl_settings = general_config["classic_controller_settings"];
-    Eigen::MatrixXd K_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
-    Eigen::MatrixXd D_d_pd = Eigen::VectorXd::Map(classic_ctl_settings["PD"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
+    auto classic_ctl_settings = get_config_value<nlohmann::json>(general_config, "classic_controller_settings");
+    Eigen::MatrixXd K_d_pd = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["PD"], "K_d").data(), 6).asDiagonal();
+    Eigen::MatrixXd D_d_pd = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["PD"], "D_d").data(), 6).asDiagonal();
 
     // CT CONTROLLER
-    Eigen::MatrixXd Kp1_ct = Eigen::VectorXd::Map(classic_ctl_settings["CT"]["Kp1"].get<std::vector<double>>().data(), 6).asDiagonal();
-    Eigen::MatrixXd Kd1_ct = Eigen::VectorXd::Map(classic_ctl_settings["CT"]["Kd1"].get<std::vector<double>>().data(), 6).asDiagonal();
+    Eigen::MatrixXd Kp1_ct = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["CT"], "Kp1").data(), 6).asDiagonal();
+    Eigen::MatrixXd Kd1_ct = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["CT"], "Kd1").data(), 6).asDiagonal();
 
     // ID CONTROLLER
-    Eigen::MatrixXd Kp1_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["Kp1"].get<std::vector<double>>().data(), 6).asDiagonal();
-    Eigen::MatrixXd Kd1_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["Kd1"].get<std::vector<double>>().data(), 6).asDiagonal();
+    Eigen::MatrixXd Kp1_id = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["ID"], "Kp1").data(), 6).asDiagonal();
+    Eigen::MatrixXd Kd1_id = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["ID"], "Kd1").data(), 6).asDiagonal();
 
-    Eigen::MatrixXd K_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["K_d"].get<std::vector<double>>().data(), 6).asDiagonal();
-    Eigen::MatrixXd D_d_id = Eigen::VectorXd::Map(classic_ctl_settings["ID"]["D_d"].get<std::vector<double>>().data(), 6).asDiagonal();
+    Eigen::MatrixXd K_d_id = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["ID"], "K_d").data(), 6).asDiagonal();
+    Eigen::MatrixXd D_d_id = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["ID"], "D_d").data(), 6).asDiagonal();
 
     // REGULARIZATION SETTINGS
-    auto reg_settings = classic_ctl_settings["regularization_settings"];
-    Eigen::VectorXd W_bar_N_nq = Eigen::VectorXd::Map(reg_settings["W_bar_N"].get<std::vector<double>>().data(), 7);
-    Eigen::MatrixXd W_bar_N = W_bar_N_nq(n_indices).asDiagonal();;
-    Eigen::VectorXd W_E_nq = Eigen::VectorXd::Map(reg_settings["W_E"].get<std::vector<double>>().data(), 7);
+    auto reg_settings = get_config_value<nlohmann::json>(classic_ctl_settings, "regularization_settings");
+    Eigen::VectorXd W_bar_N_nq = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(reg_settings, "W_bar_N").data(), 7);
+    Eigen::MatrixXd W_bar_N = W_bar_N_nq(n_indices).asDiagonal();
+    Eigen::VectorXd W_E_nq = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(reg_settings, "W_E").data(), 7);
     Eigen::MatrixXd W_E = W_E_nq(n_indices).asDiagonal();
 
     controller_settings.pd_plus_settings.D_d = D_d_pd;
@@ -468,7 +461,7 @@ Eigen::VectorXd WorkspaceController::update(const double *const x_nq)
     double x_nq_red[nx_red];
 
     // Convert nx to nx_red state
-    for (int i = 0; i < nx_red; i++)
+    for (uint i = 0; i < nx_red; i++)
     {
         x_nq_red[i] = x_nq[n_x_indices[i]];
     }
@@ -627,80 +620,14 @@ void WorkspaceController::switchController(ControllerType type)
 }
 
 
-void WorkspaceController::simulateModelEuler(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt)
+void WorkspaceController::update_trajectory_data(const double *x_k_ndof_ptr)
 {
-    Eigen::Map<Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
-
-    // Check for errors
-    if (x_k_ndof.hasNaN())
-    {
-        reset();
-        error_flag = ErrorFlag::NAN_DETECTED;
-        std::cerr << "NaN values detected in the joint vector!" << std::endl;
-        return;
-    }
-
-    Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
-    torque_mapper.simulateModelEuler(x_k_ndof, tau, dt);
+    Eigen::Map<const Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
+    Eigen::VectorXd x_k = Eigen::VectorXd::Zero(nx_red);
+    reset(x_k.data());
 }
 
-
-void WorkspaceController::simulateModelRK4(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt)
+void WorkspaceController::update_config()
 {
-    Eigen::Map<Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
-
-    // Check for errors
-    if (x_k_ndof.hasNaN())
-    {
-        reset();
-        error_flag = ErrorFlag::NAN_DETECTED;
-        std::cerr << "NaN values detected in the joint vector!" << std::endl;
-        return;
-    }
-
-    Eigen::Map<const Eigen::VectorXd> tau(tau_ptr, nq);
-    torque_mapper.simulateModelRK4(x_k_ndof, tau, dt);
-}
-
-Eigen::VectorXd WorkspaceController::get_traj_x0_red_init(casadi_uint traj_select)
-{
-    Eigen::VectorXd x0_init = *trajectory_generator.get_traj_file_x0_init(traj_select);
-    Eigen::VectorXd x0_init_red = x0_init(n_x_indices);
-    return x0_init_red;
-}
-
-Eigen::VectorXd WorkspaceController::get_act_traj_x0_red_init()
-{
-    Eigen::VectorXd x0_init = *trajectory_generator.get_traj_x0_init();
-    Eigen::VectorXd x0_init_red = x0_init(n_x_indices);
-    return x0_init_red;
-}
-
-void WorkspaceController::error_check(Eigen::VectorXd &tau_full)
-{
-    // Check for NaN values in the torque vector
-    if (tau_full.hasNaN())
-    {
-        reset();
-        error_flag = ErrorFlag::NAN_DETECTED;
-        std::cerr << "NaN values detected in the torque vector!" << std::endl;
-    }
-
-    Eigen::VectorXd delta_u = tau_full - tau_full_prev;
-
-    // Conditions for jumps
-    bool condition1 = (delta_u.array() > 0 && delta_u.array() > tau_max_jump).any();
-    bool condition2 = (delta_u.array() < 0 && delta_u.array() < -tau_max_jump).any();
-
-    if (condition1 || condition2)
-    {
-        error_flag = ErrorFlag::JUMP_DETECTED;
-        std::cout << "Jump in torque detected (tau = " << tau_full.transpose() << "). Output zero torque." << std::endl;
-        tau_full.setZero(); // Set torque to zero
-    }
-    else
-    {
-        error_flag = ErrorFlag::NO_ERROR;
-        tau_full_prev = tau_full; // Update previous torque
-    }
+    update_controller_settings();
 }

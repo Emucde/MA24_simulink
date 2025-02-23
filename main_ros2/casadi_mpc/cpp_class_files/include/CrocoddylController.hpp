@@ -1,6 +1,7 @@
 #ifndef CROCODYL_CONTROLLER_HPP
 #define CROCODYL_CONTROLLER_HPP
 
+#include "CommonBaseController.hpp"
 #include "param_robot.h"
 #include "robot_data.hpp"
 #include <iostream>
@@ -24,82 +25,31 @@
 #include "CrocoddylMPC.hpp"
 #include "CrocoddylMPCType.hpp"
 
-class CrocoddylController
+class CrocoddylController : public CommonBaseController
 {
 public:
-    CrocoddylController(const std::string &urdf_path,
-                        const std::string &crocoddyl_config_path,
-                        const std::string &general_config_file);
+    CrocoddylController(const std::string &urdf_filename,
+                        const std::string &mpc_config_filename,
+                        const std::string &general_config_filename);
 
     Eigen::VectorXd solveMPC(const double *const x_k_ndof_ptr);
     nlohmann::json read_config(std::string file_path);
     void update_mpc_weights();
+    void update_config() override;
 
-    // Initialize trajectory data
-    void init_file_trajectory(uint traj_select, const double *x_k_ndof_ptr,
-                              double T_start, double T_poly, double T_end);
+    void switch_traj(uint traj_select) override;
 
-    // Method for creating a custom trajectory with extra samples for the last prediction horizon
-    void init_custom_trajectory(ParamPolyTrajectory param);
-
-    void switch_traj(uint traj_select);
-
-    void update_trajectory_data(const double *x_k_ndof_ptr);
+    void update_trajectory_data(const double *x_k_ndof_ptr) override;
 
     void setActiveMPC(CrocoddylMPCType mpc_type);
 
     // Method to simulate the robot model
-    void simulateModelEuler(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
-    void simulateModelRK4(double *const x_k_ndof_ptr, const double *const tau_ptr, double dt);
-    void reset(const casadi_real *const x_k_in);
-    void reset();
+    void reset(const casadi_real *const x_k_in) override;
+    void reset() override;
 
-    void set_tau_max_jump(double tau_jump)
-    {
-        tau_max_jump = tau_jump;
-    }
-
-    uint get_traj_data_len()
-    {
-        return trajectory_generator.get_traj_data_len();
-    }
-
-    uint get_traj_data_real_len()
-    {
-        return trajectory_generator.get_traj_data_real_len();
-    }
-
-    uint get_transient_traj_len()
-    {
-        return trajectory_generator.get_transient_traj_len();
-    }
-
-    const double *get_act_traj_data()
+    const double *get_act_traj_data() override
     {
         return active_mpc->get_act_traj_data();
-    }
-
-    const double *get_traj_x0_init(uint traj_select)
-    {
-        return trajectory_generator.get_traj_file_x0_init(traj_select)->data();
-    }
-
-    const Eigen::MatrixXd *get_trajectory()
-    {
-        return trajectory_generator.get_traj_data();
-    }
-
-    Eigen::VectorXd get_traj_x0_red_init(uint traj_select);
-    Eigen::VectorXd get_act_traj_x0_red_init();
-
-    ErrorFlag get_error_flag()
-    {
-        return error_flag;
-    }
-
-    void reset_error_flag()
-    {
-        error_flag = ErrorFlag::NO_ERROR;
     }
 
     std::vector< Eigen::VectorXd > &get_u_opt_full()
@@ -107,43 +57,28 @@ public:
         return active_mpc->get_u_opt_full();
     }
 
-    uint get_traj_count()
+    uint get_traj_count() override
     {
         return active_mpc->get_traj_count();
     }
 
-    uint get_traj_step()
+    uint get_traj_step() override
     {
         return active_mpc->get_traj_step();
     }
 
-    uint get_N_step()
+    uint get_N_step() override
     {
         return active_mpc->get_N_step();
     }
 
-    const uint *get_n_indices()
-    {
-        return robot_config.n_indices;
-    }
-
-    FullSystemTorqueMapper* get_torque_mapper()
-    {
-        return &torque_mapper;
-    }
-
-    void set_torque_mapper_config(FullSystemTorqueMapper::Config &config)
-    {
-        torque_mapper.setConfiguration(config);
-    }
-
     // increase counter from mpc if it solves too slow
-    void increase_traj_count()
+    void increase_traj_count() override
     {
         active_mpc->increase_traj_count();
     }
 
-    void set_traj_count(uint new_traj_count)
+    void set_traj_count(uint new_traj_count) override
     {
         active_mpc->set_traj_count(new_traj_count);
     }
@@ -151,27 +86,11 @@ public:
     ~CrocoddylController() {};
 
 private:
-    const std::string urdf_path;
-    const std::string crocoddyl_config_path;
-    const std::string general_config_file;
-    robot_config_t robot_config;
-    const Eigen::VectorXi n_indices, n_x_indices;
-    const int nq, nx, nq_red, nx_red;
-    RobotModel robot_model;
-    FullSystemTorqueMapper torque_mapper;
-    TrajectoryGenerator trajectory_generator;
-
     std::vector<CrocoddylMPC> crocoddyl_mpcs;
     CrocoddylMPC *active_mpc;
     CrocoddylMPCType selected_mpc_type;
 
     double *u_k_ptr;
-
-    ErrorFlag error_flag = ErrorFlag::NO_ERROR;
-    Eigen::VectorXd tau_full_prev = Eigen::VectorXd::Zero(nq);
-    double tau_max_jump = 5.0; // Maximum jump in torque (Nm/dt)
-
-    void error_check(Eigen::VectorXd &tau_full);
 };
 
 #endif // CROCODYL_CONTROLLER_HPP

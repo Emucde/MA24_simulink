@@ -11,31 +11,19 @@
 
 // #define DEBUG 1
 
-mpc_config_t invalid_config(const std::string &mpc_name)
-{
-    throw std::runtime_error("CasadiMPC.cpp: \"" + mpc_name + "\" is not a valid MPC name. Use one of the following: MPC01, MPC6, MPC7, MPC8, MPC9, MPC10, MPC11, MPC12, MPC13, MPC14");
-    return {};
-}
-
 // Constructor implementation
 CasadiMPC::CasadiMPC(CasadiMPCType mpc,
                      robot_config_t &robot_config,
-                     TrajectoryGenerator &trajectory_generator) : mpc_name(casadi_mpctype_to_string(mpc)),
+                     TrajectoryGenerator &trajectory_generator) : CommonBaseMPC(robot_config, trajectory_generator),
+                                                                  mpc_name(casadi_mpctype_to_string(mpc)),
                                                                   mpc_config(get_MPC_config(mpc)),
-                                                                  robot_config(robot_config),
-                                                                  trajectory_generator(trajectory_generator),
-                                                                  traj_data(trajectory_generator.get_traj_data()),
-                                                                  traj_data_real_len(trajectory_generator.get_traj_data_real_len()),
                                                                   is_kinematic_mpc(mpc_config.kinematic_mpc == 1), is_planner_mpc(mpc_config.planner_mpc == 1),
-                                                                  nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
                                                                   casadi_fun(mpc_config.casadi_fun),
                                                                   arg(mpc_config.arg), res(mpc_config.res), iw(mpc_config.iw), w(mpc_config.w), w_end(mpc_config.w_end),
                                                                   horizon_len(mpc_config.traj_data_per_horizon),
                                                                   mpc_traj_indices((Eigen::VectorXi(horizon_len) << ConstIntVectorMap(mpc_config.traj_indices, horizon_len)).finished()),
-                                                                  N_step(static_cast<uint32_t>(mpc_config.N_step)),
                                                                   traj_data_per_horizon(mpc_config.traj_data_per_horizon),
-                                                                  traj_count(0), traj_step(1), traj_select(1),
-                                                                  mem(mpc_config.mem), dt(robot_config.dt)
+                                                                  mem(mpc_config.mem)
 {
     // Check if the configuration is valid
     if (mpc_config.casadi_fun == nullptr)

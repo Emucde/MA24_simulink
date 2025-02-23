@@ -5,13 +5,14 @@ set(UTILS_SOURCES
     /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/TrajectoryGenerator.cpp
     /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CasadiController.cpp
     /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/FullSystemTorqueMapper.cpp
-    /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CrocoddylController.cpp
     /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/SharedMemory.cpp
     /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/RobotModel.cpp
+    /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CrocoddylController.cpp
     /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CommonBaseController.cpp
     /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/TicToc.cpp
     /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CasadiEKF.cpp
     /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/SignalFilter.cpp
+    /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CommonBaseMPC.cpp
 )
 set(MPC_SOURCES
     /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles/MPC01.c
