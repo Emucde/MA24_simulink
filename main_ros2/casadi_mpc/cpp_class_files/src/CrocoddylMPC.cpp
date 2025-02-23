@@ -37,9 +37,9 @@ void CrocoddylMPC::init_config()
 
     int_method = get_setting<std::string>("int_method");
     N_MPC = get_setting<uint>("N_MPC");
+    N_step = get_setting<uint>("N_step");
     dt = get_setting<double>("Ts");
-    dt_MPC = get_setting<double>("Ts_MPC");
-    N_step = static_cast<uint>( dt_MPC / dt );
+    dt_MPC = N_step * dt;
     N_solver_steps = get_setting<uint>("solver_steps");
     traj_step = static_cast<casadi_uint>(dt / trajectory_generator.get_dt());
     mpc_traj_indices = traj_step * Eigen::VectorXi::LinSpaced(N_MPC+1, 0, N_MPC * N_step);
