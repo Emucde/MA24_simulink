@@ -20,12 +20,6 @@ class FullSystemTorqueMapper
 public:
     // Constructor
     FullSystemTorqueMapper(const std::string &urdf_filename,
-                           const std::string &tcp_frame_name,
-                           robot_config_t &robot_config,
-                           bool use_gravity,
-                           bool is_kinematic_mpc);
-
-    FullSystemTorqueMapper(const std::string &urdf_filename,
                            robot_config_t &robot_config,
                            const std::string &general_config_file);
 
@@ -47,6 +41,7 @@ public:
 
     nlohmann::json read_config(std::string file_path);
     void update_config();
+    void update_config(double dt_new);
 
     // Functions
     Eigen::VectorXd calcFeedforwardTorqueKinematic(const Eigen::VectorXd &u,
@@ -111,6 +106,7 @@ private:
 
     Eigen::VectorXd tau_full;
     Eigen::VectorXd q_pp;
+    double dt;
 
     Config config; // Configuration parameters
 

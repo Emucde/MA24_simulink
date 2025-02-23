@@ -30,7 +30,7 @@ if autostart_fr3:
 
 ################################################ REALTIME ###############################################
 
-use_data_from_simulink = False
+use_data_from_simulink = True
 manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
@@ -484,7 +484,7 @@ try:
                                                     xs[:, :n_dof], transient_traj, Ts,
                                                     frame_skip=1, create_html = True, html_name = visualize_file_path)
                             process_vis = multiprocessing.Process(target=vis_sol_act)
-                            process_vis.daemon = True # this will kill the process if the main process is killed
+                            process_vis.daemon = False # this will kill the process if the main process is killed
                             process_vis.start()
                     i = 0
             elif not explicit_mpc:
@@ -550,7 +550,7 @@ try:
                                                 xs[:, :n_dof], transient_traj, Ts,
                                                 frame_skip=1, create_html = True, html_name = visualize_file_path)
                         process_vis = multiprocessing.Process(target=vis_sol_act)
-                        process_vis.daemon = True # this will kill the process if the main process is killed
+                        process_vis.daemon = False # this will kill the process if the main process is killed
                         process_vis.start()
 
                     xs = np.zeros((N_traj, 2*n_dof))

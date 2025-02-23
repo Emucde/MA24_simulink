@@ -630,4 +630,6 @@ void WorkspaceController::update_trajectory_data(const double *x_k_ndof_ptr)
 void WorkspaceController::update_config()
 {
     update_controller_settings();
+    // dt = active_controller->get_dt();
+    // torque_mapper.update_config(dt);
 }

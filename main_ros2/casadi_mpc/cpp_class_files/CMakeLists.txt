@@ -206,6 +206,7 @@ find_library(RT_LIB rt)
 # Define utility libraries
 set(UTILS_LIBRARIES
     CommonBaseController
+    CommonBaseMPC
     CrocoddylController
     CrocoddylMPC
     WorkspaceController

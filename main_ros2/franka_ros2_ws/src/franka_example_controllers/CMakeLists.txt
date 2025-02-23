@@ -178,6 +178,16 @@ find_library(WORKSPACECONTROLLER_LIB
     HINTS "${MPC_LIB_DIR_REL}"
 )
 
+find_library(COMMONBASECONTROLLER_LIB
+    NAMES CommonBaseController
+    HINTS "${MPC_LIB_DIR_REL}"
+)
+
+find_library(COMMONBASEMPC_LIB
+    NAMES CommonBaseMPC
+    HINTS "${MPC_LIB_DIR_REL}"
+)
+
 
 target_link_libraries(
         ${PROJECT_NAME}

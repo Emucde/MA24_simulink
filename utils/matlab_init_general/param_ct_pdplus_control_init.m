@@ -1,8 +1,8 @@
 %% CT Controller Parameters
-K_d_t = 3*diag([1 1 1]);
+K_d_t = 500*diag([1 1 1])/2;
 K_p_t = K_d_t^2/4;
 
-K_d_r = 3*diag([1 1 1]);
+K_d_r = 500*diag([1 1 1]);
 K_p_r = K_d_r^2/4;
 
 ctrl_param.ct.Kd1 = blkdiag(K_d_t, K_d_r);

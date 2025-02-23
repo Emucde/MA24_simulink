@@ -70,6 +70,11 @@ public:
         return traj_step;
     }
 
+    double get_dt()
+    {
+        return dt;
+    }
+
     // Overwrite Methods
     virtual void reset(const Eigen::VectorXd &x_k) = 0;
     virtual void switch_traj(const Eigen::VectorXd &x_k) = 0;

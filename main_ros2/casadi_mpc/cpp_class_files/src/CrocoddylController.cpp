@@ -100,7 +100,16 @@ void CrocoddylController::update_mpc_weights()
 
 void CrocoddylController::update_config()
 {
+    nlohmann::json general_config = read_config(general_config_filename);
     update_mpc_weights();
+    
+    active_mpc->init_config();
+    dt = active_mpc->get_dt();
+    
+    torque_mapper.update_config(dt);
+    torque_mapper.set_kinematic_mpc_flag(active_mpc->is_kinematic);
+
+    update_trajectory_data(trajectory_generator.get_traj_x0_init()->data());
 }
 
 void CrocoddylController::setActiveMPC(CrocoddylMPCType mpc_type)
@@ -109,7 +118,7 @@ void CrocoddylController::setActiveMPC(CrocoddylMPCType mpc_type)
     {
         selected_mpc_type = mpc_type;
         active_mpc = &crocoddyl_mpcs[static_cast<int>(selected_mpc_type)];
-        torque_mapper.set_kinematic_mpc_flag(active_mpc->is_kinematic);
+        update_config();
         u_k_ptr = active_mpc->get_optimal_control();
     }
     else

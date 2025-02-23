@@ -139,6 +139,16 @@ void CasadiController::update_config()
     update_mpc_weights();
     nlohmann::json general_config = read_config(general_config_filename);
     use_planner = get_config_value<bool>(general_config, "use_casadi_planner");
+    set_planner_mode(use_planner);
+
+    mpc_traj_indices = const_cast<casadi_uint *>(active_mpc->get_mpc_traj_indices());
+    dt = active_mpc->get_dt();
+
+    // adapt D gain of Torque mapper to dt
+    torque_mapper.update_config(dt);
+    torque_mapper.set_kinematic_mpc_flag(active_mpc->is_kinematic_mpc);
+
+    update_trajectory_data(trajectory_generator.get_traj_x0_init()->data());
 }
 
 void CasadiController::switch_traj(uint traj_select)
@@ -174,12 +184,9 @@ void CasadiController::setActiveMPC(CasadiMPCType mpc_type)
         active_mpc_config = active_mpc->get_mpc_config();
         active_mpc_input_config = &active_mpc_config->in;
 
-        torque_mapper.set_kinematic_mpc_flag(active_mpc->is_kinematic_mpc);
-
         w_ptr = active_mpc->get_w();
-        traj_data_per_horizon = active_mpc->get_traj_data_per_horizon_len();
-        mpc_traj_indices = const_cast<casadi_uint *>(active_mpc->get_mpc_traj_indices());
-        dt = active_mpc->get_dt();
+        
+        update_config();
 
         // 2. Planner has a active mpc now
         planner_solver.switch_controller(active_mpc);

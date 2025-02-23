@@ -147,12 +147,6 @@ public:
         return traj_cols * traj_rows;
     }
 
-    // Method to get the control sampling time dt
-    casadi_real get_dt()
-    {
-        return dt;
-    }
-
     // Method to get the mpc_config
     mpc_config_t *get_mpc_config()
     {

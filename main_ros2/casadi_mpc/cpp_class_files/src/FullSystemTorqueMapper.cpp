@@ -13,7 +13,8 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
       n_indices(ConstIntVectorMap(robot_config.n_indices, nq_red)),
       n_indices_fixed(ConstIntVectorMap(robot_config.n_indices_fixed, nq_fixed)),
       q_ref_nq(ConstDoubleVectorMap(robot_config.q_0_ref, nq)),
-      q_ref_fixed(Eigen::Map<const Eigen::VectorXd>(robot_config.q_0_ref, nq_fixed)(n_indices_fixed))
+      q_ref_fixed(Eigen::Map<const Eigen::VectorXd>(robot_config.q_0_ref, nq_fixed)(n_indices_fixed)),
+      dt(robot_config.dt)
 {
     // Initialize the function pointer based on the type of MPC
     setFeedforwardTorqueFunction(is_kinematic_mpc);
@@ -57,7 +58,8 @@ nlohmann::json FullSystemTorqueMapper::read_config(std::string file_path)
     return jsonData;
 }
 
-void FullSystemTorqueMapper::update_config(){
+void FullSystemTorqueMapper::update_config()
+{
     nlohmann::json general_config = read_config(general_config_filename);
 
     use_gravity = get_config_value<bool>(general_config, "use_gravity");
@@ -71,6 +73,20 @@ void FullSystemTorqueMapper::update_config(){
     config.q_ref_nq = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "q_ref_nq").get<std::vector<double>>().data(), robot_config.nq);
     config.q_ref_nq_fixed = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "q_ref_nq_fixed").get<std::vector<double>>().data(), robot_config.nq_fixed);
     config.torque_limit = get_config_value<double>(torque_mapper_settings, "torque_limit");
+}
+
+void FullSystemTorqueMapper::update_config(double dt_new)
+{
+    update_config();
+    dt = dt_new;
+
+    // adapt D gain of Torque mapper to dt:
+    // Reduce eigenvalues!
+    double scale = robot_config.dt / dt;
+    config.D_d *= scale;
+    config.D_d_fixed *= scale;
+    config.K_d *= (scale * scale);
+    config.K_d_fixed *= (scale * scale);
 }
 
 // Implementation of kinematic torque mapping
