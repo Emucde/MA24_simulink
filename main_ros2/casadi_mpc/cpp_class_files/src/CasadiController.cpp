@@ -150,11 +150,8 @@ void CasadiController::switch_traj(uint traj_select)
 void CasadiController::update_trajectory_data(const casadi_real *const x_k_ndof_ptr)
 {
     // Convert nx to nx_red state
-    double x_k[nx_red];
-    for (casadi_uint i = 0; i < nx_red; i++)
-    {
-        x_k[i] = x_k_ndof_ptr[n_x_indices[i]];
-    }
+    Eigen::Map<const Eigen::VectorXd> x_k_nq(x_k_ndof_ptr, nx);
+    const Eigen::VectorXd x_k = x_k_nq(n_x_indices);
 
     // send trajectory pointer to all MPCs
     for (int i = 0; i < static_cast<int>(CasadiMPCType::COUNT); ++i)
@@ -287,7 +284,8 @@ void CasadiController::collinearity_weight_x(const casadi_real *const x_k)
 
 void CasadiController::reset(const double *const x_k_in)
 {
-    active_mpc->reset(x_k_in);
+    Eigen::Map<const Eigen::VectorXd> x_k(x_k_in, nx_red);
+    active_mpc->reset(x_k);
     tau_full_prev = Eigen::VectorXd::Zero(nq);
     reset_error_flag();
 }
@@ -295,7 +293,7 @@ void CasadiController::reset(const double *const x_k_in)
 void CasadiController::reset()
 {
     Eigen::VectorXd x0_init = get_act_traj_x0_red_init();
-    active_mpc->reset(x0_init.data());
+    active_mpc->reset(x0_init);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////

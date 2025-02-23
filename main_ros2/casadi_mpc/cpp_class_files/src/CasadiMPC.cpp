@@ -238,7 +238,7 @@ void CasadiMPC::predict_init_guess()
 }
 
 // Method for switching the trajectory
-void CasadiMPC::switch_traj(const casadi_real *const x_k_in)
+void CasadiMPC::switch_traj(const Eigen::VectorXd &x_k)
 {
     traj_data = trajectory_generator.get_traj_data();
     traj_rows = traj_data->rows();
@@ -250,7 +250,7 @@ void CasadiMPC::switch_traj(const casadi_real *const x_k_in)
     if (traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1] > traj_cols)
     {
         throw std::runtime_error("void CasadiMPC::switch_traj(const Eigen::MatrixXd* traj_data_new, \
-                                  const casadi_real *const x_k_in, casadi_uint traj_data_real_len_new): \
+                                  const Eigen::VectorXd &x_k, casadi_uint traj_data_real_len_new): \
                                   Trajectory data length + mpc_traj_indices[end] = " +
                                  std::to_string(traj_data_real_len + mpc_traj_indices[traj_data_per_horizon - 1]) +
                                  " exceeds totalthrow length = " +
@@ -260,15 +260,15 @@ void CasadiMPC::switch_traj(const casadi_real *const x_k_in)
 
     generate_trajectory_blocks();
     init_references_and_pointers();
-    set_coldstart_init_guess(x_k_in);
+    set_coldstart_init_guess(x_k.data());
 
     traj_count = 0;
 }
 
-void CasadiMPC::reset(const casadi_real *const x_k_in)
+void CasadiMPC::reset(const Eigen::VectorXd &x_k)
 {
     traj_count = 0;
-    set_coldstart_init_guess(x_k_in);
+    set_coldstart_init_guess(x_k.data());
 }
 
 // Method to set the cold start initial guess (assuming x_k was already set)

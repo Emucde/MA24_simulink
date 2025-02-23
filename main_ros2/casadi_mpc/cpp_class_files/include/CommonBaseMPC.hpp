@@ -71,8 +71,8 @@ public:
     }
 
     // Overwrite Methods
-    virtual void reset(const double *const x_k_in) = 0;
-    virtual void switch_traj(const double *const x_k_in) = 0;
+    virtual void reset(const Eigen::VectorXd &x_k) = 0;
+    virtual void switch_traj(const Eigen::VectorXd &x_k) = 0;
 
     // New functions
     // solve() / control() / update() / ...

@@ -1,6 +1,7 @@
 #ifndef CROCODDYL_MPC_HPP
 #define CROCODDYL_MPC_HPP
 
+#include "CommonBaseMPC.hpp"
 #include "param_robot.h"
 #include "robot_data.hpp"
 #include <iostream>
@@ -46,12 +47,12 @@
 #include "CrocoddylBaseIntegrator.hpp"
 #include "CrocoddylMPCType.hpp"
 
-class CrocoddylMPC
+class CrocoddylMPC : public CommonBaseMPC
 {
 public:
     CrocoddylMPC(CrocoddylMPCType mpc_type,
                  RobotModel &robot_model,
-                 const std::string &crocoddyl_config_path,
+                 const std::string &config_filename,
                  TrajectoryGenerator &trajectory_generator);
 
     CrocoddylMPCType mpc_type;
@@ -84,10 +85,10 @@ public:
     void create_mpc_solver();
     void set_references(const Eigen::VectorXd &x_k);
     bool solve(const Eigen::VectorXd &x_k);
-    void reset(const Eigen::VectorXd &x_k);
+    void reset(const Eigen::VectorXd &x_k) override;
     void set_coldstart_init_guess(const Eigen::VectorXd &x_k);
     void init_config();
-    void switch_traj(const Eigen::VectorXd &x_k);
+    void switch_traj(const Eigen::VectorXd &x_k) override;
 
     double *get_optimal_control()
     {
@@ -99,47 +100,13 @@ public:
         return us_init_guess;
     }
 
-    const casadi_real *get_act_traj_data()
-    {
-        return traj_data->col((traj_count > 0 ? traj_count-1 : traj_count)).data();
-    }
-
-    uint get_traj_count()
-    {
-        return traj_count;
-    }
-
-    casadi_uint get_traj_step()
-    {
-        return traj_step;
-    }
-
-    uint get_N_step()
-    {
-        return N_step;
-    }
-
-    // increase counter from mpc if it solves too slow
-    void increase_traj_count()
-    {
-        traj_count++;
-    }
-
-    void set_traj_count(uint new_traj_count)
-    {
-        traj_count = new_traj_count;
-    }
-
 private:
-    RobotModel &robot_model;
-    const std::string crocoddyl_config_path;
+
     nlohmann::json mpc_settings;
     nlohmann::json param_mpc_weight;
-    TrajectoryGenerator &trajectory_generator;
-    const int nq_red, nx_red; // this is nq_red_red and nx_red!!!
-    double dt, dt_MPC;
+    double dt_MPC;
     std::string int_method;
-    uint N_MPC, N_step, N_solver_steps;
+    uint N_MPC, N_solver_steps;
     Eigen::VectorXd x_min, x_max, x_mean;
     Eigen::VectorXd u_min, u_max;
     std::vector< Eigen::VectorXd > xs_init_guess;
@@ -155,18 +122,11 @@ private:
     std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::ResidualModelFrameRotation>>> residual_frame_rotation_models;
     boost::shared_ptr<crocoddyl::ShootingProblem> problem_reference;
 
-    const Eigen::MatrixXd *traj_data;
-    uint traj_data_real_len;
-    casadi_uint traj_rows;
-    casadi_uint traj_cols;
-
     const Eigen::Vector3i p_d_rows{0, 1, 2};
     const Eigen::Vector4i q_d_rows{9, 10, 11, 12};
 
     std::vector<Eigen::MatrixXd> p_d_blocks;
     std::vector<std::vector<Eigen::Matrix3d>> R_d_blocks;
-    uint traj_count;
-    uint traj_step;                   // step width at which the trajectory is sampled
 public:
     bool is_kinematic;
 };

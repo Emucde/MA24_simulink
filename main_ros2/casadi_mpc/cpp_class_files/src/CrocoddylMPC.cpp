@@ -2,18 +2,10 @@
 
 CrocoddylMPC::CrocoddylMPC(CrocoddylMPCType mpc_type,
                  RobotModel &robot_model,
-                 const std::string &crocoddyl_config_path,
+                 const std::string &config_filename,
                  TrajectoryGenerator &trajectory_generator)
-        : mpc_type(mpc_type),
-          robot_model(robot_model),
-          crocoddyl_config_path(crocoddyl_config_path),
-          trajectory_generator(trajectory_generator),
-          nq_red(robot_model.nq), nx_red(robot_model.nx), // this is nq_red and nx_red!!!
-          traj_data(trajectory_generator.get_traj_data()),
-          traj_data_real_len(trajectory_generator.get_traj_data_real_len()),
-          traj_rows(trajectory_generator.get_traj_data()->rows()), 
-          traj_cols(trajectory_generator.get_traj_data()->cols()),
-          traj_count(0)
+        : CommonBaseMPC(robot_model, robot_model.robot_config, config_filename, trajectory_generator),
+          mpc_type(mpc_type)
     {
         // TODO: Own for each MPC
         init_config();
@@ -22,7 +14,7 @@ CrocoddylMPC::CrocoddylMPC(CrocoddylMPCType mpc_type,
 
 void CrocoddylMPC::init_config()
 {
-    std::ifstream file(crocoddyl_config_path);
+    std::ifstream file(config_filename);
     if (!file.is_open())
     {
         std::cerr << "Error: Could not open JSON file." << std::endl;

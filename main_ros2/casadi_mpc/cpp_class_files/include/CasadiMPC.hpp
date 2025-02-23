@@ -96,9 +96,9 @@ public:
 
 
     // Method to switch the trajectory
-    void switch_traj(const double *const x_k_in) override;
+    void switch_traj(const Eigen::VectorXd &x_k) override;
 
-    void reset(const double *const x_k_in) override;
+    void reset(const Eigen::VectorXd &x_k) override;
 
     ///////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////
