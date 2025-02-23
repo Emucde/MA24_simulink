@@ -60,8 +60,9 @@ message(STATUS "MPC source directory: ${MPC_SOURCE_DIR}")
 set(MPC_LIB_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../s_functions/fr3_no_hand_6dof/mpc_libraries)
 cmake_path(SET MPC_LIB_DIR NORMALIZE "${MPC_LIB_DIR_REL}")
 
-# Find all MPC*.c files
-file(GLOB MPC_SOURCES "${MPC_SOURCE_DIR}/MPC*.c" "${MPC_SOURCE_DIR}/param_robot.c" "${MPC_SOURCE_DIR}/fr3_ekf.c")
+#MPC_SOURCES are defined in SourceFiles.cmake
+include(SourceFiles.cmake)
+
 set(MPC_ALL_LIBRARIES "")
 set(MPC_PARAM_LIBRARIES "")
 set(MPC_LIBRARIES "")
@@ -200,10 +201,11 @@ find_package(Threads REQUIRED)
 find_package(rclcpp REQUIRED)
 find_library(RT_LIB rt)
 
-# Add source files for main executable, including CasadiMPC.cpp
-file(GLOB_RECURSE SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")  # Recursively find all .cpp files in src folder
+#utils source files are defined in SourceFiles.cmake
+
 # Define utility libraries
 set(UTILS_LIBRARIES
+    CommonBaseController
     CrocoddylController
     CrocoddylMPC
     WorkspaceController
@@ -218,7 +220,7 @@ set(UTILS_LIBRARIES
     CasadiEKF
 )
 
-foreach(SOURCE_FILE ${SRC_FILES})
+foreach(SOURCE_FILE ${UTILS_SOURCES})
     get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)  # Get the filename without extension
 
     # Create the shared library
@@ -227,7 +229,11 @@ foreach(SOURCE_FILE ${SRC_FILES})
     # Set the output library name to 'lib<NAME>.so'
     set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}" INSTALL_RPATH "${MPC_SOURCE_DIR};${LIBRARY_PATH}")
 
-    if(${FILE_NAME} STREQUAL "WorkspaceController")
+    if(${FILE_NAME} STREQUAL "CommonBaseController")
+        set(SHARED_LIBRARIES
+            ${EIGEN3_LIBRARIES}
+        )
+    elseif(${FILE_NAME} STREQUAL "WorkspaceController")
         set(SHARED_LIBRARIES
             ${EIGEN3_LIBRARIES}
             ${pinocchio_LIBRARIES}
@@ -259,6 +265,7 @@ foreach(SOURCE_FILE ${SRC_FILES})
         )
     elseif(${FILE_NAME} STREQUAL "TicToc")
         set(SHARED_LIBRARIES "")
+
     elseif(${FILE_NAME} STREQUAL "TrajectoryGenerator")
         set(SHARED_LIBRARIES
             ${EIGEN3_LIBRARIES}
