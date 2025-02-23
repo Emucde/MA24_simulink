@@ -20,11 +20,13 @@ from plotly.subplots import make_subplots
 import plotly.offline as py
 from typing import overload
 from bs4 import BeautifulSoup
-from multiprocessing import shared_memory, resource_tracker
+from multiprocessing import shared_memory, resource_tracker, Process
 import asyncio
 import websockets
 import psutil
 import fcntl
+import pickle
+import tempfile
 
 import time
 
@@ -2919,7 +2921,6 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
         print('Warning: NaN values detected in xs array, set to zero!')
         q_sol = np.nan_to_num(q_sol)
 
-    anim = Animation()
     # vis = robot_display.viewer
     vis = mc.Visualizer()
 
@@ -3016,25 +3017,60 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
     # vis.set_cam_target(camera_target)
 
     # Iterate through trajectory data
-    for i in range(0, N_traj, frame_skip):
-        pinocchio.forwardKinematics(robot_model, robot_data, q_sol[i])
-        pinocchio.updateFramePlacements(robot_model, robot_data)
+    
+    def parallel_calc(j, N_thread, file_path):
+        anim = Animation()
+        robot_data = robot_model.createData()
+        N_chunk = N_traj // N_thread
+        for i in range(j*N_chunk, (j+1)*N_chunk, frame_skip):
+            pinocchio.forwardKinematics(robot_model, robot_data, q_sol[i])
+            pinocchio.updateFramePlacements(robot_model, robot_data)
 
-        with anim.at_frame(vis, i) as frame:
-            H_0_E = robot_data.oMf[TCP_frame_id].homogeneous
-            frame["TCP_KOS"].set_transform(H_0_E)
-            frame["TCP_KOS"].get_clip().fps = 1 / dt
-            for obj in geometry_objects:
-                frame_id = obj["frame_id"]
-                H_0_s = robot_data.oMf[frame_id].homogeneous
-                H_s_obj = obj['homogeneous']
-                for stl_file in link_to_meshes[obj['name']]:
-                    link_name = stl_file[:-4] # without .stl
-                    frame[link_name].set_transform(H_0_s @ H_s_obj)
-                    frame[link_name].get_clip().fps = 1 / dt
+            with anim.at_frame(vis, i) as frame:
+                H_0_E = robot_data.oMf[TCP_frame_id].homogeneous
+                frame["TCP_KOS"].set_transform(H_0_E)
+                frame["TCP_KOS"].get_clip().fps = 1 / dt
+                for obj in geometry_objects:
+                    frame_id = obj["frame_id"]
+                    H_0_s = robot_data.oMf[frame_id].homogeneous
+                    H_s_obj = obj['homogeneous']
+                    for stl_file in link_to_meshes[obj['name']]:
+                        link_name = stl_file[:-4] # without .stl
+                        frame[link_name].set_transform(H_0_s @ H_s_obj)
+                        frame[link_name].get_clip().fps = 1 / dt
+        with open(file_path, "wb") as f:
+            pickle.dump(anim, f)
+   
+    N_thread = 20
+    processes = []
+    temp_files = [tempfile.NamedTemporaryFile(delete=False) for _ in range(N_thread)]
+
+    for j in range(N_thread):
+        process = Process(target=parallel_calc, args=(j, N_thread, temp_files[j].name))
+        processes.append(process)
+        process.start()
+
+    for process in processes:
+        process.join()
+
+    # Load animation objects from files
+    animation_clips_list = []
+    for temp_file in temp_files:
+        with open(temp_file.name, "rb") as f:
+            animation_clips_list.append(pickle.load(f))
+    
+    combined_animation = animation_clips_list[0]
+    for j, anim in enumerate(animation_clips_list[1:]):
+        item_list = list(anim.clips.items())
+        for i, (path, clip) in enumerate(combined_animation.clips.items()):
+            combined_animation.clips[path].tracks['position'].frames+=(item_list[i][1].tracks['position'].frames)
+            combined_animation.clips[path].tracks['position'].values+=(item_list[i][1].tracks['position'].values)
+            combined_animation.clips[path].tracks['quaternion'].frames+=(item_list[i][1].tracks['quaternion'].frames)
+            combined_animation.clips[path].tracks['quaternion'].values+=(item_list[i][1].tracks['quaternion'].values)
+                
 
     # Set the animation to the Meshcat viewer
-    vis.set_animation(anim)
+    vis.set_animation(combined_animation)
     for obj in geometry_objects:
         for stl_file in link_to_meshes[obj['name']]:
             link_name = stl_file[:-4] # without .stl

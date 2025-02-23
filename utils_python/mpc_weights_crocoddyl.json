@@ -6,7 +6,7 @@
       "N_step": 1,
       "T_horizon": 20e-3,
       "use_T_horizon": false,
-      "N_MPC": 20,
+      "N_MPC": 5,
       "int_method": "euler",
       "use_dt_scale": false,
       "N_extra_Ts_samples": 1,

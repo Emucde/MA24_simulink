@@ -838,10 +838,12 @@ try:
         plot_solution_7dof(subplot_data, plot_fig = False, save_plot=True, file_name=plot_file_path, matlab_import=False, reload_page=reload_page, title_text=title_text)
 
     if visualize_sol is True:
+        tic = time.time()
         q_sol = xs[:, :n_dof]
         visualize_robot(robot_model_full, robot_data_full, visual_model, TCP_frame_id,
                         q_sol, transient_traj, Ts,
                         frame_skip=1, create_html = True, html_name = visualize_file_path)
+        print(f"Visualization time: {time.time()-tic:.2f} s")
 
     if use_data_from_simulink:
         user_input = input("Do you want to clear the shared memory? (y/n): ").lower()
