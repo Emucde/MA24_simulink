@@ -40,7 +40,7 @@ J_red = Function('J_red', {q_red}, {J_red_sx(:, n_indices)});
 y_d_0 = [p_d_0; q_d_0];
 
 q_1 = 2*pi*rand(n_red, 1);
-q_1 = min(max(q_1, param_robot.q_limit_lower(n_indices)*q_scale_ref), param_robot.q_limit_upper(n_indices)*q_scale_ref);
+q_1 = min(max(q_1, param_robot.q_limit_lower(n_indices)*0.8), param_robot.q_limit_upper(n_indices)*0.8);
 x_init_guess_0 = [q_1];
 
 lam_x_init_guess_0 = zeros(numel(x_init_guess_0), 1);
@@ -75,8 +75,8 @@ q_mean_down = (q_min - q_n);
 ubw = [repmat(q_n + q_mean_up*q_scale, size(x, 2), 1);];
 lbw = [repmat(q_n + q_mean_down*q_scale, size(x, 2), 1);];
 
-mpc_parameter_inputs = {R_x, q1_manip, q_scale};
-mpc_init_reference_values = [R_x_ref(:); q1_manip_ref; q_scale_ref];
+mpc_parameter_inputs = {R_x, q_manip, q_scale};
+mpc_init_reference_values = [R_x_ref(:); q_manip_ref; q_scale_ref];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -109,7 +109,7 @@ Q_norm_square = @(z, Q) dot( z, mtimes(Q, z));
 
 % J4 = -epsilon;
 J1 = Q_norm_square(x(:, 1), R_x);
-J2 = q1_manip*sqrt(det(J_red(x(:, 1))*J_red(x(:, 1))'));
+J2 = q_manip*sqrt(det(J_red(x(:, 1))*J_red(x(:, 1))'));
 
 cost_vars_names = '{J1, J2}';
 

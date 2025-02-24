@@ -254,14 +254,14 @@ if(multiple_singular_solutions)
     end
     fclose(fileID);
 else
-    N_min = 10000;
+    N_min = 1000000;
     qq_min = repmat({[q_0_ref]}, 1, N_min);
     w_min = 100*ones(N_min, 1);
 
     q_manip_ref = 1e8;
     q_scale_ref = 0.8;
     R_x_ref = 1*eye(n_red);
-    mpc_init_reference_values = [R_x_ref(:); q1_manip_ref; q_scale_ref];
+    mpc_init_reference_values = [R_x_ref(:); q_manip_ref; q_scale_ref];
 
     init_guess_0 = [x_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
     qq_n_sol = zeros(n, 1);
@@ -273,12 +273,12 @@ else
 
     base_scale = 0.3+0.5*rand(1);
 
-    for i=1:600000
+    for i=1:1000000
         q_manip_ref = 1e8 + 1e2*rand(1);
         q_scale_ref = base_scale*rand(1);
         R_x_ref = 1e0*rand(1)*eye(n_red);
 
-        mpc_init_reference_values = [R_x_ref(:); q1_manip_ref; q_scale_ref];
+        mpc_init_reference_values = [R_x_ref(:); q_manip_ref; q_scale_ref];
 
         q_0 = 2*pi*rand(n, 1);
         q_0 = min(max(q_0, param_robot.q_limit_lower*q_scale_ref), param_robot.q_limit_upper*q_scale_ref);
