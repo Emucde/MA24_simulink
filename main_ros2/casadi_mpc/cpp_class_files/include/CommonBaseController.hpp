@@ -115,6 +115,7 @@ protected:
     TrajectoryGenerator trajectory_generator;
     double tau_max_jump = 5.0; // Maximum jump in torque (Nm/dt)
     double dt;
+    uint traj_data_real_len;
 
     ErrorFlag error_flag = ErrorFlag::NO_ERROR;
 

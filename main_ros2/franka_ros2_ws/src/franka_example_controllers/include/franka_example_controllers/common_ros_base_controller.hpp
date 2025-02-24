@@ -14,6 +14,8 @@
 #include <Eigen/Dense>
 #include <random>
 
+#define SIMULATION_MODE 1
+
 namespace franka_example_controllers
 {
 
@@ -92,7 +94,7 @@ namespace franka_example_controllers
         SharedMemory shm;
 
         double current_frequency = 0.0;
-        TicToc timer_mpc_solver;
+        TicToc timer_solver;
         TicToc timer_all;
 
         const Eigen::MatrixXd *current_trajectory;
@@ -110,8 +112,8 @@ namespace franka_example_controllers
 #ifdef SIMULATION_MODE
         Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude);
 #endif
-
         void init_filter(double omega_c_q, double omega_c_dq);
+        void init_controller();
         void init_trajectory();
         void reset_trajectory();
     };

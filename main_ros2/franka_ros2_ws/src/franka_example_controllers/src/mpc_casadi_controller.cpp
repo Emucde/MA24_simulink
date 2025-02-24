@@ -94,7 +94,7 @@ namespace franka_example_controllers
                 solver_step_counter = 0;
             solver_step_counter++;
 
-            current_frequency = timer_mpc_solver.get_frequency()*solver_steps;
+            current_frequency = timer_solver.get_frequency()*solver_steps;
             shm.write("read_state_data_full", x_measured.data(), global_traj_count);
             shm.write("read_control_data", tau_full.data());
             shm.write("read_control_data_full", tau_full.data(), global_traj_count);
@@ -218,7 +218,7 @@ namespace franka_example_controllers
         }
 
         timer_all.tic();
-        timer_mpc_solver.tic();
+        timer_solver.tic();
 
         RCLCPP_INFO(get_node()->get_logger(), "MPC controller initialized");
 
@@ -407,171 +407,11 @@ namespace franka_example_controllers
         }
     }
 
-    nlohmann::json ModelPredictiveControllerCasadi::read_config(std::string file_path)
-    {
-        std::ifstream file(file_path);
-        if (!file.is_open())
-        {
-            std::cerr << "Error: Could not open JSON file." << std::endl;
-            return {};
-        }
-        nlohmann::json jsonData;
-        file >> jsonData; // Parse JSON file
-        file.close();
-        return jsonData;
-    }
-
-    Eigen::VectorXd ModelPredictiveControllerCasadi::filter_x_measured()
-    {
-        Eigen::VectorXd x_filtered;
-        if(use_ekf && use_lowpass_filter)
-        {
-            ekf.predict(tau_full.data(), x_measured.data());
-            lowpass_filter.run(x_filtered_ekf_ptr);
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, nx);
-        }
-        else if(use_lowpass_filter)
-        {
-            lowpass_filter.run(x_measured.data()); // updates data from x_filtered_ptr
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, nx);
-        }
-        else if(use_ekf)
-        {
-            ekf.predict(tau_full.data(), x_measured.data());
-            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, nx);
-        }
-        else
-        {
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), nx);
-        }
-        return x_filtered;
-    }
-
-    #ifdef SIMULATION_MODE
-    // Function to generate an Eigen vector of white noise
-    Eigen::VectorXd ModelPredictiveControllerCasadi::generateNoiseVector(int n, double Ts, double mean_noise_amplitude) {
-        // Calculate noise power
-        double noise_power = 1 / (2*Ts) * (Ts / 2) * M_PI * std::pow(mean_noise_amplitude, 2);
-
-        // Initializes random number generator for normal distribution
-        std::random_device rd;
-        std::mt19937 generator(rd()); // Mersenne Twister random number generator
-        std::normal_distribution<double> distribution(0.0, std::sqrt(noise_power)); // Normal distribution
-
-        // Create an Eigen vector to hold the noise
-        Eigen::VectorXd white_noise(n);
-
-        // Generate white noise
-        for (int i = 0; i < n; ++i) {
-            white_noise[i] = distribution(generator);
-        }
-
-        return white_noise; // Return the generated noise vector
-    }
-    #endif
-
     void ModelPredictiveControllerCasadi::solve()
     {
-        timer_mpc_solver.tic();
+        timer_solver.tic();
         tau_full = controller.update_control(x_filtered);
-        timer_mpc_solver.toc();
-    }
-
-    void ModelPredictiveControllerCasadi::init_filter(double omega_c_q, double omega_c_dq)
-    {
-        if(use_ekf && use_lowpass_filter)
-        {
-            ekf.update_config();
-            lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
-            x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
-            ekf.initialize(x_measured.data());
-            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, nx);
-        }
-        else if(use_ekf)
-        {
-            ekf.update_config();
-            ekf.initialize(x_measured.data());
-            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
-            x_filtered_lowpass_ptr = x_filtered_ekf_ptr;
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, nx);
-        }
-        else if(use_lowpass_filter)
-        {
-            lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
-            x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
-            x_filtered_ekf_ptr = x_filtered_lowpass_ptr;
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, nx);
-        }
-        else
-        {
-            x_filtered_ekf_ptr = x_measured.data();
-            x_filtered_lowpass_ptr = x_measured.data();
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), nx);
-        }
-        // without previous data, we cannot filter
-    }
-
-    void ModelPredictiveControllerCasadi::init_controller()
-    {
-        // Update general configuration
-        nlohmann::json general_config = read_config(general_config_filename);
-        use_lowpass_filter = get_config_value<bool>(general_config, "use_lowpass_filter");
-        use_ekf = get_config_value<bool>(general_config, "use_ekf");
-        // Is set by using the nodejs gui
-        // traj_select = general_config["trajectory_selection"];
-
-        bool use_planner = get_config_value<bool>(general_config, "use_casadi_planner");
-        double omega_c_q = get_config_value<double>(general_config, "lowpass_filter_omega_c_q");
-        double omega_c_dq = get_config_value<double>(general_config, "lowpass_filter_omega_c_dq");
-
-        /////// SET ACTIVE MPC ///////
-        // Is set by using the nodejs gui
-        // controller.setActiveMPC(string_to_casadi_mpctype(general_config["default_casadi_mpc"]));
-
-        controller.set_planner_mode(use_planner);
-        controller.update_mpc_weights();
-
-        N_step = controller.get_N_step();
-        solver_steps = controller.get_traj_step();
-
-        #ifdef SIMULATION_MODE
-        mean_noise_amplitude = get_config_value<double>(general_config, "mean_noise_amplitude");
-        use_noise = get_config_value<bool>(general_config, "use_noise");
-        if(use_noise)
-            x_measured = state + generateNoiseVector(nx, Ts, mean_noise_amplitude);
-        else
-            x_measured = state;
-        #endif
-
-        init_filter(omega_c_q, omega_c_dq); // uses x_measured
-    }
-
-    void ModelPredictiveControllerCasadi::init_trajectory()
-    {
-        nlohmann::json general_config = read_config(general_config_filename);
-        double T_traj_start = get_config_value<double>(general_config, "transient_traj_start_time");
-        double T_traj_dur = get_config_value<double>(general_config, "transient_traj_duration");
-        double T_traj_end = get_config_value<double>(general_config, "transient_traj_end_time");
-        controller.init_file_trajectory(traj_select, state.data(), T_traj_start, T_traj_dur, T_traj_end);
-        traj_len = controller.get_traj_data_real_len();
-        current_trajectory = controller.get_trajectory();
-    }
-
-    void ModelPredictiveControllerCasadi::reset_trajectory()
-    {
-        Eigen::VectorXd x0_red_init = controller.get_traj_x0_red_init(traj_select);
-        controller.reset(x0_red_init.data());
-
-        #ifdef SIMULATION_MODE
-        const double *x0_init = controller.get_traj_x0_init(traj_select);
-        state = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
-        #endif
-
-        tau_full = Eigen::VectorXd::Zero(nq);
-        global_traj_count = 0;
-        first_start=true;
+        timer_solver.toc();
     }
 
 } // namespace franka_example_controllers

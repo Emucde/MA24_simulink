@@ -1,7 +1,9 @@
+%run('main_matlab/parameters_7dof.m');
+
 single_sing_pose = readmatrix('./main_c/sorted_output_single.csv');
 double_sing_pose = readmatrix('./main_c/sorted_output_doublesing_7.csv');
 
-%plot(single_sing_pose);
+plot(single_sing_pose);
 %plot(double_sing_pose);
 
 % 110612, 129903

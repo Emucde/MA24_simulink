@@ -25,7 +25,7 @@
 
 #include <controller_interface/controller_interface.hpp>
 #include "franka_example_controllers/visibility_control.h"
-#include <franka_example_controllers/common_base_controller.hpp>
+#include <franka_example_controllers/common_ros_base_controller.hpp>
 
 #include <rclcpp/duration.hpp>
 #include <rclcpp/time.hpp>
@@ -128,15 +128,6 @@ namespace franka_example_controllers
                          std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response);
         void controller_switch(const std::shared_ptr<mpc_interfaces::srv::WorkspaceControllerTypeCommand::Request> request,
                         std::shared_ptr<mpc_interfaces::srv::WorkspaceControllerTypeCommand::Response> response);
-        nlohmann::json read_config(std::string file_path);
-
-        Eigen::VectorXd filter_x_measured();
-        #ifdef SIMULATION_MODE
-        Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude);
-        #endif
-        void init_filter(double omega_c_q, double omega_c_dq);
-        void init_controller();
-        void reset_mpc_trajectory();
     };
 
 } // namespace franka_example_controllers

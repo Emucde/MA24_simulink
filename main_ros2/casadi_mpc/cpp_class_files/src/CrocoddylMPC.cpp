@@ -439,14 +439,17 @@ void CrocoddylMPC::create_mpc_solver()
 
 void CrocoddylMPC::set_references(const Eigen::VectorXd &x_k)
 {   
-    for (uint i = 0; i < N_MPC+1; i++)
+    if (traj_count < traj_data_real_len - 1)
     {
-        residual_frame_translation_models[i]["TCP_pose"]->set_reference(p_d_blocks[traj_count].col(i));
-        residual_frame_rotation_models[i]["TCP_rot"]->set_reference(R_d_blocks[traj_count][i]);
-        residual_state_models[i]["xprevReg"]->set_reference(xs_init_guess[i]); // init guess
-        if(i < N_MPC)
-            residual_control_models[i]["ctrlPrev"]->set_reference(us_init_guess[i]); // init guess
+        for (uint i = 0; i < N_MPC+1; i++)
+        {
+            residual_frame_translation_models[i]["TCP_pose"]->set_reference(p_d_blocks[traj_count].col(i));
+            residual_frame_rotation_models[i]["TCP_rot"]->set_reference(R_d_blocks[traj_count][i]);
+            residual_state_models[i]["xprevReg"]->set_reference(xs_init_guess[i]); // init guess
+            if(i < N_MPC)
+                residual_control_models[i]["ctrlPrev"]->set_reference(us_init_guess[i]); // init guess
+        }
+        problem_reference->set_x0(x_k);
+        traj_count += traj_step;
     }
-    problem_reference->set_x0(x_k);
-    traj_count += traj_step;
 }

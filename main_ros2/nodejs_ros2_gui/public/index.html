@@ -13,7 +13,11 @@
 
 <body>
     <h1 class="toggle-container"> ROS 2 Controller</h1>
-    <div id="graph"></div>
+    <div id="graph_container">
+        <div id="graph"></div>
+        <input type="checkbox" id="autoscaleCheckbox" checked>
+        <label id="autoscaleCheckboxLabel" for="autoscaleCheckbox">Enable Autoscale</label>
+    </div>
     <div class="toggle-container">
         <label class="switch">
             <input type="checkbox" id="toggle">

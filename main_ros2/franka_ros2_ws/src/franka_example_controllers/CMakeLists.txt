@@ -102,6 +102,7 @@ link_directories("${MPC_SOURCE_DIR}")
 add_library(
         ${PROJECT_NAME}
         SHARED
+        src/common_ros_base_controller.cpp
         src/gravity_compensation_example_controller.cpp
         src/conventional_workspace_controller.cpp
         src/mpc_crocoddyl_controller.cpp
@@ -193,6 +194,16 @@ target_link_libraries(
         ${PROJECT_NAME}
         franka_example_controllers_parameters
         ${MPC_ALL_LIBRARIES}
+        ${CASADI_CONTROLLER_LIBRARY} # Link against the found libraries
+        ${CASADI_MPC_LIBRARY}
+        ${SHARED_MEMORY_LIBRARY}
+        ${CASADI_EKF_LIBRARY}
+        ${SIGNAL_FILTER_LIBRARY}
+        ${FULL_SYSTEM_TORQUE_MAPPER_LIB}
+        ${CROCODDYLCONTROLLER_LIB}
+        ${WORKSPACECONTROLLER_LIB}
+        ${COMMONBASECONTROLLER_LIB}
+        ${COMMONBASEMPC_LIB}
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE -fdiagnostics-color=always ${MPC_OPT_FLAG})

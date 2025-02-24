@@ -72,6 +72,11 @@ public:
         return active_mpc->get_N_step();
     }
 
+    CrocoddylMPCType get_controller_type()
+    {
+        return selected_mpc_type;
+    }
+
     // increase counter from mpc if it solves too slow
     void increase_traj_count() override
     {

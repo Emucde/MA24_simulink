@@ -40,7 +40,7 @@ public:
           x_err(Eigen::VectorXd::Zero(6)), x_err_p(Eigen::VectorXd::Zero(6)),
           x_d_p(Eigen::VectorXd::Zero(6)), x_d_pp(Eigen::VectorXd::Zero(6)),
           n_indices(ConstIntVectorMap(robot_model.robot_config.n_indices, robot_model.robot_config.nq_red)),
-          dt(robot_model.robot_config.dt), traj_count(0)
+          traj_data_real_len(trajectory_generator.get_traj_data_real_len()), dt(robot_model.robot_config.dt), traj_count(0)
     {
         update_controller_settings();
     }
@@ -67,6 +67,7 @@ protected:
     Eigen::VectorXd x_d_p, x_d_pp;
     Eigen::VectorXd column_weights = Eigen::VectorXd::Ones(nq);
     const Eigen::VectorXi n_indices;
+    uint traj_data_real_len;
     double dt;
 
 public:
@@ -105,6 +106,7 @@ public:
     void switch_traj(uint traj_select) override
     {
         trajectory_generator.switch_traj(traj_select);
+        traj_data_real_len = trajectory_generator.get_traj_data_real_len();
     }
 
     Eigen::VectorXd update_control(const Eigen::VectorXd &x_nq) override;
@@ -137,6 +139,11 @@ public:
     {
         uint traj_count = active_controller->traj_count;
         return trajectory_generator.get_traj_data()->col((traj_count > 0 ? traj_count - 1 : traj_count)).data();
+    }
+
+    ControllerType get_controller_type()
+    {
+        return selected_controller_type;
     }
 
 private:
@@ -182,6 +189,7 @@ private:
     PDPlusController pd_plus_controller;              // Instance of PDPlusController
     InverseDynamicsController inverse_dyn_controller; // Instance of InverseDynamicsController
     BaseWorkspaceController *active_controller=0;     // I do not need a smart pointer because I store all instances in the class.
+    ControllerType selected_controller_type;
 };
 
 #endif

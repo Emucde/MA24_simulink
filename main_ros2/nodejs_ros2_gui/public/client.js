@@ -227,6 +227,9 @@ document.getElementById('close_brakes').addEventListener('click', () => {
     ws.send(JSON.stringify({ command: 'close_brakes' }));
 });
 
+document.getElementById("autoscaleCheckbox").addEventListener("change", toggleAutoscale);
+document.querySelector('#graph').addEventListener('dblclick', updateAutoscale);
+
 const toggle = document.getElementById('toggle');
 const body = document.body;
 
@@ -439,7 +442,7 @@ function createdygraph(size) {
         ylabel: 'Nm', // Y-axis label
         xlabel: 't (s)', // X-axis label
         colors: ['rgb(222, 205, 51)', 'rgb(19,159,255)', 'rgb(255,105,41)', 'rgb(100,212,19)', 'rgb(183,70,255)', 'rgb(15,255,255)', 'rgb(255,19,166)'], // Colors for each line
-        strokeWidth: 1 // Line thickness
+        strokeWidth: 1, // Line thickness
     });
 }
 
@@ -459,3 +462,23 @@ function updateGraph(tau_values) {
     // Update the graph
     g.updateOptions({ file: plotdata });
 }
+
+
+function toggleAutoscale() {
+    const isAutoscaleEnabled = document.getElementById("autoscaleCheckbox").checked;
+    if (isAutoscaleEnabled) {
+        g.updateOptions({ valueRange: null }); // Enable autoscaling
+    } else {
+        const [yMin, yMax] = g.yAxisRange(); // Get current y-axis range
+        g.updateOptions({ valueRange: [yMin, yMax] }); // Disable autoscaling and set fixed range
+    }
+}
+
+function updateAutoscale() {
+    g.updateOptions({ valueRange: null });
+    setTimeout(() => {
+        const [yMin, yMax] = g.yAxisRange(); // Get current y-axis range
+        g.updateOptions({ valueRange: [yMin, yMax] }); // Disable autoscaling and set fixed range
+    }, 200);
+}
+    

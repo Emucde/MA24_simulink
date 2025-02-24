@@ -114,8 +114,6 @@ void CrocoddylController::update_config()
     
     torque_mapper.update_config(dt);
     torque_mapper.set_kinematic_mpc_flag(active_mpc->is_kinematic);
-
-    update_trajectory_data(trajectory_generator.get_traj_x0_init()->data());
 }
 
 void CrocoddylController::setActiveMPC(CrocoddylMPCType mpc_type)

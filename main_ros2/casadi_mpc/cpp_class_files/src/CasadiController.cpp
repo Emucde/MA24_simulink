@@ -146,8 +146,6 @@ void CasadiController::update_config()
     // adapt D gain of Torque mapper to dt
     torque_mapper.update_config(dt);
     torque_mapper.set_kinematic_mpc_flag(active_mpc->is_kinematic_mpc);
-
-    update_trajectory_data(trajectory_generator.get_traj_x0_init()->data());
 }
 
 void CasadiController::switch_traj(uint traj_select)

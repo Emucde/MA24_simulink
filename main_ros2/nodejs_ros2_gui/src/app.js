@@ -46,7 +46,7 @@ async function init_ros() {
                     check_result_activate(result_activate)
                 }
                 active_controller_name = controller_names[active_controller_idx];
-                enable_control = (active_controller_name === 'mpc_pinocchio_controller' || active_controller_name === 'mpc_casadi_controller');
+                enable_control = (active_controller_name === 'mpc_crocoddyl_controller' || active_controller_name === 'mpc_casadi_controller');
                 console.log("Currently active controllers: ", active_controller_name);
                 ros_running = true;
                 init_ros_running = false;

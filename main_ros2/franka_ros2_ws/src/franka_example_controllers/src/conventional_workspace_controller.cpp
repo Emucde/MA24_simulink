@@ -89,7 +89,7 @@ namespace franka_example_controllers
         {
             solve();
 
-            current_frequency = timer_mpc_solver.get_frequency();
+            current_frequency = timer_solver.get_frequency();
             shm.write("read_state_data_full", x_measured.data(), global_traj_count);
             shm.write("read_control_data", tau_full.data());
             shm.write("read_control_data_full", tau_full.data(), global_traj_count);
@@ -210,7 +210,7 @@ namespace franka_example_controllers
         }
 
         timer_all.tic();
-        timer_mpc_solver.tic();
+        timer_solver.tic();
 
         RCLCPP_INFO(get_node()->get_logger(), "MPC controller initialized");
 
@@ -294,16 +294,22 @@ namespace franka_example_controllers
 
         filter_x_measured(); // uses x_measured
 
-        timer_mpc_solver.tic();
-        tau_full = controller.update_control(x_filtered);
-        timer_mpc_solver.toc();
+        if(first_start)
+        {
+            reset_trajectory();
+            init_trajectory();
+            tau_full = controller.update_control(x_filtered);
+            controller.set_traj_count(0);
+            tau_full = controller.update_control(x_filtered);
+            controller.set_traj_count(0);
+            first_start = false;
+        }
+        
         int8_t readonly_mode = 1;
-
         shm.write("read_traj_length", &traj_len);
         shm.write("readonly_mode", &readonly_mode);
 
         controller_started = true;
-        controller.set_traj_count(0);
     }
 
     void ConventionalWorkspaceController::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
@@ -320,7 +326,7 @@ namespace franka_example_controllers
         shm.write("data_from_simulink_stop", &flags.stop);
         shm.write("data_from_simulink_reset", &flags.reset);
 
-        reset_mpc_trajectory();
+        reset_trajectory();
 
         response->status = "reset flag set";
         controller_started = false;
@@ -351,182 +357,53 @@ namespace franka_example_controllers
     void ConventionalWorkspaceController::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
                                                       std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response)
     {
+        int old_traj_select = traj_select;
         traj_select = request->traj_select; // it is later used at start_mpc() in init_trajectory
+        if(old_traj_select == traj_select)
+        {
+            response->status = "trajectory " + std::to_string(traj_select) + " already selected";
+            RCLCPP_INFO(get_node()->get_logger(), "Trajectory %d already selected", traj_select);
+        }
+        else
+        {
+            controller.switch_traj(traj_select);
+            reset_trajectory();
 
-        controller.switch_traj(traj_select);
-        reset_mpc_trajectory();
-
-        response->status = "trajectory " + std::to_string(traj_select) + " selected";
-        controller_started = false;
-        
-        RCLCPP_INFO(get_node()->get_logger(), "Trajectory %d selected", traj_select);
+            response->status = "trajectory " + std::to_string(traj_select) + " selected";
+            controller_started = false;
+            first_start = true;
+            
+            RCLCPP_INFO(get_node()->get_logger(), "Trajectory %d selected", traj_select);
+        }
     }
 
     void ConventionalWorkspaceController::controller_switch(const std::shared_ptr<mpc_interfaces::srv::WorkspaceControllerTypeCommand::Request> request,
                                                          std::shared_ptr<mpc_interfaces::srv::WorkspaceControllerTypeCommand::Response> response)
     {
-        ControllerType workspace_controller_type = static_cast<ControllerType>(request->workspace_controller_type);
-        controller.switchController(workspace_controller_type);
-        
-        controller.reset();
-        response->status = "MPC type " + std::to_string(request->workspace_controller_type) + " selected";
-        std::string status_message = "Switched to " + controller.get_classic_controller_string(workspace_controller_type) + " Controller";
-        RCLCPP_INFO(get_node()->get_logger(), status_message.c_str());
-        response->status = status_message;
-    }
-
-    nlohmann::json ConventionalWorkspaceController::read_config(std::string file_path)
-    {
-        std::ifstream file(file_path);
-        if (!file.is_open())
+        ControllerType old_controller_type = controller.get_controller_type();
+        if(old_controller_type == static_cast<ControllerType>(request->workspace_controller_type))
         {
-            std::cerr << "Error: Could not open JSON file." << std::endl;
-            return {};
-        }
-        nlohmann::json jsonData;
-        file >> jsonData; // Parse JSON file
-        file.close();
-        return jsonData;
-    }
-
-    Eigen::VectorXd ConventionalWorkspaceController::filter_x_measured()
-    {
-        Eigen::VectorXd x_filtered;
-        if(use_ekf && use_lowpass_filter)
-        {
-            ekf.predict(tau_full.data(), x_measured.data());
-            lowpass_filter.run(x_filtered_ekf_ptr);
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, nx);
-        }
-        else if(use_lowpass_filter)
-        {
-            lowpass_filter.run(x_measured.data()); // updates data from x_filtered_ptr
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, nx);
-        }
-        else if(use_ekf)
-        {
-            ekf.predict(tau_full.data(), x_measured.data());
-            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, nx);
+            response->status = "Controller type " + std::to_string(request->workspace_controller_type) + " already selected";
+            RCLCPP_INFO(get_node()->get_logger(), "Controller type %ld already selected", request->workspace_controller_type);
         }
         else
         {
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), nx);
+            ControllerType workspace_controller_type = static_cast<ControllerType>(request->workspace_controller_type);
+            controller.switchController(workspace_controller_type);
+            
+            controller.reset();
+            response->status = "Controller type " + std::to_string(request->workspace_controller_type) + " selected";
+            std::string status_message = "Switched to " + controller.get_classic_controller_string(workspace_controller_type) + " Controller";
+            RCLCPP_INFO(get_node()->get_logger(), status_message.c_str());
+            response->status = status_message;
         }
-        return x_filtered;
     }
-
-    #ifdef SIMULATION_MODE
-    // Function to generate an Eigen vector of white noise
-    Eigen::VectorXd ConventionalWorkspaceController::generateNoiseVector(int n, double Ts, double mean_noise_amplitude) {
-        // Calculate noise power
-        double noise_power = 1 / (2*Ts) * (Ts / 2) * M_PI * std::pow(mean_noise_amplitude, 2);
-
-        // Initializes random number generator for normal distribution
-        std::random_device rd;
-        std::mt19937 generator(rd()); // Mersenne Twister random number generator
-        std::normal_distribution<double> distribution(0.0, std::sqrt(noise_power)); // Normal distribution
-
-        // Create an Eigen vector to hold the noise
-        Eigen::VectorXd white_noise(n);
-
-        // Generate white noise
-        for (int i = 0; i < n; ++i) {
-            white_noise[i] = distribution(generator);
-        }
-
-        return white_noise; // Return the generated noise vector
-    }
-    #endif
 
     void ConventionalWorkspaceController::solve()
     {
-        timer_mpc_solver.tic();
+        timer_solver.tic();
         tau_full = controller.update_control(x_filtered);
-        timer_mpc_solver.toc();
-    }
-
-    void ConventionalWorkspaceController::init_filter(double omega_c_q, double omega_c_dq)
-    {
-        if(use_ekf && use_lowpass_filter)
-        {
-            ekf.update_config();
-            lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
-            x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
-            ekf.initialize(x_measured.data());
-            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, nx);
-        }
-        else if(use_ekf)
-        {
-            ekf.update_config();
-            ekf.initialize(x_measured.data());
-            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
-            x_filtered_lowpass_ptr = x_filtered_ekf_ptr;
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ekf_ptr, nx);
-        }
-        else if(use_lowpass_filter)
-        {
-            lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
-            x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
-            x_filtered_ekf_ptr = x_filtered_lowpass_ptr;
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, nx);
-        }
-        else
-        {
-            x_filtered_ekf_ptr = x_measured.data();
-            x_filtered_lowpass_ptr = x_measured.data();
-            x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), nx);
-        }
-        // without previous data, we cannot filter
-    }
-
-    void ConventionalWorkspaceController::init_controller()
-    {
-        // Update general configuration
-        nlohmann::json general_config = read_config(general_config_filename);
-        use_lowpass_filter = get_config_value<bool>(general_config, "use_lowpass_filter");
-        use_ekf = get_config_value<bool>(general_config, "use_ekf");
-        // Is set by using the nodejs gui
-        // traj_select = get_config_value<int>(general_config, "trajectory_selection");
-        double omega_c_q = get_config_value<double>(general_config, "lowpass_filter_omega_c_q");
-        double omega_c_dq = get_config_value<double>(general_config, "lowpass_filter_omega_c_dq");
-
-        /////// INIT FILE TRAJECTORY ///////
-        double T_traj_start = get_config_value<double>(general_config, "transient_traj_start_time");
-        double T_traj_dur = get_config_value<double>(general_config, "transient_traj_duration");
-        double T_traj_end = get_config_value<double>(general_config, "transient_traj_end_time");
-        controller.init_file_trajectory(traj_select, state.data(), T_traj_start, T_traj_dur, T_traj_end);
-        traj_len = controller.get_traj_data_real_len();
-
-        current_trajectory = controller.get_trajectory();
-        traj_len = controller.get_traj_data_real_len();
-        controller.update_controller_settings();
-
-        #ifdef SIMULATION_MODE
-        mean_noise_amplitude = general_config["mean_noise_amplitude"];
-        use_noise = general_config["use_noise"];
-        if(use_noise)
-            x_measured = state + generateNoiseVector(nx, Ts, mean_noise_amplitude);
-        else
-            x_measured = state;
-        #endif
-
-        init_filter(omega_c_q, omega_c_dq); // uses x_measured
-    }
-
-    void ConventionalWorkspaceController::reset_mpc_trajectory()
-    {
-        Eigen::VectorXd x0_red_init = controller.get_traj_x0_red_init(traj_select);
-        controller.reset();
-
-        #ifdef SIMULATION_MODE
-        const double *x0_init = controller.get_traj_x0_init(traj_select);
-        state = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
-        #endif
-
-        tau_full = Eigen::VectorXd::Zero(nq);
-        global_traj_count = 0;
+        timer_solver.toc();
     }
 
 } // namespace franka_example_controllers

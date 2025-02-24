@@ -263,12 +263,16 @@ select:focus {
 #graph {
     height: 370px;
     width: 500px;
-    float: right;
-    margin-right: 50px;
     background-color: #000000; /* Dark background */
     color: #e0e0e0; /* Light text color */
     border: 1px solid #333; /* Dark border */
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+}
+
+#graph_container {
+    clear: both;
+    float: right;
+    margin-right: 100px; /* Adjust as needed */
 }
 
 

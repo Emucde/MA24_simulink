@@ -7,7 +7,7 @@ WorkspaceController::WorkspaceController(const std::string &urdf_filename,
                         ct_controller(robot_model, general_config_filename, trajectory_generator),
                         pd_plus_controller(robot_model, general_config_filename, trajectory_generator),
                         inverse_dyn_controller(robot_model, general_config_filename, trajectory_generator),
-                        active_controller(&ct_controller)
+                        active_controller(&ct_controller), selected_controller_type(ControllerType::CT)
 {
 }
 
@@ -321,6 +321,8 @@ void BaseWorkspaceController::update_controller_settings()
 
     regularization_settings = controller_settings.regularization_settings;
     sing_method = controller_settings.regularization_settings.mode;
+
+    traj_data_real_len = trajectory_generator.get_traj_data_real_len();
 }
 
 void BaseWorkspaceController::calculateControlData(const Eigen::VectorXd &x)
@@ -384,7 +386,10 @@ void BaseWorkspaceController::calculateControlData(const Eigen::VectorXd &x)
     x_d_pp << p_d_pp, omega_d_p;
 
     J_pinv = computeJacobianRegularization();
-    traj_count++;
+    if (traj_count < traj_data_real_len - 1)
+    {
+        traj_count++;
+    }
 }
 
 void BaseWorkspaceController::calculateControlDataID(const Eigen::VectorXd &x, const Eigen::VectorXd &x_d)
@@ -615,6 +620,7 @@ void WorkspaceController::switchController(ControllerType type)
         inverse_dyn_controller.init = true;
         break;
     }
+    selected_controller_type = type;
     active_controller->traj_count = 0;
 }
 
