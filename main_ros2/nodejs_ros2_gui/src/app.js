@@ -9,7 +9,9 @@ const { searchTrajectoryNames } = require('./search_m_file');
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
+const wss_data_logger = new WebSocket.Server({ port: 8081 });
 const clients = new Set();
+const clients_data_logger = new Set();
 
 var controller_names = null;
 var controller_active_states = null;
@@ -56,8 +58,8 @@ async function init_ros() {
             });
     }
     catch (error) {
-        console.log("Error while getting loaded controllers. ROS2 was not started. Retrying in 2 seconds.");
-        setTimeout(init_ros, 2000);
+        console.log("Error while getting loaded controllers. ROS2 was not started. Retrying in 5 seconds.");
+        setTimeout(init_ros, 5000);
     }
 }
 
@@ -104,7 +106,7 @@ async function check(result, checked_command, data)
         case 'switch_control':
             if (result.ok) {
                 result = await update(); // Update controller info
-                status += 'Controller switched to ' + active_controller_name + ' ';
+                status += ' Controller switched to ' + active_controller_name + ' ';
                 console.log('Controller switched to ' + active_controller_name);
             }
             else
@@ -113,15 +115,15 @@ async function check(result, checked_command, data)
             break;
         case 'switch_casadi_mpc':
             if (result.ok) {
-                status += 'Switched to Casadi ' + available_casadi_mpcs[data.mpc_type];
+                status += ' Switched to Casadi ' + available_casadi_mpcs[data.mpc_type];
             }
             else
-                status += 'Error while switching Casadi MPC';
+                status += ' Error while switching Casadi MPC';
             name = 'ros_service';
             break;
         case 'switch_workspace_controller':
             if (result.ok) {
-                status += 'Switched to ' + available_workspace_controller[data.workspace_controller_type] + ' Workspace Controller';
+                status += ' Switched to ' + available_workspace_controller[data.workspace_controller_type] + ' Workspace Controller';
             }
             else
                 status += 'Error while switching Casadi MPC';
@@ -132,7 +134,7 @@ async function check(result, checked_command, data)
             {
                 if(result.status != null && !result.status.includes('No active controller'))
                 {
-                    status += 'Trajectory ' + data.traj_select + ' on ' + active_controller_name + ' selected ';
+                    status += ' Trajectory ' + data.traj_num + ' on ' + active_controller_name + ' selected ';
                 }
             }
             else
@@ -148,7 +150,7 @@ async function check(result, checked_command, data)
                 }
             }
             else
-                status += 'Error while starting controller: ' + result.status;
+                status += ' Error while starting controller: ' + result.status;
             name = 'ros_service';
             break;
         case 'reset_service':
@@ -160,7 +162,7 @@ async function check(result, checked_command, data)
                 }
             }
             else
-                status += 'Error while resetting controller: ' + result.status;
+                status += ' Error while resetting controller: ' + result.status;
             name = 'ros_service';
             break;
         case 'stop_service':
@@ -170,7 +172,7 @@ async function check(result, checked_command, data)
                     result.status = active_controller_name + ' stopped';
             }
             else
-                status += 'Error while stopping controller: ' + result.status;
+                status += ' Error while stopping controller: ' + result.status;
             name = 'ros_service';
             break;
         case 'update':
@@ -180,9 +182,11 @@ async function check(result, checked_command, data)
             name = result.name;
             break;
     }
+    console.log(status);
     return { ok: result.ok, status: status, name: name };
 }
 
+// broadcasting data
 function broadcast(message) {
     clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
@@ -191,7 +195,28 @@ function broadcast(message) {
     });
 }
 
+function broadcast_data_logger(message) {
+    clients_data_logger.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
+    });
+}
+
 async function main() {
+    wss_data_logger.on('connection', (ws) => {
+        clients_data_logger.add(ws);
+        console.log('WebSocket connection (data logger ' + (clients_data_logger.size) + ') established\n');
+        ws.on('close', () => {
+            clients_data_logger.delete(ws);
+        });
+
+        ws.on('message', async (message) => {
+            broadcast_data_logger(message);
+        });
+    });
+
+
     wss.on('listening', (ws) => {
         check_ros_connection();
     });
@@ -206,7 +231,6 @@ async function main() {
         });
 
         ws.on('message', async (message) => {
-            // ws.send(JSON.stringify({ status: 'success', result: "test" }));
             const data = JSON.parse(message);
             var log_check = { ok: false, status: '' };
         
@@ -316,12 +340,12 @@ async function main() {
                 {
                     restartNode()
                     .then(() => {
-                      console.log('Node restarted successfully');
-                      // Perform any necessary actions after restart
+                    console.log('Node restarted successfully');
+                    // Perform any necessary actions after restart
                     })
                     .catch(error => {
-                      console.error('Failed to restart node:', error);
-                      // Handle restart failure
+                    console.error('Failed to restart node:', error);
+                    // Handle restart failure
                     });
                     additional_string=": ROS2 service node restarted";
                 }
@@ -355,7 +379,7 @@ async function main() {
     });
 
     server.listen(8080, () => {
-        console.log('Server listening on http://localhost:8080');
+        console.log('Server listening on http://localhost:8080 for ros commands');
     });
 }
 

@@ -50,13 +50,13 @@ void TrajectoryGenerator::switch_traj(int traj_select)
         traj_select = 1;
     }
 
-    if (traj_select != selected_trajectory)
-    {
-        traj_data_file = all_traj_data_file[traj_select - 1];
-        traj_data_file_x0_init = all_traj_data_x0_init[traj_select - 1];
+    // if (traj_select != selected_trajectory)
+    // {
+    traj_data_file = all_traj_data_file[traj_select - 1];
+    traj_data_file_x0_init = all_traj_data_x0_init[traj_select - 1];
 
-        selected_trajectory = traj_select;
-    }
+    selected_trajectory = traj_select;
+    // }
 }
 
 void TrajectoryGenerator::check_param_poly_traj(ParamPolyTrajectory param)

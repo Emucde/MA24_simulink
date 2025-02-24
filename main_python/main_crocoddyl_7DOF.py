@@ -21,6 +21,7 @@ from utils_python.utils import *
     # sudo sed -i '/# End of file/i @realtime soft nice -20\n@realtime hard nice -20' /etc/security/limits.d/realtime.conf
 os.nice(0)
 start_server() # start plotting update server
+start_node_data_logger()
 
 autostart_fr3 = False
 
@@ -87,6 +88,7 @@ if use_data_from_simulink or explicit_mpc:
     read_state_data_full = shm_data['read_state_data_full']
     read_control_data_full = shm_data['read_control_data_full']
     shm_changed_semaphore = posix_ipc.Semaphore("/shm_changed_semaphore", posix_ipc.O_CREAT, initial_value=0)
+    data_logger_semaphore = posix_ipc.Semaphore("/data_logger_semaphore", posix_ipc.O_CREAT, initial_value=0)
 
     # create objects for debouncing the simulink buttons:
     start_button = DebouncedButton(debounce_delay)
@@ -371,6 +373,7 @@ try:
         if use_data_from_simulink and not explicit_flag:
             # Read data
             shm_changed_semaphore.acquire()
+            data_logger_semaphore.release()
 
             if readonly_mode[0] == 0:
                 if(data_from_simulink_valid[0] == 1):
@@ -854,6 +857,8 @@ try:
                 shm_objects[name].unlink()
             shm_changed_semaphore.unlink()
             shm_changed_semaphore.close()
+            data_logger_semaphore.unlink()
+            data_logger_semaphore.close()
             print("Shared memory closed and cleared.")
         else:
             print("Shared memory not cleared.")

@@ -83,7 +83,7 @@ public:
                      const std::string &general_config_filename);
 
     // CasadiController: solve the MPC
-    Eigen::VectorXd solveMPC(const casadi_real *const x_k_ndof_ptr);
+    Eigen::VectorXd update_control(const Eigen::VectorXd &x_nq) override;
 
     nlohmann::json read_config(std::string file_path);
     void update_mpc_weights();
@@ -108,6 +108,11 @@ public:
     void set_traj_count(uint new_traj_count) override
     {
         active_mpc->set_traj_count(new_traj_count);
+    }
+
+    CasadiMPCType get_active_mpc_type()
+    {
+        return selected_mpc_type;
     }
 
     casadi_real *get_u_next()

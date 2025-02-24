@@ -61,26 +61,32 @@ void CrocoddylController::update_trajectory_data(const double *x_k_ndof_ptr)
     }
 }
 
-Eigen::VectorXd CrocoddylController::solveMPC(const double *const x_k_ndof_ptr)
+Eigen::VectorXd CrocoddylController::update_control(const Eigen::VectorXd &x_nq)
 {
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
-    Eigen::Map<const Eigen::VectorXd> x_k_ndof(x_k_ndof_ptr, nx);
-    Eigen::VectorXd x_k = x_k_ndof(n_x_indices);
     
-    bool hasConverged = active_mpc->solve(x_k);
+    double x_k[nx_red];
+
+    // Convert nx to nx_red state
+    for (casadi_uint i = 0; i < nx_red; i++)
+    {
+        x_k[i] = x_nq[n_x_indices[i]];
+    }
+    
+    bool hasConverged = active_mpc->solve(Eigen::Map<Eigen::VectorXd>(x_k, nx_red));
     if (!hasConverged)
     {
         std::cerr << "Error in Crocoddyl function call." << std::endl;
         error_flag = ErrorFlag::CROCODDYL_ERROR;
         tau_full_prev = tau_full; // zero torque
-        reset(x_k.data());
+        reset(x_k);
         return tau_full;          // Return zero torque
     }
 
     u_k_ptr = active_mpc->get_optimal_control();
     Eigen::Map<Eigen::VectorXd> u_k(u_k_ptr, nq_red);
 
-    tau_full = torque_mapper.calc_full_torque(u_k, x_k_ndof);
+    tau_full = torque_mapper.calc_full_torque(u_k, x_nq);
 
     error_check(tau_full);
     return tau_full;

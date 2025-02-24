@@ -112,10 +112,6 @@ h1, h2 {
     color: black; /* Heading color in light theme */
 }
 
-p {
-    color: white;
-}
-
 title {
     color: white;
 }
@@ -202,14 +198,9 @@ input[type="text"]:focus {
     margin-right: 10px; /* Space between indicator and text */
 }
 
-/* Status Text Styling */
-#connected, #labcon, #statuscon {
-    font-weight: bold; /* Make the status text bold */
-    color: white; /* White text for visibility */
-}
 
 /* Light Theme Styles */
-.light-theme #connected, .light-theme #labcon, .light-theme #homedelay_p {
+.light-theme #connected, .light-theme #labcon, .light-theme #homedelay_p .light-theme #statuscon .light-theme p{
     color: black; /* Heading color in light theme */
 }
 
@@ -274,4 +265,51 @@ select:focus {
     width: 500px;
     float: right;
     margin-right: 50px;
+    background-color: #000000; /* Dark background */
+    color: #e0e0e0; /* Light text color */
+    border: 1px solid #333; /* Dark border */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+}
+
+
+#graph .dygraph-axis-label,
+#graph .dygraph-label {
+    color: #bbb;
+}
+
+#graph .dygraph-legend {
+    background-color: rgba(30, 30, 30, 0.7) !important;
+    color: #e0e0e0 !important;
+    border: 1px solid #444 !important;
+}
+
+#graph .dygraph-grid-line {
+    stroke: #5d5c5c !important;
+}
+
+/* Light theme */
+.light-theme #graph {
+    background-color: #f9f9f9; /* Light background */
+    color: #333; /* Dark text color */
+    border: 1px solid #ddd; /* Light border */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+.light-theme #graph canvas {
+    filter: none; /* Remove any filters */
+}
+
+.light-theme #graph .dygraph-axis-label,
+.light-theme #graph .dygraph-label {
+    color: #666;
+}
+
+.light-theme #graph .dygraph-legend {
+    background-color: rgba(240, 240, 240, 0.7) !important;
+    color: #333 !important;
+    border: 1px solid #ccc !important;
+}
+
+.light-theme #graph .dygraph-grid-line {
+    stroke: #ccc !important;
 }

@@ -2154,6 +2154,49 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
 ###########################################################################
 ###########################################################################
 
+def start_node_data_logger():
+    LOCK_FILE = '/tmp/node_data_logger.lock'
+    SCRIPT_PATH = 'main_python/node_data_logger.py'
+    PID_FILE = '/tmp/node_data_logger.pid'
+
+    def is_running():
+        if os.path.exists(LOCK_FILE):
+            with open(PID_FILE, 'r') as pid_file:
+                pid = int(pid_file.read())
+                try:
+                    # Check if the process is running
+                    process = psutil.Process(pid)
+                    return process.is_running()
+                except psutil.NoSuchProcess:
+                    # If the process does not exist, remove the lock file and return False
+                    os.remove(LOCK_FILE)
+                    if os.path.exists(PID_FILE):
+                        os.remove(PID_FILE)
+                    return False
+        return False
+
+    if is_running():
+        print("node_data_logger.py is already running.")
+        return False
+
+    # Erstelle Lock-Datei
+    with open(LOCK_FILE, 'w') as lock_file:
+        try:
+            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            
+            # Starte das Server-Skript im Hintergrund
+            pid = os.spawnl(os.P_NOWAIT, sys.executable, sys.executable, SCRIPT_PATH)
+            
+            # Schreibe die PID in die Datei
+            with open(PID_FILE, 'w') as pid_file:
+                pid_file.write(str(pid))
+
+            print("node_data_logger started successfully.")
+            return True
+        except IOError:
+            print("Could not acquire lock. node_data_logger may be running.")
+            return False
+
 def start_server(broadcast_message = 'reload_plotly'):
     LOCK_FILE = '/tmp/my_server.lock'
     SCRIPT_PATH = 'main_python/websocket_fr3.py'

@@ -185,6 +185,7 @@ int main()
     double omega_c_q = get_config_value<double>(general_config, "lowpass_filter_omega_c_q");
     double omega_c_dq = get_config_value<double>(general_config, "lowpass_filter_omega_c_dq");
     Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nx);
+    Eigen::VectorXd x_filtered = Eigen::VectorXd::Zero(nx);
 
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
     Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
@@ -269,7 +270,8 @@ int main()
         {"read_traj_data_full", 19 * sizeof(casadi_real), traj_len},
         {"read_frequency_full", sizeof(casadi_real), traj_len},
         {"read_state_data_full", sizeof(casadi_real) * robot_config.nx, traj_len},
-        {"read_control_data_full", sizeof(casadi_real) * robot_config.nq, traj_len}};
+        {"read_control_data_full", sizeof(casadi_real) * robot_config.nq, traj_len},
+        {"read_control_data", sizeof(casadi_real) * robot_config.nq, 1}};
 
     const std::vector<std::string> sem_readwrite_names = {
         "shm_changed_semaphore",
@@ -306,13 +308,15 @@ int main()
             filter.run(x_filtered_ptr); // updates data from x_filtered_ptr
         else
             x_filtered_ptr_2 = x_filtered_ptr;
+
+        x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ptr_2, nx);    
         
         // x_filtered_ptr = x_measured.data();
 
         if ( controller_type == MainControllerType::Casadi )
         {
             timer_mpc_solver.tic();
-            tau_full = casadi_controller.solveMPC(x_filtered_ptr_2);
+            tau_full = casadi_controller.update_control(x_filtered);
             timer_mpc_solver.toc();
             act_data = casadi_controller.get_act_traj_data();
             error_flag = casadi_controller.get_error_flag();
@@ -320,7 +324,7 @@ int main()
         else if ( controller_type == MainControllerType::Classic )
         {
             timer_mpc_solver.tic();
-            tau_full = classic_controller.update(x_filtered_ptr_2);
+            tau_full = classic_controller.update_control(x_filtered);
             timer_mpc_solver.toc();
             act_data = classic_controller.get_act_traj_data();
             error_flag = classic_controller.get_error_flag();
@@ -328,7 +332,7 @@ int main()
         else// if ( controller_type == MainControllerType::Crocoddyl )
         {
             timer_mpc_solver.tic();
-            tau_full = crocoddyl_controller.solveMPC(x_filtered_ptr_2);
+            tau_full = crocoddyl_controller.update_control(x_filtered);
             timer_mpc_solver.toc();
             act_data = crocoddyl_controller.get_act_traj_data();
             error_flag = crocoddyl_controller.get_error_flag();
@@ -361,6 +365,7 @@ int main()
             current_frequency = timer_mpc_solver.get_frequency()*solver_steps;
             shm.write("read_state_data_full", x_filtered_ptr_2, i+j);
             shm.write("read_control_data_full", tau_full.data(), i+j);
+            shm.write("read_control_data", tau_full.data());
             shm.write("read_traj_data_full", act_data, i+j);
             shm.write("read_frequency_full", &current_frequency, i+j);
             shm.post_semaphore("shm_changed_semaphore");

@@ -8,7 +8,7 @@
     "mean_noise_amplitude": 0.1e-3,
     "lowpass_filter_omega_c_q": 1000,
     "lowpass_filter_omega_c_dq": 1000,
-    "trajectory_selection": 1,
+    "trajectory_selection": 2,
     "transient_traj_start_time": 0.0,
     "transient_traj_duration": 2.0,
     "transient_traj_end_time": 2.0,

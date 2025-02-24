@@ -107,7 +107,7 @@ public:
         trajectory_generator.switch_traj(traj_select);
     }
 
-    Eigen::VectorXd update(const double *const x_nq);
+    Eigen::VectorXd update_control(const Eigen::VectorXd &x_nq) override;
 
     void reset() override;
     void reset(const casadi_real *const x_k_in) override;

@@ -53,16 +53,15 @@ CasadiController::CasadiController(const std::string &urdf_filename,
 ///////////////////////////////////////////////////////////////////////////////////////
 
 // Solve one MPC iteration and result a map to the optimal control
-Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr)
+Eigen::VectorXd CasadiController::update_control(const Eigen::VectorXd &x_nq)
 {
     Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
-    Eigen::VectorXd x_k_ndof = Eigen::Map<const Eigen::VectorXd>(x_k_ndof_ptr, nx);
     double x_k[nx_red];
 
     // Convert nx to nx_red state
     for (casadi_uint i = 0; i < nx_red; i++)
     {
-        x_k[i] = x_k_ndof[n_x_indices[i]];
+        x_k[i] = x_nq[n_x_indices[i]];
     }
 
     // Solve the MPC
@@ -78,7 +77,7 @@ Eigen::VectorXd CasadiController::solveMPC(const casadi_real *const x_k_ndof_ptr
     // Calculate the full torque (Feedforward + PD control for fixed joints)
     Eigen::Map<Eigen::VectorXd> u_k(u_k_ptr, nq_red);
 
-    tau_full = torque_mapper.calc_full_torque(u_k, x_k_ndof);
+    tau_full = torque_mapper.calc_full_torque(u_k, x_nq);
 
     error_check(tau_full);
 

@@ -91,6 +91,7 @@ namespace franka_example_controllers
 
             current_frequency = timer_mpc_solver.get_frequency();
             shm.write("read_state_data_full", x_measured.data(), global_traj_count);
+            shm.write("read_control_data", tau_full.data());
             shm.write("read_control_data_full", tau_full.data(), global_traj_count);
             shm.write("read_traj_data_full", current_trajectory->col(global_traj_count).data(), global_traj_count);
             shm.write("read_frequency_full", &current_frequency, global_traj_count);
@@ -294,7 +295,7 @@ namespace franka_example_controllers
         filter_x_measured(); // uses x_measured
 
         timer_mpc_solver.tic();
-        tau_full = controller.update(x_filtered.data());
+        tau_full = controller.update_control(x_filtered);
         timer_mpc_solver.toc();
         int8_t readonly_mode = 1;
 
@@ -441,7 +442,7 @@ namespace franka_example_controllers
     void ConventionalWorkspaceController::solve()
     {
         timer_mpc_solver.tic();
-        tau_full = controller.update(x_filtered.data());
+        tau_full = controller.update_control(x_filtered);
         timer_mpc_solver.toc();
     }
 

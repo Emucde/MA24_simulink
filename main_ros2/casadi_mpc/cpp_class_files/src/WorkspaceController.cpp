@@ -456,20 +456,19 @@ void BaseWorkspaceController::calculateControlDataID(const Eigen::VectorXd &x, c
     traj_count++;
 }
 
-Eigen::VectorXd WorkspaceController::update(const double *const x_nq)
+Eigen::VectorXd WorkspaceController::update_control(const Eigen::VectorXd &x_nq)
 {
-    double x_nq_red[nx_red];
+    double x_k[nx_red];
 
     // Convert nx to nx_red state
     for (uint i = 0; i < nx_red; i++)
     {
-        x_nq_red[i] = x_nq[n_x_indices[i]];
+        x_k[i] = x_nq[n_x_indices[i]];
     }
 
-    Eigen::Map<const Eigen::VectorXd> x_nq_vec(x_nq, nx);
-    Eigen::Map<const Eigen::VectorXd> x_nq_red_vec(x_nq_red, nx_red);
-    Eigen::VectorXd tau_red = active_controller->control(x_nq_red_vec);
-    Eigen::VectorXd tau_full = torque_mapper.calc_full_torque(tau_red, x_nq_vec);
+    Eigen::Map<const Eigen::VectorXd> x_k_vec(x_k, nx_red);
+    Eigen::VectorXd tau_red = active_controller->control(x_k_vec);
+    Eigen::VectorXd tau_full = torque_mapper.calc_full_torque(tau_red, x_nq);
 
     error_check(tau_full);
 

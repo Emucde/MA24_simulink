@@ -83,7 +83,7 @@ public:
     Eigen::VectorXd get_act_traj_x0_red_init();
 
     // NEW
-    // virtual void update(const Eigen::VectorXd &x_nq) = 0; // W: update, Ca, Cr: solveMPC
+    virtual Eigen::VectorXd update_control(const Eigen::VectorXd &x_nq) = 0; // W: update, Ca, Cr: solveMPC
     // virtual void switch_controller(uint controller_select) = 0; // W: switch_controller, Ca, Cr: setActiveMPC
     virtual void update_config() = 0; // W: set_controller_settings, Ca, Cr: update_mpc_weights
 

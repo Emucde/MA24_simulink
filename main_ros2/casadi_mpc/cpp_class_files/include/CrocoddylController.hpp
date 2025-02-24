@@ -32,7 +32,7 @@ public:
                         const std::string &mpc_config_filename,
                         const std::string &general_config_filename);
 
-    Eigen::VectorXd solveMPC(const double *const x_k_ndof_ptr);
+    Eigen::VectorXd update_control(const Eigen::VectorXd &x_nq) override;
     nlohmann::json read_config(std::string file_path);
     void update_mpc_weights();
     void update_config() override;

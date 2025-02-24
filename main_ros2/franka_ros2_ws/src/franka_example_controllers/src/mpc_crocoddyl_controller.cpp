@@ -85,7 +85,7 @@ namespace franka_example_controllers
                         state[nq + 3], state[nq + 4], state[nq + 5], state[nq + 6]);
         #endif
 
-        if (mpc_started)
+        if (controller_started)
         {
             if(solver_step_counter % solver_steps == 0)
                 solve();
@@ -96,6 +96,7 @@ namespace franka_example_controllers
 
             current_frequency = timer_mpc_solver.get_frequency()*solver_steps;
             shm.write("read_state_data_full", x_measured.data(), global_traj_count);
+            shm.write("read_control_data", tau_full.data());
             shm.write("read_control_data_full", tau_full.data(), global_traj_count);
             shm.write("read_traj_data_full", current_trajectory->col(global_traj_count).data(), global_traj_count);
             shm.write("read_frequency_full", &current_frequency, global_traj_count);
@@ -125,7 +126,7 @@ namespace franka_example_controllers
                     RCLCPP_WARN(get_node()->get_logger(), "Error in Crocoddyl function call. Stopping the controller.");
                 }
 
-                mpc_started = false;
+                controller_started = false;
                 tau_full = Eigen::VectorXd::Zero(nq);
             }
 
@@ -298,15 +299,15 @@ namespace franka_example_controllers
 
         filter_x_measured(); // uses x_measured
 
-        tau_full = controller.solveMPC(x_filtered.data());
+        tau_full = controller.update_control(x_filtered);
         controller.set_traj_count(0);
-        tau_full = controller.solveMPC(x_filtered.data());
+        tau_full = controller.update_control(x_filtered);
         int8_t readonly_mode = 1;
 
         shm.write("read_traj_length", &traj_len);
         shm.write("readonly_mode", &readonly_mode);
 
-        mpc_started = true;
+        controller_started = true;
         controller.set_traj_count(0);
     }
 
@@ -327,7 +328,7 @@ namespace franka_example_controllers
         reset_mpc_trajectory();
 
         response->status = "reset flag set";
-        mpc_started = false;
+        controller_started = false;
         shm.post_semaphore("shm_changed_semaphore");
         RCLCPP_INFO(get_node()->get_logger(), "Crocoddyl MPC reset");
     }
@@ -348,7 +349,7 @@ namespace franka_example_controllers
         shm.post_semaphore("shm_changed_semaphore");
 
         response->status = "stop flag set";
-        mpc_started = false;
+        controller_started = false;
         RCLCPP_INFO(get_node()->get_logger(), "Crocoddyl MPC stopped");
     }
 
@@ -361,7 +362,7 @@ namespace franka_example_controllers
         reset_mpc_trajectory();
 
         response->status = "trajectory " + std::to_string(traj_select) + " selected";
-        mpc_started = false;
+        controller_started = false;
         
         RCLCPP_INFO(get_node()->get_logger(), "Trajectory %d selected", traj_select);
     }
@@ -433,7 +434,7 @@ namespace franka_example_controllers
     void ModelPredictiveControllerCrocoddyl::solve()
     {
         timer_mpc_solver.tic();
-        tau_full = controller.solveMPC(x_filtered.data());
+        tau_full = controller.update_control(x_filtered);
         timer_mpc_solver.toc();
     }
 
