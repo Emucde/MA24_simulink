@@ -48,6 +48,7 @@
 #include "trajectory_settings.hpp"
 #include <Eigen/Dense>
 #include <random>
+#include <semaphore.h>
 
 #include <boost/asio/thread_pool.hpp>
 #include <boost/asio/post.hpp>
@@ -105,6 +106,9 @@ namespace franka_example_controllers
     private:
         const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
         CrocoddylController controller;
+        
+        bool semaphore_initialized = false;
+        sem_t solve_semaphore;
 
         // rclcpp::Subscription<mpc_interfaces::msg::ControlArray>::SharedPtr subscription_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
