@@ -8,7 +8,7 @@
     "mean_noise_amplitude": 0.1e-3,
     "lowpass_filter_omega_c_q": 1000,
     "lowpass_filter_omega_c_dq": 1000,
-    "trajectory_selection": 2,
+    "trajectory_selection": 1,
     "transient_traj_start_time": 0.0,
     "transient_traj_duration": 2.0,
     "transient_traj_end_time": 2.0,
@@ -18,7 +18,7 @@
         "Casadi",
         "Crocoddyl"
     ],
-    "default_classic_controller": "ID",
+    "default_classic_controller": "PD",
     "available_classic_controller": [
         "PD",
         "CT",
@@ -93,7 +93,7 @@
         },
         "regularization_settings": {
             "mode" : "Damping",
-            "k": 1e-5,
+            "k": 1e-4,
             "W_bar_N": [0.110889, 0.099856, 0.147456, 0.007744, 0.011449, 0.0106916],
             "W_E": [1, 1, 1, 1, 1, 1],
             "eps": 1e-5,
