@@ -16,6 +16,7 @@
 
 // #define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_WARN
 #define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_INFO
+#define CUSTOM_LIST 1
 
 #define SIMULATION_MODE 1
 
@@ -105,7 +106,11 @@ namespace franka_example_controllers
 
         void solve();
     private:
-        const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand_simulink.json";
+#ifdef CUSTOM_LIST
+    const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand_custom_list.json";
+#else
+    const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand_simulink.json";
+#endif
         bool use_planner = false;
         CasadiController controller;
         // CasadiController controller = CasadiController(urdf_filename, casadi_mpc_config_filename, general_config_filename);

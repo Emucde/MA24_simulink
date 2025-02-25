@@ -128,7 +128,10 @@ void CasadiController::update_mpc_weights()
         if (static_cast<CasadiMPCType>(i) != CasadiMPCType::INVALID)
         {
             std::string mpc_name = casadi_mpcs[i].get_mpc_name();
+            nlohmann::json mpc_config = get_config_value<nlohmann::json>(param_mpc_weight, mpc_name);
+
             casadi_mpcs[i].update_mpc_weights(param_mpc_weight[mpc_name]);
+            casadi_mpcs[i].update_mpc_weights(mpc_config);
         }
     }
 }
@@ -265,8 +268,11 @@ void CasadiController::PlannerSolver::update_planner_params()
     }
 
     std::string mpc_name = active_mpc->get_mpc_name();
-    K_P_q = Eigen::VectorXd::Map(param_mpc_weight[mpc_name]["K_P_q"].get<std::vector<double>>().data(), nq_red);
-    K_D_q = Eigen::VectorXd::Map(param_mpc_weight[mpc_name]["K_D_q"].get<std::vector<double>>().data(), nq_red);
+    nlohmann::json mpc_config = get_config_value<nlohmann::json>(param_mpc_weight, mpc_name);
+    nlohmann::json K_P_q_json = get_config_value<nlohmann::json>(mpc_config, "K_P_q");
+    nlohmann::json K_D_q_json = get_config_value<nlohmann::json>(mpc_config, "K_D_q");
+    K_P_q = Eigen::VectorXd::Map(K_P_q_json.get<std::vector<double>>().data(), nq_red);
+    K_D_q = Eigen::VectorXd::Map(K_D_q_json.get<std::vector<double>>().data(), nq_red);
 }
 
 // Hat fuer R_q ueberhaupt nicht geklappt maybe fuer xprev

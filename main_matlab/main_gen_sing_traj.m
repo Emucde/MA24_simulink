@@ -3,8 +3,10 @@
 single_sing_pose = readmatrix('./main_c/sorted_output_single.csv');
 double_sing_pose = readmatrix('./main_c/sorted_output_doublesing_7.csv');
 
+figure(3);
 plot(single_sing_pose(:, 4));
-%plot(double_sing_pose);
+figure(4);
+plot(double_sing_pose);
 
 % 110612, 129903
 q1=double_sing_pose(110612, :);
@@ -70,3 +72,33 @@ q12 = single_sing_pose(68098, 1:7);
 %         fprintf('Pose %d, pose_distances: %g\n', i, pose_distances(i));
 %     end
 % end
+
+y = [1/2, -1/4, 1/4, -1/2]; % = Q_0, Q_1, ..., Q_n
+z = [0 0 0 0];
+x = [0 1/3 2/3 1];
+QQ = [x; y; z]'; % e.g. measured data
+
+% Use custom tang vek
+T0 = [1 -1 0];
+Tk = [1 0 0; 1 1 0]; % = [T1; T2]
+Tn = [0 1 1];
+
+TT = [T0; Tk; Tn];
+
+% T1 = [1 0 0] active at Q1 = QQ(2,:), T2 = [1 1 0] active at Q2 = QQ(3,:)
+Ind_deriv = [1, 2]; % index 1: T1, index 2: T2
+
+% T0 and Tn are ignored (alpha(1) = alpha(end) = 0), T1 and T2 are scaled
+% with approximated chord length 1*d. This means for this example:
+% alpha(1) is active on T0 = TT(1, :),
+% alpha(2) is active on T1 = TT(1+Ind_deriv(1), :)
+% alpha(3) is active on T2 = TT(1+Ind_deriv(2), :)
+% alpha(end) is active on Tn = TT(end, :)
+alpha = [0 1 1 0];
+
+p = 3; % spline order
+
+PDi = bsplineCurveFitting(QQ, TT, Ind_deriv, alpha, p);
+figure(5);
+CC = spline_fun(0, 1, PDi);
+fun = @(t) cell2mat(arrayfun(@(i) spline_fun(i, 1, PDi), t, 'UniformOutput', false));
