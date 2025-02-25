@@ -299,17 +299,22 @@ namespace franka_example_controllers
 
         filter_x_measured(); // uses x_measured
 
-        if(first_start)
-        {
-            reset_trajectory();
-            init_trajectory();
-            tau_full = controller.update_control(x_filtered);
-            controller.set_traj_count(0);
-            tau_full = controller.update_control(x_filtered);
-            controller.set_traj_count(0);
-            first_start = false;
-        }
+        // if(first_start)
+        // {
+        //     init_trajectory();
+        //     reset_trajectory();
+        //     tau_full = controller.update_control(x_filtered);
+        //     controller.set_traj_count(0);
+        //     tau_full = controller.update_control(x_filtered);
+        //     controller.set_traj_count(0);
+        //     first_start = false;
+        // }
         
+        base_controller->init_file_trajectory(1, state.data(), 0, 5, 5);
+        traj_len = base_controller->get_traj_data_real_len();
+        current_trajectory = base_controller->get_trajectory();
+        global_traj_count = 0;
+
         int8_t readonly_mode = 1;
         shm.write("read_traj_length", &traj_len);
         shm.write("readonly_mode", &readonly_mode);

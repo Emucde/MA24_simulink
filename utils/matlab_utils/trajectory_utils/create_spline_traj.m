@@ -1,37 +1,32 @@
-function [x_d] = create_spline_traj(traj_select, t, param_traj, init_bus_param)  
+function [x_d] = create_spline_traj(traj_select, t, param_traj, init_bus_param)
     start_index = param_traj.start_index(traj_select);
     stop_index  = param_traj.stop_index(traj_select);
     t_val       = param_traj.time(start_index:stop_index);
-    i = sum(t >= t_val);
 
-    if( i == length(t_val) )
-        i = length(t_val)-1; % TODO
-        t = t_val(end) - t_val(end-1);
+    bspline = param_traj.bspline{traj_select};
+
+    T = t_val(end);
+
+
+    alpha0 = param_traj.alpha(start_index);
+
+    R_init = param_traj.rotation(:, :, start_index);
+    rot_ax = param_traj.rot_ax(:, start_index+1);
+
+    if(t > T)
+        alpha    = 1;
+        alpha_p  = 0;
+        alpha_pp = 0;
+        data = C_fun(1, 2, bspline);
     else
-        t = t - t_val(i);
+        [alpha, alpha_p, alpha_pp] = trajectory_poly(t, 0, 1, T);
+        data = C_fun(t/T, 2, bspline);
     end
 
-    i = i + start_index; % zeigt schon auf target
-    
-    xe0    = param_traj.pose(1:3, i-1);
-    alpha0 = param_traj.alpha(i-1);
 
-    xeT    = param_traj.pose(1:3, i);
-    alphaT = param_traj.alpha(i);
-
-    R_init = param_traj.rotation(:, :, i-1);
-    rot_ax = param_traj.rot_ax(:, i);
-
-    alpha_offset = 0; % TODO DELETE
-
-    y0 = [xe0; alpha0];
-    yT = [xeT; alphaT];
-
-    [p_d, p_d_p, p_d_pp] = trajectory_poly(t, y0, yT, t_val(i-start_index+1) - t_val(i-start_index));
-    
-    alpha    = p_d(4);
-    alpha_p  = p_d_p(4);
-    alpha_pp = p_d_pp(4);
+    x_ref = data(:,1);
+    x_ref_p = data(:,2);
+    x_ref_pp = data(:,3);
 
     skew_ew  = skew(rot_ax);
 
@@ -63,10 +58,11 @@ function [x_d] = create_spline_traj(traj_select, t, param_traj, init_bus_param)
     alpha_d_pp = alpha_pp;
     rot_ax_d = rot_ax;
 
+
     x_d = init_bus_param.x_d;
-    x_d.p_d       = p_d(1:3);
-    x_d.p_d_p     = p_d_p(1:3);
-    x_d.p_d_pp    = p_d_pp(1:3);
+    x_d.p_d       = x_ref;
+    x_d.p_d_p     = x_ref_p;
+    x_d.p_d_pp    = x_ref_pp;
     x_d.Phi_d     = Phi_act;
     x_d.Phi_d_p   = Phi_act_p;
     x_d.Phi_d_pp  = Phi_act_pp;
@@ -80,6 +76,26 @@ function [x_d] = create_spline_traj(traj_select, t, param_traj, init_bus_param)
     x_d.alpha_d_p = alpha_d_p;
     x_d.alpha_d_pp = alpha_d_pp;
     x_d.rot_ax_d = rot_ax_d;
-    x_d.alpha_d_offset = alpha_offset;
+    x_d.alpha_d_offset = alpha0;
     x_d.q_d_rel = quat_R_endeffector_py(R_init);
+end
+
+function [CC] = spline_vec_fun(k, bspline)
+    Cx = @(uu) arrayfun(@(u) C_tj_k_fun(u, 1, k, bspline), uu);
+    Cy = @(uu) arrayfun(@(u) C_tj_k_fun(u, 2, k, bspline), uu);
+    Cz = @(uu) arrayfun(@(u) C_tj_k_fun(u, 3, k, bspline), uu);
+
+    CC = @(uu) [Cx(uu); Cy(uu); Cz(uu)];
+end
+
+function [CC] = C_fun(theta, k, bspline)
+    i = bspline_findspan(theta, bspline);
+    p = bspline.degree;
+    control_points = bspline.control_points;
+    CC = control_points(1+(i-p):1+(i),:)' * bspline_basisfunction(theta,i,k,bspline)';
+end
+
+function [Crow] = C_tj_k_fun(theta, row, k, bspline)
+    CC = C_fun(theta, 1, bspline);
+    Crow = CC(row, k+1);
 end

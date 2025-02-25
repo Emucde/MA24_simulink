@@ -71,6 +71,7 @@ function traj_struct_combined = combine_trajectories(traj_cell, param_global, pa
     traj_struct_combined.diff_filter = repmat(init_param_diff_filter, 1, N_traj);
     traj_struct_combined.diff_filter_jointspace = repmat(init_param_diff_filter_jointspace, 1, N_traj);
     traj_struct_combined.sin_poly = repmat(init_param_sin_poly, 1, N_traj);
+    traj_struct_combined.bspline = cell(1, N_traj);
     traj_struct_combined.N_traj      = N_traj;
 
     % Combine all trajectories
@@ -94,6 +95,7 @@ function traj_struct_combined = combine_trajectories(traj_cell, param_global, pa
         traj_struct_combined.diff_filter(i).diff_filter = traj_struct.diff_filter;
         traj_struct_combined.diff_filter_jointspace(i).diff_filter_jointspace = traj_struct.diff_filter_jointspace;
         traj_struct_combined.sin_poly(i).sin_poly = traj_struct.sin_poly;
+        traj_struct_combined.bspline{i} = traj_struct.bspline;
 
         for j = 1:N
             index = (start_index - 1) + j;

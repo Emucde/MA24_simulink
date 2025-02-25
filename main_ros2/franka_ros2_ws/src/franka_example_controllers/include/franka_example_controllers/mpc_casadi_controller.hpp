@@ -18,8 +18,6 @@
 #define MY_LOG_LEVEL RCUTILS_LOG_SEVERITY_INFO
 #define CUSTOM_LIST 1
 
-#define SIMULATION_MODE 1
-
 #define MAX_INVALID_COUNT 100
 
 #include <string>

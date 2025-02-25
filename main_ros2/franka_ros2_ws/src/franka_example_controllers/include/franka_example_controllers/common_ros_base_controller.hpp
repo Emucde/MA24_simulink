@@ -14,7 +14,7 @@
 #include <Eigen/Dense>
 #include <random>
 
-#define SIMULATION_MODE 1
+// #define SIMULATION_MODE 1
 
 namespace franka_example_controllers
 {
@@ -109,9 +109,7 @@ namespace franka_example_controllers
         nlohmann::json read_config(std::string file_path);
 
         Eigen::VectorXd filter_x_measured();
-#ifdef SIMULATION_MODE
         Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude);
-#endif
         void init_filter(double omega_c_q, double omega_c_dq);
         void init_controller();
         void init_trajectory();

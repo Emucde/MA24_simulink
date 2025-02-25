@@ -12,7 +12,7 @@
     "transient_traj_start_time": 0.0,
     "transient_traj_duration": 2.0,
     "transient_traj_end_time": 2.0,
-    "default_controller": "Casadi",
+    "default_controller": "Crocoddyl",
     "available_controllers": [
         "Classic",
         "Casadi",
@@ -26,7 +26,7 @@
     ],
     "use_casadi_planner": false,
     "default_casadi_mpc": "MPC1_dyn_classic_N_MPC_3",
-    "available_casadi_mpc_simulink": [
+    "available_casadi_mpc": [
         "MPC1_dyn_classic_N_MPC_3",
         "MPC1_dyn_classic_N_MPC_5",
         "MPC2_dyn_parametric_N_MPC_3",
@@ -46,7 +46,7 @@
         "MPC5_kin_dev_planner_N_MPC_20",
         "MPC5_kin_dev_planner_N_MPC_30"
     ],
-    "available_casadi_mpc": [
+    "available_casadi_mpc_simulink": [
         "MPC01",
         "MPC6",
         "MPC7",
@@ -82,7 +82,7 @@
             "D_d": [20, 20, 20, 8.944, 8.944, 8.944]
         },
         "CT": {
-            "Kp1": [100, 100, 100, 20, 20, 20],
+            "Kp1": [200, 200, 200, 20, 20, 20],
             "Kd1": [20, 20, 20, 8.944, 8.944, 8.944]
         },
         "ID": {

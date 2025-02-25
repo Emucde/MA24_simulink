@@ -93,14 +93,12 @@ void CommonBaseController::init_custom_trajectory(ParamPolyTrajectory param)
     update_trajectory_data(param.x_init.data());
 }
 
-Eigen::VectorXd CommonBaseController::get_traj_x0_red_init(casadi_uint traj_select)
+Eigen::VectorXd CommonBaseController::get_file_traj_x0_nq_init(casadi_uint traj_select)
 {
-    Eigen::VectorXd x0_init = *trajectory_generator.get_traj_file_x0_init(traj_select);
-    Eigen::VectorXd x0_init_red = x0_init(n_x_indices);
-    return x0_init_red;
+    return *trajectory_generator.get_traj_file_x0_init(traj_select);
 }
 
-Eigen::VectorXd CommonBaseController::get_act_traj_x0_red_init()
+Eigen::VectorXd CommonBaseController::get_transient_traj_x0_red_init()
 {
     Eigen::VectorXd x0_init = *trajectory_generator.get_traj_x0_init();
     Eigen::VectorXd x0_init_red = x0_init(n_x_indices);

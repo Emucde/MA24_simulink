@@ -57,8 +57,8 @@ use_custom_trajectory = False
 param_traj_poly = {}
 if not use_custom_trajectory:
     param_traj_poly['T_start'] = 0
-    param_traj_poly['T_poly'] = 2
-    param_traj_poly['T_end'] = 2
+    param_traj_poly['T_poly'] = 5
+    param_traj_poly['T_end'] = 5
 else:
     param_traj_poly['T_start'] = 0
     param_traj_poly['T_poly'] = 10

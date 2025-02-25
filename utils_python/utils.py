@@ -1573,22 +1573,22 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
     # because later I add the initial trajectory to the true trajectory
     n_dof = param_robot['n_dof']
 
+    n_indices = param_robot['n_indices']
+    n_x_indices = param_robot['n_x_indices']
+
     mpc_settings, param_mpc_weight = load_mpc_config(robot_model)
    
     if use_custom_trajectory:
-        transient_traj = create_custom_trajectory(x_k[:n_dof], param_target, TCP_frame_id, robot_model_full, robot_data_full, mpc_settings, param_traj_poly, plot_traj=False)
+        transient_traj = create_custom_trajectory(x_k[n_x_indices][:6], param_target, TCP_frame_id, robot_model, robot_data, mpc_settings, param_traj_poly, plot_traj=False)
         T_max_horizon = param_traj_poly['T_max_horizon']
         dt = mpc_settings['Ts']
         N_traj = transient_traj['N_traj'] - int(T_max_horizon/dt)
         transient_traj['N_traj'] = N_traj
     else:
-        transient_traj = create_transient_trajectory(x_k[:n_dof], TCP_frame_id, robot_model_full, robot_data_full, traj_data, mpc_settings, param_traj_poly, plot_traj=False)
+        transient_traj = create_transient_trajectory(x_k[n_x_indices][:6], TCP_frame_id, robot_model, robot_data, traj_data, mpc_settings, param_traj_poly, plot_traj=False)
 
         N_init_traj = transient_traj['N_init']
         N_traj = traj_init_config['N_traj_true'] + N_init_traj
-
-    n_indices = param_robot['n_indices']
-    n_x_indices = param_robot['n_x_indices']
     
     p_d, p_d_p, p_d_pp, R_d, q_0_pp = get_trajectory_data(transient_traj, traj_init_config, n_indices)
 
@@ -1677,7 +1677,6 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
     solver, init_guess_fun, create_ocp_problem, simulate_model, next_init_guess_fun  = get_mpc_funs(opt_type)
 
     # use start pose at trajectory for first init guess
-    x_init_robot = x_k
     tau_init_robot = pinocchio.rnea(robot_model, robot_data, q_0[n_indices], q_0_p[n_indices], q_0_pp[n_indices])
 
     x_k_red, xs, us, xs_init_guess, us_init_guess = init_guess_fun(tau_init_robot, x_k[n_x_indices], N_traj, N_MPC, param_robot, traj_data)

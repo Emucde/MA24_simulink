@@ -140,7 +140,7 @@ void CrocoddylController::reset(const casadi_real *const x_k_in)
 
 void CrocoddylController::reset()
 {
-    Eigen::VectorXd x0_init = get_act_traj_x0_red_init();
+    Eigen::VectorXd x0_init = get_transient_traj_x0_red_init();
     active_mpc->reset(x0_init);
     tau_full_prev = Eigen::VectorXd::Zero(nq);
     reset_error_flag();

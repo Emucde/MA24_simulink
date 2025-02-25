@@ -79,8 +79,8 @@ public:
         torque_mapper.setConfiguration(config);
     }
 
-    Eigen::VectorXd get_traj_x0_red_init(uint traj_select);
-    Eigen::VectorXd get_act_traj_x0_red_init();
+    Eigen::VectorXd get_file_traj_x0_nq_init(uint traj_select);
+    Eigen::VectorXd get_transient_traj_x0_red_init();
 
     // NEW
     virtual Eigen::VectorXd update_control(const Eigen::VectorXd &x_nq) = 0; // W: update, Ca, Cr: solveMPC

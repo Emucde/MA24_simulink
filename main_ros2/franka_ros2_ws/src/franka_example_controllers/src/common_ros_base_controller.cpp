@@ -67,7 +67,6 @@ namespace franka_example_controllers
         return x_filtered;
     }
 
-    #ifdef SIMULATION_MODE
     // Function to generate an Eigen vector of white noise
     Eigen::VectorXd CommonROSBaseController::generateNoiseVector(int n, double Ts, double mean_noise_amplitude) {
         // Calculate noise power
@@ -88,7 +87,6 @@ namespace franka_example_controllers
 
         return white_noise; // Return the generated noise vector
     }
-    #endif
 
     void CommonROSBaseController::init_controller()
     {
@@ -160,18 +158,18 @@ namespace franka_example_controllers
         double T_traj_start = get_config_value<double>(general_config, "transient_traj_start_time");
         double T_traj_dur = get_config_value<double>(general_config, "transient_traj_duration");
         double T_traj_end = get_config_value<double>(general_config, "transient_traj_end_time");
-        base_controller->init_file_trajectory(traj_select, state.data(), T_traj_start, T_traj_dur, T_traj_end);
+        base_controller->init_file_trajectory(traj_select, x_filtered.data(), T_traj_start, T_traj_dur, T_traj_end);
         traj_len = base_controller->get_traj_data_real_len();
         current_trajectory = base_controller->get_trajectory();
     }
 
     void CommonROSBaseController::reset_trajectory()
     {
-        Eigen::VectorXd x0_red_init = base_controller->get_traj_x0_red_init(traj_select);
+        Eigen::VectorXd x0_red_init = base_controller->get_transient_traj_x0_red_init();
         base_controller->reset(x0_red_init.data());
 
         #ifdef SIMULATION_MODE
-        const double *x0_init = base_controller->get_traj_x0_init(traj_select);
+        const double *x0_init = base_controller->get_file_traj_x0_nq_init(traj_select);
         state = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
         #endif
 

@@ -302,7 +302,7 @@ void CasadiController::reset(const double *const x_k_in)
 
 void CasadiController::reset()
 {
-    Eigen::VectorXd x0_init = get_act_traj_x0_red_init();
+    Eigen::VectorXd x0_init = get_transient_traj_x0_red_init();
     active_mpc->reset(x0_init);
 }
 

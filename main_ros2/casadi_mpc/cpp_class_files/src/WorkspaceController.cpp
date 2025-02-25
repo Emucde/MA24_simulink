@@ -494,7 +494,7 @@ void WorkspaceController::reset(const casadi_real *const x_k_in)
 
 void WorkspaceController::reset()
 {
-    Eigen::VectorXd x_0_init = get_act_traj_x0_red_init();
+    Eigen::VectorXd x_0_init = get_transient_traj_x0_red_init();
     reset(x_0_init.data());
 }
 

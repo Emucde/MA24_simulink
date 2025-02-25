@@ -223,7 +223,7 @@ int main()
     }
 
     x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
-    // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
+    q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
 
     // ParamPolyTrajectory param_target;

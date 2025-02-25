@@ -304,8 +304,8 @@ namespace franka_example_controllers
 
         if(first_start)
         {
-            reset_trajectory();
             init_trajectory();
+            reset_trajectory();
             tau_full = controller.update_control(x_filtered);
             controller.set_traj_count(0);
             tau_full = controller.update_control(x_filtered);
