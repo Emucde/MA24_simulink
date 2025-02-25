@@ -98,7 +98,42 @@ alpha = [0 1 1 0];
 
 p = 3; % spline order
 
-PDi = bsplineCurveFitting(QQ, TT, Ind_deriv, alpha, p);
-figure(5);
-CC = spline_fun(0, 1, PDi);
-fun = @(t) cell2mat(arrayfun(@(i) spline_fun(i, 1, PDi), t, 'UniformOutput', false));
+bspline = bsplineCurveFitting(QQ, TT, Ind_deriv, alpha, p);
+
+CC = spline_vec_fun(0, bspline);
+
+%CC = @(uu) [Cx(uu); Cy(uu); Cz(uu)];
+%dCC = @(uu) [dCx(uu); dCy(uu); dCz(uu)];
+
+tt = 0:1e-3:1;
+plot(tt, CC(tt));
+
+function [CC] = spline_vec_fun(k, bspline)
+    Cx = @(uu) arrayfun(@(u) C_tj_k_fun(u, 1, k, bspline), uu);
+    Cy = @(uu) arrayfun(@(u) C_tj_k_fun(u, 2, k, bspline), uu);
+    Cz = @(uu) arrayfun(@(u) C_tj_k_fun(u, 3, k, bspline), uu);
+
+    CC = @(uu) [Cx(uu); Cy(uu); Cz(uu)];
+end
+
+function [CC] = C_fun(theta, k, bspline)
+    i = bspline_findspan(theta, bspline);
+    p = bspline.degree;
+    control_points = bspline.control_points;
+    CC = control_points(1+(i-p):1+(i),:)' * bspline_basisfunction(theta,i,k,bspline)';
+end
+
+function [Crow] = C_tj_k_fun(theta, row, k, bspline)
+    CC = C_fun(theta, 1, bspline);
+    Crow = CC(row, k+1);
+end
+
+function [Crow] = C_tj_fun(theta, row, bspline)
+    CC = C_fun(theta, 1, bspline);
+    Crow = CC(row, 1);
+end
+
+function [dCrow] = dC_tj_fun(theta, row, bspline)
+    CC = C_fun(theta, 1, bspline);
+    dCrow = CC(row, 2);
+end

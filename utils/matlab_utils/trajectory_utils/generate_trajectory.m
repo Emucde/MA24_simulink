@@ -35,6 +35,8 @@ function [param_traj_data] = generate_trajectory(param_traj, init_bus_param, tra
                 x_d = create_poly_traj_jointspace(traj_select, t(j), param_traj, init_bus_param);
             elseif(traj_type == traj_mode.sinus)
                 x_d = create_sinus_traj(traj_select, t(j), param_traj, init_bus_param);
+            elseif(traj_type == traj_mode.spline)
+                x_d = create_spline_traj(traj_select, t(j), param_traj, init_bus_param);
             else
                 error('traj_type have to be 1 (stabilize equilibrium), 2 (5th order differential filter), 3 (5th order polynomial) or 4 (smooth sinus)');
             end

@@ -21,6 +21,7 @@ traj_mode.differential_filter_jointspace = 3;
 traj_mode.polynomial = 4;
 traj_mode.polynomial_jointspace = 5;
 traj_mode.sinus = 6;
+traj_mode.spline = 7;
 
 overwrite_offline_traj = false; 
 
