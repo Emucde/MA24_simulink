@@ -15,7 +15,7 @@ CrocoddylController::CrocoddylController(const std::string &urdf_filename,
         }
     }
 
-    nlohmann::json general_config = read_config(general_config_filename);
+    nlohmann::json general_config = read_config<>(general_config_filename);
 
     setActiveMPC(CrocoddylMPCType::DynMPC_v1); // Set the default MPC
     
@@ -23,20 +23,6 @@ CrocoddylController::CrocoddylController(const std::string &urdf_filename,
 
     // Initialize the previous torque
     tau_full_prev = Eigen::VectorXd::Zero(nq);
-}
-
-nlohmann::json CrocoddylController::read_config(std::string file_path)
-{
-    std::ifstream file(file_path);
-    if (!file.is_open())
-    {
-        std::cerr << "Error: Could not open JSON file." << std::endl;
-        return {};
-    }
-    nlohmann::json jsonData;
-    file >> jsonData; // Parse JSON file
-    file.close();
-    return jsonData;
 }
 
 void CrocoddylController::switch_traj(uint traj_select)
@@ -106,7 +92,7 @@ void CrocoddylController::update_mpc_weights()
 
 void CrocoddylController::update_config()
 {
-    nlohmann::json general_config = read_config(general_config_filename);
+    nlohmann::json general_config = read_config<>(general_config_filename);
     update_mpc_weights();
     
     active_mpc->init_config();

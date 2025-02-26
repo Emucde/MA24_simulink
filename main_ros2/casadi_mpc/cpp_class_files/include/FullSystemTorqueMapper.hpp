@@ -39,7 +39,6 @@ public:
         double torque_limit;            // Max allowable torque
     };
 
-    nlohmann::json read_config(std::string file_path);
     void update_config();
     void update_config(double dt_new);
 

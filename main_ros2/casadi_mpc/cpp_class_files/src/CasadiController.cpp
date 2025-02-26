@@ -6,10 +6,10 @@ CasadiController::CasadiController(const std::string &urdf_filename,
                                    const std::string &general_config_filename)
     : CommonBaseController(urdf_filename, mpc_config_filename, general_config_filename),
       mpc_config_filename(mpc_config_filename),
-      param_mpc_weight(read_config(mpc_config_filename)),
+      param_mpc_weight(read_config<>(mpc_config_filename)),
       standard_solver(nullptr, robot_config), planner_solver(nullptr, param_mpc_weight, robot_config)
 {
-    nlohmann::json general_config = read_config(general_config_filename);
+    nlohmann::json general_config = read_config<>(general_config_filename);
     use_planner = get_config_value<bool>(general_config, "use_casadi_planner");
     CasadiMPCType default_active_mpc = string_to_casadi_mpctype(get_config_value<std::string>(general_config, "default_casadi_mpc"));
     casadi_uint default_traj_select = get_config_value<casadi_uint>(general_config, "trajectory_selection");
@@ -105,23 +105,9 @@ bool CasadiController::PlannerSolver::solveMPC(const casadi_real *const x_k_in)
     return flag;
 }
 
-nlohmann::json CasadiController::read_config(std::string file_path)
-{
-    std::ifstream file(file_path);
-    if (!file.is_open())
-    {
-        std::cerr << "Error: Could not open JSON file." << std::endl;
-        return {};
-    }
-    nlohmann::json jsonData;
-    file >> jsonData; // Parse JSON file
-    file.close();
-    return jsonData;
-}
-
 void CasadiController::update_mpc_weights()
 {
-    param_mpc_weight = read_config(mpc_config_filename);
+    param_mpc_weight = read_config<>(mpc_config_filename);
 
     for (int i = 0; i < static_cast<int>(CasadiMPCType::COUNT); ++i)
     {
@@ -139,7 +125,7 @@ void CasadiController::update_mpc_weights()
 void CasadiController::update_config()
 {
     update_mpc_weights();
-    nlohmann::json general_config = read_config(general_config_filename);
+    nlohmann::json general_config = read_config<>(general_config_filename);
     use_planner = get_config_value<bool>(general_config, "use_casadi_planner");
     set_planner_mode(use_planner);
 

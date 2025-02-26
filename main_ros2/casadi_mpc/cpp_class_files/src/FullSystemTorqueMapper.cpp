@@ -2,8 +2,8 @@
 #include "eigen_templates.hpp"
 
 FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
-                                              robot_config_t &robot_config,
-                                              const std::string &general_config_file)
+                                               robot_config_t &robot_config,
+                                               const std::string &general_config_file)
     : urdf_filename(urdf_filename), general_config_filename(general_config_file),
       robot_config(robot_config),
       is_kinematic_mpc(false),
@@ -44,23 +44,9 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 
-nlohmann::json FullSystemTorqueMapper::read_config(std::string file_path)
-{
-    std::ifstream file(file_path);
-    if (!file.is_open())
-    {
-        std::cerr << "Error: Could not open JSON file." << std::endl;
-        return {};
-    }
-    nlohmann::json jsonData;
-    file >> jsonData; // Parse JSON file
-    file.close();
-    return jsonData;
-}
-
 void FullSystemTorqueMapper::update_config()
 {
-    nlohmann::json general_config = read_config(general_config_filename);
+    nlohmann::json general_config = read_config<>(general_config_filename);
 
     use_gravity = get_config_value<bool>(general_config, "use_gravity");
     tcp_frame_name = get_config_value<std::string>(general_config, "tcp_frame_name");
@@ -96,7 +82,7 @@ Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueKinematic(
     const Eigen::VectorXd &q_p)
 {
     // Assuming q_pp is properly defined elsewhere
-    q_pp.setZero(); // Initialize q_pp if necessary
+    q_pp.setZero();      // Initialize q_pp if necessary
     q_pp(n_indices) = u; // Set specific index using input
 
     // Calculate the resulting torques
@@ -109,7 +95,7 @@ Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueDynamic(
     const Eigen::VectorXd &q,
     const Eigen::VectorXd &q_p)
 {
-    q_pp.setZero(); // Initialize q_pp
+    q_pp.setZero();              // Initialize q_pp
     Eigen::VectorXd tau_red = u; // Define reduced input vector
 
     // Calculate inertia matrix and Coriolis forces
@@ -130,10 +116,14 @@ Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueDynamic(
     return pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, q_pp);
 }
 
-void FullSystemTorqueMapper::setFeedforwardTorqueFunction(bool is_kinematic_mpc) {
-    if (is_kinematic_mpc) {
+void FullSystemTorqueMapper::setFeedforwardTorqueFunction(bool is_kinematic_mpc)
+{
+    if (is_kinematic_mpc)
+    {
         calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematic;
-    } else {
+    }
+    else
+    {
         calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamic;
     }
 }
@@ -161,7 +151,7 @@ Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &
     return tau_full;
 }
 
-void FullSystemTorqueMapper::calcPose(const double* x, Eigen::Vector3d &p, Eigen::Matrix3d &R)
+void FullSystemTorqueMapper::calcPose(const double *x, Eigen::Vector3d &p, Eigen::Matrix3d &R)
 {
     Eigen::Map<const Eigen::VectorXd> q(x, nq);
     calcPose(q, p, R);
@@ -184,14 +174,15 @@ void FullSystemTorqueMapper::simulateModelEuler(Eigen::Map<Eigen::VectorXd> &x_k
 
     Eigen::VectorXd q_pp = pinocchio::aba(robot_model_full, robot_data_full, q, q_p, tau);
 
-    x_k_ndof.head(nq) = q + q_p * dt; // q_next = q + q_p * dt
+    x_k_ndof.head(nq) = q + q_p * dt;    // q_next = q + q_p * dt
     x_k_ndof.tail(nq) = q_p + q_pp * dt; // q_p_next = q_p + q_pp * dt
 }
 
 void FullSystemTorqueMapper::simulateModelRK4(Eigen::Map<Eigen::VectorXd> &x_k_ndof, Eigen::Map<const Eigen::VectorXd> &tau, double dt)
 {
     // Define lambda for computing f(x, u) = [q_p, q_pp] = [x2, u]
-    auto f = [&](const Eigen::VectorXd& state) -> Eigen::VectorXd {
+    auto f = [&](const Eigen::VectorXd &state) -> Eigen::VectorXd
+    {
         // Extract positions and velocities from the state vector
         Eigen::Ref<const Eigen::VectorXd> q = state.head(nq);
         Eigen::Ref<const Eigen::VectorXd> q_p = state.tail(nq);
@@ -201,15 +192,16 @@ void FullSystemTorqueMapper::simulateModelRK4(Eigen::Map<Eigen::VectorXd> &x_k_n
 
         // Combine derivatives: [q_p; q_pp]
         Eigen::VectorXd derivative(2 * nq);
-        derivative.head(nq) = q_p;    // dq/dt = q_p
-        derivative.tail(nq) = q_pp;  // dq_p/dt = q_pp
+        derivative.head(nq) = q_p;  // dq/dt = q_p
+        derivative.tail(nq) = q_pp; // dq_p/dt = q_pp
 
         return derivative;
     };
     x_k_ndof = RK4(x_k_ndof, dt, f);
 }
 
-Eigen::VectorXd FullSystemTorqueMapper::RK4(const Eigen::VectorXd& state, double dt, const std::function<Eigen::VectorXd(const Eigen::VectorXd&)>& f) {
+Eigen::VectorXd FullSystemTorqueMapper::RK4(const Eigen::VectorXd &state, double dt, const std::function<Eigen::VectorXd(const Eigen::VectorXd &)> &f)
+{
     // Compute k1
     Eigen::VectorXd k1 = f(state);
 

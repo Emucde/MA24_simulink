@@ -47,7 +47,9 @@
 class TrajectoryGenerator
 {
 public:
-    TrajectoryGenerator(RobotModel &robot_model, double dt);
+    TrajectoryGenerator(RobotModel &robot_model,
+                        double dt,
+                        const std::string &general_config_filename);
 
     Eigen::MatrixXd p_d;       // Target position
     Eigen::MatrixXd p_d_p;     // Target velocity
@@ -111,6 +113,8 @@ private:
     std::vector<Eigen::VectorXd> read_x0_init(const std::string &x0_init_file);
 
     void update_traj_values();
+
+    const std::string general_config_filename;
 
     // Member variables
     RobotModel &robot_model;

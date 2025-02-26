@@ -81,6 +81,7 @@ public:
     }
 
     Eigen::VectorXd get_file_traj_x0_nq_init(uint traj_select);
+    Eigen::VectorXd get_transient_traj_x0_init();
     Eigen::VectorXd get_transient_traj_x0_red_init();
 
     // NEW

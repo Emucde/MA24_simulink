@@ -25,8 +25,6 @@ public:
                const std::string &general_config_file,
                bool reduced_model = false);
 
-    nlohmann::json read_config(std::string file_path);
-
     // Update state with joint positions and velocities
     void updateState(const Eigen::VectorXd &x);
 

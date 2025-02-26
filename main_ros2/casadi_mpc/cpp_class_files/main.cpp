@@ -62,20 +62,6 @@ void test_fun2(const casadi_real *x_k_ndof, const Eigen::VectorXi n_x_indices_ei
     // 0.01s
 }
 
-nlohmann::json read_config(std::string file_path)
-{
-    std::ifstream file(file_path);
-    if (!file.is_open())
-    {
-        std::cerr << "Error: Could not open JSON file." << std::endl;
-        return {};
-    }
-    nlohmann::json jsonData;
-    file >> jsonData; // Parse JSON file
-    file.close();
-    return jsonData;
-}
-
 // Function to generate an Eigen vector of white noise
 Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude) {
     // Calculate noise power
@@ -163,7 +149,7 @@ int main_old()
     const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand_simulink.json";
     #endif
 
-    nlohmann::json general_config = read_config(general_config_filename);
+    nlohmann::json general_config = read_config<>(general_config_filename);
 
     // Configuration flags
     const std::string tcp_frame_name = get_config_value<std::string>(general_config, "tcp_frame_name");

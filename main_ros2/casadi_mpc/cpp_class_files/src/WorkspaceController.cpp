@@ -263,23 +263,9 @@ Eigen::MatrixXd BaseWorkspaceController::computeJacobianRegularization()
     return J_pinv;
 }
 
-nlohmann::json BaseWorkspaceController::read_config(std::string file_path)
-{
-    std::ifstream file(file_path);
-    if (!file.is_open())
-    {
-        std::cerr << "Error: Could not open JSON file." << std::endl;
-        return {};
-    }
-    nlohmann::json jsonData;
-    file >> jsonData; // Parse JSON file
-    file.close();
-    return jsonData;
-}
-
 void BaseWorkspaceController::update_controller_settings()
 {
-    nlohmann::json general_config = read_config(general_config_filename);
+    nlohmann::json general_config = read_config<>(general_config_filename);
 // PD CONTROLLER
     auto classic_ctl_settings = get_config_value<nlohmann::json>(general_config, "classic_controller_settings");
     Eigen::MatrixXd K_d_pd = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["PD"], "K_d").data(), 6).asDiagonal();

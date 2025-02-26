@@ -151,9 +151,6 @@ private:
         "shm_changed_semaphore",
     };
 
-    // A method to read the configuration file
-    nlohmann::json read_config(const std::string& file_path);
-
     // get controller type of crocoddyl controller
     MainControllerType get_controller_type(const std::string &controller_type_str);
     CrocoddylMPCType get_crocoddyl_controller_type(const std::string &controller_type_str);

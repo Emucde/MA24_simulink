@@ -33,7 +33,6 @@ public:
                         const std::string &general_config_filename);
 
     Eigen::VectorXd update_control(const Eigen::VectorXd &x_nq) override;
-    nlohmann::json read_config(std::string file_path);
     void update_mpc_weights();
     void update_config() override;
 

@@ -10,7 +10,7 @@ CommonBaseController::CommonBaseController(const std::string &urdf_filename,
                         nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
                         robot_model(urdf_filename, robot_config, general_config_filename, true),
                         torque_mapper(urdf_filename, robot_config, general_config_filename),
-                        trajectory_generator(robot_model, robot_config.dt), 
+                        trajectory_generator(robot_model, robot_config.dt, general_config_filename), 
                         traj_data_real_len(trajectory_generator.get_traj_data_real_len()),
                         error_flag(ErrorFlag::NO_ERROR)
                         {
@@ -98,9 +98,14 @@ Eigen::VectorXd CommonBaseController::get_file_traj_x0_nq_init(casadi_uint traj_
     return *trajectory_generator.get_traj_file_x0_init(traj_select);
 }
 
+Eigen::VectorXd CommonBaseController::get_transient_traj_x0_init()
+{
+    return *trajectory_generator.get_traj_x0_init();
+}
+
 Eigen::VectorXd CommonBaseController::get_transient_traj_x0_red_init()
 {
-    Eigen::VectorXd x0_init = *trajectory_generator.get_traj_x0_init();
+    Eigen::VectorXd x0_init = get_transient_traj_x0_init();
     Eigen::VectorXd x0_init_red = x0_init(n_x_indices);
     return x0_init_red;
 }

@@ -4,8 +4,9 @@
 #include <fstream>
 #include <stdexcept>
 
-TrajectoryGenerator::TrajectoryGenerator(RobotModel &robot_model, double dt)
-    : robot_model(robot_model),
+TrajectoryGenerator::TrajectoryGenerator(RobotModel &robot_model, double dt, const std::string &general_config_filename)
+    : general_config_filename(general_config_filename), 
+      robot_model(robot_model),
       robot_config(robot_model.robot_config),
       nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
       n_x_indices(ConstIntVectorMap(robot_config.n_x_indices, robot_config.nx_red)), dt(dt)
@@ -14,8 +15,16 @@ TrajectoryGenerator::TrajectoryGenerator(RobotModel &robot_model, double dt)
     x0_init_file = robot_config.x0_init_path;
     all_traj_data_file = read_trajectory_data(traj_file);
     all_traj_data_x0_init = read_x0_init(x0_init_file);
+
+    nlohmann::json general_config = read_config<>(general_config_filename);
+    int traj_select = get_config_value<int>(general_config, "trajectory_selection");
+    if (traj_select < 1 || traj_select > static_cast<int>(all_traj_data_file.size()))
+    {
+        std::cerr << "Invalid trajectory selection. Selecting Trajectory 1" << std::endl;
+        traj_select = 1;
+    }
     
-    selected_trajectory = 1; // Default trajectory selection
+    selected_trajectory = traj_select; // Default trajectory selection
     traj_data_file = all_traj_data_file[selected_trajectory - 1];
     traj_data_file_x0_init = all_traj_data_x0_init[selected_trajectory - 1];
 

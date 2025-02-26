@@ -6,6 +6,22 @@
 #include <array>
 #include <type_traits>
 #include "json.hpp"
+#include <fstream>
+#include <stdexcept>
+
+template<typename T = nlohmann::json>
+T read_config(const std::string& file_path)
+{
+    std::ifstream file(file_path);
+    if (!file.is_open())
+    {
+        throw std::runtime_error("Error: Could not open JSON file.");
+    }
+    T jsonData;
+    file >> jsonData; // Parse JSON file
+    file.close();
+    return jsonData;
+}
 
 // Template function to safely get a config value from nlohmann::json
 template<typename T>

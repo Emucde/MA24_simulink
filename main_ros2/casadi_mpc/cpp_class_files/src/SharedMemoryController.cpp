@@ -31,7 +31,7 @@ SharedMemoryController::SharedMemoryController(const std::string& urdf_file,
         casadi_controller(urdf_filename, casadi_mpc_config_filename, general_config_filename),
         crocoddyl_controller(urdf_filename, crocoddyl_config_filename, general_config_filename),
         controller(&crocoddyl_controller),
-        x0_nq_init(Eigen::Map<const Eigen::VectorXd>(robot_config.q_0_ref, nx)),
+        x0_nq_init(controller->get_transient_traj_x0_init()),
         x_measured(x0_nq_init),
         x_filtered(x0_nq_init),
         x_filtered_ekf_ptr(x_measured.data()), x_filtered_lowpass_ptr(x_measured.data()),
@@ -44,18 +44,6 @@ SharedMemoryController::SharedMemoryController(const std::string& urdf_file,
     init_trajectory(x_measured);
     init_shm();
     init_python();
-}
-
-nlohmann::json SharedMemoryController::read_config(const std::string& file_path) {
-    std::ifstream file(file_path);
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open JSON file." << std::endl;
-        return {};
-    }
-    nlohmann::json jsonData;
-    file >> jsonData;
-    file.close();
-    return jsonData;
 }
 
 // Destructor
@@ -100,7 +88,7 @@ CrocoddylMPCType SharedMemoryController::get_crocoddyl_controller_type(const std
 
 void SharedMemoryController::update_config()
 {
-    nlohmann::json general_config = read_config(general_config_filename);
+    nlohmann::json general_config = read_config<>(general_config_filename);
 
     // Robot Settings
     std::string tcp_frame_name = get_config_value<std::string>(general_config, "tcp_frame_name");
@@ -208,10 +196,11 @@ void SharedMemoryController::run_simulation()
 {
     solver_steps = controller->get_traj_step();
     traj_len = controller->get_traj_data_real_len();
-    const double* x0_init = controller->get_traj_x0_init(trajectory_selection);
+    // const double* x0_init = controller->get_traj_x0_init(trajectory_selection);
     const double *act_data=0;
 
-    Eigen::VectorXd x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
+    // Eigen::VectorXd x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
+    Eigen::VectorXd x_k_ndof_eig = x0_nq_init;
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof_eig.data(), nq);
     // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);

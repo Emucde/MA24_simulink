@@ -45,7 +45,6 @@ public:
         update_controller_settings();
     }
     virtual Eigen::VectorXd control(const Eigen::VectorXd &x) = 0; // Pure virtual function
-    nlohmann::json read_config(std::string file_path);
     void update_controller_settings();
     Eigen::MatrixXd computeJacobianRegularization();       // Common method in BaseWorkspaceController
     void calculateControlData(const Eigen::VectorXd &x);   // Common method in BaseWorkspaceController
