@@ -65,15 +65,12 @@ namespace franka_example_controllers
         {
             state[i] = state_interfaces_[i].get_value();
         }
-        x_measured = state;
         #else
         if(use_noise)
             x_measured = state + generateNoiseVector(nx, Ts, mean_noise_amplitude);
         else
             x_measured = state;
         #endif
-
-        x_filtered = filter_x_measured();
 
         #ifdef DEBUG
         RCLCPP_INFO(get_node()->get_logger(), "q (rad): [%f, %f, %f, %f, %f, %f, %f]",
@@ -87,13 +84,6 @@ namespace franka_example_controllers
 
         if (controller_started)
         {
-            if(solver_step_counter % solver_steps == 0)
-                solve();
-            
-            if(solver_step_counter >= 1000)
-                solver_step_counter = 0;
-            solver_step_counter++;
-
             current_frequency = timer_solver.get_frequency()*solver_steps;
             shm.write("read_state_data_full", x_measured.data(), global_traj_count);
             shm.write("read_control_data", tau_full.data());
@@ -130,13 +120,39 @@ namespace franka_example_controllers
                 tau_full = Eigen::VectorXd::Zero(nq);
             }
 
+            x_measured = state;
+            x_filtered = filter_x_measured();
+
             #ifdef SIMULATION_MODE
             controller.simulateModelRK4(state.data(), tau_full.data(), Ts);
+            #else
+            for (int i = 0; i < nq; ++i) {
+                command_interfaces_[i].set_value(tau_full[i]);
+            }
             #endif
+
+
+            if(solver_step_counter % solver_steps == 0)
+            {
+                // if(solve_finished)
+                // {
+                //     solve_finished = false;
+                    std::async(std::launch::async, &ModelPredictiveControllerCrocoddyl::solve, this);
+                // }
+                // solve();
+            }
+            
+            if(solver_step_counter >= 1000)
+                solver_step_counter = 0;
+            solver_step_counter++;
         }
         else
         {
-            tau_full = Eigen::VectorXd::Zero(nq);
+            #ifndef SIMULATION_MODE
+            for (int i = 0; i < nq; ++i) {
+                command_interfaces_[i].set_value(0);
+            }
+            #endif
         }
 
         #ifndef SIMULATION_MODE
@@ -216,6 +232,7 @@ namespace franka_example_controllers
 
         timer_all.tic();
         timer_solver.tic();
+        init_semaphores();
 
         RCLCPP_INFO(get_node()->get_logger(), "MPC controller initialized");
 
@@ -225,6 +242,7 @@ namespace franka_example_controllers
     CallbackReturn ModelPredictiveControllerCrocoddyl::on_deactivate(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
+        destroy_semaphores();
         RCLCPP_INFO(get_node()->get_logger(), "on_deactivate: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
@@ -232,6 +250,7 @@ namespace franka_example_controllers
     CallbackReturn ModelPredictiveControllerCrocoddyl::on_activate(const rclcpp_lifecycle::State &)
     {
         open_shared_memories();
+        init_semaphores();
         init_controller();
         int8_t readonly_mode = 1;
         shm.write("readonly_mode", &readonly_mode);
@@ -242,6 +261,7 @@ namespace franka_example_controllers
     CallbackReturn ModelPredictiveControllerCrocoddyl::on_cleanup(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
+        destroy_semaphores();
         RCLCPP_INFO(get_node()->get_logger(), "on_cleanup: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
@@ -249,6 +269,7 @@ namespace franka_example_controllers
     CallbackReturn ModelPredictiveControllerCrocoddyl::on_shutdown(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
+        destroy_semaphores();
         RCLCPP_INFO(get_node()->get_logger(), "on_shutdown: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
@@ -299,21 +320,26 @@ namespace franka_example_controllers
 
         filter_x_measured(); // uses x_measured
 
-        // if(first_start)
-        // {
-        //     init_trajectory();
-        //     reset_trajectory();
-        //     tau_full = controller.update_control(x_filtered);
-        //     controller.set_traj_count(0);
-        //     tau_full = controller.update_control(x_filtered);
-        //     controller.set_traj_count(0);
-        //     first_start = false;
-        // }
+#ifdef SIMULATION_MODE
+        Eigen::VectorXd x0_init = base_controller->get_file_traj_x0_nq_init(traj_select);
+        state = x0_init;
+#endif
         
-        base_controller->init_file_trajectory(1, state.data(), 0, 5, 5);
+        base_controller->init_file_trajectory(1, state.data(), 0, 2, 2);
         traj_len = base_controller->get_traj_data_real_len();
         current_trajectory = base_controller->get_trajectory();
         global_traj_count = 0;
+
+        if(first_start)
+        {
+            // init_trajectory();
+            // reset_trajectory();
+            tau_full = controller.update_control(x_filtered);
+            controller.set_traj_count(0);
+            tau_full = controller.update_control(x_filtered);
+            controller.set_traj_count(0);
+            first_start = false;
+        }
 
         int8_t readonly_mode = 1;
         shm.write("read_traj_length", &traj_len);
@@ -340,6 +366,7 @@ namespace franka_example_controllers
 
         response->status = "reset flag set";
         controller_started = false;
+        solve_started = false;
         shm.post_semaphore("shm_changed_semaphore");
         RCLCPP_INFO(get_node()->get_logger(), "Crocoddyl MPC reset");
     }
@@ -361,6 +388,7 @@ namespace franka_example_controllers
 
         response->status = "stop flag set";
         controller_started = false;
+        solve_started = false;
         RCLCPP_INFO(get_node()->get_logger(), "Crocoddyl MPC stopped");
     }
 
@@ -389,9 +417,32 @@ namespace franka_example_controllers
 
     void ModelPredictiveControllerCrocoddyl::solve()
     {
-        timer_solver.tic();
-        tau_full = controller.update_control(x_filtered);
-        timer_solver.toc();
+        // while(controller_started)
+        // {
+            // sem_wait(&solve_semaphore);
+            timer_solver.tic();
+            tau_full = controller.update_control(x_filtered);
+            timer_solver.toc();
+            solve_finished = true;
+        // }
+    }
+
+    void ModelPredictiveControllerCrocoddyl::init_semaphores()
+    {
+        if(!semaphore_initialized)
+        {
+            sem_init(&solve_semaphore, 1, 0);
+            semaphore_initialized = true;
+        }
+    }
+
+    void ModelPredictiveControllerCrocoddyl::destroy_semaphores()
+    {
+        if(semaphore_initialized)
+        {
+            sem_destroy(&solve_semaphore);
+            semaphore_initialized = false;
+        }
     }
 
 } // namespace franka_example_controllers

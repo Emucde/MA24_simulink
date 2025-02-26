@@ -14,7 +14,7 @@
 #include <Eigen/Dense>
 #include <random>
 
-// #define SIMULATION_MODE 1
+#define SIMULATION_MODE 1
 
 namespace franka_example_controllers
 {

@@ -169,8 +169,8 @@ namespace franka_example_controllers
         base_controller->reset(x0_red_init.data());
 
         #ifdef SIMULATION_MODE
-        const double *x0_init = base_controller->get_file_traj_x0_nq_init(traj_select);
-        state = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
+        Eigen::VectorXd x0_init = base_controller->get_file_traj_x0_nq_init(traj_select);
+        state = x0_init;
         #endif
 
         tau_full = Eigen::VectorXd::Zero(nq);

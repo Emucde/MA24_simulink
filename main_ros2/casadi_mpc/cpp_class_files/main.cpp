@@ -133,7 +133,7 @@ CrocoddylMPCType get_crocoddyl_controller_type(const std::string &controller_typ
     }
 }
 
-#define CUSTOM_LIST 1
+// #define CUSTOM_LIST 1
 
 int main()
 {

@@ -48,9 +48,11 @@
 #include "trajectory_settings.hpp"
 #include <Eigen/Dense>
 #include <random>
+#include <semaphore.h>
 
 #include <boost/asio/thread_pool.hpp>
 #include <boost/asio/post.hpp>
+#include <boost/asio.hpp>
 #include <future> // Include the future and async library
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
@@ -105,6 +107,13 @@ namespace franka_example_controllers
     private:
         const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
         CrocoddylController controller;
+
+        bool semaphore_initialized = false;
+        bool solve_started = false;
+        bool solve_finished = true;
+        sem_t solve_semaphore;
+        Eigen::VectorXd x_filtered_temp;
+        Eigen::VectorXd tau_full_finished;
 
         // rclcpp::Subscription<mpc_interfaces::msg::ControlArray>::SharedPtr subscription_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
