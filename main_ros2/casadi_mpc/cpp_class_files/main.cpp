@@ -142,6 +142,7 @@ CrocoddylMPCType get_crocoddyl_controller_type(const std::string &controller_typ
 int main()
 {
     SharedMemoryController shared_memory_controller(MASTERDIR, true);
+    shared_memory_controller.run_simulation();
 }
 
 int main_old()
