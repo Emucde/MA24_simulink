@@ -14,7 +14,7 @@
 #include <Eigen/Dense>
 #include <random>
 
-// #define SIMULATION_MODE 1
+#define SIMULATION_MODE 1
 
 namespace franka_example_controllers
 {
@@ -80,16 +80,24 @@ namespace franka_example_controllers
             {"data_from_simulink_reset", sizeof(int8_t), 1},
             {"data_from_simulink_stop", sizeof(int8_t), 1},
             {"readonly_mode", sizeof(int8_t), 1},
+            {"start_cpp", sizeof(int8_t), 1},
+            {"stop_cpp", sizeof(int8_t), 1},
+            {"reset_cpp", sizeof(int8_t), 1},
+            {"error_cpp", sizeof(int8_t), 1},
+            {"valid_cpp", sizeof(int8_t), 1},
             {"read_traj_length", sizeof(uint), 1},
             {"read_traj_data_full", 19 * sizeof(double), 20000},
             {"read_frequency_full", sizeof(double), 20000},
             {"read_state_data_full", sizeof(double) * robot_config.nx, 20000},
             {"read_control_data", sizeof(double) * robot_config.nq, 1},
+            {"cpp_control_data", sizeof(double) * robot_config.nq, 1},
+            {"ros2_state_data", sizeof(double) * robot_config.nx, 1},
             {"read_control_data_full", sizeof(double) * robot_config.nq, 20000},
             {"data_from_python", sizeof(double) * robot_config.nq, 1}};
 
         const std::vector<std::string> sem_readwrite_names = {
             "shm_changed_semaphore",
+            "ros2_semaphore",
         };
         SharedMemory shm;
 

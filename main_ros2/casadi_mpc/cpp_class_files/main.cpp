@@ -1,38 +1,33 @@
 #include <iostream>
-#include <fstream>
-#include <vector>
-#include <cstring> // for memcpy
-
 #include "SharedMemoryController.hpp"
-
-#include "include/FullSystemTorqueMapper.hpp"
-#include "include/CasadiMPC.hpp"
-#include "include/CasadiController.hpp"
-#include "mpc_config_types.h"
-#include "param_robot.h"
-#include "casadi_types.h"
+#include "SharedMemory.hpp"
+#include <semaphore.h>
 #include <Eigen/Dense>
-#include <Eigen/Core>
-#include "include/eigen_templates.hpp"
-#include "include/TicToc.hpp"
-#include "include/SignalFilter.hpp"
-#include "include/SharedMemory.hpp"
-#include "param_robot.h"
-#include "trajectory_settings.hpp"
-#include "WorkspaceController.hpp"
-#include "CrocoddylController.hpp"
-#include "CrocoddylMPCType.hpp"
-#include "CasadiEKF.hpp"
-#include "CommonBaseController.hpp"
-#include "json.hpp"
-#include <random>
-#include <cmath>
 
 #define CUSTOM_LIST 1
 #define USE_SHARED_MEMORY 1
+#define RUN_SIMULATION 1
 
-int main()
+int main(int argc, char *argv[])
 {
+    bool run_simulation = false;
+    if (argc > 1 && std::string(argv[1]) == "run")
+    {
+        run_simulation = true;
+    }
+
     SharedMemoryController shared_memory_controller(MASTERDIR, true);
-    shared_memory_controller.run_simulation();
+    if (run_simulation)
+    {
+        std::cout << "Running simulation mode" << std::endl;
+        shared_memory_controller.run_simulation();
+    }
+    else
+    {
+        std::cout << "Running shared memory mode" << std::endl;
+        while(true)
+        {
+            shared_memory_controller.run_shm_mode();
+        }
+    }
 }

@@ -35,6 +35,7 @@ CLEAR_ALL=false
 CLEAR_MPC=false
 RUN_FILE=true
 RUN_ONLY=false
+RUN_ONLY_SIMU=false
 
 if [[ $# -ge 2 ]]; then
     if [ $2 == "all" ]; then
@@ -106,6 +107,10 @@ if [[ $# -gt 0 ]]; then
         RUN_ONLY=true
         shift
         ;;
+        --run_only_simulation)
+        RUN_ONLY_SIMU=true
+        shift
+        ;;
         *)
         echo "Unknown option: $key"
         exit 1
@@ -125,6 +130,7 @@ echo "CLEAR_ALL: $CLEAR_ALL"
 echo "CLEAR_MPC: $CLEAR_MPC"
 echo "RUN_FILE: $RUN_FILE"
 echo "RUN_ONLY: $RUN_ONLY"
+echo "RUN_ONLY_SIMU: $RUN_ONLY_SIMU"
 echo ""
 
 if [ "$BUILD_TYPE" = "release" ]; then
@@ -173,6 +179,11 @@ fi
 
 if [ "$RUN_ONLY" = true ]; then
     time nice -n -20 ./main_ros2/casadi_mpc/cpp_class_files/build_release/bin/main
+    exit 0
+fi
+
+if [ "$RUN_ONLY_SIMU" = true ]; then
+    time nice -n -20 ./main_ros2/casadi_mpc/cpp_class_files/build_release/bin/main run
     exit 0
 fi
 

@@ -83,19 +83,22 @@ namespace franka_example_controllers
         #endif
 
         if (controller_started)
-        {
-            current_frequency = timer_solver.get_frequency()*solver_steps;
-            shm.write("read_state_data_full", x_measured.data(), global_traj_count);
-            shm.write("read_control_data", tau_full.data());
-            shm.write("read_control_data_full", tau_full.data(), global_traj_count);
-            shm.write("read_traj_data_full", current_trajectory->col(global_traj_count).data(), global_traj_count);
-            shm.write("read_frequency_full", &current_frequency, global_traj_count);
-            shm.post_semaphore("shm_changed_semaphore");
+        {          
+            shm.read_int8("valid_cpp", &valid_cpp);
+            if (valid_cpp == 1)
+            {
+                valid_cpp = 0;
+                shm.write("valid_cpp", &valid_cpp);
+                shm.write("ros2_state_data", state.data());
+                shm.read_double("cpp_control_data", tau_full.data());
+                shm.read_int8("error_cpp", &error_flag_int8);
+                error_flag = static_cast<ErrorFlag>(error_flag_int8);
+                shm.post_semaphore("ros2_semaphore");
 
-            if(global_traj_count < traj_len)
-                global_traj_count++;
-
-            error_flag = controller.get_error_flag(); // Get the error flag
+#ifdef SIMULATION_MODE
+                controller.simulateModelRK4(state.data(), tau_full.data(), Ts);
+#endif
+            }
 
             if (error_flag != ErrorFlag::NO_ERROR)
             {
@@ -117,51 +120,26 @@ namespace franka_example_controllers
                 }
 
                 controller_started = false;
-                tau_full = Eigen::VectorXd::Zero(nq);
+                error_flag = ErrorFlag::NO_ERROR;
+                int8_t stop = 1;
+                shm.write("stop_cpp", &stop);
+                shm.post_semaphore("ros2_semaphore");
             }
 
-            #ifdef SIMULATION_MODE
-            controller.simulateModelRK4(state.data(), tau_full.data(), Ts);
-            #else
+#ifndef SIMULATION_MODE
             for (int i = 0; i < nq; ++i) {
                 command_interfaces_[i].set_value(tau_full[i]);
             }
-            #endif
-
-            x_measured = state;
-            filter_x_measured();
-
-            if(solver_step_counter % solver_steps == 0)
-            {
-                // if(solve_finished)
-                // {
-                //     solve_finished = false;
-                    std::async(std::launch::async, &ModelPredictiveControllerCrocoddyl::solve, this);
-                // }
-                // solve();
-            }
-            
-            if(solver_step_counter >= 1000)
-                solver_step_counter = 0;
-            solver_step_counter++;
+#endif
         }
         else
         {
-            #ifndef SIMULATION_MODE
+#ifndef SIMULATION_MODE
             for (int i = 0; i < nq; ++i) {
                 command_interfaces_[i].set_value(0);
             }
-            #endif
+#endif
         }
-
-        #ifndef SIMULATION_MODE
-        // Write torques to shared memory (send data to robot)
-        for (int i = 0; i < nq; ++i) {
-            command_interfaces_[i].set_value(tau_full[i]);
-        }
-        #endif
-
-
         return controller_interface::return_type::OK;
     }
 
@@ -303,9 +281,16 @@ namespace franka_example_controllers
             0  // torques_valid
         };
 
+        shm.write("data_from_simulink_start", &flags.start);
         shm.write("data_from_simulink_reset", &flags.reset);
         shm.write("data_from_simulink_stop", &flags.stop);
-        shm.write("data_from_simulink_start", &flags.start);
+
+        shm.write("start_cpp", &flags.start);
+        shm.write("reset_cpp", &flags.reset);
+        shm.write("stop_cpp", &flags.stop);
+
+        shm.post_semaphore("shm_changed_semaphore");
+        shm.post_semaphore("ros2_semaphore");
 
         response->status = "start flag set";
 
@@ -317,24 +302,6 @@ namespace franka_example_controllers
         Eigen::VectorXd x0_init = base_controller->get_file_traj_x0_nq_init(traj_select);
         state = x0_init;
 #endif
-
-        init_controller();
-        
-        base_controller->init_file_trajectory(1, state.data(), 0, 2, 2);
-        traj_len = base_controller->get_traj_data_real_len();
-        current_trajectory = base_controller->get_trajectory();
-        global_traj_count = 0;
-
-        if(first_start)
-        {
-            // init_trajectory();
-            // reset_trajectory();
-            tau_full = controller.update_control(x_filtered);
-            controller.set_traj_count(0);
-            tau_full = controller.update_control(x_filtered);
-            controller.set_traj_count(0);
-            first_start = false;
-        }
 
         int8_t readonly_mode = 1;
         shm.write("read_traj_length", &traj_len);
@@ -357,12 +324,17 @@ namespace franka_example_controllers
         shm.write("data_from_simulink_stop", &flags.stop);
         shm.write("data_from_simulink_reset", &flags.reset);
 
+        shm.write("start_cpp", &flags.start);
+        shm.write("reset_cpp", &flags.reset);
+        shm.write("stop_cpp", &flags.stop);
+
         reset_trajectory();
 
         response->status = "reset flag set";
         controller_started = false;
         solve_started = false;
         shm.post_semaphore("shm_changed_semaphore");
+        shm.post_semaphore("ros2_semaphore");
         RCLCPP_INFO(get_node()->get_logger(), "Crocoddyl MPC reset");
     }
 
@@ -379,7 +351,13 @@ namespace franka_example_controllers
         shm.write("data_from_simulink_start", &flags.start);
         shm.write("data_from_simulink_reset", &flags.reset);
         shm.write("data_from_simulink_stop", &flags.stop);
+
+        shm.write("start_cpp", &flags.start);
+        shm.write("reset_cpp", &flags.reset);
+        shm.write("stop_cpp", &flags.stop);
+
         shm.post_semaphore("shm_changed_semaphore");
+        shm.post_semaphore("ros2_semaphore");
 
         response->status = "stop flag set";
         controller_started = false;

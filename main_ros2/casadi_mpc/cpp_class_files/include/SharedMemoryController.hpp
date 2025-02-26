@@ -65,8 +65,11 @@ public:
     // Method to init python for data reading
     void init_python();
 
-    void run_simulation();
+    void reset_cpp_shm_flags();
 
+    void run_simulation();
+    void run_shm_mode();
+    void update();
 private:
     std::string urdf_filename;
     std::string crocoddyl_config_filename;
@@ -92,7 +95,7 @@ private:
 
     // General Settings
     double Ts;
-    uint solver_steps;
+    uint traj_step;
     double current_frequency;
 
     // Trajectory Settings
@@ -102,12 +105,15 @@ private:
     double T_traj_dur;
     double T_traj_end;
     double transient_traj_len;
+    const double* act_data;
+    uint traj_count;
 
 
     // Input and Output Variables
     Eigen::VectorXd x0_nq_init;
     Eigen::VectorXd x0_nq_red_init;
     Eigen::VectorXd x_measured;
+    Eigen::VectorXd x_measured_red;
     Eigen::VectorXd x_filtered;
     Eigen::VectorXd tau_full;
     double* x_filtered_ekf_ptr;
@@ -138,6 +144,11 @@ private:
     const std::vector<SharedMemoryInfo> shm_readwrite_infos = {
         {"data_from_simulink_start", sizeof(int8_t), 1},
         {"data_from_simulink_reset", sizeof(int8_t), 1},
+        {"start_cpp", sizeof(int8_t), 1},
+        {"stop_cpp", sizeof(int8_t), 1},
+        {"reset_cpp", sizeof(int8_t), 1},
+        {"error_cpp", sizeof(int8_t), 1},
+        {"valid_cpp", sizeof(int8_t), 1},
         {"data_from_simulink_stop", sizeof(int8_t), 1},
         {"readonly_mode", sizeof(int8_t), 1},
         {"read_traj_length", sizeof(casadi_uint), 1},
@@ -145,16 +156,24 @@ private:
         {"read_frequency_full", sizeof(double), 20000},
         {"read_state_data_full", sizeof(double) * robot_config.nx, 20000},
         {"read_control_data_full", sizeof(double) * robot_config.nq, 20000},
-        {"read_control_data", sizeof(double) * robot_config.nq, 1}};
+        {"read_control_data", sizeof(double) * robot_config.nq, 1},
+        {"cpp_control_data", sizeof(double) * robot_config.nq, 1},
+        {"ros2_state_data", sizeof(double) * robot_config.nx, 1}};
 
     const std::vector<std::string> sem_readwrite_names = {
         "shm_changed_semaphore",
+        "ros2_semaphore",
     };
 
     // get controller type of crocoddyl controller
     MainControllerType get_controller_type(const std::string &controller_type_str);
     CrocoddylMPCType get_crocoddyl_controller_type(const std::string &controller_type_str);
     Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude);
+
+    // shm mode data
+    int8_t start_cpp, stop_cpp, reset_cpp, valid_cpp, error_flag_int8;
+    bool run_flag;
+    sem_t *ros2_semaphore;
 };
 
 #endif // SHAREDMEMORYCONTROLLER_HPP

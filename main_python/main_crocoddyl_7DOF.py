@@ -89,6 +89,7 @@ if use_data_from_simulink or explicit_mpc:
     read_control_data_full = shm_data['read_control_data_full']
     shm_changed_semaphore = posix_ipc.Semaphore("/shm_changed_semaphore", posix_ipc.O_CREAT, initial_value=0)
     data_logger_semaphore = posix_ipc.Semaphore("/data_logger_semaphore", posix_ipc.O_CREAT, initial_value=0)
+    ros2_semaphore = posix_ipc.Semaphore("/ros2_semaphore", posix_ipc.O_CREAT, initial_value=0)
 
     # create objects for debouncing the simulink buttons:
     start_button = DebouncedButton(debounce_delay)
@@ -863,6 +864,8 @@ try:
             shm_changed_semaphore.close()
             data_logger_semaphore.unlink()
             data_logger_semaphore.close()
+            ros2_semaphore.unlink()
+            ros2_semaphore.close()
             print("Shared memory closed and cleared.")
         else:
             print("Shared memory not cleared.")

@@ -115,6 +115,8 @@ namespace franka_example_controllers
         Eigen::VectorXd x_filtered_temp;
         Eigen::VectorXd tau_full_finished;
 
+        int8_t error_flag_int8=0, valid_cpp=0;
+
         // rclcpp::Subscription<mpc_interfaces::msg::ControlArray>::SharedPtr subscription_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr reset_mpc_service_;

@@ -516,6 +516,11 @@ def initialize_shared_memory():
         "data_from_simulink_valid":       {"size": 1,                     "dtype": np.int8},
         "data_from_simulink_start":       {"size": 1,                     "dtype": np.int8},
         "data_from_simulink_reset":       {"size": 1,                     "dtype": np.int8},
+        "start_cpp":                      {"size": 1,                     "dtype": np.int8},
+        "reset_cpp":                      {"size": 1,                     "dtype": np.int8},
+        "stop_cpp":                       {"size": 1,                     "dtype": np.int8},
+        "error_cpp":                      {"size": 1,                     "dtype": np.int8},
+        "valid_cpp":                      {"size": 1,                     "dtype": np.int8},
         "data_from_simulink_stop":        {"size": 1,                     "dtype": np.int8},
         "data_from_simulink_traj_switch": {"size": 1,                     "dtype": np.int8},
         "readonly_mode":                  {"size": 1,                     "dtype": np.int8},
@@ -524,6 +529,8 @@ def initialize_shared_memory():
         "read_frequency":                 {"size": 1 * 8,                 "dtype": np.float64}, # scalar frequency (0 if skipped)
         "read_state_data":                {"size": 2 * n_dof * 8,         "dtype": np.float64}, # q and qp
         "read_control_data":              {"size": n_dof * 8,             "dtype": np.float64}, # tau
+        "cpp_control_data":               {"size": n_dof * 8,             "dtype": np.float64}, # tau
+        "ros2_state_data":                {"size": 2 * n_dof * 8,         "dtype": np.float64}, # tau
         "read_traj_data_full":            {"size": 19 * 8 * 20000,        "dtype": np.float64}, # pos and quaternion
         "read_frequency_full":            {"size": 1 * 8 * 20000,         "dtype": np.float64}, # scalar frequency (0 if skipped)
         "read_state_data_full":           {"size": 2 * n_dof * 8 * 20000, "dtype": np.float64}, # q and qp
