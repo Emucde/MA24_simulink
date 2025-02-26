@@ -10,7 +10,7 @@ CommonBaseController::CommonBaseController(const std::string &urdf_filename,
                         nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
                         robot_model(urdf_filename, robot_config, general_config_filename, true),
                         torque_mapper(urdf_filename, robot_config, general_config_filename),
-                        trajectory_generator(torque_mapper, robot_config.dt), 
+                        trajectory_generator(robot_model, robot_config.dt), 
                         traj_data_real_len(trajectory_generator.get_traj_data_real_len()),
                         error_flag(ErrorFlag::NO_ERROR)
                         {

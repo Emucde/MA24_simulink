@@ -12,6 +12,7 @@
 #include "json.hpp"
 #include "RobotModel.hpp"
 #include "TrajectoryGenerator.hpp"
+#include "FullSystemTorqueMapper.hpp"
 
 class CommonBaseController
 {

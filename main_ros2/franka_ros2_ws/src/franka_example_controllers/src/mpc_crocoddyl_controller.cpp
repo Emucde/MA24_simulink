@@ -120,9 +120,6 @@ namespace franka_example_controllers
                 tau_full = Eigen::VectorXd::Zero(nq);
             }
 
-            x_measured = state;
-            x_filtered = filter_x_measured();
-
             #ifdef SIMULATION_MODE
             controller.simulateModelRK4(state.data(), tau_full.data(), Ts);
             #else
@@ -131,6 +128,8 @@ namespace franka_example_controllers
             }
             #endif
 
+            x_measured = state;
+            filter_x_measured();
 
             if(solver_step_counter % solver_steps == 0)
             {
@@ -310,20 +309,16 @@ namespace franka_example_controllers
 
         response->status = "start flag set";
 
-        #ifndef SIMULATION_MODE
+#ifndef SIMULATION_MODE
         for (int i = 0; i < nx; ++i)
             state[i] = state_interfaces_[i].get_value();
         x_measured = state;
-        #endif
-
-        init_controller();
-
-        filter_x_measured(); // uses x_measured
-
-#ifdef SIMULATION_MODE
+#else
         Eigen::VectorXd x0_init = base_controller->get_file_traj_x0_nq_init(traj_select);
         state = x0_init;
 #endif
+
+        init_controller();
         
         base_controller->init_file_trajectory(1, state.data(), 0, 2, 2);
         traj_len = base_controller->get_traj_data_real_len();
@@ -421,7 +416,7 @@ namespace franka_example_controllers
         // {
             // sem_wait(&solve_semaphore);
             timer_solver.tic();
-            tau_full = controller.update_control(x_filtered);
+            tau_full = controller.update_control(state);
             timer_solver.toc();
             solve_finished = true;
         // }

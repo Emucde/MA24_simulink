@@ -1,9 +1,8 @@
 #ifndef TRAJECTORY_GENERATOR_HPP
 #define TRAJECTORY_GENERATOR_HPP
-#include "TrajectoryGenerator.hpp"
 #include "param_robot.h"
 #include "eigen_templates.hpp"
-#include "FullSystemTorqueMapper.hpp"
+#include "RobotModel.hpp"
 #include "trajectory_settings.hpp"
 #include <vector>
 #include <map>
@@ -48,7 +47,7 @@
 class TrajectoryGenerator
 {
 public:
-    TrajectoryGenerator(FullSystemTorqueMapper &torque_mapper, double dt);
+    TrajectoryGenerator(RobotModel &robot_model, double dt);
 
     Eigen::MatrixXd p_d;       // Target position
     Eigen::MatrixXd p_d_p;     // Target velocity
@@ -114,9 +113,10 @@ private:
     void update_traj_values();
 
     // Member variables
-    FullSystemTorqueMapper &torque_mapper;
+    RobotModel &robot_model;
     robot_config_t &robot_config;
     int nq, nx, nq_red, nx_red;
+    Eigen::VectorXi n_x_indices;
     ParamPolyTrajectory param_poly_traj;
     std::string traj_file, x0_init_file;
 

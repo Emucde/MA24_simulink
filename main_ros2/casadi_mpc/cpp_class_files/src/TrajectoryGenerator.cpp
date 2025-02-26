@@ -4,11 +4,11 @@
 #include <fstream>
 #include <stdexcept>
 
-TrajectoryGenerator::TrajectoryGenerator(FullSystemTorqueMapper &torque_mapper, double dt)
-    : torque_mapper(torque_mapper),
-      robot_config(torque_mapper.getRobotConfig()),
+TrajectoryGenerator::TrajectoryGenerator(RobotModel &robot_model, double dt)
+    : robot_model(robot_model),
+      robot_config(robot_model.robot_config),
       nq(robot_config.nq), nx(robot_config.nx), nq_red(robot_config.nq_red), nx_red(robot_config.nx_red),
-      dt(dt)
+      n_x_indices(ConstIntVectorMap(robot_config.n_x_indices, robot_config.nx_red)), dt(dt)
 {
     traj_file = robot_config.traj_data_path;
     x0_init_file = robot_config.x0_init_path;
@@ -110,7 +110,13 @@ void TrajectoryGenerator::init_file_trajectory(int traj_select,
     Eigen::Vector3d p_init;
     Eigen::Matrix3d R_init;
 
-    torque_mapper.calcPose(x_k_ndof_ptr, p_init, R_init); // set p_init, R_init = fwdkin(q_init)
+    // torque_mapper.calcPose(x_k_ndof_ptr, p_init, R_init); // set p_init, R_init = fwdkin(q_init)
+    Eigen::VectorXd x_k_nq = Eigen::Map<const Eigen::VectorXd>(x_k_ndof_ptr, nx);
+    Eigen::VectorXd x_k = x_k_nq(n_x_indices);
+    robot_model.updateState(x_k);
+
+    p_init = robot_model.kinematicsData.p;
+    R_init = robot_model.kinematicsData.R;
 
     param_poly_traj.T_start = T_start;
     param_poly_traj.T_poly = T_poly;

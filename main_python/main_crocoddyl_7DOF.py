@@ -806,7 +806,11 @@ try:
             # ddp.setCallbacks([cro.CallbackVerbose()])
             
             elapsed_time = measureSimu.toc()
-            freq_per_Ta_step[i] = 1/elapsed_time
+
+            if i<N_traj-1:
+                freq_per_Ta_step[i] = 1/elapsed_time
+            else:
+                freq_per_Ta_step[N_traj-1] = 1/measureTotal.toc()
 
             if (i+1) % update_interval == 0:
                 print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()} | {format_freq(freq_per_Ta_step[i], 2)}     ", end='\r')

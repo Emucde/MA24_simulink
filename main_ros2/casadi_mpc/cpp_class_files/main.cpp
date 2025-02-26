@@ -21,9 +21,13 @@
 #include "CrocoddylController.hpp"
 #include "CrocoddylMPCType.hpp"
 #include "CasadiEKF.hpp"
+#include "CommonBaseController.hpp"
 #include "json.hpp"
 #include <random>
 #include <cmath>
+
+#define CUSTOM_LIST 1
+#define USE_SHARED_MEMORY 1
 
 casadi_real x_k_tst[12] = {0};
 
@@ -133,8 +137,6 @@ CrocoddylMPCType get_crocoddyl_controller_type(const std::string &controller_typ
     }
 }
 
-// #define CUSTOM_LIST 1
-
 int main()
 {
     std::cout << "Starting main loop" << std::endl;
@@ -203,27 +205,26 @@ int main()
     classic_controller.switchController(classic_controller.get_classic_controller_type(get_config_value<std::string>(general_config, "default_classic_controller")));
     crocoddyl_controller.setActiveMPC(get_crocoddyl_controller_type(get_config_value<std::string>(general_config, "default_crocoddyl_mpc")));
 
+    CommonBaseController* controller;
+
     if (controller_type == MainControllerType::Casadi)
-    {
-        solver_steps = casadi_controller.get_traj_step();
-        traj_len = casadi_controller.get_traj_data_real_len();
-        x0_init = casadi_controller.get_traj_x0_init(trajectory_selection);
-    }
+        controller = &casadi_controller;
     else if(controller_type == MainControllerType::Classic)
-    {
-        solver_steps = 1;
-        traj_len = classic_controller.get_traj_data_real_len();
-        x0_init = classic_controller.get_traj_x0_init(trajectory_selection);
-    }
+        controller = &classic_controller;
     else if(controller_type == MainControllerType::Crocoddyl)
+        controller = &crocoddyl_controller;
+    else
     {
-        solver_steps = crocoddyl_controller.get_traj_step();
-        traj_len = crocoddyl_controller.get_traj_data_real_len();
-        x0_init = crocoddyl_controller.get_traj_x0_init(trajectory_selection);
+        throw std::invalid_argument("Invalid controller type");
+        return 1;
     }
 
+    solver_steps = controller->get_traj_step();
+    traj_len = controller->get_traj_data_real_len();
+    x0_init = controller->get_traj_x0_init(trajectory_selection);
+
     x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
-    q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
+    // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
 
     // ParamPolyTrajectory param_target;
@@ -235,22 +236,9 @@ int main()
 
     casadi_uint transient_traj_len = 0;
 
-    if (controller_type == MainControllerType::Casadi)
-    {
-        casadi_controller.init_file_trajectory(trajectory_selection, x_k_ndof, T_traj_start, T_traj_dur, T_traj_end);
-        transient_traj_len = casadi_controller.get_transient_traj_len();
-    }
-    else if (controller_type == MainControllerType::Classic)
-    {
-        classic_controller.init_file_trajectory(trajectory_selection, x_k_ndof, T_traj_start, T_traj_dur, T_traj_end);
-        transient_traj_len = classic_controller.get_transient_traj_len();
-    }
-    else if (controller_type == MainControllerType::Crocoddyl)
-    {
-        crocoddyl_controller.init_file_trajectory(trajectory_selection, x_k_ndof, T_traj_start, T_traj_dur, T_traj_end);
-        transient_traj_len = crocoddyl_controller.get_transient_traj_len();
-    }
-
+    controller->init_file_trajectory(trajectory_selection, x_k_ndof, T_traj_start, T_traj_dur, T_traj_end);
+    transient_traj_len = controller->get_transient_traj_len();
+    
     // initialize EKF
     CasadiEKF ekf(ekf_config_filename);
     ekf.initialize(x_k_ndof);
@@ -315,39 +303,11 @@ int main()
         
         // x_filtered_ptr = x_measured.data();
 
-        if ( controller_type == MainControllerType::Casadi )
-        {
-            timer_mpc_solver.tic();
-            tau_full = casadi_controller.update_control(x_filtered);
-            timer_mpc_solver.toc();
-            act_data = casadi_controller.get_act_traj_data();
-            error_flag = casadi_controller.get_error_flag();
-        }
-        else if ( controller_type == MainControllerType::Classic )
-        {
-            timer_mpc_solver.tic();
-            tau_full = classic_controller.update_control(x_filtered);
-            timer_mpc_solver.toc();
-            act_data = classic_controller.get_act_traj_data();
-            error_flag = classic_controller.get_error_flag();
-        }
-        else// if ( controller_type == MainControllerType::Crocoddyl )
-        {
-            timer_mpc_solver.tic();
-            tau_full = crocoddyl_controller.update_control(x_filtered);
-            timer_mpc_solver.toc();
-            act_data = crocoddyl_controller.get_act_traj_data();
-            error_flag = crocoddyl_controller.get_error_flag();
-        }
-
-        // double* w = casadi_controller.get_w();
-        // std::cout << "w:" << std::endl;
-        // for(int i = 0; i < 1063; i++)
-        // {
-        //     std::cout << w[i] << " ";
-        // }
-        // std::cout << std::endl;
-        // return 0;
+        timer_mpc_solver.tic();
+        tau_full = controller->update_control(x_filtered);
+        timer_mpc_solver.toc();
+        act_data = controller->get_act_traj_data();
+        error_flag = controller->get_error_flag();
 
         if (i % 100 == 0)
         {
@@ -372,18 +332,7 @@ int main()
             shm.write("read_frequency_full", &current_frequency, i+j);
             shm.post_semaphore("shm_changed_semaphore");
 
-            if ( controller_type == MainControllerType::Casadi )
-            {
-                casadi_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
-            }
-            else if ( controller_type == MainControllerType::Classic )
-            {
-                classic_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
-            }
-            else if ( controller_type == MainControllerType::Crocoddyl )
-            {
-                crocoddyl_controller.simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
-            }
+            controller->simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
         }
 
         if (error_flag != ErrorFlag::NO_ERROR)

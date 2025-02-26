@@ -25,8 +25,8 @@
         "ID"
     ],
     "use_casadi_planner": false,
-    "default_casadi_mpc": "MPC01",
-    "available_casadi_mpc_simulink": [
+    "default_casadi_mpc": "MPC1_dyn_classic_N_MPC_3",
+    "available_casadi_mpc": [
         "MPC1_dyn_classic_N_MPC_3",
         "MPC1_dyn_classic_N_MPC_5",
         "MPC2_dyn_parametric_N_MPC_3",
@@ -46,7 +46,7 @@
         "MPC5_kin_dev_planner_N_MPC_20",
         "MPC5_kin_dev_planner_N_MPC_30"
     ],
-    "available_casadi_mpc": [
+    "available_casadi_mpc_simulink": [
         "MPC01",
         "MPC6",
         "MPC7",

@@ -40,9 +40,8 @@ namespace franka_example_controllers
         return jsonData;
     }
 
-    Eigen::VectorXd CommonROSBaseController::filter_x_measured()
+    void CommonROSBaseController::filter_x_measured()
     {
-        Eigen::VectorXd x_filtered;
         if(use_ekf && use_lowpass_filter)
         {
             ekf.predict(tau_full.data(), x_measured.data());
@@ -64,7 +63,6 @@ namespace franka_example_controllers
         {
             x_filtered = Eigen::Map<Eigen::VectorXd>(x_measured.data(), nx);
         }
-        return x_filtered;
     }
 
     // Function to generate an Eigen vector of white noise

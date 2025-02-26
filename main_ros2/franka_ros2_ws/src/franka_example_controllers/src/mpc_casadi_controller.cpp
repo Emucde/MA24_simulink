@@ -59,21 +59,21 @@ namespace franka_example_controllers
         const rclcpp::Duration & /*period*/)
     {   
         
-        #ifndef SIMULATION_MODE
+#ifndef SIMULATION_MODE
         // Read states from joint state interface
         for (int i = 0; i < nx; ++i)
         {
             state[i] = state_interfaces_[i].get_value();
         }
         x_measured = state;
-        #else
+#else        
         if(use_noise)
             x_measured = state + generateNoiseVector(nx, Ts, mean_noise_amplitude);
         else
             x_measured = state;
-        #endif
+#endif
 
-        x_filtered = filter_x_measured();
+        filter_x_measured();
 
         #ifdef DEBUG
         RCLCPP_INFO(get_node()->get_logger(), "q (rad): [%f, %f, %f, %f, %f, %f, %f]",
@@ -87,13 +87,6 @@ namespace franka_example_controllers
 
         if (controller_started)
         {
-            if(solver_step_counter % solver_steps == 0)
-                solve();
-            
-            if(solver_step_counter >= 1000)
-                solver_step_counter = 0;
-            solver_step_counter++;
-
             current_frequency = timer_solver.get_frequency()*solver_steps;
             shm.write("read_state_data_full", x_measured.data(), global_traj_count);
             shm.write("read_control_data", tau_full.data());
@@ -129,13 +122,19 @@ namespace franka_example_controllers
                 controller_started = false;
             }
 
-            #ifdef SIMULATION_MODE
-            controller.simulateModelRK4(state.data(), tau_full.data(), Ts);
-            #else
+#ifndef SIMULATION_MODE
             for (int i = 0; i < nq; ++i) {
                 command_interfaces_[i].set_value(tau_full[i]);
             }
-            #endif
+#else
+            controller.simulateModelRK4(state.data(), tau_full.data(), Ts);
+#endif
+            if(solver_step_counter % solver_steps == 0)
+                solve();
+            
+            if(solver_step_counter >= 1000)
+                solver_step_counter = 0;
+            solver_step_counter++;
         }
         else
         {

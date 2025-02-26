@@ -73,7 +73,7 @@ namespace franka_example_controllers
             x_measured = state;
         #endif
 
-        x_filtered = filter_x_measured();
+        filter_x_measured();
 
         #ifdef DEBUG
         RCLCPP_INFO(get_node()->get_logger(), "q (rad): [%f, %f, %f, %f, %f, %f, %f]",
