@@ -163,8 +163,8 @@ Eigen::MatrixXd TrajectoryGenerator::generate_poly_trajectory()
     Eigen::Map<const Eigen::Matrix3d> R_init(param_poly_traj.R_init.data());
     Eigen::Map<const Eigen::Matrix3d> R_target(param_poly_traj.R_target.data());
 
-    std::cout << "R_init" << R_init << std::endl;
-    std::cout << "R_target" << R_target << std::endl;
+    // std::cout << "R_init" << R_init << std::endl;
+    // std::cout << "R_target" << R_target << std::endl;
 
     double T_end = param_poly_traj.T_end;
 

@@ -3,6 +3,8 @@
 #include <vector>
 #include <cstring> // for memcpy
 
+#include "SharedMemoryController.hpp"
+
 #include "include/FullSystemTorqueMapper.hpp"
 #include "include/CasadiMPC.hpp"
 #include "include/CasadiController.hpp"
@@ -138,6 +140,11 @@ CrocoddylMPCType get_crocoddyl_controller_type(const std::string &controller_typ
 }
 
 int main()
+{
+    SharedMemoryController shared_memory_controller(MASTERDIR, true);
+}
+
+int main_old()
 {
     std::cout << "Starting main loop" << std::endl;
     // Measure execution time

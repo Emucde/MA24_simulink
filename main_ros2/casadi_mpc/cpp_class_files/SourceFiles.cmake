@@ -10,6 +10,7 @@ set(UTILS_SOURCES
     /home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CrocoddylController.cpp
     /home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CommonBaseController.cpp
     /home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/TicToc.cpp
+    /home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/SharedMemoryController.cpp
     /home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CasadiEKF.cpp
     /home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/SignalFilter.cpp
     /home/rslstudent/Students/Emanuel/MA24_simulink/main_ros2/casadi_mpc/cpp_class_files/src/CommonBaseMPC.cpp

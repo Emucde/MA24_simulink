@@ -205,6 +205,7 @@ find_library(RT_LIB rt)
 
 # Define utility libraries
 set(UTILS_LIBRARIES
+    SharedMemoryController
     CommonBaseController
     CommonBaseMPC
     CrocoddylController
@@ -230,7 +231,12 @@ foreach(SOURCE_FILE ${UTILS_SOURCES})
     # Set the output library name to 'lib<NAME>.so'
     set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}" INSTALL_RPATH "${MPC_SOURCE_DIR};${LIBRARY_PATH}")
 
-    if(${FILE_NAME} STREQUAL "CommonBaseController")
+    if(${FILE_NAME} STREQUAL "SharedMemoryController")
+        set(SHARED_LIBRARIES
+            ${EIGEN3_LIBRARIES}
+            ${rclcpp_LIBRARIES}
+        )
+    elseif(${FILE_NAME} STREQUAL "CommonBaseController")
         set(SHARED_LIBRARIES
             ${EIGEN3_LIBRARIES}
         )
