@@ -10,6 +10,8 @@ slprj
 *.mexa64
 *.mtx
 *.log
+LibraryFiles.cmake
+SourceFiles.cmake
 *.csv
 .tmp
 videos

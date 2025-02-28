@@ -31,73 +31,25 @@ find_package(moveit_msgs REQUIRED)
 find_package(mpc_interfaces REQUIRED)
 find_package(pinocchio REQUIRED)
 
-set(MPC_SOURCE_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../../s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles)
-cmake_path(SET MPC_SOURCE_DIR NORMALIZE "${MPC_SOURCE_DIR_REL}")
+set(MPC_INCLUDE_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../../s_functions/fr3_no_hand_6dof/mpc_c_sourcefiles)
+cmake_path(SET MPC_INCLUDE_DIR NORMALIZE "${MPC_INCLUDE_DIR_REL}")
+
+set(MPC_SOURCE_DIR ${MPC_INCLUDE_DIR})
+
+set(UTILS_INCLUDE_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../casadi_mpc/cpp_class_files/include)
+cmake_path(SET UTILS_INCLUDE_DIR NORMALIZE "${UTILS_INCLUDE_DIR_REL}")
 
 set(MPC_LIB_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../../s_functions/fr3_no_hand_6dof/mpc_libraries)
 cmake_path(SET MPC_LIB_DIR NORMALIZE "${MPC_LIB_DIR_REL}")
 
-set(MPC_UTILS_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../casadi_mpc/cpp_class_files)
-cmake_path(SET MPC_UTILS_DIR NORMALIZE "${MPC_UTILS_DIR_REL}")
+set(UTILS_LIB_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../../s_functions/fr3_no_hand_6dof/utils_libraries)
+cmake_path(SET UTILS_LIB_DIR NORMALIZE "${UTILS_LIB_DIR_REL}")
 
-set(MPC_INCLUDE_DIR ${MPC_SOURCE_DIR})
-set(MPC_LIBRARY_DIR ${MPC_LIB_DIR})
-set(UTILS_SOURCE_DIR ${MPC_UTILS_DIR}/src)
-set(UTILS_INCLUDE_DIR ${MPC_UTILS_DIR}/include)
-
-message(STATUS "MPC source directory: ${MPC_SOURCE_DIR}")
-message(STATUS "MPC include directory: ${MPC_INCLUDE_DIR}")
-message(STATUS "MPC utils source directory: ${UTILS_SOURCE_DIR}")
-message(STATUS "MPC utils include directory: ${UTILS_INCLUDE_DIR}")
-
-# Find all MPC*.c files
-file(GLOB MPC_SOURCES "${MPC_SOURCE_DIR}/MPC*.c" "${MPC_SOURCE_DIR}/param_robot.c" "${UTILS_SOURCE_DIR}/*.cpp" "${MPC_SOURCE_DIR}/fr3_ekf.c")
-set(MPC_ALL_LIBRARIES "")
-set(MPC_PARAM_LIBRARIES "")
-set(MPC_LIBRARIES "")
-set(MPC_UTILS_LIBRARIES "")
-
-# Search shared libraries
-foreach(SOURCE_FILE ${MPC_SOURCES})
-        get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)  # Get the filename without extension
-
-        # Collect the libraries for installation
-        list(APPEND MPC_ALL_LIBRARIES ${FILE_NAME})
-
-        if(SOURCE_FILE MATCHES ${MPC_SOURCE_DIR})
-                if(FILE_NAME MATCHES "_param$")
-                        list(APPEND MPC_PARAM_LIBRARIES ${FILE_NAME})
-                elseif(FILE_NAME MATCHES "MPC")
-                        list(APPEND MPC_LIBRARIES ${FILE_NAME})
-                endif()
-        else()
-                list(APPEND MPC_UTILS_LIBRARIES ${FILE_NAME})
-        endif()
-
-endforeach()
-
-# Check if the libraries were found
-if(NOT DEFINED MPC_PARAM_LIBRARIES OR MPC_PARAM_LIBRARIES STREQUAL "")
-        message(WARNING "MPC_PARAM_LIBRARIES on path \"${MPC_SOURCE_DIR}\" is empty or not defined")
-else()
-        message(STATUS "MPC param libraries: ${MPC_PARAM_LIBRARIES}")
-endif()
-
-if(NOT DEFINED MPC_LIBRARIES OR MPC_LIBRARIES STREQUAL "")
-        message(WARNING "MPC_LIBRARIES on path \"${MPC_SOURCE_DIR}\" is empty or not defined")
-else()
-        message(STATUS "MPC libraries: ${MPC_LIBRARIES}")
-endif()
-
-if(NOT DEFINED MPC_UTILS_LIBRARIES OR MPC_UTILS_LIBRARIES STREQUAL "")
-        message(WARNING "MPC_UTILS_LIBRARIES on path \"${UTILS_SOURCE_DIR}\" is empty or not defined")
-else()
-        message(STATUS "MPC utils libraries: ${MPC_UTILS_LIBRARIES}")
-endif()
+include(LibraryFiles.cmake) # import MPC_LIBRARIES and UTILS_LIBRARIES
 
 # list(APPEND CMAKE_PREFIX_PATH "/opt/ros/humble")
-list(APPEND CMAKE_PREFIX_PATH "${MPC_SOURCE_DIR}")
-link_directories("${MPC_SOURCE_DIR}")
+list(APPEND CMAKE_PREFIX_PATH "${MPC_LIB_DIR}" "${UTILS_LIB_DIR}")
+link_directories("${MPC_LIB_DIR}" "${UTILS_LIB_DIR}")
 
 add_library(
         ${PROJECT_NAME}
@@ -118,8 +70,8 @@ target_include_directories(
         PUBLIC
         include
         ${EIGEN3_INCLUDE_DIRS}
-        ${MPC_INCLUDE_DIR}
         ${UTILS_INCLUDE_DIR}
+        ${MPC_INCLUDE_DIR}
 )
 
 add_definitions(-DMASTERDIR="$ENV{masterdir}")
@@ -139,71 +91,38 @@ ament_target_dependencies(
 
 generate_parameter_library(franka_example_controllers_parameters src/model_example_controller_parameters.yaml)
 
-find_library(CASADI_CONTROLLER_LIBRARY
-    NAMES CasadiController
-    HINTS "${MPC_LIB_DIR_REL}"
-)
+set(ALL_UTILS_LIBRARIES "")
+include(UtilsLibraryFiles.cmake) # get UTILS_LIBRARIES
+foreach(LIBRARY ${UTILS_LIBRARIES})
+        find_library(${LIBRARY}_LIBRARY
+                NAMES ${LIBRARY}
+                HINTS "${UTILS_LIB_DIR}"
+                REQUIRED
+        )
+        list(APPEND ALL_UTILS_LIBRARIES ${${LIBRARY}_LIBRARY})
+endforeach()
+message(STATUS "ALL_UTILS_LIBRARIES: ${ALL_UTILS_LIBRARIES}")
 
-find_library(CASADI_MPC_LIBRARY
-    NAMES CasadiMPC
-    HINTS "${MPC_LIB_DIR_REL}"
-)
-
-find_library(SHARED_MEMORY_LIBRARY
-    NAMES SharedMemory
-    HINTS "${MPC_LIB_DIR_REL}"
-)
-
-find_library(CASADI_EKF_LIBRARY
-    NAMES CasadiEKF
-    HINTS "${MPC_LIB_DIR_REL}"
-)
-
-find_library(SIGNAL_FILTER_LIBRARY
-    NAMES SignalFilter
-    HINTS "${MPC_LIB_DIR_REL}"
-)
-
-find_library(FULL_SYSTEM_TORQUE_MAPPER_LIB
-    NAMES FullSystemTorqueMapper
-    HINTS "${MPC_LIB_DIR_REL}"
-)
-
-find_library(CROCODDYLCONTROLLER_LIB
-    NAMES CrocoddylController
-    HINTS "${MPC_LIB_DIR_REL}"
-)
-
-find_library(WORKSPACECONTROLLER_LIB
-    NAMES WorkspaceController
-    HINTS "${MPC_LIB_DIR_REL}"
-)
-
-find_library(COMMONBASECONTROLLER_LIB
-    NAMES CommonBaseController
-    HINTS "${MPC_LIB_DIR_REL}"
-)
-
-find_library(COMMONBASEMPC_LIB
-    NAMES CommonBaseMPC
-    HINTS "${MPC_LIB_DIR_REL}"
-)
-
+# Find all MPC*.c files
+file(GLOB MPC_SOURCES "${MPC_SOURCE_DIR}/MPC*.c" "${MPC_SOURCE_DIR}/param_robot.c" "${UTILS_SOURCE_DIR}/*.cpp" "${MPC_SOURCE_DIR}/fr3_ekf.c")
+set(ALL_MPC_LIBRARIES "")
+# Search shared libraries
+foreach(SOURCE_FILE ${MPC_SOURCES})
+        get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)  # Get the filename without extension
+        find_library(${FILE_NAME}_LIBRARY
+                NAMES ${FILE_NAME}
+                HINTS "${MPC_LIB_DIR_REL}"
+                REQUIRED
+        )
+        list(APPEND ALL_MPC_LIBRARIES ${${FILE_NAME}_LIBRARY})
+endforeach()
+message(STATUS "ALL_MPC_LIBRARIES: ${ALL_MPC_LIBRARIES}")
 
 target_link_libraries(
         ${PROJECT_NAME}
         franka_example_controllers_parameters
-        ${MPC_ALL_LIBRARIES}
-        ${CASADI_CONTROLLER_LIBRARY} # Link against the found libraries
-        ${CASADI_MPC_LIBRARY}
-        ${SHARED_MEMORY_LIBRARY}
-        ${CASADI_EKF_LIBRARY}
-        ${SIGNAL_FILTER_LIBRARY}
-        ${FULL_SYSTEM_TORQUE_MAPPER_LIB}
-        ${CROCODDYLCONTROLLER_LIB}
-        ${WORKSPACECONTROLLER_LIB}
-        ${COMMONBASECONTROLLER_LIB}
-        ${COMMONBASEMPC_LIB}
+        ${ALL_MPC_LIBRARIES}
+        ${ALL_UTILS_LIBRARIES}
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE -fdiagnostics-color=always ${MPC_OPT_FLAG})
@@ -226,8 +145,8 @@ install(
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    BUILD_WITH_INSTALL_RPATH TRUE
-    INSTALL_RPATH "${MPC_SOURCE_DIR}"
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH "${MPC_LIB_DIR};${UTILS_LIB_DIR}"
 )
 
 if(BUILD_TESTING)
@@ -297,4 +216,4 @@ ament_export_dependencies(
         hardware_interface
         moveit_core
 )
-ament_package()
+ament_package()	

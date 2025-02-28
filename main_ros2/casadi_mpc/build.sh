@@ -339,6 +339,7 @@ if [ $BUILD_STATUS -eq 0 ]; then
         cd $UTILS_BUILD_PATH
         make install
         cd $CURRENT_PATH
+        ./main_ros2/casadi_mpc/create_libfile_list.sh
     fi
 else
     echo "Build failed with status code $BUILD_STATUS"

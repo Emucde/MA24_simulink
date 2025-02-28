@@ -34,7 +34,7 @@ if(full_reset_flag)
                 % ./s_functions/robot_name/mpc_settings
                 % ./s_functions/robot_name/trajectory_data
 
-                folder_names = {'casadi_functions', 'initial_guess', 'matlab_functions', 'mpc_c_sourcefiles', 'mpc_settings', 'trajectory_data', 'mpc_libraries'};
+                folder_names = {'casadi_functions', 'initial_guess', 'matlab_functions', 'mpc_c_sourcefiles', 'mpc_settings', 'trajectory_data', 'mpc_libraries', 'utils_libraries'};
                 for i = 1:length(folder_names)
                     mkdir([s_fun_path, '/', folder_names{i}]);
                 end

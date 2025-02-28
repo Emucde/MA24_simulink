@@ -2,7 +2,7 @@
     "use_gravity": false,
     "use_lowpass_filter": false,
     "use_ekf": false,
-    "use_noise": false,
+    "use_noise": true,
     "dt": 1e-3,
     "tau_max_jump": 50,
     "tcp_frame_name": "fr3_link8_tcp",

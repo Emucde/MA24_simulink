@@ -60,6 +60,9 @@ message(STATUS "MPC source directory: ${MPC_SOURCE_DIR}")
 set(MPC_LIB_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../s_functions/fr3_no_hand_6dof/mpc_libraries)
 cmake_path(SET MPC_LIB_DIR NORMALIZE "${MPC_LIB_DIR_REL}")
 
+set(UTILS_LIB_DIR_REL ${CMAKE_CURRENT_SOURCE_DIR}/../../../s_functions/fr3_no_hand_6dof/utils_libraries)
+cmake_path(SET UTILS_LIB_DIR NORMALIZE "${UTILS_LIB_DIR_REL}")
+
 #MPC_SOURCES are defined in SourceFiles.cmake
 include(SourceFiles.cmake)
 
@@ -201,26 +204,7 @@ find_package(Threads REQUIRED)
 find_package(rclcpp REQUIRED)
 find_library(RT_LIB rt)
 
-#utils source files are defined in SourceFiles.cmake
-
-# Define utility libraries
-set(UTILS_LIBRARIES
-    SharedMemoryController
-    CommonBaseController
-    CommonBaseMPC
-    CrocoddylController
-    CrocoddylMPC
-    WorkspaceController
-    CasadiController
-    FullSystemTorqueMapper
-    RobotModel
-    SharedMemory
-    SignalFilter
-    CasadiMPC
-    TicToc
-    TrajectoryGenerator
-    CasadiEKF
-)
+include(UtilsLibraryFiles.cmake) # get UTILS_LIBRARIESf
 
 foreach(SOURCE_FILE ${UTILS_SOURCES})
     get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)  # Get the filename without extension
@@ -229,7 +213,7 @@ foreach(SOURCE_FILE ${UTILS_SOURCES})
     add_library(${FILE_NAME} SHARED ${SOURCE_FILE})
 
     # Set the output library name to 'lib<NAME>.so'
-    set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}" INSTALL_RPATH "${MPC_SOURCE_DIR};${LIBRARY_PATH}")
+    set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}" INSTALL_RPATH "${LIBRARY_PATH}")
 
     if(${FILE_NAME} STREQUAL "SharedMemoryController")
         set(SHARED_LIBRARIES
@@ -251,6 +235,7 @@ foreach(SOURCE_FILE ${UTILS_SOURCES})
             ${MPC_PARAM_LIBRARIES}
             ${MPC_LIBRARIES}
         )
+        set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}" INSTALL_RPATH "${LIBRARY_PATH};${MPC_LIB_DIR}")
     elseif(${FILE_NAME} STREQUAL "CrocoddylController" OR ${FILE_NAME} STREQUAL "CrocoddylMPC")
         set(SHARED_LIBRARIES
             ${EIGEN3_LIBRARIES}
@@ -282,6 +267,7 @@ foreach(SOURCE_FILE ${UTILS_SOURCES})
             ${EIGEN3_LIBRARIES}
             ${MPC_LIBRARIES}
         )
+        set_target_properties(${FILE_NAME} PROPERTIES OUTPUT_NAME "${FILE_NAME}" INSTALL_RPATH "${LIBRARY_PATH};${MPC_LIB_DIR}")
     endif()
 
     # Include directories
@@ -307,8 +293,12 @@ foreach(SOURCE_FILE ${UTILS_SOURCES})
 endforeach()
 
 # Install libraries
-install(TARGETS ${UTILS_LIBRARIES} ${MPC_ALL_LIBRARIES}
-    LIBRARY DESTINATION ${MPC_SOURCE_DIR}
+install(TARGETS ${MPC_ALL_LIBRARIES}
+    LIBRARY DESTINATION ${MPC_LIB_DIR}
+)
+
+install(TARGETS ${UTILS_LIBRARIES}
+    LIBRARY DESTINATION ${UTILS_LIB_DIR}
 )
 
 # Define the path to the main source file

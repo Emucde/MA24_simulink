@@ -563,18 +563,18 @@ void CasadiMPC::set_row_vector(casadi_real *matrix_data, casadi_real *row_data, 
 
 void CasadiMPC::set_references(const casadi_real *const x_k_in)
 {
+    x_k_ptr = x_k_in;
+    t_k_ptr = &t_d_arr[traj_count];
+    y_d_ptr = y_d_blocks_data[traj_count];
+    y_d_p_ptr = y_d_p_blocks_data[traj_count];
+    y_d_pp_ptr = y_d_pp_blocks_data[traj_count];
+
+    for (casadi_uint i = 0; i < mpc_data.size(); i++)
+    {
+        mpc_set_funcs[i](w, *mpc_data[i]);
+    }
     if (traj_count < traj_data_real_len - 1)
     {
-        x_k_ptr = x_k_in;
-        t_k_ptr = &t_d_arr[traj_count];
-        y_d_ptr = y_d_blocks_data[traj_count];
-        y_d_p_ptr = y_d_p_blocks_data[traj_count];
-        y_d_pp_ptr = y_d_pp_blocks_data[traj_count];
-
-        for (casadi_uint i = 0; i < mpc_data.size(); i++)
-        {
-            mpc_set_funcs[i](w, *mpc_data[i]);
-        }
         traj_count += traj_step;
     }
 }

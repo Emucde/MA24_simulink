@@ -162,12 +162,12 @@ void SharedMemoryController::init_trajectory(Eigen::VectorXd &x_nq)
     x0_nq_init = x_nq;
     x0_nq_red_init = x_nq(n_x_indices);
 
+    controller->init_file_trajectory(trajectory_selection, x0_nq_init.data(), T_traj_start, T_traj_dur, T_traj_end);
+    transient_traj_len = controller->get_transient_traj_len();
+
     traj_step = controller->get_traj_step();
     traj_len = controller->get_traj_data_real_len();
     act_data = controller->get_act_traj_data();
-
-    controller->init_file_trajectory(trajectory_selection, x0_nq_init.data(), T_traj_start, T_traj_dur, T_traj_end);
-    transient_traj_len = controller->get_transient_traj_len();
     traj_count = 0;
 }
 
@@ -245,17 +245,12 @@ void SharedMemoryController::reset_cpp_shm_flags()
 void SharedMemoryController::run_simulation()
 {
     casadi_real x_k_ndof[nx] = {0};
-    const casadi_real *x0_init=0;
+    const casadi_real *x0_init = controller->get_traj_x0_init(trajectory_selection);
 
     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
     Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
-
-    x0_init = controller->get_traj_x0_init(trajectory_selection);
-
     x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
-
-    double* x_filtered_ptr = base_filter->get_filtered_data_ptr();
-    Eigen::Map<Eigen::VectorXd> x_filtered(x_filtered_ptr, nx);
+    Eigen::Map<Eigen::VectorXd> x_filtered(base_filter->get_filtered_data_ptr(), nx);
 
     init_python();
 
@@ -326,85 +321,6 @@ void SharedMemoryController::run_simulation()
     shm.close_semaphores();
 }
 
-// void SharedMemoryController::run_simulation()
-// {
-//     traj_step = controller->get_traj_step();
-//     traj_len = controller->get_traj_data_real_len();
-//     // const double* x0_init = controller->get_traj_x0_init(trajectory_selection);
-
-//     // Eigen::VectorXd x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
-//     Eigen::VectorXd x_k_ndof_eig = x0_nq_init;
-//     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof_eig.data(), nq);
-//     // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
-//     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
-
-//     init_python();
-
-//     for (casadi_uint i = 0; i < traj_len; i=i+traj_step)
-//     {
-//         traj_count = i;
-//         if(use_noise)
-//             x_measured << x_k_ndof_eig + generateNoiseVector(nx, Ts, mean_noise_amplitude);
-//         else
-//             x_measured << x_k_ndof_eig;
-        
-//         if(use_ekf)
-//             ekf.predict(tau_full.data(), x_measured.data());
-//         else
-//             x_filtered_ekf_ptr = x_measured.data();
-        
-//         if(use_lowpass_filter)
-//             lowpass_filter.run(x_filtered_ekf_ptr); // updates data from x_filtered_ptr
-//         else
-//             x_filtered_lowpass_ptr = x_filtered_ekf_ptr;
-
-//         x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, nx);    
-        
-//         act_data = controller->get_act_traj_data();
-
-//         timer_mpc_solver.tic();
-//         tau_full = controller->update_control(x_filtered);
-//         timer_mpc_solver.toc();
-//         error_flag = controller->get_error_flag();
-
-//         if (traj_count % 100 == 0)
-//         {
-//             timer_mpc_solver.print_frequency("traj_count=" + std::to_string(traj_count));
-//             std::cout << std::endl;
-//             std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
-//             std::cout << "u_k: |" << tau_full.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|"<< std::endl;
-//         }
-//         if (traj_count == transient_traj_len)
-//         {
-//             std::cout << "Switching to trajectory from data" << std::endl;
-//         }
-
-//         for (casadi_uint j = 0; j < traj_step; j++)
-//         {
-//             // Write data to shm:
-//             current_frequency = timer_mpc_solver.get_frequency()*traj_step;
-//             shm.write("read_state_data_full", x_filtered_lowpass_ptr, traj_count+j);
-//             shm.write("read_control_data_full", tau_full.data(), traj_count+j);
-//             shm.write("read_control_data", tau_full.data());
-//             shm.write("read_traj_data_full", act_data, traj_count+j);
-//             shm.write("read_frequency_full", &current_frequency, traj_count+j);
-//             shm.post_semaphore("shm_changed_semaphore");
-
-//             controller->simulateModelRK4(x_k_ndof_eig.data(), tau_full.data(), Ts);
-//         }
-
-//         if (error_flag != ErrorFlag::NO_ERROR)
-//         {
-//             std::cerr << "Error flag: " << static_cast<int>(error_flag) << std::endl;
-//             break;
-//         }
-//     }
-//     int8_t reset = 1;
-//     shm.write("data_from_simulink_reset", &reset);
-//     shm.post_semaphore("shm_changed_semaphore");
-// }
-
-
 void SharedMemoryController::run_shm_mode()
 {
     while(true)
@@ -412,6 +328,7 @@ void SharedMemoryController::run_shm_mode()
         Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_measured.data(), nq);
         double* x_filtered_ptr = base_filter->get_filtered_data_ptr();
         Eigen::Map<Eigen::VectorXd> x_filtered(x_filtered_ptr, nx);
+        int print_counter = 0;
 
         //reset semaphore counter
         while (sem_trywait(ros2_semaphore) == 0) {
@@ -457,23 +374,27 @@ void SharedMemoryController::run_shm_mode()
             do
             {
                 shm.read_double("ros2_state_data", x_measured.data());
-
                 // controller->simulateModelRK4(x_measured.data(), tau_full.data(), Ts);
                 
                 base_filter->run_filter(); // automatically mapped to x_filtered
-
                 act_data=controller->get_act_traj_data();
+
                 timer_mpc_solver.tic();
                 tau_full = controller->update_control(x_filtered);
                 timer_mpc_solver.toc();
                 error_flag = controller->get_error_flag();
 
-                if (traj_count % 100 == 0)
+                if (print_counter % 100 == 0)
                 {
                     timer_mpc_solver.print_frequency("traj_count=" + std::to_string(traj_count));
                     std::cout << std::endl;
                     std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
                     std::cout << "u_k: |" << tau_full.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|"<< std::endl;
+                    print_counter = 1;
+                }
+                else
+                {
+                    print_counter++;
                 }
 
                 if (error_flag != ErrorFlag::NO_ERROR)
@@ -481,7 +402,7 @@ void SharedMemoryController::run_shm_mode()
                     std::cerr << "Error flag: " << static_cast<int>(error_flag) << std::endl;
                     std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
                     run_flag = false;
-                    // valid_cpp = 0;
+                    valid_cpp = 0;
                 }
                 else
                 {
@@ -508,7 +429,7 @@ void SharedMemoryController::run_shm_mode()
                 if(reset_cpp == 1)
                 {
                     reset_cpp = 0;
-                    // valid_cpp = 0;
+                    valid_cpp = 0;
                     shm.write("reset_cpp", &reset_cpp);
                     std::cout << "Resetting controller in do while" << std::endl;
                     run_flag = false;
@@ -517,13 +438,14 @@ void SharedMemoryController::run_shm_mode()
                 if(stop_cpp == 1)
                 {
                     stop_cpp = 0;
-                    // valid_cpp = 0;
+                    valid_cpp = 0;
                     shm.write("stop_cpp", &stop_cpp);
                     std::cout << "Stopping controller in do while" << std::endl;
                 }
                 shm.read_int8("start_cpp", &start_cpp);
                 if(start_cpp == 1)
                 {
+                    init_python();
                     start_cpp = 0;
                     shm.write("start_cpp", &start_cpp);
                     std::cout << "Starting controller in do while" << std::endl;

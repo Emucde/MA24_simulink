@@ -1,0 +1,17 @@
+set(UTILS_LIBRARIES
+    SharedMemoryController
+    CommonBaseController
+    CommonBaseMPC
+    CrocoddylController
+    CrocoddylMPC
+    WorkspaceController
+    CasadiController
+    FullSystemTorqueMapper
+    RobotModel
+    SharedMemory
+    SignalFilter
+    CasadiMPC
+    TicToc
+    TrajectoryGenerator
+    CasadiEKF
+)
