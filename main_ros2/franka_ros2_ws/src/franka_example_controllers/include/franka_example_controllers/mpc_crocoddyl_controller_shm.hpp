@@ -24,13 +24,16 @@
 
 #include <controller_interface/controller_interface.hpp>
 #include "franka_example_controllers/visibility_control.h"
+#include <franka_example_controllers/common_ros_base_controller.hpp>
 
+#include "param_robot.h"
 #include <rclcpp/duration.hpp>
 #include <rclcpp/time.hpp>
 #include "mpc_interfaces/msg/num.hpp"
 #include "mpc_interfaces/srv/add_three_ints.hpp"
 #include "mpc_interfaces/srv/simple_command.hpp"
 #include "mpc_interfaces/srv/trajectory_command.hpp"
+#include "FullSystemTorqueMapper.hpp"
 #include <Eigen/Dense>
 #include <semaphore.h>
 
@@ -80,7 +83,9 @@ namespace franka_example_controllers
                 std::string arm_id_;
                 const int num_joints = N_DOF;
                 double torques_prev[N_DOF] = {0}; // previous torques
+                double state[2 * N_DOF];
                 int invalid_counter = 0;          // counter for invalid data, if exceeds MAX_INVALID_COUNT, terminate the controller
+                int read_state_data = 0;
                 int shm_states = 0;
                 int shm_states_valid = 0;
                 int shm_start_mpc = 0;
@@ -98,6 +103,12 @@ namespace franka_example_controllers
                 double Ts = 0.001;
                 double T1 = 1/400, A1 = std::exp(-Ts/T1), B1 = 1 - A1; // Lowpass Filter for q
                 double T2 = 1/400, A2 = std::exp(-Ts/T2), B2 = 1 - A2; // Lowpass Filter for q_p
+
+                const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
+                const std::string general_config_filename = std::string(MASTERDIR) + "/config_settings/general_settings.json";
+                robot_config_t robot_config = get_robot_config();
+                FullSystemTorqueMapper torque_mapper = FullSystemTorqueMapper(urdf_filename, robot_config, general_config_filename);
+
                 // rclcpp::Subscription<mpc_interfaces::msg::Num>::SharedPtr subscription_;
                 rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
                 rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr reset_mpc_service_;

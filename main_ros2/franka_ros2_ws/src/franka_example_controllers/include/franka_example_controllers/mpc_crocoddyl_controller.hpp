@@ -103,7 +103,6 @@ namespace franka_example_controllers
         controller_interface::return_type update(const rclcpp::Time &time,
                                                  const rclcpp::Duration &period) override;
 
-        void solve();
     private:
         const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
         CrocoddylController controller;
@@ -116,6 +115,7 @@ namespace franka_example_controllers
         Eigen::VectorXd tau_full_finished;
 
         int8_t error_flag_int8=0, valid_cpp=0;
+        bool sem_posted = false;
 
         // rclcpp::Subscription<mpc_interfaces::msg::ControlArray>::SharedPtr subscription_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
@@ -137,8 +137,6 @@ namespace franka_example_controllers
                          std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response);
         void mpc_switch(const std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Request> request,
                         std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Response> response);
-        void init_semaphores();
-        void destroy_semaphores();
     };
 
     // #ifdef SIMULATION_MODE

@@ -62,12 +62,29 @@ public:
         return write(name, data, 0);
     }
 
+    void clear_semaphore(const std::string &name)
+    {
+        sem_t *sem = semaphores[name];
+        while (sem_trywait(sem) == 0)
+        {
+            // Keep decrementing until it fails
+        }
+    }
+
+    int feedback_write_int8(const std::string &name, int8_t *data);
+
     // Method to get a shared memory file descriptor
 
     // Method to get a semaphore
     sem_t *get_semaphore(const std::string &name)
     {
         return semaphores[name];
+    }
+
+    // Method to get a shared memory
+    char *get_shared_memory(const std::string &name)
+    {
+        return shared_memory_data[name];
     }
 
     // Method to post a semaphore
@@ -80,6 +97,11 @@ public:
     void wait_semaphore(const std::string &name)
     {
         sem_wait(semaphores[name]);
+    }
+
+    int trywait_semaphore(const std::string &name)
+    {
+        return sem_trywait(semaphores[name]);
     }
 
 private:

@@ -268,7 +268,7 @@ void CasadiMPC::switch_traj(const Eigen::VectorXd &x_k)
 void CasadiMPC::reset(const Eigen::VectorXd &x_k)
 {
     traj_count = 0;
-    set_coldstart_init_guess(x_k.data());
+    switch_traj(x_k);
 }
 
 // Method to set the cold start initial guess (assuming x_k was already set)

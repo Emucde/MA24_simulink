@@ -29,7 +29,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${env:masterdir}/main_ros2/casadi_mpc/cpp_class_files/build_debug/bin/main",
-            "args": [],
+            "args": ["run"],
             "stopAtEntry": false, // stop at exception in my code
             "cwd": "${env:masterdir}/main_ros2/casadi_mpc/cpp_class_files",
             "environment": [

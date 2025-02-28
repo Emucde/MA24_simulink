@@ -69,7 +69,6 @@ public:
 
     void run_simulation();
     void run_shm_mode();
-    void update();
 private:
     std::string urdf_filename;
     std::string crocoddyl_config_filename;
@@ -162,18 +161,33 @@ private:
 
     const std::vector<std::string> sem_readwrite_names = {
         "shm_changed_semaphore",
-        "ros2_semaphore",
+        "ros2_semaphore"
     };
 
     // get controller type of crocoddyl controller
     MainControllerType get_controller_type(const std::string &controller_type_str);
     CrocoddylMPCType get_crocoddyl_controller_type(const std::string &controller_type_str);
     Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude);
+    
+    // method to write valid_cpp_shm
+    void write_valid_cpp_shm(int8_t flags)
+    {
+        memcpy(valid_cpp_shm, &flags, sizeof(int8_t));
+    }
+
+    //method to read valid_cpp_shm
+    int8_t read_valid_cpp_shm()
+    {
+        int8_t flags;
+        memcpy(&flags, valid_cpp_shm, sizeof(int8_t));
+        return flags;
+    }
 
     // shm mode data
     int8_t start_cpp, stop_cpp, reset_cpp, valid_cpp, error_flag_int8;
-    bool run_flag;
+    bool run_flag, first_run, data_valid;
     sem_t *ros2_semaphore;
+    char* valid_cpp_shm;
 };
 
 #endif // SHAREDMEMORYCONTROLLER_HPP

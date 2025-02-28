@@ -106,6 +106,20 @@ int SharedMemory::write(const std::string &name, const void *data, size_t size, 
     return 0;
 }
 
+int SharedMemory::feedback_write_int8(const std::string &name, int8_t *data)
+{
+    int8_t value_read = 0;
+
+    // Write value to shared memory
+    write(name, data);
+
+    // Loop until the same value is read from shared memory
+    while (value_read != *data) {
+        read_int8(name, &value_read);
+    }
+    return 0;
+}
+
 // getter and setter
 
 ///////////////////////////////////////////////////////////////////////////////////////

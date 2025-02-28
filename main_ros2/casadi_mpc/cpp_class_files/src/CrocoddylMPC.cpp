@@ -110,7 +110,7 @@ bool CrocoddylMPC::solve(const Eigen::VectorXd &x_k)
 void CrocoddylMPC::reset(const Eigen::VectorXd &x_k)
 {
     traj_count = 0;
-    set_coldstart_init_guess(x_k);
+    switch_traj(x_k);
 }
 
 void CrocoddylMPC::set_coldstart_init_guess(const Eigen::VectorXd &x_k)

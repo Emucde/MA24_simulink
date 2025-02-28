@@ -65,8 +65,6 @@ namespace franka_example_controllers
         double zero_torques[N_DOF] = {0.0};
         int8_t valid_flag = 0;
 
-        double state[2 * N_DOF];
-
         /*
          * start flag sended: mpc_started = true, first_torque_read = false
          * 1. Read states from joint state interface
@@ -87,11 +85,13 @@ namespace franka_example_controllers
 
         if (mpc_started)
         {
+            #ifndef SIMULATION_MODE
             // Read states from joint state interface
             for (int i = 0; i < 2 * N_DOF; ++i)
             {
                 state[i] = state_interfaces_[i].get_value();
             }
+            #endif
 
             Eigen::Map<Eigen::VectorXd> q_measured(state, N_DOF);
             Eigen::Map<Eigen::VectorXd> q_p_measured(state + N_DOF, N_DOF);
@@ -141,6 +141,13 @@ namespace franka_example_controllers
                 invalid_counter = 0;
                 valid_flag = 0;
                 write_to_shared_memory(shm_torques_valid, &valid_flag, sizeof(int8_t), get_node()->get_logger());
+
+                #ifdef SIMULATION_MODE
+                Eigen::Map<Eigen::VectorXd> state_eig(state, 2*N_DOF);
+                Eigen::Map<const Eigen::VectorXd> torques_eig(torques, N_DOF);
+                torque_mapper.simulateModelRK4(state_eig, torques_eig, Ts);
+                write_to_shared_memory(shm_states, state, sizeof(state), get_node()->get_logger());
+                #endif
             }
             else
             {
@@ -294,6 +301,7 @@ namespace franka_example_controllers
         shm_changed_semaphore = open_write_sem("shm_changed_semaphore", get_node()->get_logger());
 
         // Open shared memory for reading torques from crocddyl
+        read_state_data = open_read_shm("read_state_data", get_node()->get_logger());
         shm_torques = open_read_shm("data_from_python", get_node()->get_logger());
         shm_torques_valid = open_write_shm("data_from_python_valid", get_node()->get_logger());
         RCLCPP_INFO(get_node()->get_logger(), "Shared memory opened successfully.");
@@ -301,6 +309,8 @@ namespace franka_example_controllers
 
     void ModelPredictiveControllerCrocoddylSHM::close_shared_memories()
     {
+        if (read_state_data != -1)
+            close(read_state_data);
         if (shm_states != -1)
             close(shm_states);
         if (shm_states_valid != -1)
@@ -341,11 +351,14 @@ namespace franka_example_controllers
         write_to_shared_memory(shm_stop_mpc, &flags.stop, sizeof(int8_t), get_node()->get_logger());
         write_to_shared_memory(shm_torques_valid, &flags.torques_valid, sizeof(int8_t), get_node()->get_logger());
 
-        double state[2 * N_DOF];
+        #ifndef SIMULATION_MODE
         for (int i = 0; i < 2 * N_DOF; ++i)
         {
             state[i] = state_interfaces_[i].get_value();
         }
+        #else
+        read_shared_memory(read_state_data, &state[0], 2*N_DOF * sizeof(double), get_node()->get_logger());
+        #endif
 
         Eigen::VectorXd state_eig = Eigen::Map<Eigen::VectorXd>(state, 2 * N_DOF);
         x_filtered = state_eig; // set x0 for Lowpass Filter

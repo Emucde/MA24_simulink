@@ -15,6 +15,7 @@
 #include <random>
 
 #define SIMULATION_MODE 1
+// #define CUSTOM_LIST 1
 
 namespace franka_example_controllers
 {
@@ -97,9 +98,11 @@ namespace franka_example_controllers
 
         const std::vector<std::string> sem_readwrite_names = {
             "shm_changed_semaphore",
-            "ros2_semaphore",
+            "ros2_semaphore"
         };
         SharedMemory shm;
+        sem_t *ros2_semaphore;
+        char* valid_cpp_shm;
 
         double current_frequency = 0.0;
         TicToc timer_solver;
@@ -122,6 +125,20 @@ namespace franka_example_controllers
         void init_controller();
         void init_trajectory();
         void reset_trajectory();
+
+        // method to write valid_cpp_shm
+        void write_valid_cpp_shm(int8_t flags)
+        {
+            memcpy(valid_cpp_shm, &flags, sizeof(int8_t));
+        }
+
+        //method to read valid_cpp_shm
+        int8_t read_valid_cpp_shm()
+        {
+            int8_t flags;
+            memcpy(&flags, valid_cpp_shm, sizeof(int8_t));
+            return flags;
+        }
     };
 }
 

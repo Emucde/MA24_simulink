@@ -36,7 +36,7 @@ manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
 use_gravity = False
-visualize_sol = True
+visualize_sol = False
 plot_sol=True
 debounce_delay = 0.1
 explicit_mpc = False
@@ -292,6 +292,8 @@ transient_traj, param_traj, title_text =   \
     init_crocoddyl( x_k_ndof, robot_model, robot_data, robot_model_full, robot_data_full, traj_data,     \
                     traj_init_config, param_robot, param_traj_poly, TCP_frame_id, \
                     use_custom_trajectory, param_target)
+
+read_state_data[:] = x_k_ndof
 
 tcp_pose_list, tcp_rot_list, xprev_list, ctrl_prev_list = init_reference_lists(ddp, param_mpc_weight)
 
@@ -587,13 +589,13 @@ try:
                     }
 
                 if run_flag is True:
+                    current_freq = read_frequency_full[i]
+
                     if i < N_traj-1:
                         i += 1
-                    else:
-                        run_flag = False
 
                     if (i+1) % update_interval == 0:
-                        print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()} | {format_freq(read_frequency_full[i-1], 2)}     ", end='\r')
+                        print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()} | {format_freq(current_freq, 2)}     ", end='\r')
 
 
         if start_solving:
@@ -672,8 +674,8 @@ try:
                 if not err_state:
                     # check for jumps in torque
                     delta_u = tau_full - tau_i_prev
-                    condition1 = np.logical_and(delta_u > 0, delta_u > 5)
-                    condition2 = np.logical_and(delta_u < 0, delta_u < -5)
+                    condition1 = np.logical_and(delta_u > 0, delta_u > 50)
+                    condition2 = np.logical_and(delta_u < 0, delta_u < -50)
 
                     if np.any(np.logical_or(condition1, condition2)):
                         print()
@@ -813,7 +815,7 @@ try:
             else:
                 freq_per_Ta_step[N_traj-1] = 1/measureTotal.toc()
 
-            if (i+1) % update_interval == 0:
+            if (i+1) % update_interval == 0 or i == N_traj-1:
                 print(f"{100 * (i+1)/N_traj:.2f} % | {measureTotal.get_time_str()} | {format_freq(freq_per_Ta_step[i], 2)}     ", end='\r')
 except KeyboardInterrupt:
     print("\nFinish Solving!")

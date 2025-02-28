@@ -33,7 +33,7 @@ SharedMemoryController::SharedMemoryController(const std::string& urdf_file,
         controller(&crocoddyl_controller),
         x0_nq_init(controller->get_transient_traj_x0_init()),
         x_measured(x0_nq_init),
-        x_filtered(x0_nq_init),
+        x_filtered(x0_nq_init), tau_full(Eigen::VectorXd::Zero(nq)),
         x_filtered_ekf_ptr(x_measured.data()), x_filtered_lowpass_ptr(x_measured.data()),
         lowpass_filter(nq, robot_config.dt, x_measured.data(), 400.0, 400.0),
         ekf(ekf_config_filename), 
@@ -95,12 +95,10 @@ void SharedMemoryController::update_config()
 
     // General Settings
     Ts = get_config_value<double>(general_config, "dt");
-    traj_step = 1;
     current_frequency = 0.0;
     
     // Trajectory Settings
-    traj_len = 0;
-    trajectory_selection = get_config_value<double>(general_config, "trajectory_selection");
+    trajectory_selection = get_config_value<double>(general_config, "trajectory_selection"); // TODO
     T_traj_start     = get_config_value<double>(general_config, "transient_traj_start_time");
     T_traj_dur   = get_config_value<double>(general_config, "transient_traj_duration");
     T_traj_end   = get_config_value<double>(general_config, "transient_traj_end_time");
@@ -132,18 +130,18 @@ void SharedMemoryController::update_config()
 
 void SharedMemoryController::init_filter(Eigen::VectorXd &x_nq)
 {
-    CasadiEKF ekf(ekf_config_filename);
+    ekf.update_config();
     ekf.initialize(x_nq.data());
     x_ekf_filtered_ptr = ekf.get_x_k_plus_ptr();
 
-    SignalFilter lowpass_filter(nq, Ts, x_nq.data(), omega_c_q, omega_c_dq); // int num_joints, double Ts, double *state, double omega_c_q, double omega_c_dq
+    lowpass_filter.init(x_nq.data(), omega_c_q, omega_c_dq);
     x_lowpass_filtered_ptr = lowpass_filter.getFilteredOutputPtr();
 }
 
 void SharedMemoryController::init_trajectory(Eigen::VectorXd &x_nq)
 {
     x0_nq_init = x_nq;
-    x0_nq_red_init = x_nq(n_indices);
+    x0_nq_red_init = x_nq(n_x_indices);
 
     traj_step = controller->get_traj_step();
     traj_len = controller->get_traj_data_real_len();
@@ -162,19 +160,36 @@ void SharedMemoryController::init_shm()
     start_cpp = 0;
     stop_cpp = 0;
     reset_cpp = 0;
-    valid_cpp = 1;
+    valid_cpp = 0;
     error_flag_int8 = 0;
     run_flag = false;
+    first_run = true;
     ros2_semaphore = shm.get_semaphore("ros2_semaphore");
+    valid_cpp_shm = shm.get_shared_memory("valid_cpp");
+
+    reset_cpp_shm_flags();
+    shm.feedback_write_int8("error_cpp", &error_flag_int8);
+    shm.feedback_write_int8("valid_cpp", &valid_cpp);
+    shm.write("read_traj_length", &traj_len);
+    shm.write("data_from_simulink_start", &start_cpp);
+    shm.write("data_from_simulink_reset", &reset_cpp);
+    shm.write("data_from_simulink_stop", &stop_cpp);
+
+    //reset semaphore counter
+    while (sem_trywait(ros2_semaphore) == 0) {
+        // Keep decrementing until it fails
+    }
 }
 
 // Function for shared memory in python
 void SharedMemoryController::init_python()
 {
-    int8_t readonly_mode = 1, start = 1;
+    int8_t readonly_mode = 1, start = 1, reset = 0, stop = 0;
     shm.write("readonly_mode", &readonly_mode);
     shm.write("read_traj_length", &traj_len);
     shm.write("data_from_simulink_start", &start);
+    shm.write("data_from_simulink_reset", &stop);
+    shm.write("data_from_simulink_stop", &reset);
 }
 
 // Function to generate an Eigen vector of white noise
@@ -200,32 +215,160 @@ Eigen::VectorXd SharedMemoryController::generateNoiseVector(int n, double Ts, do
 
 void SharedMemoryController::reset_cpp_shm_flags()
 {
-        start_cpp = 0;
-        reset_cpp = 0;
-        stop_cpp = 0;
-        shm.write("start_cpp", &start_cpp, sizeof(int8_t));
-        shm.write("reset_cpp", &reset_cpp, sizeof(int8_t));
-        shm.write("stop_cpp", &stop_cpp, sizeof(int8_t));
+    start_cpp = 0;
+    reset_cpp = 0;
+    stop_cpp = 0;
+    shm.feedback_write_int8("start_cpp", &start_cpp);
+    shm.feedback_write_int8("reset_cpp", &reset_cpp);
+    shm.feedback_write_int8("stop_cpp", &stop_cpp);
 }
 
 void SharedMemoryController::run_simulation()
 {
-    traj_step = controller->get_traj_step();
-    traj_len = controller->get_traj_data_real_len();
-    // const double* x0_init = controller->get_traj_x0_init(trajectory_selection);
-    const double *act_data=0;
+        std::cout << "Starting main loop" << std::endl;
+    // Measure execution time
+    TicToc timer_mpc_solver;
+    TicToc timer_total;
 
-    // Eigen::VectorXd x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
-    Eigen::VectorXd x_k_ndof_eig = x0_nq_init;
-    Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof_eig.data(), nq);
+    // MASTERDIR defined in CMakeLists.txt (=$masterdir)
+    const std::string urdf_filename = std::string(MASTERDIR) + "/urdf_creation/fr3_no_hand_7dof.urdf";
+    const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
+    const std::string ekf_config_filename = std::string(MASTERDIR) + "/config_settings/ekf_settings.json";
+    const std::string general_config_filename = std::string(MASTERDIR) + "/config_settings/general_settings.json";
+    #ifdef CUSTOM_LIST
+    const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand_custom_list.json";
+    #else
+    const std::string casadi_mpc_config_filename = std::string(MASTERDIR) + "/config_settings/casadi_mpc_weights_fr3_no_hand_simulink.json";
+    #endif
+
+    nlohmann::json general_config = read_config<>(general_config_filename);
+
+    // Configuration flags
+    const std::string tcp_frame_name = get_config_value<std::string>(general_config, "tcp_frame_name");
+    bool use_lowpass_filter = get_config_value<bool>(general_config, "use_lowpass_filter");
+    bool use_ekf = get_config_value<bool>(general_config, "use_ekf");
+    bool use_noise = get_config_value<bool>(general_config, "use_noise");
+
+    robot_config_t robot_config = get_robot_config();
+
+    ErrorFlag error_flag = ErrorFlag::NO_ERROR;
+    double Ts = get_config_value<double>(general_config, "dt");
+    // double freq_multiplier = Ts / robot_config.dt;
+    casadi_uint solver_steps = 1;
+    const casadi_uint nq = robot_config.nq;
+    const casadi_uint nx = robot_config.nx;
+    const casadi_uint nq_red = robot_config.nq_red;
+    const casadi_uint nx_red = robot_config.nx_red;
+    const casadi_uint *n_indices_ptr = robot_config.n_indices;
+    const casadi_uint *n_x_indices_ptr = robot_config.n_x_indices;
+    Eigen::VectorXi n_indices_eig = ConstIntVectorMap(n_indices_ptr, nq_red);
+    Eigen::VectorXi n_x_indices_eig = ConstIntVectorMap(n_x_indices_ptr, nx_red);
+    casadi_real x_k_ndof[nx] = {0};
+    const casadi_real *x0_init=0;
+    double current_frequency = 0.0;
+    casadi_uint traj_len = 0;
+    double mean_noise_amplitude = get_config_value<double>(general_config, "mean_noise_amplitude");
+    double trajectory_selection = get_config_value<double>(general_config, "trajectory_selection");
+    double T_traj_start = get_config_value<double>(general_config, "transient_traj_start_time");
+    double T_traj_dur = get_config_value<double>(general_config, "transient_traj_duration");
+    double T_traj_end = get_config_value<double>(general_config, "transient_traj_end_time");
+    double omega_c_q = get_config_value<double>(general_config, "lowpass_filter_omega_c_q");
+    double omega_c_dq = get_config_value<double>(general_config, "lowpass_filter_omega_c_dq");
+    Eigen::VectorXd x_measured = Eigen::VectorXd::Zero(nx);
+    Eigen::VectorXd x_filtered = Eigen::VectorXd::Zero(nx);
+
+    Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof, nq);
+    Eigen::Map<Eigen::VectorXd> x_k_ndof_eig(x_k_ndof, nx);
+    Eigen::VectorXd tau_full = Eigen::VectorXd::Zero(nq);
+
+    WorkspaceController classic_controller(urdf_filename, general_config_filename);
+    CasadiController casadi_controller(urdf_filename, casadi_mpc_config_filename, general_config_filename);
+    CrocoddylController crocoddyl_controller(urdf_filename, crocoddyl_config_filename, general_config_filename);
+    
+    MainControllerType controller_type = get_controller_type(get_config_value<std::string>(general_config, "default_controller"));
+    casadi_controller.setActiveMPC(string_to_casadi_mpctype(get_config_value<std::string>(general_config, "default_casadi_mpc")));
+    casadi_controller.update_mpc_weights();
+    classic_controller.switchController(classic_controller.get_classic_controller_type(get_config_value<std::string>(general_config, "default_classic_controller")));
+    crocoddyl_controller.setActiveMPC(get_crocoddyl_controller_type(get_config_value<std::string>(general_config, "default_crocoddyl_mpc")));
+
+    CommonBaseController* controller;
+
+    if (controller_type == MainControllerType::Casadi)
+        controller = &casadi_controller;
+    else if(controller_type == MainControllerType::Classic)
+        controller = &classic_controller;
+    else if(controller_type == MainControllerType::Crocoddyl)
+        controller = &crocoddyl_controller;
+    else
+    {
+        throw std::invalid_argument("Invalid controller type");
+    }
+
+    solver_steps = controller->get_traj_step();
+    traj_len = controller->get_traj_data_real_len();
+    x0_init = controller->get_traj_x0_init(trajectory_selection);
+
+    x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
     // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
 
-    init_python();
+    // ParamPolyTrajectory param_target;
+    // param_target.p_target = Eigen::Vector3d(0.5, 0.0, 0.6);
+    // param_target.R_target = Eigen::Matrix3d::Identity();
+    // param_target.T_horizon_max = 2.0
+    // param_target.x_init = x_k_ndof_eig;
+    // casadi_controller.init_trajectory_custom_target(param_target);
 
-    for (casadi_uint i = 0; i < traj_len; i=i+traj_step)
+    casadi_uint transient_traj_len = 0;
+
+    controller->init_file_trajectory(trajectory_selection, x_k_ndof, T_traj_start, T_traj_dur, T_traj_end);
+    transient_traj_len = controller->get_transient_traj_len();
+    
+    // initialize EKF
+    CasadiEKF ekf(ekf_config_filename);
+    ekf.initialize(x_k_ndof);
+    double* x_filtered_ptr = ekf.get_x_k_plus_ptr();
+
+    // initialize the filter
+    
+    SignalFilter filter(nq, Ts, x_k_ndof, omega_c_q, omega_c_dq); // int num_joints, double Ts, double *state, double omega_c_q, double omega_c_dq
+    double* x_filtered_ptr_2 = filter.getFilteredOutputPtr();
+    const double *act_data;
+
+    // create shared memory with size
+    const std::vector<SharedMemoryInfo> shm_readwrite_infos = {
+        {"data_from_simulink_start", sizeof(int8_t), 1},
+        {"data_from_simulink_reset", sizeof(int8_t), 1},
+        {"data_from_simulink_stop", sizeof(int8_t), 1},
+        {"readonly_mode", sizeof(int8_t), 1},
+        {"read_traj_length", sizeof(casadi_uint), 1},
+        {"read_traj_data_full", 19 * sizeof(casadi_real), traj_len},
+        {"read_frequency_full", sizeof(casadi_real), traj_len},
+        {"read_state_data_full", sizeof(casadi_real) * robot_config.nx, traj_len},
+        {"read_control_data_full", sizeof(casadi_real) * robot_config.nq, traj_len},
+        {"read_control_data", sizeof(casadi_real) * robot_config.nq, 1}};
+
+    const std::vector<std::string> sem_readwrite_names = {
+        "shm_changed_semaphore",
+    };
+
+    SharedMemory shm;
+    shm.open_readwrite_shms(shm_readwrite_infos);
+    shm.open_readwrite_sems(sem_readwrite_names);
+
+    // enable shm read mode:
+    int8_t readonly_mode = 1, start = 1;
+
+    shm.write("readonly_mode", &readonly_mode);
+    shm.write("read_traj_length", &traj_len);
+    shm.write("data_from_simulink_start", &start);
+
+    // Start measuring time
+    timer_total.tic();
+
+    // Main loop for trajectory processing
+    for (casadi_uint i = 0; i < traj_len; i=i+solver_steps)
     {
-        traj_count = i;
         if(use_noise)
             x_measured << x_k_ndof_eig + generateNoiseVector(nx, Ts, mean_noise_amplitude);
         else
@@ -234,14 +377,14 @@ void SharedMemoryController::run_simulation()
         if(use_ekf)
             ekf.predict(tau_full.data(), x_measured.data());
         else
-            x_filtered_ekf_ptr = x_measured.data();
+            x_filtered_ptr = x_measured.data();
         
         if(use_lowpass_filter)
-            lowpass_filter.run(x_filtered_ekf_ptr); // updates data from x_filtered_ptr
+            filter.run(x_filtered_ptr); // updates data from x_filtered_ptr
         else
-            x_lowpass_filtered_ptr = x_filtered_ekf_ptr;
+            x_filtered_ptr_2 = x_filtered_ptr;
 
-        x_filtered = Eigen::Map<Eigen::VectorXd>(x_lowpass_filtered_ptr, nx);    
+        x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_ptr_2, nx);    
         
         // x_filtered_ptr = x_measured.data();
 
@@ -251,30 +394,30 @@ void SharedMemoryController::run_simulation()
         act_data = controller->get_act_traj_data();
         error_flag = controller->get_error_flag();
 
-        if (traj_count % 100 == 0)
+        if (i % 100 == 0)
         {
-            timer_mpc_solver.print_frequency("traj_count=" + std::to_string(traj_count));
+            timer_mpc_solver.print_frequency("i=" + std::to_string(i));
             std::cout << std::endl;
             std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
             std::cout << "u_k: |" << tau_full.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|"<< std::endl;
         }
-        if (traj_count == transient_traj_len)
+        if (i == transient_traj_len)
         {
             std::cout << "Switching to trajectory from data" << std::endl;
         }
 
-        for (casadi_uint j = 0; j < traj_step; j++)
+        for (casadi_uint j = 0; j < solver_steps; j++)
         {
             // Write data to shm:
-            current_frequency = timer_mpc_solver.get_frequency()*traj_step;
-            shm.write("read_state_data_full", x_lowpass_filtered_ptr, traj_count+j);
-            shm.write("read_control_data_full", tau_full.data(), traj_count+j);
+            current_frequency = timer_mpc_solver.get_frequency()*solver_steps;
+            shm.write("read_state_data_full", x_filtered_ptr_2, i+j);
+            shm.write("read_control_data_full", tau_full.data(), i+j);
             shm.write("read_control_data", tau_full.data());
-            shm.write("read_traj_data_full", act_data, traj_count+j);
-            shm.write("read_frequency_full", &current_frequency, traj_count+j);
+            shm.write("read_traj_data_full", act_data, i+j);
+            shm.write("read_frequency_full", &current_frequency, i+j);
             shm.post_semaphore("shm_changed_semaphore");
 
-            controller->simulateModelRK4(x_k_ndof_eig.data(), tau_full.data(), Ts);
+            controller->simulateModelRK4(x_k_ndof, tau_full.data(), Ts);
         }
 
         if (error_flag != ErrorFlag::NO_ERROR)
@@ -283,107 +426,242 @@ void SharedMemoryController::run_simulation()
             break;
         }
     }
-    int8_t reset = 1;
-    shm.write("data_from_simulink_reset", &reset);
+
+    // Measure and print execution time
+    timer_mpc_solver.print_time("Total casadi_controller.solveMPC time: ");
+    std::cout << std::endl;
+
+    timer_total.toc();
+    timer_total.print_time("Total execution time: ");
+    std::cout << std::endl;
+
+    shm.write("data_from_simulink_reset", &start);
     shm.post_semaphore("shm_changed_semaphore");
+    shm.close_shared_memories();
+    shm.close_semaphores();
 }
 
-void SharedMemoryController::update()
-{
-    if(use_ekf)
-        ekf.predict(tau_full.data(), x_measured.data());
-    else
-        x_filtered_ekf_ptr = x_measured.data();
-    
-    if(use_lowpass_filter)
-        lowpass_filter.run(x_filtered_ekf_ptr); // updates data from x_filtered_ptr
-    else
-        x_lowpass_filtered_ptr = x_filtered_ekf_ptr;
+// void SharedMemoryController::run_simulation()
+// {
+//     traj_step = controller->get_traj_step();
+//     traj_len = controller->get_traj_data_real_len();
+//     // const double* x0_init = controller->get_traj_x0_init(trajectory_selection);
 
-    x_filtered = Eigen::Map<Eigen::VectorXd>(x_lowpass_filtered_ptr, nx);    
-    
-    // x_filtered_ptr = x_measured.data();
+//     // Eigen::VectorXd x_k_ndof_eig = Eigen::Map<const Eigen::VectorXd>(x0_init, nx);
+//     Eigen::VectorXd x_k_ndof_eig = x0_nq_init;
+//     Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_k_ndof_eig.data(), nq);
+//     // q_k_ndof_eig(n_indices_eig) += Eigen::VectorXd::Constant(nq_red, 0.1);
+//     // q_k_ndof_eig += Eigen::VectorXd::Constant(nq, 0.1);
 
-    timer_mpc_solver.tic();
-    tau_full = controller->update_control(x_filtered);
-    timer_mpc_solver.toc();
-    act_data = controller->get_act_traj_data();
-    error_flag = controller->get_error_flag();
+//     init_python();
 
-    for (casadi_uint j = 0; j < traj_step; j++)
-    {
-        // Write data to shm:
-        current_frequency = timer_mpc_solver.get_frequency()*traj_step;
-        shm.write("read_state_data_full", x_lowpass_filtered_ptr, traj_count+j);
-        shm.write("read_control_data_full", tau_full.data(), traj_count+j);
-        shm.write("read_control_data", tau_full.data());
-        shm.write("read_traj_data_full", act_data, traj_count+j);
-        shm.write("read_frequency_full", &current_frequency, traj_count+j);
-        shm.post_semaphore("shm_changed_semaphore");
-    }
+//     for (casadi_uint i = 0; i < traj_len; i=i+traj_step)
+//     {
+//         traj_count = i;
+//         if(use_noise)
+//             x_measured << x_k_ndof_eig + generateNoiseVector(nx, Ts, mean_noise_amplitude);
+//         else
+//             x_measured << x_k_ndof_eig;
+        
+//         if(use_ekf)
+//             ekf.predict(tau_full.data(), x_measured.data());
+//         else
+//             x_filtered_ekf_ptr = x_measured.data();
+        
+//         if(use_lowpass_filter)
+//             lowpass_filter.run(x_filtered_ekf_ptr); // updates data from x_filtered_ptr
+//         else
+//             x_lowpass_filtered_ptr = x_filtered_ekf_ptr;
 
-    if (error_flag != ErrorFlag::NO_ERROR)
-    {
-        std::cerr << "Error flag: " << static_cast<int>(error_flag) << std::endl;
-    }
-    if(traj_count < traj_len-1)
-        traj_count += traj_step;
-}
+//         x_filtered = Eigen::Map<Eigen::VectorXd>(x_lowpass_filtered_ptr, nx);    
+        
+//         act_data = controller->get_act_traj_data();
+
+//         timer_mpc_solver.tic();
+//         tau_full = controller->update_control(x_filtered);
+//         timer_mpc_solver.toc();
+//         error_flag = controller->get_error_flag();
+
+//         if (traj_count % 100 == 0)
+//         {
+//             timer_mpc_solver.print_frequency("traj_count=" + std::to_string(traj_count));
+//             std::cout << std::endl;
+//             std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
+//             std::cout << "u_k: |" << tau_full.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|"<< std::endl;
+//         }
+//         if (traj_count == transient_traj_len)
+//         {
+//             std::cout << "Switching to trajectory from data" << std::endl;
+//         }
+
+//         for (casadi_uint j = 0; j < traj_step; j++)
+//         {
+//             // Write data to shm:
+//             current_frequency = timer_mpc_solver.get_frequency()*traj_step;
+//             shm.write("read_state_data_full", x_lowpass_filtered_ptr, traj_count+j);
+//             shm.write("read_control_data_full", tau_full.data(), traj_count+j);
+//             shm.write("read_control_data", tau_full.data());
+//             shm.write("read_traj_data_full", act_data, traj_count+j);
+//             shm.write("read_frequency_full", &current_frequency, traj_count+j);
+//             shm.post_semaphore("shm_changed_semaphore");
+
+//             controller->simulateModelRK4(x_k_ndof_eig.data(), tau_full.data(), Ts);
+//         }
+
+//         if (error_flag != ErrorFlag::NO_ERROR)
+//         {
+//             std::cerr << "Error flag: " << static_cast<int>(error_flag) << std::endl;
+//             break;
+//         }
+//     }
+//     int8_t reset = 1;
+//     shm.write("data_from_simulink_reset", &reset);
+//     shm.post_semaphore("shm_changed_semaphore");
+// }
+
 
 void SharedMemoryController::run_shm_mode()
 {
-    sem_wait(ros2_semaphore);
-    shm.read_int8("start_cpp", &start_cpp);
-    shm.read_int8("stop_cpp", &stop_cpp);
-    shm.read_int8("reset_cpp", &reset_cpp);
-    shm.read_double("ros2_state_data", x_measured.data());
-
-    if(!run_flag)
+    while(true)
     {
-        if(start_cpp == 1 && stop_cpp == 0 && reset_cpp == 0)
+
+        Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_measured.data(), nq);
+
+        //reset semaphore counter
+        while (sem_trywait(ros2_semaphore) == 0) {
+            // Keep decrementing until it fails
+        }
+
+        sem_wait(ros2_semaphore);
+
+        shm.read_int8("start_cpp", &start_cpp);
+        shm.read_int8("stop_cpp", &stop_cpp);
+        shm.read_int8("reset_cpp", &reset_cpp);
+
+        if(reset_cpp == 1)
         {
-            reset_cpp_shm_flags();
+            std::cout << "Resetting controller" << std::endl;
+            reset_cpp = 0;
+            run_flag=false;
+            shm.write("reset_cpp", &reset_cpp);
+        }
+        if(start_cpp == 1 && reset_cpp == 0 && stop_cpp == 0)
+        {
+            start_cpp = 0;
+            shm.write("start_cpp", &start_cpp);
+            init_python();
             update_config();
+            shm.read_double("ros2_state_data", x_measured.data());
             init_filter(x_measured);
+            x_measured_red = x_measured(n_x_indices);
             init_trajectory(x_measured);
+            controller->reset(x_measured_red.data());
+            tau_full = controller->update_control(x_measured);
+            controller->set_traj_count(0);
+            
             std::cout << "Starting controller" << std::endl;
             run_flag = true;
+            while (sem_trywait(ros2_semaphore) == 0) {
+                // Keep decrementing until it fails
+            }
         }
-    }
-
-    if(reset_cpp == 1)
-    {
-        std::cout << "Resetting controller" << std::endl;
-        reset_cpp_shm_flags();
-        run_flag = false;
-        error_flag = ErrorFlag::NO_ERROR;
-        x_measured_red = x_measured(n_x_indices);
-        controller->reset(x_measured_red.data());
-        tau_full = Eigen::VectorXd::Zero(nq);
-        traj_count = 0;
-    }
-
-    if(run_flag)
-    {
-        if(stop_cpp == 1)
+        valid_cpp = 1;
+        if(run_flag)
         {
-            reset_cpp_shm_flags();
-            std::cout << "Stopping controller" << std::endl;
+            do
+            {
+                shm.read_double("ros2_state_data", x_measured.data());
+
+                // controller->simulateModelRK4(x_measured.data(), tau_full.data(), Ts);
+                
+                if(use_ekf)
+                    ekf.predict(tau_full.data(), x_measured.data());
+                else
+                    x_filtered_ekf_ptr = x_measured.data();
+                
+                if(use_lowpass_filter)
+                    lowpass_filter.run(x_filtered_ekf_ptr); // updates data from x_filtered_ptr
+                else
+                    x_lowpass_filtered_ptr = x_filtered_ekf_ptr;
+
+                x_filtered = Eigen::Map<Eigen::VectorXd>(x_lowpass_filtered_ptr, nx);    
+                act_data=controller->get_act_traj_data();
+                timer_mpc_solver.tic();
+                tau_full = controller->update_control(x_filtered);
+                timer_mpc_solver.toc();
+                error_flag = controller->get_error_flag();
+
+                if (traj_count % 100 == 0)
+                {
+                    timer_mpc_solver.print_frequency("traj_count=" + std::to_string(traj_count));
+                    std::cout << std::endl;
+                    std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
+                    std::cout << "u_k: |" << tau_full.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|"<< std::endl;
+                }
+
+                if (error_flag != ErrorFlag::NO_ERROR)
+                {
+                    std::cerr << "Error flag: " << static_cast<int>(error_flag) << std::endl;
+                    std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
+                    run_flag = false;
+                    // valid_cpp = 0;
+                }
+                else
+                {
+                    valid_cpp = 1;
+                }
+
+                for (casadi_uint j = 0; j < traj_step; j++)
+                {
+                    // Write data to shm:
+                    current_frequency = timer_mpc_solver.get_frequency()*traj_step;
+                    shm.write("read_state_data_full", x_lowpass_filtered_ptr, traj_count+j);
+                    shm.write("read_control_data_full", tau_full.data(), traj_count+j);
+                    shm.write("read_control_data", tau_full.data());
+                    shm.write("read_traj_data_full", act_data, traj_count+j);
+                    shm.write("read_frequency_full", &current_frequency, traj_count+j);
+                    shm.post_semaphore("shm_changed_semaphore");
+                }
+
+                shm.write("cpp_control_data", tau_full.data());
+                error_flag_int8 = static_cast<int8_t>(error_flag);
+                shm.write("error_cpp", &error_flag_int8);
+
+                shm.read_int8("reset_cpp", &reset_cpp);
+                if(reset_cpp == 1)
+                {
+                    reset_cpp = 0;
+                    // valid_cpp = 0;
+                    shm.write("reset_cpp", &reset_cpp);
+                    std::cout << "Resetting controller in do while" << std::endl;
+                    run_flag = false;
+                }
+                shm.read_int8("stop_cpp", &stop_cpp);
+                if(stop_cpp == 1)
+                {
+                    stop_cpp = 0;
+                    // valid_cpp = 0;
+                    shm.write("stop_cpp", &stop_cpp);
+                    std::cout << "Stopping controller in do while" << std::endl;
+                }
+                shm.read_int8("start_cpp", &start_cpp);
+                if(start_cpp == 1)
+                {
+                    start_cpp = 0;
+                    shm.write("start_cpp", &start_cpp);
+                    std::cout << "Starting controller in do while" << std::endl;
+                }
+
+                if(traj_count < traj_len-1)
+                    traj_count += traj_step;
+
+                write_valid_cpp_shm(valid_cpp);
+
+                sem_wait(ros2_semaphore);
+            } while(run_flag);
             run_flag = false;
-            tau_full = Eigen::VectorXd::Zero(nq);
+            valid_cpp = 0;
+            shm.feedback_write_int8("valid_cpp", &valid_cpp);
         }
-        else
-        {
-            update(); // use internally tau_full_ptr and error_flag_ptr and x_nq.data()
-        }
-
-        // Write data to ros2
-        shm.write("cpp_control_data", tau_full.data());
-        error_flag_int8 = static_cast<int8_t>(error_flag);
-        shm.write("error_cpp", &error_flag_int8);
-        shm.write("valid_cpp", &valid_cpp);
     }
-
-    // send data to python:
-    shm.post_semaphore("shm_changed_semaphore");
 }
