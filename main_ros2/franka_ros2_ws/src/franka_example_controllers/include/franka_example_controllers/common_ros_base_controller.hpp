@@ -72,7 +72,7 @@ namespace franka_example_controllers
         uint traj_len;
 
         CasadiEKF ekf = CasadiEKF(ekf_config_filename);
-        SignalFilter lowpass_filter = SignalFilter(nq, Ts, state.data(), 400, 400);
+        SignalFilter lowpass_filter = SignalFilter(nq, x_measured.data(), general_config_filename);
 
         ErrorFlag error_flag = ErrorFlag::NO_ERROR;
 
@@ -121,7 +121,7 @@ namespace franka_example_controllers
 
         void filter_x_measured();
         Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude);
-        void init_filter(double omega_c_q, double omega_c_dq);
+        void init_filter();
         void init_controller();
         void init_trajectory();
         void reset_trajectory();

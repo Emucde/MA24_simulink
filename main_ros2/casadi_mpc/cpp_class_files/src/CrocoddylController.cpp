@@ -97,6 +97,8 @@ void CrocoddylController::update_config()
     
     active_mpc->init_config();
     dt = active_mpc->get_dt();
+
+    set_tau_max_jump(get_config_value<double>(general_config, "tau_max_jump"));
     
     torque_mapper.update_config(dt);
     torque_mapper.set_kinematic_mpc_flag(active_mpc->is_kinematic);

@@ -4,9 +4,9 @@
 WorkspaceController::WorkspaceController(const std::string &urdf_filename,
                                          const std::string &general_config_filename) 
                       : CommonBaseController(urdf_filename, "", general_config_filename),
-                        ct_controller(robot_model, general_config_filename, trajectory_generator),
-                        pd_plus_controller(robot_model, general_config_filename, trajectory_generator),
-                        inverse_dyn_controller(robot_model, general_config_filename, trajectory_generator),
+                        ct_controller(robot_model, general_config_filename, trajectory_generator, tau_max_jump),
+                        pd_plus_controller(robot_model, general_config_filename, trajectory_generator, tau_max_jump),
+                        inverse_dyn_controller(robot_model, general_config_filename, trajectory_generator, tau_max_jump),
                         active_controller(&ct_controller), selected_controller_type(ControllerType::CT)
 {
 }
@@ -309,6 +309,8 @@ void BaseWorkspaceController::update_controller_settings()
     sing_method = controller_settings.regularization_settings.mode;
 
     traj_data_real_len = trajectory_generator.get_traj_data_real_len();
+
+    tau_max_jump = get_config_value<double>(general_config, "tau_max_jump");
 }
 
 void BaseWorkspaceController::calculateControlData(const Eigen::VectorXd &x)

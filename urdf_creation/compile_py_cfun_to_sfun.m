@@ -20,7 +20,7 @@ create_some_sources = true;
 import casadi.*;
 
 if(~exist('parameter_str', 'var'))
-    parameters_7dof;
+    run('main_matlab/parameters_7dof.m');
 end
 
 % valid robot_names: fr3_7dof, fr3_6dof, ur5e
@@ -89,6 +89,7 @@ if create_some_sources
         casadi_fun = Function.load([input_dir, fun_name '.casadi']);
         
         create_only_source(casadi_fun, [output_dir, 'mpc_c_sourcefiles/']);
+        % return
     end
     fprintf('\n--------------------------------------------------------------------\n\n');
 end

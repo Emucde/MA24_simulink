@@ -30,7 +30,7 @@ if(~use_extern_flags)
     compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
     compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
     iterate_all_mpc_sfunctions      = true;
-    mpc_source_selection            = 5; % (1: all MPCs, 2: only dynamic MPCs, 3: only kinematic MPCs, 4: only selected MPC, 5: custom list)
+    mpc_source_selection            = 1; % (1: all MPCs, 2: only dynamic MPCs, 3: only kinematic MPCs, 4: only selected MPC, 5: custom list)
     coptimflags                     = '-Ofast -march=native -flto'; % Optimization flag for compilation
     use_jit                         = false; % use jit for compilation (precompiles before each RUN!!!
     generate_realtime_udp_c_fun     = true; % create SOURCEFILES

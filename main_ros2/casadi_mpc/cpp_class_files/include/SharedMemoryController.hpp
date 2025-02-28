@@ -113,21 +113,16 @@ private:
     Eigen::VectorXd x0_nq_red_init;
     Eigen::VectorXd x_measured;
     Eigen::VectorXd x_measured_red;
-    Eigen::VectorXd x_filtered;
     Eigen::VectorXd tau_full;
-    double* x_filtered_ekf_ptr;
-    double* x_filtered_lowpass_ptr;
     
     // Filter Settings
     bool use_lowpass_filter;
     double omega_c_q;
     double omega_c_dq;
     SignalFilter lowpass_filter;
-    double* x_lowpass_filtered_ptr;
 
     bool use_ekf;
     CasadiEKF ekf;
-    double* x_ekf_filtered_ptr;
     
     // Simulation Settings
     bool use_noise;
@@ -188,6 +183,110 @@ private:
     bool run_flag, first_run, data_valid;
     sem_t *ros2_semaphore;
     char* valid_cpp_shm;
+
+    class BaseFilter
+    {
+    public:
+        BaseFilter(double* x_nq_in) : x_nq_in(x_nq_in) {}
+        virtual void run_filter() = 0;
+        virtual double* get_filtered_data_ptr() = 0;
+        virtual ~BaseFilter() = default;
+    protected:
+        double* x_nq_in;
+    };
+
+    class LowpassFilter : public BaseFilter
+    {
+    public:
+        LowpassFilter(SignalFilter& lowpass_filter, double* x_nq_in) : BaseFilter(x_nq_in), lowpass_filter(lowpass_filter)
+        {
+            lowpass_filter.reset_state(x_nq_in);
+            x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
+        }
+        void run_filter() override
+        {
+            lowpass_filter.run(x_nq_in);
+        }
+        double* get_filtered_data_ptr() override
+        {
+            return x_filtered_lowpass_ptr;
+        }
+    protected:
+        SignalFilter& lowpass_filter;
+        double* x_filtered_lowpass_ptr;
+    };
+
+    class EKF_Filter : public BaseFilter
+    {
+    public:
+        EKF_Filter(CasadiEKF& ekf, double* x_nq_in, double* u_nq_in) : BaseFilter(x_nq_in), ekf(ekf), u_nq_in(u_nq_in)
+        {
+            ekf.initialize(x_nq_in);
+            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
+        }
+        void run_filter() override
+        {
+            ekf.predict(u_nq_in, x_nq_in);
+        }
+        double* get_filtered_data_ptr() override
+        {
+            return x_filtered_ekf_ptr;
+        }
+    protected:
+        CasadiEKF& ekf;
+        double* u_nq_in;
+        double* x_filtered_ekf_ptr;
+    };
+
+    class LPEKF_Filter : public BaseFilter
+    {
+    public:
+        LPEKF_Filter(CasadiEKF& ekf, SignalFilter& lowpass_filter, double* x_nq_in, double* u_nq_in) : BaseFilter(x_nq_in),
+                                                                                                    ekf(ekf),
+                                                                                                    lowpass_filter(lowpass_filter),
+                                                                                                    u_nq_in(u_nq_in)
+        {
+            lowpass_filter.reset_state(x_nq_in);
+            ekf.initialize(x_nq_in);
+            x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
+            x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
+        }
+        void run_filter() override
+        {
+            lowpass_filter.run(x_nq_in);
+            ekf.predict(u_nq_in, x_filtered_lowpass_ptr);
+        }
+        double* get_filtered_data_ptr() override
+        {
+            return x_filtered_ekf_ptr;
+        }
+    protected:
+        CasadiEKF& ekf;
+        SignalFilter& lowpass_filter;
+        double* u_nq_in;
+        double* x_filtered_lowpass_ptr;
+        double* x_filtered_ekf_ptr;
+    };
+
+    class NoFilter : public BaseFilter
+    {
+    public:
+        NoFilter(double* x_nq_in) : BaseFilter(x_nq_in) {}
+        void run_filter() override
+        {
+            // do nothing
+        }
+        double* get_filtered_data_ptr() override
+        {
+            return x_nq_in;
+        }
+    };
+
+    EKF_Filter base_ekf_filter;
+    LowpassFilter base_lowpass_filter;
+    LPEKF_Filter base_lpekf_filter;
+    NoFilter base_no_filter;
+    BaseFilter* base_filter;
 };
 
 #endif // SHAREDMEMORYCONTROLLER_HPP

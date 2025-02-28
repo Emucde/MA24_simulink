@@ -132,6 +132,8 @@ void CasadiController::update_config()
     mpc_traj_indices = const_cast<casadi_uint *>(active_mpc->get_mpc_traj_indices());
     dt = active_mpc->get_dt();
 
+    set_tau_max_jump(get_config_value<double>(general_config, "tau_max_jump"));
+
     // adapt D gain of Torque mapper to dt
     torque_mapper.update_config(dt);
     torque_mapper.set_kinematic_mpc_flag(active_mpc->is_kinematic_mpc);

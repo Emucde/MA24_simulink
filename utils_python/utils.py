@@ -1871,62 +1871,191 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
     non_zero_min = np.min(given_numbers[given_numbers > 0]) if np.any(given_numbers > 0) else 0
     control_frequency_real = np.full_like(given_numbers, non_zero_min)
 
-    for i in range(N):
-        q[i] = xs[i, 0:n]
-        q_p[i] = xs[i, n:2 * n]
+    def parallel_calc(j, N_thread, file_path):
+        N_chunk = N // N_thread
+        p_e = np.zeros((N_chunk, 3))
+        p_e_p = np.zeros((N_chunk, 3))
+        p_e_pp = np.zeros((N_chunk, 3))
 
-        tau[i] = us[i]
+        quat_e = np.zeros((N_chunk, 4))
+        omega_e = np.zeros((N_chunk, 3))
+        omega_e_p = np.zeros((N_chunk, 3))
 
-        q_pp[i] = pinocchio.aba(robot_model, robot_data, q[i], q_p[i], tau[i])
+        w = np.zeros(N_chunk)  # manipulability
 
-        pinocchio.forwardKinematics(robot_model, robot_data, q[i], q_p[i], q_pp[i])
-        pinocchio.updateFramePlacements(robot_model, robot_data)
+        q        = np.zeros((N_chunk, n))
+        q_p      = np.zeros((N_chunk, n))
+        q_pp     = np.zeros((N_chunk, n))
 
-        pinocchio.computeJointJacobians(robot_model, robot_data, q[i])
-        J = pinocchio.getFrameJacobian(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED)
-        pinocchio.computeJointJacobiansTimeVariation(robot_model, robot_data, q[i], q_p[i])
-        # J_p = pinocchio.getFrameJacobianTimeVariation(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+        p_err    = np.zeros((N_chunk, 3))
+        p_err_p  = np.zeros((N_chunk, 3))
+        p_err_pp = np.zeros((N_chunk, 3))
 
-        p_e[i] = robot_data.oMf[TCP_frame_id].translation.T.copy()
-        p_e_p[i] = J[0:3, :] @ q_p[i]
-        # p_e_pp[i] = J[0:3, :] @ q_pp[i] + J_p[0:3, :] @ q_p[i] # update: Bug wurde gefixt, es ist nun 1:1 wie unterer Befehl
-        p_e_pp[i] = pinocchio.getFrameClassicalAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).linear
+        e_x = np.zeros(N_chunk)
+        e_x_p = np.zeros(N_chunk)
+        e_x_pp = np.zeros(N_chunk)
 
-        quat_e_7val = pinocchio.SE3ToXYZQUAT(robot_data.oMf[TCP_frame_id])
-        quat_e_xyzw = pinocchio.Quaternion(quat_e_7val[3::])
-        quat_e[i] = np.hstack([quat_e_7val[6], quat_e_7val[3:6]]) #wxyz
+        e_y = np.zeros(N_chunk)
+        e_y_p = np.zeros(N_chunk)
+        e_y_pp = np.zeros(N_chunk)
 
-        omega_e[i] = pinocchio.getFrameVelocity(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
-        omega_e_p[i] = pinocchio.getFrameClassicalAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
+        e_z = np.zeros(N_chunk)
+        e_z_p = np.zeros(N_chunk)
+        e_z_pp = np.zeros(N_chunk)
 
-        J_red = J[:, n_indices]
-        w[i] = np.sqrt(np.abs(sp.linalg.det(J_red @ J_red.T)))
+        quat_err = np.zeros((N_chunk, 4))
+        omega_err = np.zeros((N_chunk, 3))
+        omega_err_p = np.zeros((N_chunk, 3))
 
-        p_err[i] = p_e[i] - p_d[:, i]
-        p_err_p[i] = p_e_p[i] - p_d_p[:, i]
-        p_err_pp[i] = p_e_pp[i] - p_d_pp[:, i]
+        tau = np.zeros((N_chunk, n))
 
-        e_x[i] = p_err[i][0]
-        e_y[i] = p_err[i][1]
-        e_z[i] = p_err[i][2]
+        k=0
+        for i in range(j*N_chunk, (j+1)*N_chunk):
+            q[k] = xs[i, 0:n]
+            q_p[k] = xs[i, n:2 * n]
 
-        e_x_p[i] = p_err_p[i][0]
-        e_y_p[i] = p_err_p[i][1]
-        e_z_p[i] = p_err_p[i][2]
+            tau[k] = us[i]
 
-        e_x_pp[i] = p_err_pp[i][0]
-        e_y_pp[i] = p_err_pp[i][1]
-        e_z_pp[i] = p_err_pp[i][2]
+            q_pp[k] = pinocchio.aba(robot_model, robot_data, q[k], q_p[k], tau[k])
 
-        quat_d_xyzw = pinocchio.Quaternion( np.hstack([quat_d[1:, i], quat_d[0, i]]) )
-        q_d_xyzw_inv = pinocchio.Quaternion.inverse(quat_d_xyzw)
+            pinocchio.forwardKinematics(robot_model, robot_data, q[k], q_p[k], q_pp[k])
+            pinocchio.updateFramePlacements(robot_model, robot_data)
 
-        quat_err_temp = quat_e_xyzw * q_d_xyzw_inv
-        quat_err[i] = np.array([quat_err_temp.w, quat_err_temp.x, quat_err_temp.y, quat_err_temp.z])
+            pinocchio.computeJointJacobians(robot_model, robot_data, q[k])
+            J = pinocchio.getFrameJacobian(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+            pinocchio.computeJointJacobiansTimeVariation(robot_model, robot_data, q[k], q_p[k])
+            # J_p = pinocchio.getFrameJacobianTimeVariation(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED)
 
-        omega_err[i] = omega_e[i] - traj_data['omega_d'][:, i]
+            p_e[k] = robot_data.oMf[TCP_frame_id].translation.T.copy()
+            p_e_p[k] = J[0:3, :] @ q_p[k]
+            # p_e_pp[k] = J[0:3, :] @ q_pp[k] + J_p[0:3, :] @ q_p[k] # update: Bug wurde gefixt, es ist nun 1:1 wie unterer Befehl
+            p_e_pp[k] = pinocchio.getFrameClassicalAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).linear
 
-        omega_err_p[i] = omega_e_p[i] - traj_data['omega_d_p'][:, i]
+            quat_e_7val = pinocchio.SE3ToXYZQUAT(robot_data.oMf[TCP_frame_id])
+            quat_e_xyzw = pinocchio.Quaternion(quat_e_7val[3::])
+            quat_e[k] = np.hstack([quat_e_7val[6], quat_e_7val[3:6]]) #wxyz
+
+            omega_e[k] = pinocchio.getFrameVelocity(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
+            omega_e_p[k] = pinocchio.getFrameClassicalAcceleration(robot_model, robot_data, TCP_frame_id, pinocchio.ReferenceFrame.LOCAL_WORLD_ALIGNED).angular
+
+            J_red = J[:, n_indices]
+            w[k] = np.sqrt(np.abs(sp.linalg.det(J_red @ J_red.T)))
+
+            p_err[k] = p_e[k] - p_d[:, i]
+            p_err_p[k] = p_e_p[k] - p_d_p[:, i]
+            p_err_pp[k] = p_e_pp[k] - p_d_pp[:, i]
+
+            e_x[k] = p_err[k][0]
+            e_y[k] = p_err[k][1]
+            e_z[k] = p_err[k][2]
+
+            e_x_p[k] = p_err_p[k][0]
+            e_y_p[k] = p_err_p[k][1]
+            e_z_p[k] = p_err_p[k][2]
+
+            e_x_pp[k] = p_err_pp[k][0]
+            e_y_pp[k] = p_err_pp[k][1]
+            e_z_pp[k] = p_err_pp[k][2]
+
+            quat_d_xyzw = pinocchio.Quaternion( np.hstack([quat_d[1:, i], quat_d[0, i]]) )
+            q_d_xyzw_inv = pinocchio.Quaternion.inverse(quat_d_xyzw)
+
+            quat_err_temp = quat_e_xyzw * q_d_xyzw_inv
+            quat_err[k] = np.array([quat_err_temp.w, quat_err_temp.x, quat_err_temp.y, quat_err_temp.z])
+
+            omega_err[k] = omega_e[k] - traj_data['omega_d'][:, i]
+
+            omega_err_p[k] = omega_e_p[k] - traj_data['omega_d_p'][:, i]
+        
+            k += 1
+
+        data = {
+            'p_e': p_e,
+            'p_e_p': p_e_p,
+            'p_e_pp': p_e_pp,
+            'quat_e': quat_e,
+            'omega_e': omega_e,
+            'omega_e_p': omega_e_p,
+            'w': w,
+            'p_err': p_err,
+            'p_err_p': p_err_p,
+            'p_err_pp': p_err_pp,
+            'e_x': e_x,
+            'e_y': e_y,
+            'e_z': e_z,
+            'e_x_p': e_x_p,
+            'e_y_p': e_y_p,
+            'e_z_p': e_z_p,
+            'e_x_pp': e_x_pp,
+            'e_y_pp': e_y_pp,
+            'e_z_pp': e_z_pp,
+            'quat_err': quat_err,
+            'omega_err': omega_err,
+            'omega_err_p': omega_err_p,
+            'q': q,
+            'q_p': q_p,
+            'q_pp': q_pp,
+            'tau': tau
+        }
+        with open(file_path, "wb") as f:
+            pickle.dump(data, f)
+
+    N_thread = 10
+    N_chunk = N // N_thread
+
+    processes = []
+    temp_files = [tempfile.NamedTemporaryFile(delete=False) for _ in range(N_thread)]
+
+    for j in range(N_thread):
+        process = Process(target=parallel_calc, args=(j, N_thread, temp_files[j].name))
+        processes.append(process)
+        process.start()
+
+    for process in processes:
+        process.join()
+
+    # Load animation objects from files
+    data_list = []
+    for temp_file in temp_files:
+        with open(temp_file.name, "rb") as f:
+            data_list.append(pickle.load(f))
+
+    for i, data in enumerate(data_list):
+        p_e[i*N_chunk:(i+1)*N_chunk] = data['p_e']
+        p_e_p[i*N_chunk:(i+1)*N_chunk] = data['p_e_p']
+        p_e_pp[i*N_chunk:(i+1)*N_chunk] = data['p_e_pp']
+
+        quat_e[i*N_chunk:(i+1)*N_chunk] = data['quat_e']
+        omega_e[i*N_chunk:(i+1)*N_chunk] = data['omega_e']
+        omega_e_p[i*N_chunk:(i+1)*N_chunk] = data['omega_e_p']
+
+        w[i*N_chunk:(i+1)*N_chunk] = data['w']
+
+        p_err[i*N_chunk:(i+1)*N_chunk] = data['p_err']
+        p_err_p[i*N_chunk:(i+1)*N_chunk] = data['p_err_p']
+        p_err_pp[i*N_chunk:(i+1)*N_chunk] = data['p_err_pp']
+
+        e_x[i*N_chunk:(i+1)*N_chunk] = data['e_x']
+        e_y[i*N_chunk:(i+1)*N_chunk] = data['e_y']
+        e_z[i*N_chunk:(i+1)*N_chunk] = data['e_z']
+
+        e_x_p[i*N_chunk:(i+1)*N_chunk] = data['e_x_p']
+        e_y_p[i*N_chunk:(i+1)*N_chunk] = data['e_y_p']
+        e_z_p[i*N_chunk:(i+1)*N_chunk] = data['e_z_p']
+
+        e_x_pp[i*N_chunk:(i+1)*N_chunk] = data['e_x_pp']
+        e_y_pp[i*N_chunk:(i+1)*N_chunk] = data['e_y_pp']
+        e_z_pp[i*N_chunk:(i+1)*N_chunk] = data['e_z_pp']
+
+        quat_err[i*N_chunk:(i+1)*N_chunk] = data['quat_err']
+        omega_err[i*N_chunk:(i+1)*N_chunk] = data['omega_err']
+        omega_err_p[i*N_chunk:(i+1)*N_chunk] = data['omega_err_p']
+
+        q[i*N_chunk:(i+1)*N_chunk] = data['q']
+        q_p[i*N_chunk:(i+1)*N_chunk] = data['q_p']
+        q_pp[i*N_chunk:(i+1)*N_chunk] = data['q_pp']
+
+        tau[i*N_chunk:(i+1)*N_chunk] = data['tau']
 
     # make data shorter, use only each N_dec sample
     N_dec = 1

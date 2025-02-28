@@ -28,7 +28,7 @@
       "R_q_pp": [1, 1, 1, 1, 1, 1],
       "q_xprev_common_weight": 0,
       "R_xprev": [1, 1, 1, 1, 1, 1,  0, 0, 0, 0, 0, 0],
-      "q_ureg_cost": 1e-1,
+      "q_ureg_cost": 1e-3,
       "q_uprev_cost": 0,
       "q_x_bound_cost": 1e-2,
       "R_x_bounds": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],

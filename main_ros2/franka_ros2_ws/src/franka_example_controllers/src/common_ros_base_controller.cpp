@@ -95,9 +95,6 @@ namespace franka_example_controllers
         // Is set by using the nodejs gui
         // traj_select = general_config["trajectory_selection"];
 
-        double omega_c_q = get_config_value<double>(general_config, "lowpass_filter_omega_c_q");
-        double omega_c_dq = get_config_value<double>(general_config, "lowpass_filter_omega_c_dq");
-
         base_controller->update_config();
 
         N_step = base_controller->get_N_step();
@@ -112,15 +109,15 @@ namespace franka_example_controllers
             x_measured = state;
         #endif
 
-        init_filter(omega_c_q, omega_c_dq); // uses x_measured
+        init_filter(); // uses x_measured
     }
 
-    void CommonROSBaseController::init_filter(double omega_c_q, double omega_c_dq)
+    void CommonROSBaseController::init_filter()
     {
         if(use_ekf && use_lowpass_filter)
         {
             ekf.update_config();
-            lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
+            lowpass_filter.update_config();
             x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
             ekf.initialize(x_measured.data());
             x_filtered_ekf_ptr = ekf.get_x_k_plus_ptr();
@@ -136,7 +133,7 @@ namespace franka_example_controllers
         }
         else if(use_lowpass_filter)
         {
-            lowpass_filter.init(x_measured.data(), omega_c_q, omega_c_dq);
+            lowpass_filter.update_config();
             x_filtered_lowpass_ptr = lowpass_filter.getFilteredOutputPtr();
             x_filtered_ekf_ptr = x_filtered_lowpass_ptr;
             x_filtered = Eigen::Map<Eigen::VectorXd>(x_filtered_lowpass_ptr, nx);

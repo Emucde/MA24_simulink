@@ -29,7 +29,8 @@ class BaseWorkspaceController
 public:
     BaseWorkspaceController(RobotModel &robot_model,
                    const std::string &general_config_filename,
-                   TrajectoryGenerator &trajectory_generator)
+                   TrajectoryGenerator &trajectory_generator,
+                   double& tau_max_jump)
         : robot_model(robot_model), general_config_filename(general_config_filename),
           trajectory_generator(trajectory_generator),
           nq(robot_model.nq), nx(robot_model.nx),
@@ -40,7 +41,8 @@ public:
           x_err(Eigen::VectorXd::Zero(6)), x_err_p(Eigen::VectorXd::Zero(6)),
           x_d_p(Eigen::VectorXd::Zero(6)), x_d_pp(Eigen::VectorXd::Zero(6)),
           n_indices(ConstIntVectorMap(robot_model.robot_config.n_indices, robot_model.robot_config.nq_red)),
-          traj_data_real_len(trajectory_generator.get_traj_data_real_len()), dt(robot_model.robot_config.dt), traj_count(0)
+          traj_data_real_len(trajectory_generator.get_traj_data_real_len()), dt(robot_model.robot_config.dt),
+          tau_max_jump(tau_max_jump), traj_count(0)
     {
         update_controller_settings();
     }
@@ -68,6 +70,7 @@ protected:
     const Eigen::VectorXi n_indices;
     uint traj_data_real_len;
     double dt;
+    double& tau_max_jump;
 
 public:
     uint traj_count;
@@ -153,8 +156,9 @@ private:
     public:
         CTController(RobotModel &robot_model,
                      const std::string &general_config_filename,
-                     TrajectoryGenerator &trajectory_generator)
-            : BaseWorkspaceController(robot_model, general_config_filename, trajectory_generator) {}
+                     TrajectoryGenerator &trajectory_generator,
+                     double& tau_max_jump)
+            : BaseWorkspaceController(robot_model, general_config_filename, trajectory_generator, tau_max_jump) {}
         Eigen::VectorXd control(const Eigen::VectorXd &x) override;
         ~CTController() override = default;
     };
@@ -164,8 +168,9 @@ private:
     public:
         PDPlusController(RobotModel &robot_model,
                          const std::string &general_config_filename,
-                         TrajectoryGenerator &trajectory_generator)
-            : BaseWorkspaceController(robot_model, general_config_filename, trajectory_generator) {}
+                         TrajectoryGenerator &trajectory_generator,
+                         double& tau_max_jump)
+            : BaseWorkspaceController(robot_model, general_config_filename, trajectory_generator, tau_max_jump) {}
         Eigen::VectorXd control(const Eigen::VectorXd &x) override;
         ~PDPlusController() override = default;
     };
@@ -175,8 +180,9 @@ private:
     public:
         InverseDynamicsController(RobotModel &robot_model,
                                   const std::string &general_config_filename,
-                                  TrajectoryGenerator &trajectory_generator)
-            : BaseWorkspaceController(robot_model, general_config_filename, trajectory_generator) {}
+                                  TrajectoryGenerator &trajectory_generator,
+                                  double& tau_max_jump)
+            : BaseWorkspaceController(robot_model, general_config_filename, trajectory_generator, tau_max_jump) {}
         Eigen::VectorXd control(const Eigen::VectorXd &x) override;
         Eigen::VectorXd q_d_prev, q_p_d_prev;
         bool init = true;

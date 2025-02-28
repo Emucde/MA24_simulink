@@ -2,14 +2,16 @@
 #define SIGNALFILTER_HPP
 
 #include <Eigen/Dense>
+#include "eigen_templates.hpp"
 
 class SignalFilter {
 public:   
     // Constructor to initialize the filter with the number of degrees of freedom (DOF) and initial state
-    SignalFilter(int num_joints, double Ts, double* state, double omega_c_q, double omega_c_dq);
+    SignalFilter(int num_joints, double* state, std::string general_config_filename);
     
     // Method to initialize the filter state and coefficients
-    void init(double* state, double omega_c_q, double omega_c_dq);
+    void update_config();
+    void reset_state(double* state);
     
     // Method to update the filter with measured values
     void run(double* state);
@@ -26,14 +28,12 @@ public:
 
 private:
     int num_joints;                       // Number of joints
-    double Ts;                            // Sample time duration for the filter
+    std::string general_config_filename;  // Path to the general configuration file
     double a_q;                           // Coefficient for the position filter
     double b_q;                           // Coefficient for the position filter
     double a_dq;                          // Coefficient for the velocity filter
     double b_dq;                          // Coefficient for the velocity filter
     Eigen::VectorXd x_filt;               // Filtered output state
-    Eigen::Ref<Eigen::VectorXd> q_filt;   // Reference for joint angle filtered output
-    Eigen::Ref<Eigen::VectorXd> q_p_filt; // Reference for joint velocity filtered output
 };
 
 #endif // SIGNALFILTER_HPP
