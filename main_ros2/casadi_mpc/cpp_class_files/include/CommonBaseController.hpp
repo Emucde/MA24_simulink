@@ -80,8 +80,15 @@ public:
         torque_mapper.setConfiguration(config);
     }
 
-    Eigen::VectorXd get_file_traj_x0_nq_init(uint traj_select);
-    Eigen::VectorXd get_transient_traj_x0_init();
+    Eigen::VectorXd get_file_traj_x0_nq_init(uint traj_select)
+    {
+        return *trajectory_generator.get_traj_file_x0_init(traj_select);
+    }
+    Eigen::VectorXd get_file_traj_x0_nq_red_init(uint traj_select);
+    Eigen::VectorXd get_transient_traj_x0_init()
+    {
+        return *trajectory_generator.get_traj_x0_init();
+    }
     Eigen::VectorXd get_transient_traj_x0_red_init();
 
     // NEW

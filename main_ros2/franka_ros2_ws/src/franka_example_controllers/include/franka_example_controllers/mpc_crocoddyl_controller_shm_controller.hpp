@@ -63,7 +63,7 @@ namespace franka_example_controllers
      * The gravity compensation controller only sends zero torques so that the robot does gravity
      * compensation
      */
-    class ModelPredictiveControllerCrocoddylSHMController : public controller_interface::ControllerInterface, franka_example_controllers::CommonROSBaseController
+    class ModelPredictiveControllerCrocoddylSHMController : public franka_example_controllers::CommonROSBaseController
     {
     public:
           ModelPredictiveControllerCrocoddylSHMController()
@@ -75,29 +75,6 @@ namespace franka_example_controllers
 
         FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
         CallbackReturn on_configure(const rclcpp_lifecycle::State &previous_state) override;
-
-        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-        CallbackReturn on_init() override;
-
-        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-        CallbackReturn on_deactivate(const rclcpp_lifecycle::State &previous_state) override;
-
-        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-        CallbackReturn on_activate(const rclcpp_lifecycle::State &previous_state) override;
-
-        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-        CallbackReturn on_cleanup(const rclcpp_lifecycle::State &previous_state) override;
-
-        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-        CallbackReturn on_shutdown(const rclcpp_lifecycle::State &previous_state) override;
-
-        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-        [[nodiscard]] controller_interface::InterfaceConfiguration command_interface_configuration()
-            const override;
-
-        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
-        [[nodiscard]] controller_interface::InterfaceConfiguration state_interface_configuration()
-            const override;
 
         FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
         controller_interface::return_type update(const rclcpp::Time &time,
@@ -117,26 +94,20 @@ namespace franka_example_controllers
         int8_t error_flag_int8=0, valid_cpp=0;
         bool sem_posted = false;
 
-        // rclcpp::Subscription<mpc_interfaces::msg::ControlArray>::SharedPtr subscription_;
-        rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
-        rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr reset_mpc_service_;
-        rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr stop_mpc_service_;
-        rclcpp::Service<mpc_interfaces::srv::TrajectoryCommand>::SharedPtr traj_switch_service_;
-        rclcpp::Service<mpc_interfaces::srv::CasadiMPCTypeCommand>::SharedPtr mpc_switch_service_;
+        // rclcpp::Service<mpc_interfaces::srv::CasadiMPCTypeCommand>::SharedPtr mpc_switch_service_;
 
-        void open_shared_memories();
-        void close_shared_memories();
+        void open_shared_memories() override;
         // void topic_callback(const mpc_interfaces::msg::ControlArray & msg);
         void start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
-                       std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response);
+                       std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response) override;
         void reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
-                       std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response);
+                       std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response) override;
         void stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request> request,
-                      std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response);
+                      std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response) override;
         void traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
-                         std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response);
-        void mpc_switch(const std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Request> request,
-                        std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Response> response);
+                         std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response) override;
+        // void mpc_switch(const std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Request> request,
+        //                 std::shared_ptr<mpc_interfaces::srv::CasadiMPCTypeCommand::Response> response) override;
     };
 
     // #ifdef SIMULATION_MODE
