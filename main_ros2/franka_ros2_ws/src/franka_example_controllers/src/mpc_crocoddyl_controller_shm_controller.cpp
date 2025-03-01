@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <franka_example_controllers/mpc_crocoddyl_controller.hpp>
+#include <franka_example_controllers/mpc_crocoddyl_controller_shm_controller.hpp>
 
 #include <exception>
 #include <string>
@@ -26,7 +26,7 @@ using std::placeholders::_1;
 namespace franka_example_controllers
 {
     controller_interface::InterfaceConfiguration
-    ModelPredictiveControllerCrocoddyl::command_interface_configuration() const
+    ModelPredictiveControllerCrocoddylSHMController::command_interface_configuration() const
     {
         controller_interface::InterfaceConfiguration config;
         config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
@@ -39,7 +39,7 @@ namespace franka_example_controllers
     }
 
     controller_interface::InterfaceConfiguration
-    ModelPredictiveControllerCrocoddyl::state_interface_configuration() const
+    ModelPredictiveControllerCrocoddylSHMController::state_interface_configuration() const
     {
         controller_interface::InterfaceConfiguration state_interfaces_config;
         state_interfaces_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
@@ -54,113 +54,72 @@ namespace franka_example_controllers
         return state_interfaces_config;
     }
 
-    controller_interface::return_type ModelPredictiveControllerCrocoddyl::update(
+    controller_interface::return_type ModelPredictiveControllerCrocoddylSHMController::update(
         const rclcpp::Time & /*time*/,
         const rclcpp::Duration & /*period*/)
     {   
-        
-        #ifndef SIMULATION_MODE
-        // Read states from joint state interface
-        for (int i = 0; i < nx; ++i)
-        {
-            state[i] = state_interfaces_[i].get_value();
-        }
-        x_measured = state;
-        #else
-        if(use_noise)
-            x_measured = state + generateNoiseVector(nx, Ts, mean_noise_amplitude);
-        else
-            x_measured = state;
-        #endif
-
-        #ifdef DEBUG
-        RCLCPP_INFO(get_node()->get_logger(), "q (rad): [%f, %f, %f, %f, %f, %f, %f]",
-                    state[0], state[1], state[2],
-                    state[3], state[4], state[5], state[6]);
-
-        RCLCPP_INFO(get_node()->get_logger(), "q_p (rad/s): [%f, %f, %f, %f, %f, %f, %f]",
-                    state[nq + 0], state[nq + 1], state[nq + 2],
-                        state[nq + 3], state[nq + 4], state[nq + 5], state[nq + 6]);
-        #endif
-
         if (controller_started)
-        {
-            current_frequency = timer_solver.get_frequency()*solver_steps;
-            shm.write("read_state_data_full", x_measured.data(), global_traj_count);
-            shm.write("read_control_data", tau_full.data());
-            shm.write("read_control_data_full", tau_full.data(), global_traj_count);
-            shm.write("read_traj_data_full", current_trajectory->col(global_traj_count).data(), global_traj_count);
-            shm.write("read_frequency_full", &current_frequency, global_traj_count);
-            shm.post_semaphore("shm_changed_semaphore");
+        {   
 
-            if(global_traj_count < traj_len)
-                global_traj_count++;
-
-            error_flag = controller.get_error_flag(); // Get the error flag
-
-            if (error_flag != ErrorFlag::NO_ERROR)
+#ifndef SIMULATION_MODE
+            // Read states from joint state interface
+            for (int i = 0; i < nx; ++i)
             {
-                if (error_flag == ErrorFlag::JUMP_DETECTED)
+                state[i] = state_interfaces_[i].get_value();
+            }
+            x_measured = state;
+#else
+            base_controller->simulateModelRK4(state.data(), tau_full.data(), Ts);
+            if(use_noise)
+                x_measured = state + generateNoiseVector(nx, Ts, mean_noise_amplitude);
+            else
+                x_measured = state;
+#endif
+        
+            valid_cpp = read_valid_cpp_shm();
+            if (valid_cpp == 1)
+            {
+                write_valid_cpp_shm(0);
+                shm.read_double("cpp_control_data", tau_full.data());
+                shm.read_int8("error_cpp", &error_flag_int8);
+                error_flag = static_cast<ErrorFlag>(error_flag_int8);
+
+                if (error_flag != ErrorFlag::NO_ERROR)
                 {
-                    RCLCPP_WARN(get_node()->get_logger(), "Jump in torque detected (tau (Nm): [%f, %f, %f, %f, %f, %f, %f]). Stopping the controller.",
-                                tau_full[0], tau_full[1], tau_full[2],
-                                tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
-                }
-                else if (error_flag == ErrorFlag::NAN_DETECTED)
-                {
-                    RCLCPP_WARN(get_node()->get_logger(), "NaN in torque detected (tau (Nm): [%f, %f, %f, %f, %f, %f, %f]). Stopping the controller.",
-                                tau_full[0], tau_full[1], tau_full[2],
-                                tau_full[3], tau_full[4], tau_full[5], tau_full[6]);
-                }
-                else if (error_flag == ErrorFlag::CROCODDYL_ERROR)
-                {
-                    RCLCPP_WARN(get_node()->get_logger(), "Error in Crocoddyl function call. Stopping the controller.");
+                    if (error_flag == ErrorFlag::JUMP_DETECTED)
+                        RCLCPP_WARN(get_node()->get_logger(), "Jump in torque detected. Stopping the controller.");
+                    else if (error_flag == ErrorFlag::NAN_DETECTED)
+                        RCLCPP_WARN(get_node()->get_logger(), "NaN in torque detected. Stopping the controller.");
+                    else if (error_flag == ErrorFlag::CROCODDYL_ERROR)
+                        RCLCPP_WARN(get_node()->get_logger(), "Error in Crocoddyl function call. Stopping the controller.");
+                    error_flag = ErrorFlag::NO_ERROR;
+                    int8_t stop = 1;
+                    shm.feedback_write_int8("stop_cpp", &stop);
+                    controller_started = false;
                 }
 
-                controller_started = false;
-                tau_full = Eigen::VectorXd::Zero(nq);
+                shm.write("ros2_state_data", x_measured.data());
+                shm.post_semaphore("ros2_semaphore");
             }
 
-            #ifdef SIMULATION_MODE
-            controller.simulateModelRK4(state.data(), tau_full.data(), Ts);
-            #else
+#ifndef SIMULATION_MODE
             for (int i = 0; i < nq; ++i) {
                 command_interfaces_[i].set_value(tau_full[i]);
             }
-            #endif
-
-            filter_x_measured();
-
-            if(solver_step_counter % solver_steps == 0)
-            {
-                solve();
-            }
-            
-            if(solver_step_counter >= 1000)
-                solver_step_counter = 0;
-            solver_step_counter++;
+#endif
         }
         else
         {
-            #ifndef SIMULATION_MODE
+#ifndef SIMULATION_MODE
             for (int i = 0; i < nq; ++i) {
                 command_interfaces_[i].set_value(0);
             }
-            #endif
+#endif
         }
-
-        #ifndef SIMULATION_MODE
-        // Write torques to shared memory (send data to robot)
-        for (int i = 0; i < nq; ++i) {
-            command_interfaces_[i].set_value(tau_full[i]);
-        }
-        #endif
-
-
         return controller_interface::return_type::OK;
     }
 
-    CallbackReturn ModelPredictiveControllerCrocoddyl::on_configure(
+    CallbackReturn ModelPredictiveControllerCrocoddylSHMController::on_configure(
         const rclcpp_lifecycle::State & /*previous_state*/)
     {
         arm_id_ = get_node()->get_parameter("arm_id").as_string();
@@ -168,7 +127,7 @@ namespace franka_example_controllers
         RCLCPP_INFO(get_node()->get_logger(), "Configuring MPC controller for %s arm", arm_id_.c_str());
 
         // subscription_ = get_node()->create_subscription<mpc_interfaces::msg::ControlArray>(
-        //     "topic", 10, std::bind(&ModelPredictiveControllerCrocoddyl::topic_callback, this, _1));
+        //     "topic", 10, std::bind(&ModelPredictiveControllerCrocoddylSHMController::topic_callback, this, _1));
 
         // RCLCPP_INFO(get_node()->get_logger(), "Subscribed to topic 'topic'");
 
@@ -177,26 +136,26 @@ namespace franka_example_controllers
 
         start_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
             service_prefix + "start_mpc_service",
-            std::bind(&ModelPredictiveControllerCrocoddyl::start_mpc, this, std::placeholders::_1, std::placeholders::_2));
+            std::bind(&ModelPredictiveControllerCrocoddylSHMController::start_mpc, this, std::placeholders::_1, std::placeholders::_2));
 
         reset_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
             service_prefix + "reset_mpc_service",
-            std::bind(&ModelPredictiveControllerCrocoddyl::reset_mpc, this, std::placeholders::_1, std::placeholders::_2));
+            std::bind(&ModelPredictiveControllerCrocoddylSHMController::reset_mpc, this, std::placeholders::_1, std::placeholders::_2));
 
         stop_mpc_service_ = get_node()->create_service<mpc_interfaces::srv::SimpleCommand>(
             service_prefix + "stop_mpc_service",
-            std::bind(&ModelPredictiveControllerCrocoddyl::stop_mpc, this, std::placeholders::_1, std::placeholders::_2));
+            std::bind(&ModelPredictiveControllerCrocoddylSHMController::stop_mpc, this, std::placeholders::_1, std::placeholders::_2));
 
         traj_switch_service_ = get_node()->create_service<mpc_interfaces::srv::TrajectoryCommand>(
             service_prefix + "traj_switch_service",
-            std::bind(&ModelPredictiveControllerCrocoddyl::traj_switch, this, std::placeholders::_1, std::placeholders::_2));
+            std::bind(&ModelPredictiveControllerCrocoddylSHMController::traj_switch, this, std::placeholders::_1, std::placeholders::_2));
 
         RCLCPP_INFO(get_node()->get_logger(), "Services created");
 
         return CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCrocoddyl::on_init()
+    CallbackReturn ModelPredictiveControllerCrocoddylSHMController::on_init()
     {
         rcutils_ret_t ret = rcutils_logging_set_logger_level(
             get_node()->get_logger().get_name(), MY_LOG_LEVEL);
@@ -232,58 +191,60 @@ namespace franka_example_controllers
         return CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCrocoddyl::on_deactivate(const rclcpp_lifecycle::State &)
+    CallbackReturn ModelPredictiveControllerCrocoddylSHMController::on_deactivate(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
         RCLCPP_INFO(get_node()->get_logger(), "on_deactivate: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCrocoddyl::on_activate(const rclcpp_lifecycle::State &)
+    CallbackReturn ModelPredictiveControllerCrocoddylSHMController::on_activate(const rclcpp_lifecycle::State &)
     {
         open_shared_memories();
         init_controller();
         int8_t readonly_mode = 1;
-        shm.write("readonly_mode", &readonly_mode);
+        shm.feedback_write_int8("readonly_mode", &readonly_mode);
         RCLCPP_INFO(get_node()->get_logger(), "on_activate: Shared memory opened successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCrocoddyl::on_cleanup(const rclcpp_lifecycle::State &)
+    CallbackReturn ModelPredictiveControllerCrocoddylSHMController::on_cleanup(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
         RCLCPP_INFO(get_node()->get_logger(), "on_cleanup: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn ModelPredictiveControllerCrocoddyl::on_shutdown(const rclcpp_lifecycle::State &)
+    CallbackReturn ModelPredictiveControllerCrocoddylSHMController::on_shutdown(const rclcpp_lifecycle::State &)
     {
         close_shared_memories();
         RCLCPP_INFO(get_node()->get_logger(), "on_shutdown: Shared memory closed successfully.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    void ModelPredictiveControllerCrocoddyl::open_shared_memories()
+    void ModelPredictiveControllerCrocoddylSHMController::open_shared_memories()
     {
         shm.open_readwrite_shms(shm_readwrite_infos);
         shm.open_readwrite_sems(sem_readwrite_names);
+        ros2_semaphore = shm.get_semaphore("ros2_semaphore");
+        valid_cpp_shm = shm.get_shared_memory("valid_cpp");
         RCLCPP_INFO(get_node()->get_logger(), "Shared memory opened successfully.");
     }
 
-    void ModelPredictiveControllerCrocoddyl::close_shared_memories()
+    void ModelPredictiveControllerCrocoddylSHMController::close_shared_memories()
     {
         shm.close_shared_memories();
         shm.close_semaphores();
     }
 
-    // void ModelPredictiveControllerCrocoddyl::topic_callback(const mpc_interfaces::msg::ControlArray & msg)
+    // void ModelPredictiveControllerCrocoddylSHMController::topic_callback(const mpc_interfaces::msg::ControlArray & msg)
     // {
     //     Eigen::Map<const Eigen::VectorXd> u_k(msg.control_array.data(), msg.control_array.size());
     //     RCUTILS_LOG_WARN("Received control array: [%f, %f, %f, %f, %f, %f]",
     //                     u_k[0], u_k[1], u_k[2], u_k[3], u_k[4], u_k[5]);
     // }
 
-    void ModelPredictiveControllerCrocoddyl::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
+    void ModelPredictiveControllerCrocoddylSHMController::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                     std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -293,52 +254,39 @@ namespace franka_example_controllers
             0  // torques_valid
         };
 
-        shm.write("data_from_simulink_reset", &flags.reset);
-        shm.write("data_from_simulink_stop", &flags.stop);
-        shm.write("data_from_simulink_start", &flags.start);
-
-        response->status = "start flag set";
-
-        #ifndef SIMULATION_MODE
-        for (int i = 0; i < nx; ++i)
-            state[i] = state_interfaces_[i].get_value();
-        x_measured = state;
-        #endif
+        shm.write("start_cpp", &flags.start);
+        shm.write("reset_cpp", &flags.reset);
+        shm.write("stop_cpp", &flags.stop);
 
         init_controller();
+        init_trajectory();
 
-        filter_x_measured(); // uses x_measured
-
-#ifdef SIMULATION_MODE
-        Eigen::VectorXd x0_init = base_controller->get_file_traj_x0_nq_init(traj_select);
-        state = x0_init;
-#endif
-        
-        base_controller->init_file_trajectory(1, state.data(), 0, 2, 2);
-        traj_len = base_controller->get_traj_data_real_len();
-        current_trajectory = base_controller->get_trajectory();
-        global_traj_count = 0;
-
+#ifndef SIMULATION_MODE
+        for (int i = 0; i < nx; ++i)
+            state[i] = state_interfaces_[i].get_value();
+#else
         if(first_start)
         {
-            // init_trajectory();
-            // reset_trajectory();
-            tau_full = controller.update_control(x_filtered);
-            controller.set_traj_count(0);
-            tau_full = controller.update_control(x_filtered);
-            controller.set_traj_count(0);
+            Eigen::VectorXd x0_init = base_controller->get_file_traj_x0_nq_init(traj_select);
+            state = x0_init;
+        }
+#endif
+        if(first_start)
+        {
+            shm.write("ros2_state_data", state.data());
             first_start = false;
         }
 
-        int8_t readonly_mode = 1;
-        shm.write("read_traj_length", &traj_len);
-        shm.write("readonly_mode", &readonly_mode);
+        shm.read_double("cpp_control_data", tau_full.data());
 
+        shm.feedback_write_int8("valid_cpp", &flags.torques_valid);
+
+        shm.post_semaphore("ros2_semaphore");
         controller_started = true;
-        std::async(std::launch::async, &ModelPredictiveControllerCrocoddyl::solve, this);
+        response->status = "start flag set";
     }
 
-    void ModelPredictiveControllerCrocoddyl::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
+    void ModelPredictiveControllerCrocoddylSHMController::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                     std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -348,19 +296,26 @@ namespace franka_example_controllers
             0  // torques_valid
         };
 
-        shm.write("data_from_simulink_start", &flags.start);
-        shm.write("data_from_simulink_stop", &flags.stop);
-        shm.write("data_from_simulink_reset", &flags.reset);
+        shm.feedback_write_int8("data_from_simulink_start", &flags.start);
+        shm.feedback_write_int8("data_from_simulink_stop", &flags.stop);
+        shm.feedback_write_int8("data_from_simulink_reset", &flags.reset);
+
+        shm.feedback_write_int8("start_cpp", &flags.start);
+        shm.feedback_write_int8("reset_cpp", &flags.reset);
+        shm.feedback_write_int8("stop_cpp", &flags.stop);
 
         reset_trajectory();
+        first_start = true;
 
         response->status = "reset flag set";
         controller_started = false;
+        solve_started = false;
         shm.post_semaphore("shm_changed_semaphore");
+        shm.post_semaphore("ros2_semaphore");
         RCLCPP_INFO(get_node()->get_logger(), "Crocoddyl MPC reset");
     }
 
-    void ModelPredictiveControllerCrocoddyl::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
+    void ModelPredictiveControllerCrocoddylSHMController::stop_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                    std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
         shm_flags flags = {
@@ -370,17 +325,24 @@ namespace franka_example_controllers
             0  // torques_valid
         };
 
-        shm.write("data_from_simulink_start", &flags.start);
-        shm.write("data_from_simulink_reset", &flags.reset);
-        shm.write("data_from_simulink_stop", &flags.stop);
+        shm.feedback_write_int8("data_from_simulink_start", &flags.start);
+        shm.feedback_write_int8("data_from_simulink_reset", &flags.reset);
+        shm.feedback_write_int8("data_from_simulink_stop", &flags.stop);
+
+        shm.feedback_write_int8("start_cpp", &flags.start);
+        shm.feedback_write_int8("reset_cpp", &flags.reset);
+        shm.feedback_write_int8("stop_cpp", &flags.stop);
+
         shm.post_semaphore("shm_changed_semaphore");
+        shm.post_semaphore("ros2_semaphore");
 
         response->status = "stop flag set";
         controller_started = false;
+        solve_started = false;
         RCLCPP_INFO(get_node()->get_logger(), "Crocoddyl MPC stopped");
     }
 
-    void ModelPredictiveControllerCrocoddyl::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
+    void ModelPredictiveControllerCrocoddylSHMController::traj_switch(const std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Request> request,
                                                       std::shared_ptr<mpc_interfaces::srv::TrajectoryCommand::Response> response)
     {
         int old_traj_select = traj_select;
@@ -403,15 +365,8 @@ namespace franka_example_controllers
         }
     }
 
-    void ModelPredictiveControllerCrocoddyl::solve()
-    {
-        timer_solver.tic();
-        tau_full = controller.update_control(x_filtered);
-        timer_solver.toc();
-    }
-
 } // namespace franka_example_controllers
 #include "pluginlib/class_list_macros.hpp"
 // NOLINTNEXTLINE
-PLUGINLIB_EXPORT_CLASS(franka_example_controllers::ModelPredictiveControllerCrocoddyl,
+PLUGINLIB_EXPORT_CLASS(franka_example_controllers::ModelPredictiveControllerCrocoddylSHMController,
                        controller_interface::ControllerInterface)

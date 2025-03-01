@@ -373,16 +373,19 @@ void SharedMemoryController::run_shm_mode()
         {
             do
             {
+                timer_mpc_solver.tic();
                 shm.read_double("ros2_state_data", x_measured.data());
-                // controller->simulateModelRK4(x_measured.data(), tau_full.data(), Ts);
+                controller->simulateModelRK4(x_measured.data(), tau_full.data(), Ts);
                 
                 base_filter->run_filter(); // automatically mapped to x_filtered
                 act_data=controller->get_act_traj_data();
-
-                timer_mpc_solver.tic();
-                tau_full = controller->update_control(x_filtered);
-                timer_mpc_solver.toc();
-                error_flag = controller->get_error_flag();
+                
+                if(traj_count % traj_step == 0)
+                {
+                    tau_full = controller->update_control(x_filtered);
+                    timer_mpc_solver.toc();
+                    error_flag = controller->get_error_flag();
+                }
 
                 if (print_counter % 100 == 0)
                 {
@@ -425,7 +428,9 @@ void SharedMemoryController::run_shm_mode()
                 error_flag_int8 = static_cast<int8_t>(error_flag);
                 shm.write("error_cpp", &error_flag_int8);
 
+                shm.read_int8("start_cpp", &start_cpp);
                 shm.read_int8("reset_cpp", &reset_cpp);
+                shm.read_int8("stop_cpp", &stop_cpp);
                 if(reset_cpp == 1)
                 {
                     reset_cpp = 0;
@@ -434,27 +439,25 @@ void SharedMemoryController::run_shm_mode()
                     std::cout << "Resetting controller in do while" << std::endl;
                     run_flag = false;
                 }
-                shm.read_int8("stop_cpp", &stop_cpp);
-                if(stop_cpp == 1)
+                else if(stop_cpp == 1)
                 {
                     stop_cpp = 0;
                     valid_cpp = 0;
                     shm.write("stop_cpp", &stop_cpp);
                     std::cout << "Stopping controller in do while" << std::endl;
                 }
-                shm.read_int8("start_cpp", &start_cpp);
-                if(start_cpp == 1)
+                else if(start_cpp == 1)
                 {
                     init_python();
                     start_cpp = 0;
                     shm.write("start_cpp", &start_cpp);
                     std::cout << "Starting controller in do while" << std::endl;
                 }
-
                 if(traj_count < traj_len-1)
                     traj_count += traj_step;
 
                 write_valid_cpp_shm(valid_cpp);
+                
 
                 sem_wait(ros2_semaphore);
             } while(run_flag);

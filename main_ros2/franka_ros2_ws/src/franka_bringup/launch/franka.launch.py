@@ -30,6 +30,7 @@ controller_names = [
     "gravity_compensation_example_controller",
     "mpc_crocoddyl_controller",
     "mpc_crocoddyl_controller_shm",
+    "mpc_crocoddyl_controller_shm_controller",
     "mpc_casadi_controller",
     "conventional_workspace_controller",
     "move_to_start_example_controller"
@@ -128,8 +129,8 @@ def generate_launch_description():
             
             # alternativ (untested):
             # https://github.com/ms-iot/vscode-ros/blob/master/doc/debug-support.md
-            # on_exit=Shutdown(),
-            on_exit=on_custom_exit,
+            on_exit=Shutdown(),
+            # on_exit=on_custom_exit,
         ),
 
         Node(package='rviz2',

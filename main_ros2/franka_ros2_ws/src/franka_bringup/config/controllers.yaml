@@ -8,6 +8,9 @@ controller_manager:
     mpc_crocoddyl_controller:
       type: franka_example_controllers/ModelPredictiveControllerCrocoddyl
       
+    mpc_crocoddyl_controller_shm_controller:
+      type: franka_example_controllers/ModelPredictiveControllerCrocoddylSHMController
+
     mpc_crocoddyl_controller_shm:
       type: franka_example_controllers/ModelPredictiveControllerCrocoddylSHM
       

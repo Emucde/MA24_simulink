@@ -58,6 +58,7 @@ add_library(
         src/gravity_compensation_example_controller.cpp
         src/conventional_workspace_controller.cpp
         src/mpc_crocoddyl_controller.cpp
+        src/mpc_crocoddyl_controller_shm_controller.cpp
         src/mpc_crocoddyl_controller_shm.cpp
         src/mpc_casadi_controller.cpp
         src/shared_memory.cpp

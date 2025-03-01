@@ -48,9 +48,11 @@
 #include "trajectory_settings.hpp"
 #include <Eigen/Dense>
 #include <random>
+#include <semaphore.h>
 
 #include <boost/asio/thread_pool.hpp>
 #include <boost/asio/post.hpp>
+#include <boost/asio.hpp>
 #include <future> // Include the future and async library
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
@@ -61,10 +63,10 @@ namespace franka_example_controllers
      * The gravity compensation controller only sends zero torques so that the robot does gravity
      * compensation
      */
-    class ModelPredictiveControllerCrocoddyl : public controller_interface::ControllerInterface, franka_example_controllers::CommonROSBaseController
+    class ModelPredictiveControllerCrocoddylSHMController : public controller_interface::ControllerInterface, franka_example_controllers::CommonROSBaseController
     {
     public:
-          ModelPredictiveControllerCrocoddyl()
+          ModelPredictiveControllerCrocoddylSHMController()
          : CommonROSBaseController(), controller(CrocoddylController(urdf_filename, crocoddyl_config_filename, general_config_filename))
          {
             base_controller = &controller;
@@ -101,10 +103,19 @@ namespace franka_example_controllers
         controller_interface::return_type update(const rclcpp::Time &time,
                                                  const rclcpp::Duration &period) override;
 
-        void solve();
     private:
         const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
         CrocoddylController controller;
+
+        bool semaphore_initialized = false;
+        bool solve_started = false;
+        bool solve_finished = true;
+        sem_t solve_semaphore;
+        Eigen::VectorXd x_filtered_temp;
+        Eigen::VectorXd tau_full_finished;
+
+        int8_t error_flag_int8=0, valid_cpp=0;
+        bool sem_posted = false;
 
         // rclcpp::Subscription<mpc_interfaces::msg::ControlArray>::SharedPtr subscription_;
         rclcpp::Service<mpc_interfaces::srv::SimpleCommand>::SharedPtr start_mpc_service_;
