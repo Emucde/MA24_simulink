@@ -51,6 +51,7 @@ public:
 
 
     // Method to update the configuration
+    void init_default_config();
     void update_config();
 
     // Method to init the filter
@@ -99,7 +100,7 @@ private:
 
     // Trajectory Settings
     uint traj_len;
-    double trajectory_selection;
+    uint trajectory_selection;
     double T_traj_start;
     double T_traj_dur;
     double T_traj_end;
@@ -143,6 +144,7 @@ private:
         {"reset_cpp", sizeof(int8_t), 1},
         {"error_cpp", sizeof(int8_t), 1},
         {"valid_cpp", sizeof(int8_t), 1},
+        {"traj_switch_cpp", sizeof(int8_t), 1},
         {"data_from_simulink_stop", sizeof(int8_t), 1},
         {"readonly_mode", sizeof(int8_t), 1},
         {"read_traj_length", sizeof(casadi_uint), 1},

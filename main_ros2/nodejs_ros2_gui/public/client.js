@@ -205,13 +205,15 @@ document.getElementById('start').addEventListener('click', () => {
 });
 
 document.getElementById('reset').addEventListener('click', () => {
+    var active_controller_name = get_controller();
     document.getElementById("home_main").classList.add("hide");
-    ws.send(JSON.stringify({ command: 'reset' }));
+    ws.send(JSON.stringify({ command: 'reset', controller_name: active_controller_name }));
 });
 
 document.getElementById('stop').addEventListener('click', () => {
+    var active_controller_name = get_controller();
     document.getElementById("home_main").classList.add("hide");
-    ws.send(JSON.stringify({ command: 'stop' }));
+    ws.send(JSON.stringify({ command: 'stop', controller_name: active_controller_name }));
 });
 
 document.getElementById('home').addEventListener('click', () => {

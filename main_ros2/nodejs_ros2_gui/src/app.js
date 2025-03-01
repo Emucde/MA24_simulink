@@ -217,9 +217,9 @@ async function main() {
     });
 
 
-    wss.on('listening', (ws) => {
-        check_ros_connection();
-    });
+    // wss.on('listening', (ws) => {
+    //     check_ros_connection();
+    // });
 
     wss.on('connection', (ws) => {
         clients.add(ws);
@@ -290,10 +290,22 @@ async function main() {
                             log_check = await check(result, 'start_service', data)
                             break;
                         case 'reset':
+                            // Switch Controller
+                            var old_controller_name = active_controller_name;
+                            result = await switch_control(old_controller_name, data.controller_name);
+                            log_check = await check(result, 'switch_control', data)
+                            if (!log_check.ok)
+                                break;
                             result = await resetService(active_controller_name);
                             log_check = await check(result, 'reset_service', data)
                             break;
                         case 'stop':
+                            // Switch Controller
+                            var old_controller_name = active_controller_name;
+                            result = await switch_control(old_controller_name, data.controller_name);
+                            log_check = await check(result, 'switch_control', data)
+                            if (!log_check.ok)
+                                break;
                             result = await stopService(active_controller_name);
                             log_check = await check(result, 'stop_service', data)
                             break;

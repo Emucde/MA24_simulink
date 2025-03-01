@@ -4,7 +4,7 @@
 #include <semaphore.h>
 #include <Eigen/Dense>
 
-// #define CUSTOM_LIST 1
+#define USE_CUSTOM_LIST true
 #define USE_SHARED_MEMORY 1
 #define RUN_SIMULATION 1
 
@@ -16,11 +16,7 @@ int main(int argc, char *argv[])
         run_simulation = true;
     }
 
-    #ifdef USE_CUSOM_LIST
-    SharedMemoryController shared_memory_controller(MASTERDIR, true);
-    #else
-    SharedMemoryController shared_memory_controller(MASTERDIR, false);
-    #endif
+    SharedMemoryController shared_memory_controller(MASTERDIR, USE_CUSTOM_LIST);
     if (run_simulation)
     {
         std::cout << "Running simulation mode" << std::endl;

@@ -199,8 +199,8 @@ namespace franka_example_controllers
         shm.feedback_write_int8("data_from_simulink_reset", &flags.reset);
 
         shm.feedback_write_int8("start_cpp", &flags.start);
-        shm.feedback_write_int8("reset_cpp", &flags.reset);
         shm.feedback_write_int8("stop_cpp", &flags.stop);
+        shm.feedback_write_int8("reset_cpp", &flags.reset);
 
         reset();
         first_start = true;
@@ -208,8 +208,8 @@ namespace franka_example_controllers
         response->status = "reset flag set";
         controller_started = false;
         solve_started = false;
-        shm.post_semaphore("shm_changed_semaphore");
         shm.post_semaphore("ros2_semaphore");
+        shm.post_semaphore("shm_changed_semaphore");
         RCLCPP_INFO(this->get_node()->get_logger(), "Crocoddyl MPC reset");
     }
 
@@ -227,9 +227,9 @@ namespace franka_example_controllers
         shm.feedback_write_int8("data_from_simulink_reset", &flags.reset);
         shm.feedback_write_int8("data_from_simulink_stop", &flags.stop);
 
-        shm.feedback_write_int8("start_cpp", &flags.start);
-        shm.feedback_write_int8("reset_cpp", &flags.reset);
-        shm.feedback_write_int8("stop_cpp", &flags.stop);
+        shm.write("start_cpp", &flags.start);
+        shm.write("reset_cpp", &flags.reset);
+        shm.write("stop_cpp", &flags.stop);
 
         shm.post_semaphore("shm_changed_semaphore");
         shm.post_semaphore("ros2_semaphore");
@@ -245,6 +245,7 @@ namespace franka_example_controllers
     {
         int old_traj_select = traj_select;
         traj_select = request->traj_select; // it is later used at start_mpc() in init_trajectory
+        shm.write("traj_switch_cpp", &traj_select);
         if(old_traj_select == traj_select)
         {
             response->status = "trajectory " + std::to_string(traj_select) + " already selected";

@@ -521,6 +521,7 @@ def initialize_shared_memory():
         "stop_cpp":                       {"size": 1,                     "dtype": np.int8},
         "error_cpp":                      {"size": 1,                     "dtype": np.int8},
         "valid_cpp":                      {"size": 1,                     "dtype": np.int8},
+        "traj_switch_cpp":                {"size": 1,                     "dtype": np.int8},
         "data_from_simulink_stop":        {"size": 1,                     "dtype": np.int8},
         "data_from_simulink_traj_switch": {"size": 1,                     "dtype": np.int8},
         "readonly_mode":                  {"size": 1,                     "dtype": np.int8},

@@ -185,8 +185,17 @@ namespace franka_example_controllers
 
         if (controller_started)
         {
+
+            base_controller->simulateModelRK4(state.data(), tau_full.data(), Ts);
             if (solver_step_counter % solver_steps == 0)
-                solve();
+            {
+                // solve();
+                std::async(std::launch::async, &CommonROSBaseController::solve, this);
+                // std::thread solver_thread([this]() {
+                //     solve();
+                // });
+                // solver_thread.detach();
+            }
 
             if (solver_step_counter >= 1000)
                 solver_step_counter = 0;
@@ -227,7 +236,6 @@ namespace franka_example_controllers
                 controller_started = false;
                 tau_full << Eigen::VectorXd::Zero(nq);
             }
-
 #ifndef SIMULATION_MODE
             for (int i = 0; i < nq; ++i)
             {
@@ -238,11 +246,17 @@ namespace franka_example_controllers
         else
         {
 #ifndef SIMULATION_MODE
-            for (int i = 0; i < nq; ++i)
-            {
-                command_interfaces_[i].set_value(0);
-            }
+            // for (int i = 0; i < nq; ++i)
+            // {
+            //     command_interfaces_[i].set_value(0);
+            // }
+            tau_full << Eigen::VectorXd::Zero(nq);
 #endif
+        }
+
+        for (int i = 0; i < nq; ++i)
+        {
+            command_interfaces_[i].set_value(tau_full[i]);
         }
 
         return controller_interface::return_type::OK;
@@ -327,6 +341,7 @@ namespace franka_example_controllers
         tau_full << Eigen::VectorXd::Zero(nq);
         controller_started = false;
         init_controller();
+        init_trajectory();
         reset();
 
         int8_t readonly_mode = 1;
@@ -385,28 +400,20 @@ namespace franka_example_controllers
 #endif
 
         init_controller();
-
-        if (first_start)
-        {
-            init_trajectory();
-            reset();
-        }
+        init_trajectory();
+        reset();
 
         base_filter->run_filter(); // automatically mapped to x_filtered_ptr, uses x_measured
-
-        if (first_start)
-        {
-
-            tau_full << base_controller->update_control(Eigen::Map<Eigen::VectorXd>(x_filtered_ptr, nx));
+        std::async(std::launch::async, [this]() {
+            solve();
             base_controller->set_traj_count(0);
-            first_start = false;
-        }
 
-        int8_t readonly_mode = 1;
-        shm.write("read_traj_length", &traj_len);
-        shm.write("readonly_mode", &readonly_mode);
+            int8_t readonly_mode = 1;
+            shm.write("read_traj_length", &traj_len);
+            shm.write("readonly_mode", &readonly_mode);
 
-        controller_started = true;
+            controller_started = true;
+        });
     }
 
     void CommonROSBaseController::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,

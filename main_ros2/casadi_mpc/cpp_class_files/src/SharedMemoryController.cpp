@@ -44,6 +44,7 @@ SharedMemoryController::SharedMemoryController(const std::string& urdf_file,
         base_filter(&base_no_filter)
 {
     update_config();
+    init_default_config();
     init_filter(x_measured);
     init_trajectory(x_measured);
     init_shm();
@@ -86,6 +87,12 @@ CrocoddylMPCType SharedMemoryController::get_crocoddyl_controller_type(const std
     }
 }
 
+void SharedMemoryController::init_default_config()
+{
+    nlohmann::json general_config = read_config<>(general_config_filename);
+    trajectory_selection = get_config_value<double>(general_config, "trajectory_selection"); // TODO
+}
+
 void SharedMemoryController::update_config()
 {
     nlohmann::json general_config = read_config<>(general_config_filename);
@@ -102,7 +109,6 @@ void SharedMemoryController::update_config()
     current_frequency = 0.0;
     
     // Trajectory Settings
-    trajectory_selection = get_config_value<double>(general_config, "trajectory_selection"); // TODO
     T_traj_start     = get_config_value<double>(general_config, "transient_traj_start_time");
     T_traj_dur   = get_config_value<double>(general_config, "transient_traj_duration");
     T_traj_end   = get_config_value<double>(general_config, "transient_traj_end_time");
@@ -329,6 +335,7 @@ void SharedMemoryController::run_shm_mode()
         double* x_filtered_ptr = base_filter->get_filtered_data_ptr();
         Eigen::Map<Eigen::VectorXd> x_filtered(x_filtered_ptr, nx);
         int print_counter = 0;
+        int8_t traj_switch;
 
         //reset semaphore counter
         while (sem_trywait(ros2_semaphore) == 0) {
@@ -340,6 +347,10 @@ void SharedMemoryController::run_shm_mode()
         shm.read_int8("start_cpp", &start_cpp);
         shm.read_int8("stop_cpp", &stop_cpp);
         shm.read_int8("reset_cpp", &reset_cpp);
+        shm.read_int8("traj_switch_cpp", &traj_switch);
+        trajectory_selection = static_cast<uint>(traj_switch); // index start at 0
+
+        std::cout << "trajectory_selection: " << trajectory_selection << std::endl;
 
         if(reset_cpp == 1)
         {
@@ -353,11 +364,11 @@ void SharedMemoryController::run_shm_mode()
             start_cpp = 0;
             shm.write("start_cpp", &start_cpp);
             init_python();
+            init_trajectory(x_measured);
             update_config();
             shm.read_double("ros2_state_data", x_measured.data());
             init_filter(x_measured);
             x_measured_red = x_measured(n_x_indices);
-            init_trajectory(x_measured);
             controller->reset(x_measured_red.data());
             tau_full = controller->update_control(x_measured);
             controller->set_traj_count(0);

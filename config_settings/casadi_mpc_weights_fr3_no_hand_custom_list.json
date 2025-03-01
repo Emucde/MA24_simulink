@@ -351,7 +351,7 @@
     },
     "MPC4_kin_int_planner_N_MPC_20": {
         "N_step": 5,
-        "dt": 1e-3,
+        "dt": 5e-3,
         "Q_y": [1e2, 1e2, 1e2, 1e2, 1e2, 1e2],
         "Q_yN": [1e5, 1e5, 1e5, 1e5, 1e5, 1e5],
         "R_q_ref": [1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5],
@@ -370,7 +370,7 @@
     },
     "MPC4_kin_int_planner_N_MPC_30": {
         "N_step": 5,
-        "dt": 1e-3,
+        "dt": 5e-3,
         "Q_y": [1e2, 1e2, 1e2, 1e2, 1e2, 1e2],
         "Q_yN": [1e5, 1e5, 1e5, 1e5, 1e5, 1e5],
         "R_q_ref": [1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5],
@@ -408,7 +408,7 @@
     },
     "MPC5_kin_dev_planner_N_MPC_20": {
         "N_step": 5,
-        "dt": 3e-3,
+        "dt": 10e-3,
         "Q_y": [1e2, 1e2, 1e2, 1e2, 1e2, 1e2],
         "Q_yN": [1e5, 1e5, 1e5, 1e5, 1e5, 1e5],
         "R_q_ref": [1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5],

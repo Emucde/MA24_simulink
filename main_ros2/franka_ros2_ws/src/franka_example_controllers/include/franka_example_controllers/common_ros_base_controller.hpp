@@ -4,6 +4,8 @@
 #include <controller_interface/controller_interface.hpp>
 #include "franka_example_controllers/visibility_control.h"
 
+#include <string.h>
+
 #include <rclcpp/duration.hpp>
 #include <rclcpp/time.hpp>
 #include "mpc_interfaces/msg/num.hpp"
@@ -32,7 +34,7 @@
 
 #define MAX_INVALID_COUNT 100
 
-#define SIMULATION_MODE 1
+// #define SIMULATION_MODE 1
 // #define CUSTOM_LIST 1
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
@@ -79,6 +81,9 @@ namespace franka_example_controllers
         FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
         [[nodiscard]] controller_interface::InterfaceConfiguration state_interface_configuration()
             const override;
+
+        FRANKA_EXAMPLE_CONTROLLERS_PUBLIC
+        virtual CallbackReturn on_configure(const rclcpp_lifecycle::State &previous_state) override = 0;
 
         void solve();
         virtual void open_shared_memories();
@@ -133,6 +138,7 @@ namespace franka_example_controllers
             {"reset_cpp", sizeof(int8_t), 1},
             {"error_cpp", sizeof(int8_t), 1},
             {"valid_cpp", sizeof(int8_t), 1},
+            {"traj_switch_cpp", sizeof(int8_t), 1},
             {"read_traj_length", sizeof(uint), 1},
             {"read_traj_data_full", 19 * sizeof(double), 20000},
             {"read_frequency_full", sizeof(double), 20000},
