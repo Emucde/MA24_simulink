@@ -72,13 +72,15 @@ if [ -z "$robot_ip" ]; then
 fi
 
 while true; do
-    nice -n -20 ros2 launch franka_bringup mpc_casadi_controller.launch.py arm_id:=fr3 robot_ip:=$robot_ip
+    nice -n -20 ros2 launch franka_bringup mpc_crocoddyl_controller.launch.py arm_id:=fr3 robot_ip:=$robot_ip
+    # nice -n -20 ros2 launch franka_bringup mpc_casadi_controller.launch.py arm_id:=fr3 robot_ip:=$robot_ip
+    # ros2 launch franka_bringup mpc_crocoddyl_controller.launch.py arm_id:=fr3 robot_ip:=$robot_ip
     if [ $? -eq 0 ]; then
         echo "ROS2 node launched successfully."
         break
     else
         echo "ROS2 crashed. Restarting..."
-        # sleep 4
+        sleep 5
     fi
 done
 

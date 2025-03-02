@@ -58,11 +58,11 @@ async function startService(active_controller_name) {
     return callService(client, {})
 }
 
+
 async function resetService(active_controller_name) {
     const client = node.createClient('mpc_interfaces/srv/SimpleCommand', '/'+active_controller_name+'/reset_mpc_service');
     return callService(client, {});
 }
-
 // ros2 service call /stop_mpc_service mpc_interfaces/srv/SimpleCommand "{}"
 async function stopService(active_controller_name) {
     const client = node.createClient('mpc_interfaces/srv/SimpleCommand', '/'+active_controller_name+'/stop_mpc_service');
@@ -85,6 +85,38 @@ async function load_and_configure_controller_intern(controller_name) {
 
     return callMultipleServices(clients, requests, status_strings);
 }
+
+async function unloadController(controllerName) {
+    const client = node.createClient(
+        'controller_manager_msgs/srv/UnloadController',
+        '/controller_manager/unload_controller'
+    );
+    return callService(client, { name: controllerName });
+}
+
+// ros2 param set /move_to_start_example_controller enable_single_joint_homing false
+async function set_enable_single_joint_homing(active_controller_name, enable) {
+    const client = node.createClient('rcl_interfaces/srv/SetParameters', '/' + active_controller_name + '/set_parameters');
+    const request = {
+        parameters: [{
+            name: 'enable_single_joint_homing',
+            value: {
+                type: 1,  // 1 corresponds to PARAMETER_BOOL
+                bool_value: enable
+            }
+        }]
+    };
+
+    try {
+        const response = await callService(client, request);
+        console.log('Parameter set response:', response);
+        return response;
+    } catch (error) {
+        console.error('Error setting parameter:', error.message);
+        throw error;
+    }
+}
+
 
 // async function load_and_configure_controller(controller_name, home_robot = null, ws = null, data = null) {
 //     return load_and_configure_controller_intern(controller_name)
@@ -126,6 +158,11 @@ async function switch_workspace_controller(workspace_controller_type) {
 async function activate_control(new_control_name) {
     const client = node.createClient('controller_manager_msgs/srv/SwitchController', 'controller_manager/switch_controller');
     return callService(client, { activate_controllers: [new_control_name], strictness: 2 });
+}
+
+async function deactivate_control(new_control_name) {
+    const client = node.createClient('controller_manager_msgs/srv/SwitchController', 'controller_manager/switch_controller');
+    return callService(client, { deactivate_controllers: [new_control_name], strictness: 2 });
 }
 
 function objectToString(obj) {
@@ -212,13 +249,94 @@ async function get_controller_info() {
         '/controller_manager/list_controllers'
     );
     const response = await callService(client, {});
-    // console.log(response.controller);
+
     var controller_names = response.controller.map(controller => controller.name);
     var controller_active_states = response.controller.map(controller => controller.state);
     var active_controller_idx = controller_active_states.findIndex(state => state === 'active');
     var active_controller_name = controller_names[active_controller_idx];
     var name = controller_names[active_controller_idx];
+
+    // if (active_controller_name === undefined) {
+    //     active_controller_name = controller_names[0];
+    //     active_controller_idx = 0;
+    //     const switchClient = node.createClient(
+    //         'controller_manager_msgs/srv/SwitchController',
+    //         '/controller_manager/switch_controller'
+    //     );
+
+    //     const deactivateRequest = {
+    //         activate_controllers: [],
+    //         deactivate_controllers: [active_controller_name],
+    //         strictness: 2,
+    //         start_asap: false,
+    //         timeout: { sec: 0, nanosec: 0 }
+    //     };
+
+    //     try {
+    //         const deactivateResponse = await callService(switchClient, deactivateRequest);
+    //         console.log('Deactivate response:', deactivateResponse);
+    //     } catch (error) {
+    //         console.error('Error deactivating controller:', error.message);
+    //         throw error;
+    //     }
+
+    //     const unloadClient = node.createClient(
+    //         'controller_manager_msgs/srv/UnloadController',
+    //         '/controller_manager/unload_controller'
+    //     );
+
+    //     try {
+    //         const unloadResponse = await callService(unloadClient, { name: active_controller_name });
+    //         console.log('Unload response:', unloadResponse);
+    //     } catch (error) {
+    //         console.error('Error unloading controller:', error.message);
+    //         throw error;
+    //     }
+
+    //     const loadClient = node.createClient(
+    //         'controller_manager_msgs/srv/LoadController',
+    //         '/controller_manager/load_controller'
+    //     );
+
+    //     try {
+    //         const loadResponse = await callService(loadClient, { name: active_controller_name });
+    //         console.log('Load response:', loadResponse);
+    //     } catch (error) {
+    //         console.error('Error loading controller:', error.message);
+    //         throw error;
+    //     }
+
+    //     const configureClient = node.createClient(
+    //         'controller_manager_msgs/srv/ConfigureController',
+    //         '/controller_manager/configure_controller'
+    //     );
+
+    //     try {
+    //         const configureResponse = await callService(configureClient, { name: active_controller_name });
+    //         console.log('Configure response:', configureResponse);
+    //     } catch (error) {
+    //         console.error('Error configuring controller:', error.message);
+    //         throw error;
+    //     }
+
+    //     const activateRequest = {
+    //         activate_controllers: [active_controller_name],
+    //         deactivate_controllers: [],
+    //         strictness: 2,
+    //         start_asap: false,
+    //         timeout: { sec: 0, nanosec: 0 }
+    //     };
+
+    //     try {
+    //         const activateResponse = await callService(switchClient, activateRequest);
+    //         console.log('Activate response:', activateResponse);
+    //     } catch (error) {
+    //         console.error('Error activating controller:', error.message);
+    //         throw error;
+    //     }
+    // }
+
     return { controller_names, controller_active_states, active_controller_idx, active_controller_name, ok: true, name: name };
 }
 
-module.exports = { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, activate_control, get_controller_info, objectToString };
+module.exports = { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, deactivate_control, activate_control, get_controller_info, objectToString, set_enable_single_joint_homing};

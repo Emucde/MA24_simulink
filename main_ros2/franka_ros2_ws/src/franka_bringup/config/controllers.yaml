@@ -1,6 +1,8 @@
 controller_manager:
   ros__parameters:
     update_rate: 1000  # Hz
+    use_rate_limiter: false
+    cutoff_frequency: 1000.0
 
     gravity_compensation_example_controller:
       type: franka_example_controllers/GravityCompensationExampleController
@@ -42,3 +44,4 @@ move_to_start_example_controller:
       - 10.0
       - 10.0
       - 5.
+    enable_single_joint_homing: true

@@ -221,6 +221,11 @@ document.getElementById('home').addEventListener('click', () => {
     ws.send(JSON.stringify({ command: 'home', delay: home_delay }));
 });
 
+document.getElementById('home_q_fixed').addEventListener('click', () => {
+    var home_delay = document.querySelector('#home_delay').value;
+    ws.send(JSON.stringify({ command: 'home_q_fixed', delay: home_delay }));
+});
+
 document.getElementById('open_brakes').addEventListener('click', () => {
     ws.send(JSON.stringify({ command: 'open_brakes' }));
 });

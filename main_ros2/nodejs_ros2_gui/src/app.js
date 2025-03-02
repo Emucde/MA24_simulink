@@ -2,7 +2,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const express = require('express');
 const path = require('path');
-const { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, activate_control, get_controller_info, objectToString } = require('./ros_services');
+const { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, deactivate_control, activate_control, get_controller_info, objectToString, set_enable_single_joint_homing } = require('./ros_services');
 const { searchTrajectoryNames } = require('./search_m_file');
 
 // Express setup to serve HTML files
@@ -34,30 +34,25 @@ app.get('/', function (req, res) {
 
 async function init_ros() {
     try {
-        await get_controller_info()
-            .then((result) => {
-                controller_names = result.controller_names;
-                controller_active_states = result.controller_active_states;
-                active_controller_idx = result.active_controller_idx
-                console.log("Loaded controllers: ", controller_names);
-                if (active_controller_idx === -1) {
-                    console.log("No active controller found. Setting 'move_to_start_example_controller' as active.");
-                    result_activate = activate_control('move_to_start_example_controller');
-                    check_result_activate(result_activate)
-                }
-                active_controller_name = controller_names[active_controller_idx];
-                enable_control = (active_controller_name === 'mpc_crocoddyl_controller' || active_controller_name === 'mpc_casadi_controller');
-                console.log("Currently active controllers: ", active_controller_name);
-                ros_running = true;
-                init_ros_running = false;
-                broadcast(JSON.stringify({ status: 'success', result: { name: 'ros2_alive', status: 'ROS2 connected!' } }));
-            })
-            .catch((error) => {
-                console.log("Error while getting loaded controllers. It seems that ROS2 crashed.");
-                throw new Error('It seems that ROS2 crashed');
-            });
-    }
-    catch (error) {
+        const result = await get_controller_info();
+        controller_names = result.controller_names;
+        controller_active_states = result.controller_active_states;
+        active_controller_idx = result.active_controller_idx;
+        console.log("Loaded controllers: ", controller_names);
+
+        if (active_controller_idx === -1) {
+            console.log("No active controller found. Setting 'move_to_start_example_controller' as active.");
+            const result_activate = await activate_control('move_to_start_example_controller');
+            await check(result_activate, 'activate_control', {});
+        }
+
+        active_controller_name = controller_names[active_controller_idx];
+        enable_control = ['mpc_crocoddyl_controller', 'mpc_casadi_controller'].includes(active_controller_name);
+        console.log("Currently active controllers: ", active_controller_name);
+        ros_running = true;
+        init_ros_running = false;
+        broadcast(JSON.stringify({ status: 'success', result: { name: 'ros2_alive', status: 'ROS2 connected!' } }));
+    } catch (error) {
         console.log("Error while getting loaded controllers. ROS2 was not started. Retrying in 5 seconds.");
         setTimeout(init_ros, 5000);
     }
@@ -108,6 +103,15 @@ async function check(result, checked_command, data)
                 result = await update(); // Update controller info
                 status += ' Controller switched to ' + active_controller_name + ' ';
                 console.log('Controller switched to ' + active_controller_name);
+            }
+            else
+                status += 'Error while switching controller';
+            name = 'ros_service';
+            break;
+        case 'disable_control':
+            if (result.ok) {
+                status += ' All Controller disabled';
+                console.log('All Controller disabled');
             }
             else
                 status += 'Error while switching controller';
@@ -203,6 +207,53 @@ function broadcast_data_logger(message) {
     });
 }
 
+async function performHoming(ws, data) {
+    let log_check;
+
+    // Set single joint homing
+    if (data.command === 'home') {
+        result = await set_enable_single_joint_homing('move_to_start_example_controller', false);
+    } else {
+        result = await set_enable_single_joint_homing('move_to_start_example_controller', true);
+    }
+    log_check = await check(result, 'ros_service', data);
+
+    // Switch controller
+    var old_controller_name = active_controller_name;
+    result = await switch_control(old_controller_name, 'move_to_start_example_controller');
+    log_check = await check(result, 'switch_control', data);
+
+    if (log_check.ok) {
+        result = await update(); // Update controller info
+        log_check = await check(result, 'update', data);
+
+        if (log_check.ok) {
+            log_check.status += '. Homing in progress';
+
+            // Set timeout for homing process
+            setTimeout(async function () {
+                result = await switch_control(active_controller_name, old_controller_name);
+                log_check = await check(result, 'switch_control', data);
+                log_check.status += '. Homing done';
+
+                if (result.ok) {
+                    result = await update(); // Update controller info
+                    log_check = await check(result, 'update', data);
+
+                    if (log_check.ok) {
+                        ws.send(JSON.stringify({ status: 'success', result: { name: 'ros_service', status: 'Homing done' } }));
+                    } else {
+                        ws.send(JSON.stringify({ status: 'error', error: { name: 'ros_service', status: log_check.status } }));
+                    }
+                }
+            }, data.delay);
+        }
+    }
+
+    return log_check;
+}
+
+
 async function main() {
     wss_data_logger.on('connection', (ws) => {
         clients_data_logger.add(ws);
@@ -258,7 +309,14 @@ async function main() {
                         case 'start':
                             // Switch Controller
                             var old_controller_name = active_controller_name;
-                            result = await switch_control(old_controller_name, data.controller_name);
+                            result = await deactivate_control(old_controller_name);
+
+                            // result = await switch_control(old_controller_name, data.controller_name);
+                            log_check = await check(result, 'disable_control', data)
+                            if (!log_check.ok)
+                                break;
+
+                            result = await activate_control(data.controller_name);
                             log_check = await check(result, 'switch_control', data)
                             if (!log_check.ok)
                                 break;
@@ -279,15 +337,18 @@ async function main() {
                                     break;
                             }
 
-                            // Switch Trajectory
-                            result = await switchTrajectory(active_controller_name, data.traj_num);
-                            log_check = await check(result, 'switch_trajectory', data)
-                            if (!log_check.ok)
-                                break;
+                            if(active_controller_name !== 'gravity_compensation_example_controller' && active_controller_name !== 'move_to_start_example_controller')
+                            {
+                                // Switch Trajectory
+                                result = await switchTrajectory(active_controller_name, data.traj_num);
+                                log_check = await check(result, 'switch_trajectory', data)
+                                if (!log_check.ok)
+                                    break;
 
-                            // start controller
-                            result = await startService(active_controller_name);
-                            log_check = await check(result, 'start_service', data)
+                                // start controller
+                                result = await startService(active_controller_name);
+                                log_check = await check(result, 'start_service', data)
+                            }
                             break;
                         case 'reset':
                             // Switch Controller
@@ -309,31 +370,9 @@ async function main() {
                             result = await stopService(active_controller_name);
                             log_check = await check(result, 'stop_service', data)
                             break;
+                        case 'home_q_fixed':
                         case 'home':
-                            var old_controller_name = active_controller_name;
-                            result = await switch_control(old_controller_name, 'move_to_start_example_controller');
-                            log_check = await check(result, 'switch_control', data)
-                            if (log_check.ok) {
-                                result = await update(); // Update controller info
-                                log_check = await check(result, 'update', data)
-                                if (log_check.ok) {
-                                    log_check.status += '. Homing in progress';
-                                    setTimeout(async function () {
-                                        result = await switch_control(active_controller_name, old_controller_name);
-                                        log_check = await check(result, 'switch_control', data)
-                                        log_check.status += '. Homing done';
-                                        if (result.ok)
-                                        {
-                                            result = await update(); // Update controller info
-                                            log_check = await check(result, 'update', data)
-                                            if (log_check.ok)
-                                                ws.send(JSON.stringify({ status: 'success', result: { name: 'ros_service', status: 'Homing done' } }));
-                                            else
-                                                ws.send(JSON.stringify({ status: 'error', error: { name: 'ros_service', status: log_check.status } }));
-                                        }
-                                    }, data.delay);
-                                }
-                            }
+                            performHoming(ws, data);
                             break;
                         default:
                             break;
@@ -399,3 +438,15 @@ main().catch(error => {
     console.error("An error occurred in the main function:", error);
     process.exit(1);
 });
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Optional: Exit with failure code
+    // process.exit(1);
+});
+
+process.on('SIGTERM', () => {
+    console.log('Received SIGTERM. Shutting down gracefully.');
+    // Perform cleanup operations here
+    process.exit(0);
+    });

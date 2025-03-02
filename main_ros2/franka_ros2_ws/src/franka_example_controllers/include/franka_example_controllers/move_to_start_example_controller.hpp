@@ -20,6 +20,8 @@
 #include <Eigen/Eigen>
 #include <controller_interface/controller_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include "param_robot.h"
+#include "eigen_templates.hpp"
 
 #include "motion_generator.hpp"
 
@@ -43,6 +45,10 @@ class MoveToStartExampleController : public controller_interface::ControllerInte
 
  private:
   std::string arm_id_;
+  bool enable_single_joint_homing_;
+  robot_config_t robot_config = get_robot_config();
+  const int nq_fixed = robot_config.nq_fixed;
+  const Eigen::VectorXi n_indices_fixed = ConstIntVectorMap(robot_config.n_indices_fixed, nq_fixed);
   const int num_joints = 7;
   Vector7d q_;
   Vector7d q_goal_;

@@ -165,7 +165,15 @@ private:
     MainControllerType get_controller_type(const std::string &controller_type_str);
     CrocoddylMPCType get_crocoddyl_controller_type(const std::string &controller_type_str);
     Eigen::VectorXd generateNoiseVector(int n, double Ts, double mean_noise_amplitude);
-    
+
+    void reset_semaphore();
+    bool read_signals();
+    void shm_mode_init();
+    void print_status(int& print_counter, const Eigen::Map<Eigen::VectorXd>& q_k_ndof_eig);
+    void check_for_errors();
+    void update_shared_memory(const Eigen::Ref<const Eigen::VectorXd>& read_state);
+    void check_signals();
+
     // method to write valid_cpp_shm
     void write_valid_cpp_shm(int8_t flags)
     {

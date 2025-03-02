@@ -327,154 +327,308 @@ void SharedMemoryController::run_simulation()
     shm.close_semaphores();
 }
 
-void SharedMemoryController::run_shm_mode()
-{
-    while(true)
-    {
-        Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_measured.data(), nq);
-        double* x_filtered_ptr = base_filter->get_filtered_data_ptr();
-        Eigen::Map<Eigen::VectorXd> x_filtered(x_filtered_ptr, nx);
-        int print_counter = 0;
-        int8_t traj_switch;
+// void SharedMemoryController::run_shm_mode()
+// {
+//     while(true)
+//     {
+//         Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_measured.data(), nq);
+//         double* x_filtered_ptr = base_filter->get_filtered_data_ptr();
+//         Eigen::Map<Eigen::VectorXd> x_filtered(x_filtered_ptr, nx);
+//         int print_counter = 0;
+//         int8_t traj_switch;
 
-        //reset semaphore counter
-        while (sem_trywait(ros2_semaphore) == 0) {
-            // Keep decrementing until it fails
-        }
+//         //reset semaphore counter
+//         while (sem_trywait(ros2_semaphore) == 0) {
+//             // Keep decrementing until it fails
+//         }
 
+//         sem_wait(ros2_semaphore);
+
+//         shm.read_int8("start_cpp", &start_cpp);
+//         shm.read_int8("stop_cpp", &stop_cpp);
+//         shm.read_int8("reset_cpp", &reset_cpp);
+//         shm.read_int8("traj_switch_cpp", &traj_switch);
+//         trajectory_selection = static_cast<uint>(traj_switch); // index start at 0
+
+//         std::cout << "trajectory_selection: " << trajectory_selection << std::endl;
+
+//         if(reset_cpp == 1)
+//         {
+//             std::cout << "Resetting controller" << std::endl;
+//             reset_cpp = 0;
+//             run_flag=false;
+//             shm.write("reset_cpp", &reset_cpp);
+//             write_valid_cpp_shm(0);
+//         }
+//         if(start_cpp == 1 && reset_cpp == 0 && stop_cpp == 0)
+//         {
+//             start_cpp = 0;
+//             shm.write("start_cpp", &start_cpp);
+//             init_python();
+//             init_trajectory(x_measured);
+//             update_config();
+//             shm.read_double("ros2_state_data", x_measured.data());
+//             init_filter(x_measured);
+//             x_measured_red = x_measured(n_x_indices);
+//             controller->reset(x_measured_red.data());
+//             tau_full = controller->update_control(x_measured);
+//             controller->set_traj_count(0);
+            
+//             std::cout << "Starting controller" << std::endl;
+//             run_flag = true;
+//             while (sem_trywait(ros2_semaphore) == 0) {
+//                 // Keep decrementing until it fails
+//             }
+//         }
+//         if(run_flag)
+//         {
+//             do
+//             {
+//                 timer_mpc_solver.tic();
+//                 shm.read_double("ros2_state_data", x_measured.data());
+//                 controller->simulateModelRK4(x_measured.data(), tau_full.data(), Ts);
+                
+//                 base_filter->run_filter(); // automatically mapped to x_filtered
+//                 act_data=controller->get_act_traj_data();
+                
+//                 if(traj_count % traj_step == 0)
+//                 {
+//                     tau_full = controller->update_control(x_filtered);
+//                     timer_mpc_solver.toc();
+//                     error_flag = controller->get_error_flag();
+//                 }
+
+//                 if (print_counter % 100 == 0)
+//                 {
+//                     timer_mpc_solver.print_frequency("traj_count=" + std::to_string(traj_count));
+//                     std::cout << std::endl;
+//                     std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
+//                     std::cout << "u_k: |" << tau_full.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|"<< std::endl;
+//                     print_counter = 1;
+//                 }
+//                 else
+//                 {
+//                     print_counter++;
+//                 }
+
+//                 if (error_flag != ErrorFlag::NO_ERROR)
+//                 {
+//                     std::cerr << "Error flag: " << static_cast<int>(error_flag) << std::endl;
+//                     std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
+//                     run_flag = false;
+//                     valid_cpp = 0;
+//                 }
+//                 else
+//                 {
+//                     valid_cpp = 1;
+//                 }
+
+//                 for (casadi_uint j = 0; j < traj_step; j++)
+//                 {
+//                     // Write data to shm:
+//                     current_frequency = timer_mpc_solver.get_frequency()*traj_step;
+//                     shm.write("read_state_data_full", x_filtered.data(), traj_count+j);
+//                     shm.write("read_control_data_full", tau_full.data(), traj_count+j);
+//                     shm.write("read_control_data", tau_full.data());
+//                     shm.write("read_traj_data_full", act_data, traj_count+j);
+//                     shm.write("read_frequency_full", &current_frequency, traj_count+j);
+//                     shm.post_semaphore("shm_changed_semaphore");
+//                 }
+
+//                 shm.write("cpp_control_data", tau_full.data());
+//                 error_flag_int8 = static_cast<int8_t>(error_flag);
+//                 shm.write("error_cpp", &error_flag_int8);
+
+//                 shm.read_int8("start_cpp", &start_cpp);
+//                 shm.read_int8("reset_cpp", &reset_cpp);
+//                 shm.read_int8("stop_cpp", &stop_cpp);
+//                 if(reset_cpp == 1)
+//                 {
+//                     reset_cpp = 0;
+//                     shm.write("reset_cpp", &reset_cpp);
+//                     write_valid_cpp_shm(0);
+//                     std::cout << "Resetting controller in do while" << std::endl;
+//                     run_flag = false;
+//                     break;
+//                 }
+//                 else if(stop_cpp == 1)
+//                 {
+//                     stop_cpp = 0;
+//                     valid_cpp = 0;
+//                     shm.write("stop_cpp", &stop_cpp);
+//                     std::cout << "Stopping controller in do while" << std::endl;
+//                 }
+//                 else if(start_cpp == 1)
+//                 {
+//                     init_python();
+//                     start_cpp = 0;
+//                     shm.write("start_cpp", &start_cpp);
+//                     std::cout << "Starting controller in do while" << std::endl;
+//                 }
+//                 if(traj_count < traj_len-1)
+//                     traj_count += traj_step;
+
+//                 write_valid_cpp_shm(valid_cpp);
+                
+
+//                 sem_wait(ros2_semaphore);
+//             } while(run_flag);
+//             run_flag = false;
+//             valid_cpp = 0;
+//             shm.feedback_write_int8("valid_cpp", &valid_cpp);
+//         }
+//     }
+// }
+
+void SharedMemoryController::run_shm_mode() {
+    shm_mode_init();
+
+    Eigen::Map<Eigen::VectorXd> q_k_ndof_eig(x_measured.data(), nq);
+    double* x_filtered_ptr = base_filter->get_filtered_data_ptr();
+    Eigen::Map<Eigen::VectorXd> x_filtered(x_filtered_ptr, nx);
+    Eigen::VectorXd x_update = Eigen::VectorXd::Zero(nx);
+    int print_counter = 0;
+
+    while(run_flag) {
         sem_wait(ros2_semaphore);
 
-        shm.read_int8("start_cpp", &start_cpp);
-        shm.read_int8("stop_cpp", &stop_cpp);
-        shm.read_int8("reset_cpp", &reset_cpp);
-        shm.read_int8("traj_switch_cpp", &traj_switch);
-        trajectory_selection = static_cast<uint>(traj_switch); // index start at 0
+        shm.read_double("ros2_state_data", x_measured.data());
+        base_filter->run_filter();
 
-        std::cout << "trajectory_selection: " << trajectory_selection << std::endl;
+        x_update << x_filtered;
 
-        if(reset_cpp == 1)
-        {
-            std::cout << "Resetting controller" << std::endl;
-            reset_cpp = 0;
-            run_flag=false;
-            shm.write("reset_cpp", &reset_cpp);
+        controller->simulateModelRK4(x_update.data(), tau_full.data(), Ts);
+        
+        act_data = controller->get_act_traj_data();
+        
+        if (traj_count % traj_step == 0) {
+            timer_mpc_solver.tic();
+            tau_full = controller->update_control(x_update);
+            timer_mpc_solver.toc();
         }
-        if(start_cpp == 1 && reset_cpp == 0 && stop_cpp == 0)
-        {
-            start_cpp = 0;
-            shm.write("start_cpp", &start_cpp);
-            init_python();
-            init_trajectory(x_measured);
-            update_config();
-            shm.read_double("ros2_state_data", x_measured.data());
-            init_filter(x_measured);
-            x_measured_red = x_measured(n_x_indices);
-            controller->reset(x_measured_red.data());
-            tau_full = controller->update_control(x_measured);
-            controller->set_traj_count(0);
-            
-            std::cout << "Starting controller" << std::endl;
-            run_flag = true;
-            while (sem_trywait(ros2_semaphore) == 0) {
-                // Keep decrementing until it fails
-            }
-        }
+
+        print_status(print_counter, q_k_ndof_eig);
+        check_for_errors();
+
+        check_signals();
+
+        if (traj_count < traj_len - 1) traj_count += traj_step;
+
+        update_shared_memory(x_filtered);
+    }
+}
+
+void SharedMemoryController::reset_semaphore() {
+    while (sem_trywait(ros2_semaphore) == 0) {}
+}
+
+bool SharedMemoryController::read_signals() {
+    int8_t traj_switch;
+    shm.read_int8("start_cpp", &start_cpp);
+    shm.read_int8("stop_cpp", &stop_cpp);
+    shm.read_int8("reset_cpp", &reset_cpp);
+    shm.read_int8("traj_switch_cpp", &traj_switch);
+    trajectory_selection = static_cast<uint>(traj_switch);
+
+    std::cout << "trajectory_selection: " << trajectory_selection << std::endl;
+    
+    return start_cpp || reset_cpp || stop_cpp; // Return true only if there's a signal
+}
+
+void SharedMemoryController::shm_mode_init() {
+    std::cout << "Starting controller" << std::endl;
+    start_cpp = 0;
+    shm.write("start_cpp", &start_cpp);
+    init_python();
+    update_config();
+
+    // Read state data from shared memory
+    shm.read_double("ros2_state_data", x_measured.data());
+
+    init_trajectory(x_measured);
+    init_filter(x_measured);
+    x_measured_red = x_measured(n_x_indices);
+
+    // first init guess (cold start)
+    controller->reset(x_measured_red.data());
+    tau_full = controller->update_control(x_measured);
+
+    // set valid flag to 1 if no error
+    check_for_errors();
+
+    if (valid_cpp)
+        run_flag = true;
+    else
+        run_flag = false;
+
+    // reset semaphore counter
+    reset_semaphore();
+
+    // reset trajectory counter
+    controller->set_traj_count(0);
+
+    // start control in ros2 if no error
+    write_valid_cpp_shm(valid_cpp);
+}
+
+void SharedMemoryController::print_status(int& print_counter, const Eigen::Map<Eigen::VectorXd>& q_k_ndof_eig) {
+    if (print_counter % 100 == 0) {
+        timer_mpc_solver.print_frequency("traj_count=" + std::to_string(traj_count));
+        std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
+        std::cout << "u_k: |" << tau_full.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
+        print_counter = 1;
+    } else {
+        print_counter++;
+    }
+}
+
+void SharedMemoryController::check_for_errors() {
+    error_flag = controller->get_error_flag();
+    if (error_flag != ErrorFlag::NO_ERROR) {
+        std::cerr << "Error flag: " << static_cast<int>(error_flag) << std::endl;
+        run_flag = false;
+        valid_cpp = 0;
+    } else {
         valid_cpp = 1;
-        if(run_flag)
-        {
-            do
-            {
-                timer_mpc_solver.tic();
-                shm.read_double("ros2_state_data", x_measured.data());
-                controller->simulateModelRK4(x_measured.data(), tau_full.data(), Ts);
-                
-                base_filter->run_filter(); // automatically mapped to x_filtered
-                act_data=controller->get_act_traj_data();
-                
-                if(traj_count % traj_step == 0)
-                {
-                    tau_full = controller->update_control(x_filtered);
-                    timer_mpc_solver.toc();
-                    error_flag = controller->get_error_flag();
-                }
+    }
+}
 
-                if (print_counter % 100 == 0)
-                {
-                    timer_mpc_solver.print_frequency("traj_count=" + std::to_string(traj_count));
-                    std::cout << std::endl;
-                    std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
-                    std::cout << "u_k: |" << tau_full.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|"<< std::endl;
-                    print_counter = 1;
-                }
-                else
-                {
-                    print_counter++;
-                }
+void SharedMemoryController::update_shared_memory(const Eigen::Ref<const Eigen::VectorXd>& read_state) {
+    for (casadi_uint j = 0; j < traj_step; j++) {
+        current_frequency = timer_mpc_solver.get_frequency() * traj_step;
+        shm.write("read_state_data_full", read_state.data(), traj_count + j);
+        shm.write("read_control_data_full", tau_full.data(), traj_count + j);
+        shm.write("read_control_data", tau_full.data());
+        shm.write("read_traj_data_full", act_data, traj_count + j);
+        shm.write("read_frequency_full", &current_frequency, traj_count + j);
+        shm.post_semaphore("shm_changed_semaphore");
+    }
 
-                if (error_flag != ErrorFlag::NO_ERROR)
-                {
-                    std::cerr << "Error flag: " << static_cast<int>(error_flag) << std::endl;
-                    std::cout << "q_k: |" << q_k_ndof_eig.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, "|", "|")) << "|" << std::endl;
-                    run_flag = false;
-                    valid_cpp = 0;
-                }
-                else
-                {
-                    valid_cpp = 1;
-                }
+    shm.write("cpp_control_data", tau_full.data());
+    int8_t error_flag_int8 = static_cast<int8_t>(error_flag);
+    shm.write("error_cpp", &error_flag_int8);
 
-                for (casadi_uint j = 0; j < traj_step; j++)
-                {
-                    // Write data to shm:
-                    current_frequency = timer_mpc_solver.get_frequency()*traj_step;
-                    shm.write("read_state_data_full", x_filtered.data(), traj_count+j);
-                    shm.write("read_control_data_full", tau_full.data(), traj_count+j);
-                    shm.write("read_control_data", tau_full.data());
-                    shm.write("read_traj_data_full", act_data, traj_count+j);
-                    shm.write("read_frequency_full", &current_frequency, traj_count+j);
-                    shm.post_semaphore("shm_changed_semaphore");
-                }
+    write_valid_cpp_shm(valid_cpp);
+}
 
-                shm.write("cpp_control_data", tau_full.data());
-                error_flag_int8 = static_cast<int8_t>(error_flag);
-                shm.write("error_cpp", &error_flag_int8);
-
-                shm.read_int8("start_cpp", &start_cpp);
-                shm.read_int8("reset_cpp", &reset_cpp);
-                shm.read_int8("stop_cpp", &stop_cpp);
-                if(reset_cpp == 1)
-                {
-                    reset_cpp = 0;
-                    valid_cpp = 0;
-                    shm.write("reset_cpp", &reset_cpp);
-                    std::cout << "Resetting controller in do while" << std::endl;
-                    run_flag = false;
-                }
-                else if(stop_cpp == 1)
-                {
-                    stop_cpp = 0;
-                    valid_cpp = 0;
-                    shm.write("stop_cpp", &stop_cpp);
-                    std::cout << "Stopping controller in do while" << std::endl;
-                }
-                else if(start_cpp == 1)
-                {
-                    init_python();
-                    start_cpp = 0;
-                    shm.write("start_cpp", &start_cpp);
-                    std::cout << "Starting controller in do while" << std::endl;
-                }
-                if(traj_count < traj_len-1)
-                    traj_count += traj_step;
-
-                write_valid_cpp_shm(valid_cpp);
-                
-
-                sem_wait(ros2_semaphore);
-            } while(run_flag);
-            run_flag = false;
-            valid_cpp = 0;
-            shm.feedback_write_int8("valid_cpp", &valid_cpp);
-        }
+void SharedMemoryController::check_signals() {
+    shm.read_int8("start_cpp", &start_cpp);
+    shm.read_int8("reset_cpp", &reset_cpp);
+    shm.read_int8("stop_cpp", &stop_cpp);
+    if (reset_cpp == 1) {
+        write_valid_cpp_shm(0);
+        run_flag = false;
+        reset_cpp = 0;
+        shm.write("reset_cpp", &reset_cpp);
+        std::cout << "Resetting controller" << std::endl;
+    } else if (stop_cpp == 1) {
+        stop_cpp = 0;
+        valid_cpp = 0;
+        shm.write("stop_cpp", &stop_cpp);
+        std::cout << "Stopping controller inside" << std::endl;
+    } else if (start_cpp == 1) {
+        start_cpp = 0;
+        shm.write("start_cpp", &start_cpp);
+        std::cout << "Starting controller inside" << std::endl;
     }
 }

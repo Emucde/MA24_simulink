@@ -16,6 +16,7 @@ source $masterdir/main_ros2/franka_ros2_ws/build_release/install/setup.bash
 
 # enable conda environment
 source ~/.bashrc
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$_colcon_cd_root/lib
 PYTHONPATH=""
 
 while true; do

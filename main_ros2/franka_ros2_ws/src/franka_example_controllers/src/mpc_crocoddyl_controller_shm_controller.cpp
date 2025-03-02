@@ -71,11 +71,11 @@ namespace franka_example_controllers
 
                 shm.write("ros2_state_data", x_measured.data());
                 shm.post_semaphore("ros2_semaphore");
-            }
 
 #ifndef SIMULATION_MODE
-            for (int i = 0; i < nq; ++i) {
-                command_interfaces_[i].set_value(tau_full[i]);
+                for (int i = 0; i < nq; ++i) {
+                    command_interfaces_[i].set_value(tau_full[i]);
+                }
             }
 #endif
         }
@@ -145,9 +145,11 @@ namespace franka_example_controllers
     void ModelPredictiveControllerCrocoddylSHMController::start_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
                                                     std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Response> response)
     {
+        controller_started = false;
+
         shm_flags flags = {
             1, // start
-            0, // reset
+            1, // reset
             0, // stop
             0  // torques_valid
         };
@@ -155,33 +157,22 @@ namespace franka_example_controllers
         shm.write("start_cpp", &flags.start);
         shm.write("reset_cpp", &flags.reset);
         shm.write("stop_cpp", &flags.stop);
-
-        init_controller();
-        init_trajectory();
-
+        
 #ifndef SIMULATION_MODE
         for (int i = 0; i < nx; ++i)
             state[i] = state_interfaces_[i].get_value();
 #else
-        if(first_start)
-        {
-            Eigen::VectorXd x0_init = base_controller->get_file_traj_x0_nq_init(traj_select);
-            state = x0_init;
-        }
+        init_trajectory();
+        Eigen::VectorXd x0_init = base_controller->get_file_traj_x0_nq_init(traj_select);
+        state = x0_init;
 #endif
-        if(first_start)
-        {
-            shm.write("ros2_state_data", state.data());
-            first_start = false;
-        }
 
-        shm.read_double("cpp_control_data", tau_full.data());
-
-        shm.feedback_write_int8("valid_cpp", &flags.torques_valid);
+        init_controller();
+        shm.write("ros2_state_data", state.data());
 
         shm.post_semaphore("ros2_semaphore");
-        controller_started = true;
         response->status = "start flag set";
+        controller_started = true;
     }
 
     void ModelPredictiveControllerCrocoddylSHMController::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,

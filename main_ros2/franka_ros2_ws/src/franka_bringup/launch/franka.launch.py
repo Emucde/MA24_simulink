@@ -27,13 +27,13 @@ from launch_ros.substitutions import FindPackageShare
 # Spawn custom controllers
 spawn_controllers = []
 controller_names = [
-    "gravity_compensation_example_controller",
-    "mpc_crocoddyl_controller",
-    "mpc_crocoddyl_controller_shm",
-    "mpc_crocoddyl_controller_shm_controller",
-    "mpc_casadi_controller",
-    "conventional_workspace_controller",
-    "move_to_start_example_controller"
+    # "gravity_compensation_example_controller",
+    "mpc_crocoddyl_controller"
+    # "mpc_crocoddyl_controller_shm",
+    # "mpc_crocoddyl_controller_shm_controller",
+    # "mpc_casadi_controller",
+    # "conventional_workspace_controller",
+    # "move_to_start_example_controller"
     ]
 
 def on_custom_exit(event, context):

@@ -84,8 +84,9 @@ namespace franka_example_controllers
             x_measured << state + generateNoiseVector(nx, Ts, mean_noise_amplitude);
         else
             x_measured << state;
+#else
+        x_measured << state;
 #endif
-
         init_filter(x_measured);
     }
 
@@ -121,7 +122,7 @@ namespace franka_example_controllers
         double T_traj_start = get_config_value<double>(general_config, "transient_traj_start_time");
         double T_traj_dur = get_config_value<double>(general_config, "transient_traj_duration");
         double T_traj_end = get_config_value<double>(general_config, "transient_traj_end_time");
-        base_controller->init_file_trajectory(traj_select, x_filtered_ptr, T_traj_start, T_traj_dur, T_traj_end);
+        base_controller->init_file_trajectory(traj_select, x_measured.data(), T_traj_start, T_traj_dur, T_traj_end);
         traj_len = base_controller->get_traj_data_real_len();
         current_trajectory = base_controller->get_trajectory();
     }
@@ -189,8 +190,8 @@ namespace franka_example_controllers
             base_controller->simulateModelRK4(state.data(), tau_full.data(), Ts);
             if (solver_step_counter % solver_steps == 0)
             {
-                // solve();
-                std::async(std::launch::async, &CommonROSBaseController::solve, this);
+                solve();
+                // std::async(std::launch::async, &CommonROSBaseController::solve, this);
                 // std::thread solver_thread([this]() {
                 //     solve();
                 // });
@@ -246,17 +247,12 @@ namespace franka_example_controllers
         else
         {
 #ifndef SIMULATION_MODE
-            // for (int i = 0; i < nq; ++i)
-            // {
-            //     command_interfaces_[i].set_value(0);
-            // }
+            for (int i = 0; i < nq; ++i)
+            {
+                command_interfaces_[i].set_value(0);
+            }
             tau_full << Eigen::VectorXd::Zero(nq);
 #endif
-        }
-
-        for (int i = 0; i < nq; ++i)
-        {
-            command_interfaces_[i].set_value(tau_full[i]);
         }
 
         return controller_interface::return_type::OK;
@@ -403,9 +399,10 @@ namespace franka_example_controllers
         init_trajectory();
         reset();
 
-        base_filter->run_filter(); // automatically mapped to x_filtered_ptr, uses x_measured
-        std::async(std::launch::async, [this]() {
-            solve();
+        // base_filter->run_filter(); // automatically mapped to x_filtered_ptr, uses x_measured
+        // std::async(std::launch::async, [this]() {
+            solve(); // cold start init guess
+            tau_full << Eigen::VectorXd::Zero(nq);
             base_controller->set_traj_count(0);
 
             int8_t readonly_mode = 1;
@@ -413,7 +410,7 @@ namespace franka_example_controllers
             shm.write("readonly_mode", &readonly_mode);
 
             controller_started = true;
-        });
+        // });
     }
 
     void CommonROSBaseController::reset_mpc(const std::shared_ptr<mpc_interfaces::srv::SimpleCommand::Request>,
