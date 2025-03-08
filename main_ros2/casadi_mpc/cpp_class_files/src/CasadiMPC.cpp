@@ -573,7 +573,7 @@ void CasadiMPC::set_references(const casadi_real *const x_k_in)
     {
         mpc_set_funcs[i](w, *mpc_data[i]);
     }
-    if (traj_count < traj_data_real_len - 1)
+    if (traj_count < traj_data_real_len - traj_step)
     {
         traj_count += traj_step;
     }

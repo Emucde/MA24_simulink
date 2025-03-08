@@ -85,6 +85,11 @@ Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueKinematic(
     q_pp.setZero();      // Initialize q_pp if necessary
     q_pp(n_indices) = u; // Set specific index using input
 
+    pinocchio::crba(robot_model_full, robot_data_full, q);
+    robot_data_full.M.triangularView<Eigen::StrictlyLower>() = robot_data_full.M.transpose().triangularView<Eigen::StrictlyLower>();
+    Eigen::MatrixXd M = robot_data_full.M;
+    M_fixed = M(n_indices_fixed, n_indices_fixed);
+
     // Calculate the resulting torques
     return pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, q_pp);
 }
@@ -106,6 +111,7 @@ Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueDynamic(
 
     // Slice the inertia matrix and Coriolis forces
     Eigen::MatrixXd M_red = M(n_indices, n_indices);
+    M_fixed = M(n_indices_fixed, n_indices_fixed);
     Eigen::VectorXd C_rnea_tilde = C_rnea(n_indices);
 
     // Compute the acceleration for the reduced system
@@ -131,7 +137,7 @@ void FullSystemTorqueMapper::setFeedforwardTorqueFunction(bool is_kinematic_mpc)
 Eigen::VectorXd FullSystemTorqueMapper::applyPDControl(const Eigen::VectorXd &q_fixed,
                                                        const Eigen::VectorXd &q_p_fixed)
 {
-    return -config.K_d_fixed * (q_fixed - config.q_ref_nq_fixed) - config.D_d_fixed * q_p_fixed;
+    return M_fixed * (-config.K_d_fixed * (q_fixed - config.q_ref_nq_fixed) - config.D_d_fixed * q_p_fixed);
 }
 
 Eigen::VectorXd FullSystemTorqueMapper::enforceTorqueLimits(const Eigen::VectorXd &tau)

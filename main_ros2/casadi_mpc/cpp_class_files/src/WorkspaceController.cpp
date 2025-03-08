@@ -353,24 +353,17 @@ void BaseWorkspaceController::calculateControlData(const Eigen::VectorXd &x)
     Eigen::Matrix3d R = robot_model.kinematicsData.R;
     Eigen::Matrix3d dR = R * R_d.transpose();
     // Eigen::Quaterniond q_err_tmp(dR);
+    Eigen::Vector4d q_err_tmp = rotm2quat_v4<double>(dR);
+    Eigen::Vector3d q_err = q_err_tmp.tail(3); // Only the orientation error part
 
     // Eigen::Quaterniond quat = robot_model.kinematicsData.quat;
     // Eigen::Quaterniond q_err_tmp = quat * q_d.conjugate();
     // Eigen::Vector3d q_err = q_err_tmp.vec(); // Only the orientation error part
-    
-    Eigen::Vector4d q_err_tmp = rotm2quat_v4<double>(dR);
-    Eigen::Vector3d q_err = q_err_tmp.tail(3); // Only the orientation error part
 
-    x_err = Eigen::VectorXd::Zero(6);
+    x_e_p << p_p, omega_e;
     x_err << (p - p_d), q_err; // Error as quaternion
-
-    x_err_p = Eigen::VectorXd::Zero(6);
     x_err_p << (p_p - p_d_p), (omega_e - omega_d);
-
-    x_d_p = Eigen::VectorXd::Zero(6);
     x_d_p << p_d_p, omega_d;
-
-    x_d_pp = Eigen::VectorXd::Zero(6);
     x_d_pp << p_d_pp, omega_d_p;
 
     J_pinv = computeJacobianRegularization();
@@ -419,16 +412,9 @@ void BaseWorkspaceController::calculateControlDataID(const Eigen::VectorXd &x, c
     Eigen::Vector4d q_err_tmp = rotm2quat_v4<double>(dR);
     Eigen::Vector3d q_err = q_err_tmp.tail(3); // Only the orientation error part
 
-    x_err = Eigen::VectorXd::Zero(6);
     x_err << (p - p_d), q_err; // Error as quaternion
-
-    x_err_p = Eigen::VectorXd::Zero(6);
     x_err_p << (p_p - p_d_p), (omega_e - omega_d);
-
-    x_d_p = Eigen::VectorXd::Zero(6);
     x_d_p << p_d_p, omega_d;
-
-    x_d_pp = Eigen::VectorXd::Zero(6);
     x_d_pp << p_d_pp, omega_d_p;
 
     // Update the robot model state with joint positions and velocities
@@ -495,10 +481,20 @@ Eigen::VectorXd WorkspaceController::CTController::control(const Eigen::VectorXd
     // Calculate J, J_pinv, J_p, C, M, C_rnea, g, q_p, x_err, x_err_p, x_d_p, x_d_pp
     calculateControlData(x);
 
-    Eigen::VectorXd v = J_pinv * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err - J_p * q_p);
+    // Eigen::VectorXd v = J_pinv * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err - J_p * q_p);
 
-    // Control Law Calculation
-    Eigen::VectorXd tau = M * v + C_rnea;
+    // // Control Law Calculation
+    // Eigen::VectorXd tau = M * v + C_rnea;
+
+    Eigen::MatrixXd J_pinv_T = J_pinv.transpose(); // Assuming J_pinv is computed somewhere earlier
+    Eigen::MatrixXd Lambda = J_pinv_T * M * J_pinv;
+    //Lambda = 0.5 * (Lambda + Lambda.transpose());
+    Eigen::MatrixXd mu = J_pinv_T * (C - M * J_pinv * J_p) * q_p;
+    Eigen::VectorXd F = mu + Lambda * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err);
+    Eigen::VectorXd F_g = J_pinv_T * g; // g is zero here
+
+    Eigen::VectorXd tau = F_g + J.transpose() * F;
+
     return tau;
 }
 
@@ -554,10 +550,14 @@ Eigen::VectorXd WorkspaceController::PDPlusController::control(const Eigen::Vect
     Eigen::MatrixXd J_pinv_T = J_pinv.transpose(); // Assuming J_pinv is computed somewhere earlier
     Eigen::MatrixXd Lambda = J_pinv_T * M * J_pinv;
     Lambda = 0.5 * (Lambda + Lambda.transpose());
+    // Eigen::MatrixXd mu = J_pinv_T * (C - M * J_pinv * J_p) * q_p;
     Eigen::MatrixXd mu = J_pinv_T * (C - M * J_pinv * J_p) * J_pinv;
+
     Eigen::VectorXd F_g = J_pinv_T * g; // g is zero here
 
+    // Eigen::VectorXd F = Lambda * x_d_pp + mu + F_g - D_d * x_err_p - K_d * x_err;
     Eigen::VectorXd F = Lambda * x_d_pp + mu * x_d_p + F_g - D_d * x_err_p - K_d * x_err;
+    // Eigen::VectorXd F = Lambda * x_d_pp + mu * x_e_p + F_g - D_d * x_err_p - K_d * x_err;
 
     Eigen::VectorXd tau = J.transpose() * F;
     return tau;

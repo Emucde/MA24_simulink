@@ -457,7 +457,7 @@ void CrocoddylMPC::set_references(const Eigen::VectorXd &x_k)
             residual_control_models[i]["ctrlPrev"]->set_reference(us_init_guess[i]); // init guess
     }
 
-    if (traj_count < traj_data_real_len - 1)
+    if (traj_count < traj_data_real_len - traj_step)
     {
         traj_count += traj_step;
     }

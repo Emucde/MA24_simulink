@@ -1,7 +1,7 @@
 {
     "use_gravity": false,
     "use_lowpass_filter": false,
-    "use_ekf": false,
+    "use_ekf": true,
     "use_noise": false,
     "dt": 1e-3,
     "tau_max_jump": 10,
@@ -11,22 +11,22 @@
     "lowpass_filter_omega_c_dq": 200,
     "trajectory_selection": 1,
     "transient_traj_start_time": 0.0,
-    "transient_traj_duration": 5.0,
-    "transient_traj_end_time": 5.0,
-    "default_controller": "Crocoddyl",
+    "transient_traj_duration": 0.0,
+    "transient_traj_end_time": 0.0,
+    "default_controller": "Classic",
     "available_controllers": [
         "Classic",
         "Casadi",
         "Crocoddyl"
     ],
-    "default_classic_controller": "PD",
+    "default_classic_controller": "CT",
     "available_classic_controller": [
         "PD",
         "CT",
         "ID"
     ],
     "use_casadi_planner": false,
-    "default_casadi_mpc": "MPC1_dyn_classic_N_MPC_3",
+    "default_casadi_mpc": "MPC2_dyn_parametric_N_MPC_5",
     "available_casadi_mpc": [
         "MPC1_dyn_classic_N_MPC_3",
         "MPC1_dyn_classic_N_MPC_5",
@@ -83,13 +83,13 @@
         "torque_limit": 100.0
     },
     "classic_controller_settings" :{
-        "PD": {
-            "K_d": [200, 200, 200, 20, 20, 20],
-            "D_d": [20, 20, 20, 8.944, 8.944, 8.944]
-        },
         "CT": {
             "Kp1": [200, 200, 200, 20, 20, 20],
             "Kd1": [20, 20, 20, 8.944, 8.944, 8.944]
+        },
+        "PD": {
+            "K_d": [200, 200, 200, 20, 20, 20],
+            "D_d": [20, 20, 20, 8.944, 8.944, 8.944]
         },
         "ID": {
             "Kp1": [100, 100, 100, 50, 50, 50],
@@ -99,7 +99,7 @@
         },
         "regularization_settings": {
             "mode" : "Damping",
-            "k": 1e-4,
+            "k": 1e-3,
             "W_bar_N": [0.110889, 0.099856, 0.147456, 0.007744, 0.011449, 0.0106916],
             "W_E": [1, 1, 1, 1, 1, 1],
             "eps": 1e-5,
@@ -107,6 +107,7 @@
             "lambda_min": 1e-5
         },
         "available_regularization_settings": [
+            "None",
             "Damping",
             "CompleteOrthogonalDecomposition",
             "JacobiSVD",

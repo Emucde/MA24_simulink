@@ -203,7 +203,8 @@ namespace franka_example_controllers
             solver_step_counter++;
 
             current_frequency = timer_solver.get_frequency() * solver_steps;
-            shm.write("read_state_data_full", x_measured.data(), global_traj_count);
+            shm.write("read_state_data_full", x_filtered_ptr, global_traj_count);
+            // shm.write("read_state_data_full", x_measured.data(), global_traj_count);
             shm.write("read_control_data", tau_full.data());
             shm.write("read_control_data_full", tau_full.data(), global_traj_count);
             shm.write("read_traj_data_full", current_trajectory->col(global_traj_count).data(), global_traj_count);

@@ -102,6 +102,7 @@ private:
     const Eigen::VectorXi n_indices_fixed;
     const Eigen::VectorXd q_ref_nq;
     const Eigen::VectorXd q_ref_fixed;
+    Eigen::MatrixXd M_fixed;
 
     Eigen::VectorXd tau_full;
     Eigen::VectorXd q_pp;
