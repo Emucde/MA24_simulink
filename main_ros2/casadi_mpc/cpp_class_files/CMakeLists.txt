@@ -187,7 +187,7 @@ else()
   message(STATUS "MPC libraries: ${MPC_ALL_LIBRARIES}")
 endif()
 
-list(APPEND CMAKE_PREFIX_PATH "$ENV{MAMBA_ROOT_PREFIX}/envs/ros_env/")
+list(APPEND CMAKE_PREFIX_PATH "$ENV{MAMBA_ROOT_PREFIX}/envs/ros_env")
 
 # set(Python_EXECUTABLE "$ENV{_colcon_cd_root}/bin/python")
 # set(Python3_EXECUTABLE "$ENV{_colcon_cd_root}/bin/python3")
