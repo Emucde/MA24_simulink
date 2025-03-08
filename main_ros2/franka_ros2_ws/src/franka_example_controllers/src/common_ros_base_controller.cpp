@@ -85,8 +85,6 @@ namespace franka_example_controllers
         else
             x_measured << state;
 #else
-        for (int i = 0; i < nx; ++i)
-            state[i] = state_interfaces_[i].get_value();
         x_measured << state;
 #endif
         init_filter(x_measured);
@@ -390,6 +388,12 @@ namespace franka_example_controllers
         shm.write("data_from_simulink_start", &flags.start);
 
         response->status = "start flag set";
+
+#ifndef SIMULATION_MODE
+        for (int i = 0; i < nx; ++i)
+            state[i] = state_interfaces_[i].get_value();
+        x_measured << state;
+#endif
 
         init_controller();
         init_trajectory();
