@@ -1,7 +1,7 @@
 % % MPC v1: Optimization problem
 
 % States:
-% - x: predicted states for n degrees of freedom (DoF) [joint positions, velocities]
+% - xx: predicted states for n degrees of freedom (DoF) [joint positions, velocities]
 % - y: predicted task-space outputs representing the manipulator's pose [position and orientation]
 % - q_pp: joint accelerations to be determined over the prediction horizon
 
@@ -34,7 +34,7 @@
 %       [y_n] = h(x_n)                          - Output calculation constraint connecting state to output
 %       y_n = [p_n; q_n]                        - Position and orientation outputs from state
 %       y_n ∈ Y                                 - Output constraints
-%       u_n ∈ U                                 - Control input constraints
+%       u_n ∈ uu                                 - Control input constraints
 
 import casadi.*
 
@@ -56,7 +56,7 @@ parametric_order = 2;
 parametric_type = parametric_mode.polynomial;
 
 get_parameterization_fun;
-u_poly = Function('u', {t0, theta0}, {q_pp(t0, theta0)});
+u_poly = Function('uu', {t0, theta0}, {q_pp(t0, theta0)});
 
 yt_indices = param_robot.yt_indices;
 yr_indices = param_robot.yr_indices;
@@ -68,7 +68,7 @@ m = param_robot.m; % Dimension of Task Space
 n_x_indices = [n_indices n_indices+n];
 
 % Model equations
-% Forward Dynamics: d/dt x = f(x, u)
+% Forward Dynamics: d/dt xx = f(xx, uu)
 
 gravity = false;
 use_aba = false;
@@ -78,7 +78,7 @@ use_aba = false;
 q_red    = SX.sym( 'q',     n_red, 1 );
 q_red_p  = SX.sym( 'q_p',   n_red, 1 );
 q_red_pp = SX.sym( 'q_pp',  n_red, 1 );
-x_red    = SX.sym( 'x',   2*n_red, 1 );
+x_red    = SX.sym( 'xx',   2*n_red, 1 );
 tau_red  = SX.sym( 'tau',   n_red, 1 );
 
 q_subs    = SX(q_0); % assumption: all trajectories have same joint values for locked joints!
@@ -146,35 +146,47 @@ x_init_guess_0 = ones(1, N_MPC+1).*x_0_0;
 theta_init_guess_0 = zeros(n_red, parametric_order+1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INIT GUESS 1/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lam_x_init_guess_0 = zeros(numel(theta_init_guess_0), 1);
-lam_g_init_guess_0 = zeros([], 1);
+lam_x_init_guess_0 = zeros(numel(u_init_guess_0) + numel(x_init_guess_0) + numel(theta_init_guess_0), 1);
+lam_g_init_guess_0 = zeros(numel(x_init_guess_0) + 2*numel(u_init_guess_0), 1);
 
-init_guess_0 = [theta_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
+init_guess_0 = [u_init_guess_0(:); x_init_guess_0(:); theta_init_guess_0(:); lam_x_init_guess_0(:); lam_g_init_guess_0(:)];
 
 if(any(isnan(full(init_guess_0))))
     error('init_guess_0 contains NaN values!');
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables 2/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+u   = SX.sym( 'u',    n_red, N_MPC   );
+x   = SX.sym( 'x',  2*n_red, N_MPC+1 );
 theta = SX.sym( 'theta', n_red, parametric_order+1);
-mpc_opt_var_inputs = {theta};
+mpc_opt_var_inputs = {u, x, theta};
 
 w = merge_cell_arrays(mpc_opt_var_inputs, 'vector')'; % optimization variables cellarray w
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET OPT Variables Limits 3/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-ubw = [inf(numel(theta),1)];
-lbw = [-inf(numel(theta),1)];
+ubw = [repmat(pp.u_max(n_indices), size(u, 2), 1);  inf(2*n_red,1); repmat(pp.x_max(n_x_indices), size(x(:,2:end), 2), 1); inf(numel(theta),1)];
+lbw = [repmat(pp.u_min(n_indices), size(u, 2), 1); -inf(2*n_red,1); repmat(pp.x_min(n_x_indices), size(x(:,2:end), 2), 1); -inf(numel(theta),1)];
 
-u_idx = [1 : numel(theta)];
+N_u = numel(u);
+N_x = numel(x);
+N_theta = numel(theta);
 
-u_opt_indices = u_idx(1:n_red);
+u_idx = [1 : numel(u)];
+x_idx = N_u + [1 : numel(x)];
+
+q0_pp_idx = u_idx(1:n_red);
+x1_idx = x_idx(1+2*n_red : 4*n_red);
+q1_pp_idx = u_idx(1+n_red : 2*n_red);
+u_opt_indices = [q0_pp_idx, x1_idx, q1_pp_idx];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET INPUT Parameter 4/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 x_k    = SX.sym( 'x_k', 2*n_red, 1       ); % current x state
 y_d    = SX.sym( 'y_d', m+1,     N_MPC+1 ); % (y_d_0 ... y_d_N)
+x_prev = SX.sym( 'x_prev', 2*n_red, N_MPC+1 );
+u_prev = SX.sym( 'u_prev', size(u) );
 
-mpc_parameter_inputs = {x_k, y_d};
-mpc_init_reference_values = [x_0_0(:); y_d_0(:)];
+mpc_parameter_inputs = {x_k, y_d, x_prev, u_prev};
+mpc_init_reference_values = [x_0_0(:); y_d_0(:); x_init_guess_0(:); u_init_guess_0(:)];
 
 %% set input parameter cellaray p
 p = merge_cell_arrays(mpc_parameter_inputs, 'vector')';
@@ -183,6 +195,9 @@ if(weights_and_limits_as_parameter) % debug input parameter
 end
 
 % constraints conditions cellarray g
+g_x = cell(1, N_MPC+1); % for x
+g_u = cell(1, N_MPC); % for u
+g_u_prev = cell(1, N_MPC); % for u_prev
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SET Equation Constraint size 5/5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if(weights_and_limits_as_parameter)
@@ -200,18 +215,18 @@ lambda_g0 = SX.sym('lambda_g0', size(lbg));
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Equation Constraints %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Actual TCP data: y_0 und y_p_0 werden nicht verwendet
 y     = SX(  7, N_MPC+1); % TCP Pose:      (y_0 ... y_N)
-x     = SX(2*n_red, N_MPC+1); % Joint states:   (x_0 ... x_N)
-u     = SX(  n_red, N_MPC); % Joint torques:  (u_0 ... u_N-1)
+xx     = SX(2*n_red, N_MPC+1); % Joint states:   (x_0 ... x_N)
+uu     = SX(  n_red, N_MPC); % Joint torques:  (u_0 ... u_N-1)
 
 R_e_arr = cell(1, N_MPC+1); % TCP orientation:   (R_0 ... R_N)
 
 g_vec = SX(n_red, N_MPC);
 
-x(:, 1) = x_k;
+xx(:, 1) = x_k;
 for i=0:N_MPC
     % calculate q (q_0 ... q_N) and q_p values (q_p_0 ... q_p_N)
     t_k = time_points(1 + (i));
-    q = x(1:n_red, 1 + (i));
+    q = xx(1:n_red, 1 + (i));
     
     % calculate trajectory values (y_0 ... y_N)
     H_e = H_red(q);
@@ -220,27 +235,31 @@ for i=0:N_MPC
     R_e_arr{1 + (i)} = H_e(1:3, 1:3);
     
     if(i < N_MPC)
-        u(:, 1 + (i)) = u_poly(time_points(1 + (i)), theta);
+        uu(:, 1 + (i)) = u_poly(time_points(1 + (i)), theta);
         if(i == 0)
-            x(:, 1 + (i+1))  = F_kp1( x(:, 1 + (i)), u(:, 1 + (i)) ); % Set the state constraints for x(t0) to x(t0+Ta) = tilde x0
+            xx(:, 1 + (i+1))  = F_kp1( xx(:, 1 + (i)), uu(:, 1 + (i)) ); % Set the state constraints for xx(t0) to xx(t0+Ta) = tilde x0
         elseif(i == 1)
-            x(:, 1 + (i+1))  = F2(  x(:, 1 + (i)), u(:, 1 + (i)) ); % Set the state constraints for x(t0+Ta) to x(t0+Ts_MPC) = tilde x1
+            xx(:, 1 + (i+1))  = F2(  xx(:, 1 + (i)), uu(:, 1 + (i)) ); % Set the state constraints for xx(t0+Ta) to xx(t0+Ts_MPC) = tilde x1
         else
-            x(:, 1 + (i+1))  = F(   x(:, 1 + (i)), u(:, 1 + (i)) ); % Set the state constraints for x(t0+Ts_MPC) to x(t0+2*Ts_MPC) = tilde x2
+            xx(:, 1 + (i+1))  = F(   xx(:, 1 + (i)), uu(:, 1 + (i)) ); % Set the state constraints for xx(t0+Ts_MPC) to xx(t0+2*Ts_MPC) = tilde x2
         end
+        g_u(1, 1 + (i))   = {u(:, 1 + (i)) - uu(:, 1 + (i))};
         g_vec(:, 1 + (i)) = g_fun_red(x(1:n_red, 1 + (i)));
+        g_u_prev(1, 1 + (i)) = {u(:, 1 + (i)) - u_prev(:, 1 + (i))};
     end
+
+    g_x(1, 1 + (i)) = {x(:, 1 + (i)) - xx(:, 1 + (i))};
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Total number of equation conditions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % jump in tau at max 1000Nm/s
-% max_du = pp.max_du;
-% max_du_arr = repmat(max_du*dt_int_arr, n_red, 1);
+max_du = pp.max_du;
+max_du_arr = repmat(max_du*dt_int_arr, n_red, 1);
 
-% lbg(1+end-N_u:end, 1) = -max_du_arr(:);
-% ubg(1+end-N_u:end, 1) =  max_du_arr(:);
-g = [{}];
+lbg(1+end-N_u:end, 1) = -max_du_arr(:);
+ubg(1+end-N_u:end, 1) =  max_du_arr(:);
+g = [g_x, g_u, g_u_prev];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Cost Function  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Q_norm_square = @(z, Q) dot( z, mtimes(diag(Q), z));
@@ -293,13 +312,18 @@ u_err = u-g_vec; % es ist stabiler es nicht gegenüber der vorherigen Lösung zu
 % q_err_p = x(n_red+1:2*n_red, :);% - x_prev(n_red+1:2*n_red, :);
 % x_err = [q_err; q_err_p];
 
-J_theta = Q_norm_square(theta', pp.R_theta);
+J_x_prev = Q_norm_square(x - x_prev, pp.R_x_prev(n_x_indices));
 J_q_ref = Q_norm_square(x(1:n_red, :) - pp.q_ref(n_indices), pp.R_q_ref(n_indices));
-J_q_p  = Q_norm_square(x(n_red+1:2*n_red, :), pp.R_q_p(n_indices));
+J_q_p  = Q_norm_square(x(1+n_red:end, :), pp.R_q_p(n_indices));
 J_u  = Q_norm_square(u_err, pp.R_u(n_indices));
+J_theta = Q_norm_square(theta', pp.R_theta);
+% J_u = Q_norm_square(q_pp, pp.R_q_pp(n_indices, n_indices)) + Q_norm_square(q_p, pp.R_q_pp(n_indices, n_indices));
+
+% it is really important to only weight the first control input!
+J_u0_prev = Q_norm_square(u(:, 1) - u_prev(:, 1), pp.R_u0_prev(n_indices));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Define Additional Outputs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_theta, J_u, J_q_ref, J_q_p}';
+cost_vars_names = '{J_yt, J_yr, J_yt_N, J_yr_N, J_theta, J_u, J_q_ref, J_q_p, J_x_prev, J_u0_prev}';
 cost_vars_SX = eval(cost_vars_names);
 cost_vars_names_cell = regexp(cost_vars_names, '\w+', 'match');
 
