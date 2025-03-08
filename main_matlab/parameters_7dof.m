@@ -96,9 +96,9 @@ bus_definitions;
 init_MPC_weights; %% set MPC weights
 
 create_trajectories;
-figure(2);
-plot(param_traj_data.p_d(:,:,2)')
-%create_mpc_init_guess;
+% figure(2);
+% plot(param_traj_data.p_d(:,:,2)')
+create_mpc_init_guess;
 
 change_simulink_traj_combo_box; % saves system!
 

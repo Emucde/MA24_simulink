@@ -26,20 +26,20 @@ if(~use_extern_flags)
     fullsimu                        = false; % make full mpc simulation and plot results
     traj_select_mpc                 = 1; % (1: equilibrium, 2: 5th order diff filt, 3: 5th order poly, 4: smooth sinus)
     create_init_guess_for_all_traj  = ~true; % create init guess for all trajectories
-    create_test_solve               = ~true; % create init guess for all trajectories
+    create_test_solve               = true; % create init guess for all trajectories
     compile_sfun                    = ~true; % needed for simulink s-function, filename: "s_function_"+casadi_func_name
     compile_matlab_sfunction        = false; % only needed for matlab MPC simu, filename: "casadi_func_name
-    iterate_all_mpc_sfunctions      = true;
-    mpc_source_selection            = 5; % (1: all MPCs, 2: only dynamic MPCs, 3: only kinematic MPCs, 4: only selected MPC, 5: custom list)
+    iterate_all_mpc_sfunctions      = ~true;
+    mpc_source_selection            = 1; % (1: all MPCs, 2: only dynamic MPCs, 3: only kinematic MPCs, 4: only selected MPC, 5: custom list)
     coptimflags                     = '-Ofast -march=native -flto'; % Optimization flag for compilation
     use_jit                         = false; % use jit for compilation (precompiles before each RUN!!!
-    generate_realtime_udp_c_fun     = true; % create SOURCEFILES
+    generate_realtime_udp_c_fun     = ~true; % create SOURCEFILES
     reload_parameters_m             = ~true; % reload parameters.m at the end (clears all variables!)
     remove_sourcefiles              = false; % remove source files after compilation
 end
 
 % MPC TO COMPILE FOR SIMULINK
-SELECTED_MPC_NAME = 'MPC10';
+SELECTED_MPC_NAME = 'MPC18';
 
 % Compile Mode:
 % compile_mode = 1 | nlpsol-sfun | fast compile time | very accurate,          | sometimes slower exec
@@ -206,6 +206,18 @@ param_casadi_fun_name.(MPC).name    = MPC;
 param_casadi_fun_name.(MPC).variant = 'nlpsol';
 param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
 param_casadi_fun_name.(MPC).version = 'opt_problem_y_u_MPC_v10_parametric'; % see nlpso_generate_opt_problem.m
+param_casadi_fun_name.(MPC).Ts      = 5e-3;
+param_casadi_fun_name.(MPC).rk_iter = 1;
+param_casadi_fun_name.(MPC).N_MPC   = 5;
+param_casadi_fun_name.(MPC).compile_mode = 1; %1: nlpsol-sfun, 2: opti-sfun
+param_casadi_fun_name.(MPC).fixed_parameter = false; % Weights and limits (true: fixed, false: as parameter inputs)
+param_casadi_fun_name.(MPC).int_method = 'Euler'; % (RK4 | SSPRK3 | Euler
+
+MPC='MPC18';
+param_casadi_fun_name.(MPC).name    = MPC;
+param_casadi_fun_name.(MPC).variant = 'nlpsol';
+param_casadi_fun_name.(MPC).solver  = 'qrqp'; % (qrqp (sqp) | qpoases | ipopt)
+param_casadi_fun_name.(MPC).version = 'opt_problem_y_u_MPC_v11_parametric_reduced'; % see nlpso_generate_opt_problem.m
 param_casadi_fun_name.(MPC).Ts      = 5e-3;
 param_casadi_fun_name.(MPC).rk_iter = 1;
 param_casadi_fun_name.(MPC).N_MPC   = 5;

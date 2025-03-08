@@ -120,10 +120,12 @@ try
         % u_full = full(reshape(xx_full_opt_sol(1+numel(x):numel(x)+numel(u)), size(u)));
 
         u_full = full(reshape(xx_full_opt_sol(1:numel(u)), size(u)));
-        x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));
-
         disp(u_full);
-        disp(x_full);
+
+        if(x.is_symbolic())
+            x_full = full(reshape(xx_full_opt_sol(1+numel(u):numel(u)+numel(x)), size(x)));        
+            disp(x_full);
+        end
 
         % show stats
 
