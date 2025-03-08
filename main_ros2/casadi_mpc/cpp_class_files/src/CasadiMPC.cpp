@@ -513,16 +513,16 @@ void CasadiMPC::generate_trajectory_blocks()
         y_d_pp_rows = y_d_pp_rpy_rows;
     }
 
-    y_d_blocks.resize(traj_cols);
-    y_d_p_blocks.resize(traj_cols);
-    y_d_pp_blocks.resize(traj_cols);
-    t_d_arr.resize(traj_cols);
+    y_d_blocks.resize(traj_data_real_len);
+    y_d_p_blocks.resize(traj_data_real_len);
+    y_d_pp_blocks.resize(traj_data_real_len);
+    t_d_arr.resize(traj_data_real_len);
 
-    y_d_blocks_data.resize(traj_cols);
-    y_d_p_blocks_data.resize(traj_cols);
-    y_d_pp_blocks_data.resize(traj_cols);
+    y_d_blocks_data.resize(traj_data_real_len);
+    y_d_p_blocks_data.resize(traj_data_real_len);
+    y_d_pp_blocks_data.resize(traj_data_real_len);
 
-    for (uint32_t i = 0; i < traj_cols; i++)
+    for (uint32_t i = 0; i < traj_data_real_len; i++)
     {
         y_d << (*traj_data)(y_d_rows, mpc_traj_indices.array() + i);
         y_d_p << (*traj_data)(y_d_p_rows, mpc_traj_indices.array() + i);

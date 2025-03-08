@@ -136,6 +136,14 @@ void CrocoddylMPC::set_coldstart_init_guess(const Eigen::VectorXd &x_k)
 void CrocoddylMPC::switch_traj(const Eigen::VectorXd &x_k)
 {
     traj_data = trajectory_generator.get_traj_data();
+
+    // check if traj_data contains valid data
+    if (traj_data == nullptr)
+    {
+        throw std::invalid_argument("Eigen::MatrixXd CrocoddylMPC::switch_traj(const Eigen::VectorXd &x_k): \
+                                  traj_data = trajectory_generator.get_traj_data() is nullptr");
+    }
+
     traj_rows = traj_data->rows();
     traj_cols = traj_data->cols();
 
@@ -167,14 +175,14 @@ void CrocoddylMPC::generate_trajectory_blocks()
 
     R_d.resize(N_MPC+1);
 
-    p_d_blocks.resize(traj_cols);
-    R_d_blocks.resize(traj_cols);
+    p_d_blocks.resize(traj_data_real_len);
+    R_d_blocks.resize(traj_data_real_len);
 
-    for( uint32_t i = 0; i < traj_cols; i++)
+    for( uint32_t i = 0; i < traj_data_real_len; i++)
     {
         p_d << (*traj_data)(p_d_rows, mpc_traj_indices.array() + i);
         q_d << (*traj_data)(q_d_rows, mpc_traj_indices.array() + i);
-        for (int j = 0; j < q_d.cols(); ++j) {
+        for (uint j = 0; j < N_MPC+1; ++j) {
             R_d[j] = quat2rotm<double>(q_d.col(j));
         }
         p_d_blocks[i] = p_d;

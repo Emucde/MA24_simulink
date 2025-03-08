@@ -114,6 +114,12 @@ void TrajectoryGenerator::init_file_trajectory(int traj_select,
                                                const double *x_k_ndof_ptr,
                                                double T_start, double T_poly, double T_end)
 {
+    // check if x_k_ndof_ptr is valid
+    if (x_k_ndof_ptr == nullptr)
+    {
+        throw std::invalid_argument("Eigen::MatrixXd TrajectoryGenerator::init_file_trajectory(): x_k_ndof_ptr is nullptr");
+    }
+
     switch_traj(traj_select);
 
     Eigen::Vector3d p_init;
