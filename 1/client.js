@@ -217,15 +217,13 @@ document.getElementById('stop').addEventListener('click', () => {
 });
 
 document.getElementById('home').addEventListener('click', () => {
-    var traj_num = get_trajectory();
     var home_delay = document.querySelector('#home_delay').value;
-    ws.send(JSON.stringify({ command: 'home', delay: home_delay, traj_num: traj_num }));
+    ws.send(JSON.stringify({ command: 'home', delay: home_delay }));
 });
 
 document.getElementById('home_q_fixed').addEventListener('click', () => {
-    var traj_num = get_trajectory();
     var home_delay = document.querySelector('#home_delay').value;
-    ws.send(JSON.stringify({ command: 'home_q_fixed', delay: home_delay, traj_num: traj_num }));
+    ws.send(JSON.stringify({ command: 'home_q_fixed', delay: home_delay }));
 });
 
 document.getElementById('open_brakes').addEventListener('click', () => {

@@ -148,6 +148,8 @@ namespace franka_example_controllers
         const rclcpp_lifecycle::State & /*previous_state*/)
     {
         updateJointStates();
+        trajectory_selection = get_node()->get_parameter("trajectory_selection").as_int();
+        q_goal_ = all_traj_data_x0_init[trajectory_selection - 1].head(num_joints);
         motion_generator_ = std::make_unique<MotionGenerator>(0.2, q_, q_goal_);
         start_time_ = this->get_node()->now();
         enable_single_joint_homing_ = get_node()->get_parameter("enable_single_joint_homing").as_bool();
@@ -168,6 +170,34 @@ namespace franka_example_controllers
             dq_(i) = velocity_interface.get_value();
         }
     }
+
+    std::vector<Eigen::VectorXd> MoveToStartExampleController::read_x0_init(const std::string &x0_init_file)
+{
+    std::ifstream file(x0_init_file, std::ios::binary);
+    if (!file)
+    {
+        throw std::runtime_error("Error opening file: " + x0_init_file);
+    }
+
+    uint32_t rows, cols;
+    file.read(reinterpret_cast<char *>(&rows), sizeof(rows));
+    file.read(reinterpret_cast<char *>(&cols), sizeof(cols));
+
+    std::vector<Eigen::VectorXd> all_x0_init;
+
+    for (size_t i = 0; i < cols; ++i)
+    {
+        Eigen::VectorXd x0(rows);
+        file.read(reinterpret_cast<char *>(x0.data()), rows * sizeof(double));
+        if (!file)
+        {
+            throw std::runtime_error("Error reading initial condition data from file: " + x0_init_file);
+        }
+        all_x0_init.push_back(x0);
+    }
+
+    return all_x0_init;
+}
 } // namespace franka_example_controllers
 #include "pluginlib/class_list_macros.hpp"
 // NOLINTNEXTLINE

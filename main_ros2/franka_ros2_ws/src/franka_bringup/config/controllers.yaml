@@ -45,3 +45,4 @@ move_to_start_example_controller:
       - 10.0
       - 5.
     enable_single_joint_homing: true
+    trajectory_selection: 1

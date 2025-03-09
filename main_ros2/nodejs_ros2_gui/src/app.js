@@ -4,7 +4,7 @@ const express = require('express');
 const path = require('path');
 const { exec } = require('child_process');
 const kill_ros = 'kill $(pgrep -f "launch.py")';
-const { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, deactivate_control, activate_control, get_controller_info, objectToString, set_enable_single_joint_homing } = require('./ros_services');
+const { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, deactivate_control, activate_control, get_controller_info, objectToString, set_enable_single_joint_homing, set_trajectory_selection_homing } = require('./ros_services');
 const { searchTrajectoryNames } = require('./search_m_file');
 
 // Express setup to serve HTML files
@@ -242,6 +242,10 @@ async function performHoming(ws, data) {
     } else {
         result = await set_enable_single_joint_homing('move_to_start_example_controller', true);
     }
+    log_check = await check(result, 'ros_service', data);
+
+    // Set trajectory_selection
+    result = await set_trajectory_selection_homing('move_to_start_example_controller', data.traj_num);
     log_check = await check(result, 'ros_service', data);
 
     // Switch controller

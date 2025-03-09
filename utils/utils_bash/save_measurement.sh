@@ -1,7 +1,8 @@
 #!/bin/bash
 
-OUTPUT_DIR=$1
-MEASUREMENT_NAME=$2
+OUTPUT_DIR="$1"
+MEASUREMENT_NAME="$2"
 
-mkdir -p $OUTPUT_DIR/$MEASUREMENT_NAME
-cp $masterdir/config_settings/* $OUTPUT_DIR/$MEASUREMENT_NAME
+mkdir -p "$OUTPUT_DIR/$MEASUREMENT_NAME"
+cp $masterdir/config_settings/* "$OUTPUT_DIR/$MEASUREMENT_NAME"
+cp -R $masterdir/main_ros2/nodejs_ros2_gui/public/* "$OUTPUT_DIR/$MEASUREMENT_NAME"

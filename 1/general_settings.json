@@ -1,0 +1,121 @@
+{
+    "use_gravity": false,
+    "use_lowpass_filter": false,
+    "use_ekf": true,
+    "use_noise": false,
+    "dt": 1e-3,
+    "tau_max_jump": 25,
+    "tcp_frame_name": "fr3_link8_tcp",
+    "mean_noise_amplitude": 0.1e-3,
+    "lowpass_filter_omega_c_q": 400,
+    "lowpass_filter_omega_c_dq": 200,
+    "trajectory_selection": 1,
+    "transient_traj_start_time": 0.0,
+    "transient_traj_duration": 2.0,
+    "transient_traj_end_time": 2.0,
+    "default_controller": "Classic",
+    "available_controllers": [
+        "Classic",
+        "Casadi",
+        "Crocoddyl"
+    ],
+    "default_classic_controller": "ID",
+    "available_classic_controller": [
+        "PD",
+        "CT",
+        "ID"
+    ],
+    "use_casadi_planner": false,
+    "default_casadi_mpc": "MPC2_dyn_parametric_N_MPC_5",
+    "available_casadi_mpc": [
+        "MPC1_dyn_classic_N_MPC_3",
+        "MPC1_dyn_classic_N_MPC_5",
+        "MPC2_dyn_parametric_N_MPC_3",
+        "MPC2_dyn_parametric_N_MPC_5",
+        "MPC2_dyn_parametric_N_MPC_10",
+        "MPC3_kin_int_thelenberg_N_MPC_5",
+        "MPC3_kin_int_thelenberg_N_MPC_10",
+        "MPC3_kin_int_thelenberg_N_MPC_15",
+        "MPC3_kin_int_thelenberg_N_MPC_20",
+        "MPC3_kin_int_thelenberg_N_MPC_30",
+        "MPC3_kin_int_parametric_N_MPC_5",
+        "MPC3_kin_int_parametric_N_MPC_10",
+        "MPC3_kin_int_parametric_N_MPC_15",
+        "MPC3_kin_int_parametric_N_MPC_20",
+        "MPC3_kin_int_parametric_N_MPC_30",
+        "MPC4_kin_int_planner_N_MPC_5",
+        "MPC4_kin_int_planner_N_MPC_10",
+        "MPC4_kin_int_planner_N_MPC_15",
+        "MPC4_kin_int_planner_N_MPC_20",
+        "MPC4_kin_int_planner_N_MPC_30",
+        "MPC5_kin_dev_planner_N_MPC_10",
+        "MPC5_kin_dev_planner_N_MPC_20",
+        "MPC5_kin_dev_planner_N_MPC_30"
+    ],
+    "available_casadi_mpc_simulink": [
+        "MPC01",
+        "MPC6",
+        "MPC7",
+        "MPC8",
+        "MPC9",
+        "MPC10",
+        "MPC11",
+        "MPC12",
+        "MPC13",
+        "MPC14",
+        "MPC15LL",
+        "MPC15HL",
+        "MPC16",
+        "MPC17"
+    ],
+    "default_crocoddyl_mpc": "DynMPC_v1",
+    "available_crocoddyl_mpc": [
+        "DynMPC_v1"
+    ],
+    "torque_mapper_settings":
+    {
+        "K_d": [500, 500, 500, 500, 500, 500, 500],
+        "D_d": [31.62, 31.62, 31.62, 31.62, 31.62, 31.62, 31.62],
+        "K_d_fixed": [500],
+        "D_d_fixed": [31.62],
+        "q_ref_nq": [0, -0.7854, 0, -2.3562, 0, 1.5708, 0.7854],
+        "q_ref_nq_fixed": [0],
+        "torque_limit": 100.0
+    },
+    "classic_controller_settings" :{
+        "CT": {
+            "Kp1": [500, 500, 500, 1000, 1000, 1000],
+            "Kd1": [31.62, 31.62, 31.62, 31.62, 31.62, 31.62]
+        },
+        "PD": {
+            "K_d": [200, 200, 200, 200, 200, 200],
+            "D_d": [20, 20, 20, 20, 20, 20]
+        },
+        "ID": {
+            "Kp1": [100, 100, 100, 50, 50, 50],
+            "Kd1": [20, 20, 20, 14.142, 14.142, 14.142],
+            "K_d": [100, 100, 100, 20, 20, 20, 20],
+            "D_d": [20, 20, 20, 8.944, 8.944, 8.944, 8.944]
+        },
+        "regularization_settings": {
+            "mode" : "ThresholdSmallSingularValues",
+            "k": 1e-2,
+            "W_bar_N": [0.110889, 0.099856, 0.147456, 0.007744, 0.011449, 0.0106916],
+            "W_E": [1, 1, 1, 1, 1, 1],
+            "eps": 1e-1,
+            "eps_collinear": 1e-2,
+            "lambda_min": 1e-4
+        },
+        "available_regularization_settings": [
+            "None",
+            "Damping",
+            "CompleteOrthogonalDecomposition",
+            "JacobiSVD",
+            "ThresholdSmallSingularValues",
+            "TikhonovRegularization",
+            "RegularizationBySingularValues",
+            "SimpleCollinearity",
+            "SteinboeckCollinearity"
+        ]
+    }
+}
