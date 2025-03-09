@@ -3,7 +3,7 @@
     "mpc_settings": {
       "version": "MPC_v1_bounds_terminate",
       "Ts": 1e-3,
-      "N_step": 3,
+      "N_step": 1,
       "T_horizon": 20e-3,
       "use_T_horizon": false,
       "N_MPC": 20,
