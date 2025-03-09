@@ -94,7 +94,7 @@
             },
             {
                 "label": "mpc_weights_crocoddyl.json",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils_python/mpc_weights_crocoddyl.json"
+                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/config_settings/mpc_weights_crocoddyl.json"
             }
         ]
     },
@@ -107,7 +107,7 @@
             },
             {
                 "label": "mpc_weights_crocoddyl.json",
-                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/utils_python/mpc_weights_crocoddyl.json"
+                "resourcePath": "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/config_settings/mpc_weights_crocoddyl.json"
             },
             {
                 "label": "utils.py",

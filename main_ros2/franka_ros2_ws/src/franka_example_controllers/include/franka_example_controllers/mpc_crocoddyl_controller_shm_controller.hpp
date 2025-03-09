@@ -81,7 +81,7 @@ namespace franka_example_controllers
                                                  const rclcpp::Duration &period) override;
 
     private:
-        const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
+        const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/config_settings/mpc_weights_crocoddyl.json";
         CrocoddylController controller;
 
         bool semaphore_initialized = false;

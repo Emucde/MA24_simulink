@@ -2,6 +2,8 @@ const http = require('http');
 const WebSocket = require('ws');
 const express = require('express');
 const path = require('path');
+const { exec } = require('child_process');
+const kill_ros = 'kill $(pgrep -f "launch.py")';
 const { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, deactivate_control, activate_control, get_controller_info, objectToString, set_enable_single_joint_homing } = require('./ros_services');
 const { searchTrajectoryNames } = require('./search_m_file');
 
@@ -31,6 +33,30 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.get('/', function (req, res) {
     res.sendFile(__dirname + '/index.html');
 });
+
+/**
+ * Function to kill processes matching a specific pattern.
+ * @param {string} pattern - The pattern to search for (e.g., "launch.py").
+ * @param {function} callback - Optional callback to handle the result.
+ */
+function kill_process(pattern, callback) {
+    const command = `pgrep -f "${pattern}" | xargs -r kill`;
+
+    exec(command, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error executing command: ${error.message}`);
+            if (callback) callback(error, null);
+            return;
+        }
+        if (stderr) {
+            console.error(`Error output: ${stderr}`);
+            if (callback) callback(new Error(stderr), null);
+            return;
+        }
+        console.log(`Command output: ${stdout}`);
+        if (callback) callback(null, stdout);
+    });
+}
 
 async function init_ros() {
     try {
@@ -268,9 +294,9 @@ async function main() {
     });
 
 
-    // wss.on('listening', (ws) => {
-    //     check_ros_connection();
-    // });
+    wss.on('listening', (ws) => {
+        check_ros_connection();
+    });
 
     wss.on('connection', (ws) => {
         clients.add(ws);
@@ -388,18 +414,33 @@ async function main() {
                 console.error('An error occurred:', error.message);
                 additional_string = "";
                 if(error.message.includes('Received undefined'))
-                {
-                    restartNode()
-                    .then(() => {
-                    console.log('Node restarted successfully');
-                    // Perform any necessary actions after restart
-                    })
-                    .catch(error => {
-                    console.error('Failed to restart node:', error);
-                    // Handle restart failure
-                    });
-                    additional_string=": ROS2 service node restarted";
-                }
+                    {
+                        new Promise((resolve, reject) => {
+                            kill_process('launch.py', (error, result) => {
+                                if (error) {
+                                    reject(error);
+                                } else {
+                                    resolve(result);
+                                }
+                            });
+                        })
+                        .then(() => {
+                            console.log('Successfully killed processes');
+                            restartNode()
+                            .then(() => {
+                            console.log('Node restarted successfully');
+                            // Perform any necessary actions after restart
+                            })
+                            .catch(error => {
+                            console.error('Failed to restart node:', error);
+                            // Handle restart failure
+                            });
+                            additional_string=": ROS2 service node restarted";
+                        })
+                        .catch((error) => {
+                            console.error('Failed to kill processes:', error.message);
+                        });
+                    }
                 ws.send(JSON.stringify({ status: 'error', error: error.message + additional_string }));
             }
         });
@@ -441,6 +482,35 @@ main().catch(error => {
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+
+    if(reason.message.includes('Received undefined'))
+    {
+        new Promise((resolve, reject) => {
+            kill_process('launch.py', (error, result) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(result);
+                }
+            });
+        })
+        .then(() => {
+            console.log('Successfully killed processes');
+            restartNode()
+            .then(() => {
+            console.log('Node restarted successfully');
+            // Perform any necessary actions after restart
+            })
+            .catch(error => {
+            console.error('Failed to restart node:', error);
+            // Handle restart failure
+            });
+            additional_string=": ROS2 service node restarted";
+        })
+        .catch((error) => {
+            console.error('Failed to kill processes:', error.message);
+        });
+    }
     // Optional: Exit with failure code
     // process.exit(1);
 });

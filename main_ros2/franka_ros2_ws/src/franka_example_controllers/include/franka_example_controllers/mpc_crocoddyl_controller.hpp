@@ -75,7 +75,7 @@ namespace franka_example_controllers
         CallbackReturn on_configure(const rclcpp_lifecycle::State &previous_state) override;
 
     private:
-        const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/utils_python/mpc_weights_crocoddyl.json";
+        const std::string crocoddyl_config_filename = std::string(MASTERDIR) + "/config_settings/mpc_weights_crocoddyl.json";
         CrocoddylController controller;
 
         // rclcpp::Service<mpc_interfaces::srv::CasadiMPCTypeCommand>::SharedPtr mpc_switch_service_;
