@@ -48,6 +48,15 @@ Eigen::Map<const Eigen::VectorXd> ConstDoubleVectorMap(T *ptr, int size)
     return Eigen::Map<const Eigen::VectorXd>(const_cast<double *>(ptr), size);
 }
 
+template <typename T = double>
+Eigen::Matrix<T, 3, 3> skew(const Eigen::Matrix<T, 3, 1>& v) {
+    Eigen::Matrix<T, 3, 3> S;
+    S << 0, -v(2), v(1),
+         v(2), 0, -v(0),
+         -v(1), v(0), 0;
+    return S;
+}
+
 // Reference:
 //   Sarabandi, S., & Thomas, F. (2018). Accurate computation of quaternions
 //   from rotation matrices. In International Symposium on Advances in Robot

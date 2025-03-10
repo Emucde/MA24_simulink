@@ -9,6 +9,7 @@ WorkspaceController::WorkspaceController(const std::string &urdf_filename,
                         inverse_dyn_controller(robot_model, general_config_filename, trajectory_generator, tau_max_jump),
                         active_controller(&ct_controller), selected_controller_type(ControllerType::CT)
 {
+    update_config();
 }
 
 Eigen::MatrixXd BaseWorkspaceController::computeJacobianRegularization()
@@ -351,10 +352,23 @@ void BaseWorkspaceController::calculateControlData(const Eigen::VectorXd &x)
     // Errors
     Eigen::Matrix3d R_d = q_d.toRotationMatrix();
     Eigen::Matrix3d R = robot_model.kinematicsData.R;
-    Eigen::Matrix3d dR = R * R_d.transpose();
+    Eigen::Matrix3d dR = R_d.transpose() * R;
     // Eigen::Quaterniond q_err_tmp(dR);
     Eigen::Vector4d q_err_tmp = rotm2quat_v4<double>(dR);
-    Eigen::Vector3d q_err = q_err_tmp.tail(3); // Only the orientation error part
+    // Eigen::Vector3d q_err = q_err_tmp.tail(3); // Only the orientation error part
+
+    Eigen::Vector3d epsilon = q_err_tmp.tail(3);
+    double eta = q_err_tmp(0);
+
+    Eigen::Vector3d q_err = 2 * R_d * (eta * Eigen::MatrixXd::Identity(3, 3) + skew<>(epsilon)) * epsilon;
+    
+    // Write values to CSV file
+    // std::ofstream csv_file("output.csv", std::ios::app);
+    // if (csv_file.tellp() == 0) {
+    //     csv_file << "p_p,omega_e,p_d,p_d_p,p_d_pp,q_d,omega_d,omega_d_p,q_err_tmp,epsilon,eta\n";
+    // }
+    // csv_file << p_p.transpose() << "," << omega_e.transpose() << "," << p_d.transpose() << "," << p_d_p.transpose() << "," << p_d_pp.transpose() << "," << q_d.coeffs().transpose() << "," << omega_d.transpose() << "," << omega_d_p.transpose() << "," << q_err_tmp.transpose() << "," << epsilon.transpose() << "," << eta << "\n";
+    // csv_file.close();
 
     // Eigen::Quaterniond quat = robot_model.kinematicsData.quat;
     // Eigen::Quaterniond q_err_tmp = quat * q_d.conjugate();
@@ -482,6 +496,12 @@ Eigen::VectorXd WorkspaceController::CTController::control(const Eigen::VectorXd
     // Control parameters
     Eigen::MatrixXd Kd1 = controller_settings.ct_settings.Kd1;
     Eigen::MatrixXd Kp1 = controller_settings.ct_settings.Kp1;
+
+    // print Kd1
+    // std::cout << "Kd1: " << Kd1 << std::endl;
+
+    // print Kp1
+    // std::cout << "Kp1: " << Kp1 << std::endl;
 
     // Calculate J, J_pinv, J_p, C, M, C_rnea, g, q_p, x_err, x_err_p, x_d_p, x_d_pp
     calculateControlData(x);
