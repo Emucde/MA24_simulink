@@ -11,10 +11,28 @@ function traj_struct_out = create_param_spline(traj_struct, param_global, text1,
     end
    
     %% Param sinus poly trajectory
-    QQ = traj_struct.pose(1:3, :)';
+
+    if(p == 0)
+        QQ = ones(1,3) .* [1:1:size(traj_struct.pose, 2)]';
+        p = 3;
+    else
+        QQ = traj_struct.pose(1:3, :)';
+    end
+
+    if(isempty(Ind_deriv))
+        Ind_deriv = 1:1:(size(QQ, 1)-2);
+    end
+    if(isempty(alpha))
+        alpha = zeros(1, size(QQ, 1));
+        alpha(2:end-1) = 1;
+    end
+    if(isempty(p))
+        p = 3;
+    end
+
+    
     
     TT = [QQ(2:end, :)- QQ(1:end-1, :); QQ(end, :)- QQ(end-1, :)];
-    
     % T1 = [1 0 0] active at Q1 = QQ(2,:), T2 = [1 1 0] active at Q2 = QQ(3,:)
     
     % T0 and Tn are ignored (alpha(1) = alpha(end) = 0), T1 and T2 are scaled
@@ -23,8 +41,6 @@ function traj_struct_out = create_param_spline(traj_struct, param_global, text1,
     % alpha(2) is active on T1 = TT(1+Ind_deriv(1), :)
     % alpha(3) is active on T2 = TT(1+Ind_deriv(2), :)
     % alpha(end) is active on Tn = TT(end, :)
-    
-    p = 3; % spline order
     
     bspline = bsplineCurveFitting(QQ, TT, Ind_deriv, alpha, p);
 

@@ -4,22 +4,22 @@
     "use_ekf": true,
     "use_noise": false,
     "dt": 1e-3,
-    "tau_max_jump": 10,
+    "tau_max_jump": 25,
     "tcp_frame_name": "fr3_link8_tcp",
     "mean_noise_amplitude": 0.1e-3,
     "lowpass_filter_omega_c_q": 400,
     "lowpass_filter_omega_c_dq": 200,
     "trajectory_selection": 1,
     "transient_traj_start_time": 0.0,
-    "transient_traj_duration": 0.0,
-    "transient_traj_end_time": 0.0,
+    "transient_traj_duration": 2.0,
+    "transient_traj_end_time": 2.0,
     "default_controller": "Classic",
     "available_controllers": [
         "Classic",
         "Casadi",
         "Crocoddyl"
     ],
-    "default_classic_controller": "CT",
+    "default_classic_controller": "ID",
     "available_classic_controller": [
         "PD",
         "CT",
@@ -84,27 +84,27 @@
     },
     "classic_controller_settings" :{
         "CT": {
-            "Kp1": [200, 200, 200, 20, 20, 20],
-            "Kd1": [20, 20, 20, 8.944, 8.944, 8.944]
+            "Kp1": [500, 500, 500, 1000, 1000, 1000],
+            "Kd1": [31.62, 31.62, 31.62, 31.62, 31.62, 31.62]
         },
         "PD": {
-            "K_d": [200, 200, 200, 20, 20, 20],
-            "D_d": [20, 20, 20, 8.944, 8.944, 8.944]
+            "K_d": [200, 200, 200, 200, 200, 200],
+            "D_d": [20, 20, 20, 20, 20, 20]
         },
         "ID": {
-            "Kp1": [100, 100, 100, 50, 50, 50],
-            "Kd1": [20, 20, 20, 14.142, 14.142, 14.142],
+            "Kp1": [100, 100, 100, 20, 20, 20],
+            "Kd1": [20, 20, 20, 8.944, 8.944, 8.944],
             "K_d": [100, 100, 100, 20, 20, 20, 20],
             "D_d": [20, 20, 20, 8.944, 8.944, 8.944, 8.944]
         },
         "regularization_settings": {
-            "mode" : "Damping",
-            "k": 1e-3,
+            "mode" : "None",
+            "k": 1e-2,
             "W_bar_N": [0.110889, 0.099856, 0.147456, 0.007744, 0.011449, 0.0106916],
             "W_E": [1, 1, 1, 1, 1, 1],
-            "eps": 1e-5,
-            "eps_collinear": 1e-5,
-            "lambda_min": 1e-5
+            "eps": 1e-1,
+            "eps_collinear": 1e-2,
+            "lambda_min": 1e-2
         },
         "available_regularization_settings": [
             "None",

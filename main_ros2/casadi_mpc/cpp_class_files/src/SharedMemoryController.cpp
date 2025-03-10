@@ -3,7 +3,7 @@
 SharedMemoryController::SharedMemoryController(const std::string &masterDir, bool use_custom_list)
     : SharedMemoryController(
         masterDir + "/urdf_creation/fr3_no_hand_7dof.urdf",
-        masterDir + "/utils_python/mpc_weights_crocoddyl.json",
+        masterDir + "/config_settings/mpc_weights_crocoddyl.json",
         masterDir + "/config_settings/ekf_settings.json",
         masterDir + "/config_settings/general_settings.json",
         masterDir + (use_custom_list ? "/config_settings/casadi_mpc_weights_fr3_no_hand_custom_list.json" : "/config_settings/casadi_mpc_weights_fr3_no_hand_simulink.json")

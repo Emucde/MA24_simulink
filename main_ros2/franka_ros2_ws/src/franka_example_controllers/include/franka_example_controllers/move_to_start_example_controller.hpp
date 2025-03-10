@@ -50,6 +50,9 @@ class MoveToStartExampleController : public controller_interface::ControllerInte
   const int nq_fixed = robot_config.nq_fixed;
   const Eigen::VectorXi n_indices_fixed = ConstIntVectorMap(robot_config.n_indices_fixed, nq_fixed);
   const int num_joints = 7;
+  int trajectory_selection = 1;
+  std::string x0_init_file = robot_config.x0_init_path;
+  std::vector<Eigen::VectorXd> all_traj_data_x0_init = read_x0_init(x0_init_file);
   Vector7d q_;
   Vector7d q_goal_;
   Vector7d dq_;
@@ -60,5 +63,6 @@ class MoveToStartExampleController : public controller_interface::ControllerInte
   std::unique_ptr<MotionGenerator> motion_generator_;
 
   void updateJointStates();
+  std::vector<Eigen::VectorXd> read_x0_init(const std::string &x0_init_file);
 };
 }  // namespace franka_example_controllers

@@ -197,6 +197,8 @@ void CrocoddylMPC::create_mpc_solver()
 
     // get robot model
 
+    double dt_int = dt;
+
     Eigen::VectorXd p_d;
     Eigen::VectorXd q_d;
     Eigen::MatrixXd R_d;
@@ -358,8 +360,12 @@ void CrocoddylMPC::create_mpc_solver()
             auto DAM = boost::make_shared<crocoddyl::DifferentialActionModelFreeFwdDynamics>(
             state, actuationModel, runningDifferentialCostModel);
 
+            if(i==0)
+                dt_int = dt;
+            else
+                dt_int = dt_MPC;
             // integrate the differential cost models
-            auto IAM = integrator->integrate(DAM, dt_MPC);
+            auto IAM = integrator->integrate(DAM, dt_int);
             runningCostModels.push_back(
                 boost::static_pointer_cast<crocoddyl::ActionModelAbstract>(IAM));
         }

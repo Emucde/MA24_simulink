@@ -36,7 +36,7 @@ manual_traj_select = 1
 use_feedforward = True
 use_clipping = False
 use_gravity = False
-visualize_sol = False
+visualize_sol = True
 plot_sol=True
 debounce_delay = 0.1
 explicit_mpc = False
@@ -149,7 +149,7 @@ n_indices_fixed = n_indices_all[~np.isin(n_indices_all, n_indices)]
 ############################################ MPC Settings ###############################################
 #########################################################################################################
 
-# see utils_python/mpc_weights_crocoddyl.json
+# see config_settings/mpc_weights_crocoddyl.json
 
 #########################################################################################################
 ######################################### Build Robot Model #############################################

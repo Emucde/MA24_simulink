@@ -129,8 +129,8 @@ def generate_launch_description():
             
             # alternativ (untested):
             # https://github.com/ms-iot/vscode-ros/blob/master/doc/debug-support.md
-            # on_exit=Shutdown(),
-            on_exit=on_custom_exit,
+            on_exit=Shutdown(),
+            # on_exit=on_custom_exit,
         ),
 
         # Node(package='rviz2',

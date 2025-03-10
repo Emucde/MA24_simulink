@@ -455,7 +455,7 @@ def get_trajectory_data(traj_data, traj_init_config, n_indices):
     q_0_pp = traj_init_config['q_0_pp'][:]
     return p_d, p_d_p, p_d_pp, R_d, q_0_pp
 
-def load_mpc_config(robot_model, file_path='utils_python/mpc_weights_crocoddyl.json'):
+def load_mpc_config(robot_model, file_path='config_settings/mpc_weights_crocoddyl.json'):
     with open(file_path, 'r') as f:
         config = json.load(f)
     
@@ -2629,6 +2629,46 @@ def get_custom_download_button_script():
         downloadData(exportData, filename, 'text/csv');
     };
 
+    const downloadHTMLBtn = document.createElement('div');
+    downloadHTMLBtn.className = 'modebar-group';
+    downloadHTMLBtn.innerHTML = `
+        <a rel="tooltip" class="modebar-btn" data-title="Download html file" data-toggle="false" data-gravity="n" download="robot_visualization.html">
+            <svg viewBox="0 0 24 24" class="icon" height="1em" width="1em">
+                <path d="M12 15l4-4h-3V3h-2v8H8l4 4zm-8 3h16v2H4z"/>
+            </svg>
+        </a>
+    `;
+
+    downloadHTMLBtn.onclick = () => {
+        // Get the full HTML content of the page
+        const htmlContent = document.documentElement.outerHTML;
+
+        // Create a Blob object with the HTML content
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+
+        // Generate a URL for the Blob
+        const url = URL.createObjectURL(blob);
+
+        // Create a temporary anchor element
+        const link = document.createElement('a');
+        link.href = url;
+
+        const now = new Date();
+        const year = now.getFullYear().toString().slice(-2);
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        const day = now.getDate().toString().padStart(2, '0');
+
+        link.download = `${year}${month}${day}_robot_plots`; // Specify the downloaded file name
+
+        // Append the anchor to the body, click it, and remove it
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Revoke the Blob URL to free memory
+        URL.revokeObjectURL(url);
+    };
+
     var rec_time_btn = 100; //ms
     function add_custom_button() {
         var graphDiv = document.querySelector('.plotly-graph-div');
@@ -2641,6 +2681,7 @@ def get_custom_download_button_script():
             // Append the button to the modebar container
             const modebarContainer = document.querySelector('.modebar-container div');
             modebarContainer.insertAdjacentElement('afterbegin', downloadBtn);
+            modebarContainer.insertAdjacentElement('afterbegin', downloadHTMLBtn);
         }
     }
     setTimeout(add_custom_button, rec_time_btn);

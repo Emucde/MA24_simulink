@@ -268,13 +268,13 @@ cnt = cnt+1;
 %     printMatrixAsCellArray(q);
 % catch
     q = [
-        [-0.002456 -0.804241  0.000000 -1.447648  1.191031  1.723439  0.012133];
+        [-0.079543 -0.811266  0.000000 -1.467184  1.283216  1.668681  0.686408];
         [-0.079543 -0.811266  0.000000 -1.467184  1.283216  1.668681  0.686408];
         [1.149425 -0.844058  0.000000 -1.526757  1.309245  1.812150  1.286332];
-        [1.206838 -0.834363  0.000000 -1.508373  1.326203  2.382486  1.447213];
-        [0.619794 -0.812444  0.000000 -1.470141  1.296152  1.646638  1.207236];
-        [0.950010  0.364019  0.000000 -1.639025  0.904915  3.343925  1.121729];
-        [0.819999  0.272029  0.000000 -1.642494  0.968143  3.353247  1.098118];
+        [1.149425 -0.844058  0.000000 -1.526757  1.309245  1.812150  1.286332];
+        [-0.079543 -0.811266  0.000000 -1.467184  1.283216  1.668681  0.686408];
+        [-0.079543 -0.811266  0.000000 -1.467184  1.283216  1.668681  0.686408];
+        [-0.079543 -0.811266  0.000000 -1.467184  1.283216  1.668681  0.686408];
     ];
 % end
 
@@ -310,12 +310,12 @@ traj_struct.traj_type = [traj_mode.polynomial];
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -3.5); % Param differential filter 5th order trajectory
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
 traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
-traj_struct = create_param_spline(traj_struct, param_global, 'Ind_deriv', [1,2,3,4,5], 'alpha', [0,1,1,1,1,1,0], 'p', 3); % Param for sinus poly trajectory
+traj_struct = create_param_spline(traj_struct, param_global, 'Ind_deriv', [], 'alpha', [], 'p', 0); % Param for sinus poly trajectory
 traj_struct.name = 'Multipoint 2, Polynomial, Workspace';
 traj_cell{cnt} = traj_struct;
 cnt = cnt+1;
 
-%% Trajectory 4: Smooth Singularity, Polynomial
+%% Trajectory 5: Smooth Singularity, Polynomial
 % Define the joint configurations as a cell array
 try
     single_sing_pose = readmatrix('./main_c/sorted_output_single.csv');

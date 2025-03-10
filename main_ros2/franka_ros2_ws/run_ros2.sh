@@ -80,7 +80,7 @@ while true; do
         break
     else
         echo "ROS2 crashed. Restarting..."
-        sleep 5
+        sleep 1
     fi
 done
 

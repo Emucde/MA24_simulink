@@ -117,6 +117,28 @@ async function set_enable_single_joint_homing(active_controller_name, enable) {
     }
 }
 
+async function set_trajectory_selection_homing(active_controller_name, value) {
+    const client = node.createClient('rcl_interfaces/srv/SetParameters', '/' + active_controller_name + '/set_parameters');
+    const request = {
+        parameters: [{
+            name: 'trajectory_selection',
+            value: {
+                type: 2,  // 2 corresponds to PARAMETER_INTEGER
+                integer_value: BigInt(value)
+            }
+        }]
+    };
+
+    try {
+        const response = await callService(client, request);
+        console.log('Parameter set response:', response);
+        return response;
+    } catch (error) {
+        console.error('Error setting parameter:', error.message);
+        throw error;
+    }
+}
+
 
 // async function load_and_configure_controller(controller_name, home_robot = null, ws = null, data = null) {
 //     return load_and_configure_controller_intern(controller_name)
@@ -339,4 +361,4 @@ async function get_controller_info() {
     return { controller_names, controller_active_states, active_controller_idx, active_controller_name, ok: true, name: name };
 }
 
-module.exports = { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, deactivate_control, activate_control, get_controller_info, objectToString, set_enable_single_joint_homing};
+module.exports = { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, deactivate_control, activate_control, get_controller_info, objectToString, set_enable_single_joint_homing, set_trajectory_selection_homing};

@@ -74,7 +74,7 @@
             },
             {
                 "label": "mpc_weights_crocoddyl.json",
-                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/utils_python/mpc_weights_crocoddyl.json"
+                "resourcePath": "/home/rslstudent/Students/Emanuel/MA24_simulink/config_settings/mpc_weights_crocoddyl.json"
             },
             {
                 "label": "utils.py",
