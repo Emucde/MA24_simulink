@@ -487,20 +487,9 @@ Eigen::VectorXd WorkspaceController::CTController::control(const Eigen::VectorXd
     calculateControlData(x);
 
     Eigen::VectorXd v = J_pinv * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err - J_p * q_p);
-    Eigen::VectorXd v = J_pinv * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err - J_p * q_p);
 
     // // Control Law Calculation
     Eigen::VectorXd tau = M * v + C_rnea;
-    Eigen::VectorXd tau = M * v + C_rnea;
-
-    // Eigen::MatrixXd J_pinv_T = J_pinv.transpose(); // Assuming J_pinv is computed somewhere earlier
-    // Eigen::MatrixXd Lambda = J_pinv_T * M * J_pinv;
-    // //Lambda = 0.5 * (Lambda + Lambda.transpose());
-    // Eigen::MatrixXd mu = J_pinv_T * (C - M * J_pinv * J_p) * q_p;
-    // Eigen::VectorXd F = mu + Lambda * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err);
-    // Eigen::VectorXd F_g = J_pinv_T * g; // g is zero here
-
-    // Eigen::VectorXd tau = F_g + J.transpose() * F;
 
     return tau;
 }
@@ -553,21 +542,6 @@ Eigen::VectorXd WorkspaceController::PDPlusController::control(const Eigen::Vect
 
     // Calculate J, J_pinv, J_p, C, M, C_rnea, g, q_p, x_err, x_err_p, x_d_p, x_d_pp
     calculateControlData(x);
-
-    // Eigen::MatrixXd J_pinv_T = J_pinv.transpose(); // Assuming J_pinv is computed somewhere earlier
-    // Eigen::MatrixXd Lambda = J_pinv_T * M * J_pinv;
-    // Lambda = 0.5 * (Lambda + Lambda.transpose());
-    // // Eigen::MatrixXd mu = J_pinv_T * (C - M * J_pinv * J_p) * q_p;
-    // Eigen::MatrixXd mu = J_pinv_T * (C - M * J_pinv * J_p) * J_pinv;
-
-    // Eigen::VectorXd F_g = J_pinv_T * g; // g is zero here
-    // Eigen::VectorXd F_g = J_pinv_T * g; // g is zero here
-
-    // // Eigen::VectorXd F = Lambda * x_d_pp + mu + F_g - D_d * x_err_p - K_d * x_err;
-    // Eigen::VectorXd F = Lambda * x_d_pp + mu * x_d_p + F_g - D_d * x_err_p - K_d * x_err;
-    // // Eigen::VectorXd F = Lambda * x_d_pp + mu * x_e_p + F_g - D_d * x_err_p - K_d * x_err;
-
-    // Eigen::VectorXd tau = J.transpose() * F;
 
     Eigen::VectorXd tau = C_rnea + M*J_pinv*(x_d_pp - J_p*q_p) - J.transpose()*(D_d * x_err_p + K_d * x_err);
     return tau;
