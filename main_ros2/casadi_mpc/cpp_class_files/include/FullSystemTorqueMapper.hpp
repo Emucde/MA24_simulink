@@ -8,6 +8,7 @@
 #include <pinocchio/algorithm/crba.hpp>
 #include <pinocchio/algorithm/rnea.hpp>
 #include "pinocchio/algorithm/frames.hpp"
+#include <pinocchio/algorithm/model.hpp>
 #include "pinocchio/algorithm/aba.hpp"
 #include <pinocchio/multibody/model.hpp>
 #include <pinocchio/multibody/data.hpp>
@@ -48,6 +49,14 @@ public:
                                                    const Eigen::VectorXd &q_p);
 
     Eigen::VectorXd calcFeedforwardTorqueDynamic(const Eigen::VectorXd &u,
+                                                 const Eigen::VectorXd &q,
+                                                 const Eigen::VectorXd &q_p);
+
+    Eigen::VectorXd calcFeedforwardTorqueKinematicAlternative(const Eigen::VectorXd &u,
+                                                   const Eigen::VectorXd &q,
+                                                   const Eigen::VectorXd &q_p);
+
+    Eigen::VectorXd calcFeedforwardTorqueDynamicAlternative(const Eigen::VectorXd &u,
                                                  const Eigen::VectorXd &q,
                                                  const Eigen::VectorXd &q_p);
 
@@ -97,12 +106,17 @@ private:
     uint nq_fixed;  // Number of reduced degrees of freedom
     pinocchio::Model robot_model_full;
     pinocchio::Data robot_data_full;
+    pinocchio::Model robot_model_reduced;
+    pinocchio::Data robot_data_reduced;
     pinocchio::Model::FrameIndex tcp_frame_id;
     const Eigen::VectorXi n_indices;
     const Eigen::VectorXi n_indices_fixed;
     const Eigen::VectorXd q_ref_nq;
     const Eigen::VectorXd q_ref_fixed;
     Eigen::MatrixXd M_fixed;
+    const Eigen::MatrixXd J_psi;
+    const Eigen::MatrixXd J_psi_T;
+    const Eigen::MatrixXd A;
 
     Eigen::VectorXd tau_full;
     Eigen::VectorXd q_pp;
@@ -110,11 +124,9 @@ private:
 
     Config config; // Configuration parameters
 
-    void initRobot(const std::string &urdf_filename,
-                   const std::string &tcp_frame_name,
-                   pinocchio::Model &robot_model,
-                   pinocchio::Data &robot_data,
-                   bool use_gravity);
+    void initRobot();
+    Eigen::MatrixXd calc_reduced_mapping_matrix();
+    Eigen::MatrixXd calc_coercive_condition_matrix();
     Eigen::VectorXd enforceTorqueLimits(const Eigen::VectorXd &tau);
     Eigen::VectorXd RK4(const Eigen::VectorXd& state, double dt, const std::function<Eigen::VectorXd(const Eigen::VectorXd&)>& f);
 };

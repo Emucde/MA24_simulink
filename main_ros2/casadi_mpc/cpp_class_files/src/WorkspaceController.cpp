@@ -350,29 +350,22 @@ void BaseWorkspaceController::calculateControlData(const Eigen::VectorXd &x)
     Eigen::VectorXd omega_d_p = trajectory_generator.omega_d_p.col(traj_count);
 
     // Errors
-    Eigen::Matrix3d R_d = q_d.toRotationMatrix();
-    Eigen::Matrix3d R = robot_model.kinematicsData.R;
-    Eigen::Matrix3d dR = R_d.transpose() * R;
-    // Eigen::Quaterniond q_err_tmp(dR);
-    Eigen::Vector4d q_err_tmp = rotm2quat_v4<double>(dR);
-    // Eigen::Vector3d q_err = q_err_tmp.tail(3); // Only the orientation error part
+    // Eigen::Matrix3d R_d = q_d.toRotationMatrix();
+    // Eigen::Matrix3d R = robot_model.kinematicsData.R;
+    // Eigen::Matrix3d dR = R_d.transpose() * R;
+    // Eigen::Vector4d q_err_tmp = rotm2quat_v4<double>(dR);
+    // Eigen::Vector3d epsilon = q_err_tmp.tail(3);s
+    // double eta = q_err_tmp(0);
 
-    Eigen::Vector3d epsilon = q_err_tmp.tail(3);
-    double eta = q_err_tmp(0);
+    // Eigen::Quaterniond q_err_tmp(dR);
+    Eigen::Matrix3d R_d = q_d.toRotationMatrix();
+    Eigen::Quaterniond quat = robot_model.kinematicsData.quat;
+    Eigen::Quaterniond q_err_tmp = q_d.conjugate() * quat;
+    Eigen::Vector3d epsilon = q_err_tmp.vec();
+    double eta = q_err_tmp.w();
 
     Eigen::Vector3d q_err = 2 * R_d * (eta * Eigen::MatrixXd::Identity(3, 3) + skew<>(epsilon)) * epsilon;
-    
-    // Write values to CSV file
-    // std::ofstream csv_file("output.csv", std::ios::app);
-    // if (csv_file.tellp() == 0) {
-    //     csv_file << "p_p,omega_e,p_d,p_d_p,p_d_pp,q_d,omega_d,omega_d_p,q_err_tmp,epsilon,eta\n";
-    // }
-    // csv_file << p_p.transpose() << "," << omega_e.transpose() << "," << p_d.transpose() << "," << p_d_p.transpose() << "," << p_d_pp.transpose() << "," << q_d.coeffs().transpose() << "," << omega_d.transpose() << "," << omega_d_p.transpose() << "," << q_err_tmp.transpose() << "," << epsilon.transpose() << "," << eta << "\n";
-    // csv_file.close();
 
-    // Eigen::Quaterniond quat = robot_model.kinematicsData.quat;
-    // Eigen::Quaterniond q_err_tmp = quat * q_d.conjugate();
-    // Eigen::Vector3d q_err = q_err_tmp.vec(); // Only the orientation error part
 
     x_e_p << p_p, omega_e;
     x_err << (p - p_d), q_err; // Error as quaternion

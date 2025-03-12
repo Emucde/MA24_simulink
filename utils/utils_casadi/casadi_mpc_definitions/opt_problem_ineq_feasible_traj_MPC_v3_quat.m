@@ -426,13 +426,19 @@ else
     J_yr = 0;
     for i=1:N_MPC
         % Hier werden nicht Euler Winkel sondern Fehler um Achsen gewichtet!!
-        quat_ref = y_ref(4:7, 1 + (i));
-        q_y_yref_err = quat_mult(y(4:7, 1 + (i)), quat_inv(quat_ref));
+        q_err_tmp = quat_mult(quat_inv(y_ref(4:7, 1 + (i))), y(4:7, 1 + (i)));
+        
+        eta = q_err_tmp(1);
+        epsilon = q_err_tmp(2:4);
+
+        R_d = quat2rotm_v2(y_d(4:7, 1 + (i)));
+
+        q_err = 2 * R_d * (eta * eye(3) + skew(epsilon)) * epsilon;
 
         if(i < N_MPC)
-            J_yr = J_yr + Q_norm_square( q_y_yref_err(1+yr_indices) , pp.Q_y(3+yr_indices)  ); % Die Gewichtung sind die Fehler um eine Achse nicht die der RPY Winkel!!
+            J_yr = J_yr + Q_norm_square( q_err(yr_indices) , pp.Q_y(3+yr_indices)  ); % Die Gewichtung sind die Fehler um eine Achse nicht die der RPY Winkel!!
         else
-            gr_eps = norm_2( q_y_yref_err(1+yr_indices) );
+            gr_eps = norm_2( q_err(yr_indices) );
         end
     end
     % J_yr = Q_norm_square( y(3+yr_indices, 1 + (1:N_MPC-1) ) - y_ref(3+yr_indices, 1 + (1:N_MPC-1)), pp.Q_y(3+yr_indices,3+yr_indices)  );

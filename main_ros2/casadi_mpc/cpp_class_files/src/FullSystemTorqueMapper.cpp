@@ -14,6 +14,8 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
       n_indices_fixed(ConstIntVectorMap(robot_config.n_indices_fixed, nq_fixed)),
       q_ref_nq(ConstDoubleVectorMap(robot_config.q_0_ref, nq)),
       q_ref_fixed(Eigen::Map<const Eigen::VectorXd>(robot_config.q_0_ref, nq_fixed)(n_indices_fixed)),
+      J_psi(calc_reduced_mapping_matrix()), J_psi_T(J_psi.transpose()),
+      A(calc_coercive_condition_matrix()),
       dt(robot_config.dt)
 {
     // Initialize the function pointer based on the type of MPC
@@ -22,7 +24,7 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
     update_config();
 
     // Initialize the robot model and data using the URDF
-    initRobot(urdf_filename, tcp_frame_name, robot_model_full, robot_data_full, use_gravity);
+    initRobot();
 
     // Initialize member matrices, biases, etc.
     tau_full = Eigen::VectorXd::Zero(nq);
@@ -56,8 +58,8 @@ void FullSystemTorqueMapper::update_config()
     config.D_d = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "D_d").get<std::vector<double>>().data(), robot_config.nq).asDiagonal();
     config.K_d_fixed = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "K_d_fixed").get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
     config.D_d_fixed = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "D_d_fixed").get<std::vector<double>>().data(), robot_config.nq_fixed).asDiagonal();
-    config.q_ref_nq = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "q_ref_nq").get<std::vector<double>>().data(), robot_config.nq);
-    config.q_ref_nq_fixed = Eigen::VectorXd::Map(get_config_value<nlohmann::json>(torque_mapper_settings, "q_ref_nq_fixed").get<std::vector<double>>().data(), robot_config.nq_fixed);
+    config.q_ref_nq = q_ref_nq;
+    config.q_ref_nq_fixed = q_ref_fixed;
     config.torque_limit = get_config_value<double>(torque_mapper_settings, "torque_limit");
 }
 
@@ -122,15 +124,68 @@ Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueDynamic(
     return pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, q_pp);
 }
 
+Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueDynamicAlternative(
+    const Eigen::VectorXd &u,
+    const Eigen::VectorXd &q,
+    const Eigen::VectorXd &q_p)
+{
+    // Calculate inertia matrix and Coriolis forces
+    pinocchio::crba(robot_model_full, robot_data_full, q);
+    robot_data_full.M.triangularView<Eigen::StrictlyLower>() = robot_data_full.M.transpose().triangularView<Eigen::StrictlyLower>();
+    Eigen::MatrixXd M = robot_data_full.M;
+    Eigen::VectorXd C_rnea = pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, Eigen::VectorXd::Zero(nq));
+
+    // Calculate the inverse inertia Matrix (Cholesky is faster and more stable than FullPivLU from M.inverse())
+    Eigen::MatrixXd M_inv = robot_data_full.M.llt().solve(Eigen::MatrixXd::Identity(nq, nq));
+
+    Eigen::MatrixXd F_psi = u;
+    // Eigen::MatrixXd F_phi = A*M_inv*C_rnea -config.D_d_fixed * A*q_p - config.K_d_fixed * A*(q - q_ref_nq);
+    Eigen::MatrixXd F_phi = A*M_inv*C_rnea -config.D_d_fixed * q_p(n_indices_fixed) - config.K_d_fixed * (q(n_indices_fixed) - config.q_ref_nq_fixed);
+
+    // solve
+    //                       ( [ J_psi^T ] ) [ F_psi ]
+    // tau_c = tau_full = inv( [         ] ) [       ] = K * F
+    //                       ( [ A*M_inv ] ) [ F_phi ]
+
+    // Build composite matrix K
+    Eigen::MatrixXd K(nq, nq);
+    K.topRows(nq_red) = J_psi.transpose();
+    K.bottomRows(nq_fixed) = A * M_inv;
+
+    // Build composite vector F
+    Eigen::VectorXd F(nq);
+    F.head(nq_red) = F_psi;
+    F.tail(nq_fixed) = F_phi;
+
+    // Solve using QR decomposition (most efficient for rectangular full-rank systems)
+    Eigen::VectorXd tau_c = K.colPivHouseholderQr().solve(F);
+    return tau_c; // tau_c = tau_full
+}
+
+Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueKinematicAlternative(
+    const Eigen::VectorXd &u,
+    const Eigen::VectorXd &q,
+    const Eigen::VectorXd &q_p)
+{
+    // inefficient:
+    // Eigen::MatrixXd tau_psi = J_psi_T * M * J_psi * u + J_psi_T * (C * J_psi * q_p + g);
+
+    // better: use directly reduced system and ID
+    Eigen::VectorXd tau_psi = pinocchio::rnea(robot_model_reduced, robot_data_reduced, q(n_indices), q_p(n_indices), u);
+    return calcFeedforwardTorqueDynamicAlternative(tau_psi, q, q_p);
+}
+
 void FullSystemTorqueMapper::setFeedforwardTorqueFunction(bool is_kinematic_mpc)
 {
     if (is_kinematic_mpc)
     {
-        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematic;
+        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematic;
+        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematicAlternative;
     }
     else
     {
-        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamic;
+        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamic;
+        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamicAlternative;
     }
 }
 
@@ -151,7 +206,7 @@ Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &
     Eigen::Map<const Eigen::VectorXd> q(x_k_ndof.head(nq).data(), nq);
     Eigen::Map<const Eigen::VectorXd> q_p(x_k_ndof.tail(nq).data(), nq);
     tau_full = (this->*calcFeedforwardTorqueFunPtr)(u, q, q_p);
-    tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed));
+    // tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed));
 
     // tau_full = enforceTorqueLimits(tau_full); // Apply torque limits
     return tau_full;
@@ -239,27 +294,60 @@ Eigen::VectorXd FullSystemTorqueMapper::RK4(const Eigen::VectorXd &state, double
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 
-void FullSystemTorqueMapper::initRobot(const std::string &urdf_filename,
-                                       const std::string &tcp_frame_name,
-                                       pinocchio::Model &robot_model,
-                                       pinocchio::Data &robot_data,
-                                       bool use_gravity)
+void FullSystemTorqueMapper::initRobot()
 {
     // Load the URDF file into the robot model
-    pinocchio::urdf::buildModel(urdf_filename, robot_model);
+    pinocchio::urdf::buildModel(urdf_filename, robot_model_full);
 
-    // Initialize the corresponding data structure
-    robot_data = pinocchio::Data(robot_model);
+    //////////////////// Build reduced robot model
+    //iterate all joints and lock the ones that are fixed
+    // Joint 0 is universe joint, so we add 1 to indices
+    std::vector<pinocchio::JointIndex> joints_to_lock;
+    for (uint32_t i = 0; i < robot_config.nq_fixed; i++)
+    {
+        const std::string & joint_name = robot_model_full.names[robot_config.n_indices_fixed[i]+1];
+        joints_to_lock.push_back(robot_model_full.getJointId(joint_name));
+    }
+
+    //////////////////// 
+
+    robot_model_reduced = pinocchio::buildReducedModel(robot_model_full, joints_to_lock, q_ref_nq);
 
     if (use_gravity)
     {
-        robot_model.gravity.linear() << 0.0, 0.0, -9.81;
+        robot_model_full.gravity.linear() << 0.0, 0.0, -9.81;
+        robot_model_reduced.gravity.linear() << 0.0, 0.0, -9.81;
     }
     else
     {
-        robot_model.gravity.linear() << 0.0, 0.0, 0.0;
+        robot_model_full.gravity.linear() << 0.0, 0.0, 0.0;
+        robot_model_reduced.gravity.linear() << 0.0, 0.0, 0.0;
     }
 
+    // Initialize the corresponding data structure
+    robot_data_full = pinocchio::Data(robot_model_full);
+    robot_data_reduced = pinocchio::Data(robot_model_reduced);
+
     // Initialize the TCP frame Id
-    tcp_frame_id = robot_model.getFrameId(tcp_frame_name);
+    tcp_frame_id = robot_model_full.getFrameId(tcp_frame_name);
+}
+
+Eigen::MatrixXd FullSystemTorqueMapper::calc_reduced_mapping_matrix()
+{
+    Eigen::MatrixXd J_psi = Eigen::MatrixXd::Zero(nq, nq_red);
+    for (uint i = 0; i < nq_red; i++)
+    {
+        J_psi(n_indices(i), i) = 1;
+    }
+    return J_psi;
+}
+
+Eigen::MatrixXd FullSystemTorqueMapper::calc_coercive_condition_matrix()
+{
+    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(nq_fixed, nq);
+    for (uint i = 0; i < nq_fixed; i++)
+    {
+        A(i, n_indices_fixed(i)) = 1;
+    }
+    return A;
 }

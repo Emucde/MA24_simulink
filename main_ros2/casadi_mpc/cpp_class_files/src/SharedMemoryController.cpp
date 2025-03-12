@@ -266,12 +266,15 @@ void SharedMemoryController::run_simulation()
     // Main loop for trajectory processing
     for (casadi_uint i = 0; i < traj_len; i=i+traj_step)
     {
-        if(use_noise)
-            x_measured << x_k_ndof_eig + generateNoiseVector(nx, Ts, mean_noise_amplitude);
-        else
-            x_measured << x_k_ndof_eig;
+        for (casadi_uint j = 0; j < traj_step; j++)
+        {
+            if(use_noise)
+                x_measured << x_k_ndof_eig + generateNoiseVector(nx, Ts, mean_noise_amplitude);
+            else
+                x_measured << x_k_ndof_eig;
 
-        base_filter->run_filter(); // automatically mapped to x_filtered
+            base_filter->run_filter(); // automatically mapped to x_filtered
+        }
 
         timer_mpc_solver.tic();
         tau_full << controller->update_control(x_filtered);

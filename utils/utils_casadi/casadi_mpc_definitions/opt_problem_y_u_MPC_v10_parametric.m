@@ -287,29 +287,25 @@ if isempty(yr_indices)
 else
     J_yr = 0;
     for i=1:N_MPC
-        % Fehlerhaft bei sehr großen fehlern:
         % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))';
-        % q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)];  % am genauesten
-        
-        % R_y_yr = R_e_arr{1 + (i)} * quat2rotm_v2(y_d(4:7, 1 + (i)))' - quat2rotm_v2(y_d(4:7, 1 + (i))) * R_e_arr{1 + (i)}';
-        % q_y_yr_err = [1; R_y_yr(3,2); R_y_yr(1,3); R_y_yr(2,1)];
-        
+        % % q_y_yr_err = quat_R_endeffector_py_fun(R_y_yr); # immer nan?
         % q_y_yr_err = rotm2quat_v4_casadi(R_y_yr);
+
+        %q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
         
-        q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
+        q_err_tmp = quat_mult(quat_inv(y_d(4:7, 1 + (i))), y(4:7, 1 + (i)));
         
-        % quat_e = y(4:7, 1 + (i));
-        % quat_d = y_d(4:7, 1 + (i));
-        
-        % vec_e = quat_e(1)*quat_d(2:4) - quat_d(1)*quat_e(2:4) - cross(quat_d(2:4), quat_e(2:4));
-        % q_y_yr_err = [1; vec_e];
-        
-        % q_y_yr_err = 1/2*simplify(quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i)))) - quat_mult(y_d(4:7, 1 + (i)), quat_inv(y(4:7, 1 + (i)))));
+        eta = q_err_tmp(1);
+        epsilon = q_err_tmp(2:4);
+
+        R_d = quat2rotm_v2(y_d(4:7, 1 + (i)));
+
+        q_err = 2 * R_d * (eta * eye(3) + skew(epsilon)) * epsilon;
         
         if(i < N_MPC)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices)  );
+            J_yr = J_yr + Q_norm_square( q_err(yr_indices) , pp.Q_y(3+yr_indices)  );
         else
-            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices)  );
+            J_yr_N = Q_norm_square( q_err(yr_indices) , pp.Q_yN(3+yr_indices)  );
         end
     end
 end

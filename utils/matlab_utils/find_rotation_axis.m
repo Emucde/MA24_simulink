@@ -37,8 +37,8 @@ end
     %   R_1_0 = R_2_0 * R_2_1' = R_target * R_init'
 
     % Compute the difference rotation matrix
-    RR = R_init'*R_target; % Im Fall der Nachmulitplikation (drehung um bezugsfestes KOS) korrekt.
-    %RR = R_target * R_init'; % Im Fall der Vormultiplikation korrekt.
+    % RR = R_init'*R_target; % Im Fall der Nachmulitplikation (drehung um bezugsfestes KOS) korrekt.
+    RR = R_target * R_init'; % Im Fall der Vormultiplikation korrekt.
 
     if mode == "fast_from_rotm"
         % Have the problem that not always wa rotation axis can be found.

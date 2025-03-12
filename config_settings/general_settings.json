@@ -13,16 +13,16 @@
     "transient_traj_start_time": 0.0,
     "transient_traj_duration": 2.0,
     "transient_traj_end_time": 2.0,
-    "default_controller": "Classic",
+    "default_controller": "Crocoddyl",
     "available_controllers": [
         "Classic",
         "Casadi",
         "Crocoddyl"
     ],
-    "default_classic_controller": "CT",
+    "default_classic_controller": "PD",
     "available_classic_controller": [
-        "PD",
         "CT",
+        "PD",
         "ID"
     ],
     "use_casadi_planner": false,
@@ -78,14 +78,12 @@
         "D_d": [31.62, 31.62, 31.62, 31.62, 31.62, 31.62, 31.62],
         "K_d_fixed": [500],
         "D_d_fixed": [31.62],
-        "q_ref_nq": [0, -0.7854, 0, -2.3562, 0, 1.5708, 0.7854],
-        "q_ref_nq_fixed": [0],
         "torque_limit": 100.0
     },
     "classic_controller_settings" :{
         "CT": {
-            "Kp1": [2000, 2000, 2000, 10000, 10000, 10000],
-            "Kd1": [30, 30, 30, 100, 100, 100]
+            "Kp1": [200, 200, 200, 20, 20, 20],
+            "Kd1": [20, 20, 20, 8.944, 8.944, 8.944]
         },
         "PD": {
             "K_d": [200, 200, 200, 20, 20, 20],
@@ -98,11 +96,11 @@
             "D_d": [20, 20, 20, 8.944, 8.944, 8.944, 8.944]
         },
         "regularization_settings": {
-            "mode" : "Damping",
-            "k": 1e-2,
+            "mode" : "RegularizationBySingularValues",
+            "k": 1e-6,
             "W_bar_N": [0.110889, 0.099856, 0.147456, 0.007744, 0.011449, 0.0106916],
             "W_E": [1, 1, 1, 1, 1, 1],
-            "eps": 1e-1,
+            "eps": 1e-3,
             "eps_collinear": 1e-2,
             "lambda_min": 1e-2
         },

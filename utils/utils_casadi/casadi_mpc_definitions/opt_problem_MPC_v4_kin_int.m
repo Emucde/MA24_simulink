@@ -253,12 +253,19 @@ else
 
         %q_y_yr_err = [1; R_y_yr(3,2) - R_y_yr(2,3); R_y_yr(1,3) - R_y_yr(3,1); R_y_yr(2,1) - R_y_yr(1,2)]; %ungenau aber schneller (flipping?)
         
-        q_y_yr_err = quat_mult(y(4:7, 1 + (i)), quat_inv(y_d(4:7, 1 + (i))));
+        q_err_tmp = quat_mult(quat_inv(y_d(4:7, 1 + (i))), y(4:7, 1 + (i)));
+        
+        eta = q_err_tmp(1);
+        epsilon = q_err_tmp(2:4);
+
+        R_d = quat2rotm_v2(y_d(4:7, 1 + (i)));
+
+        q_err = 2 * R_d * (eta * eye(3) + skew(epsilon)) * epsilon;
         
         if(i < N_MPC)
-            J_yr = J_yr + Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_y(3+yr_indices)  );
+            J_yr = J_yr + Q_norm_square( q_err(yr_indices) , pp.Q_y(3+yr_indices)  );
         else
-            J_yr_N = Q_norm_square( q_y_yr_err(1+yr_indices) , pp.Q_yN(3+yr_indices)  );
+            J_yr_N = Q_norm_square( q_err(yr_indices) , pp.Q_yN(3+yr_indices)  );
         end
     end
 end
