@@ -51,6 +51,7 @@ public:
     Eigen::MatrixXd computeJacobianRegularization();       // Common method in BaseWorkspaceController
     void calculateControlData(const Eigen::VectorXd &x);   // Common method in BaseWorkspaceController
     void calculateControlDataID(const Eigen::VectorXd &x, const Eigen::VectorXd &x_d);   // Common method in BaseWorkspaceController
+    void reset() { traj_count = 0; x_I_err.setZero(); }
     virtual ~BaseWorkspaceController() = default; // Virtual destructor
 protected:
     RobotModel &robot_model;
@@ -65,7 +66,7 @@ protected:
     Eigen::VectorXd g;
     Eigen::VectorXd q, q_p;
     Eigen::VectorXd x_e_p = Eigen::VectorXd::Zero(6);
-    Eigen::VectorXd x_err = Eigen::VectorXd::Zero(6), x_err_p = Eigen::VectorXd::Zero(6);
+    Eigen::VectorXd x_I_err = Eigen::VectorXd::Zero(6), x_err = Eigen::VectorXd::Zero(6), x_err_p = Eigen::VectorXd::Zero(6);
     Eigen::VectorXd x_d_p = Eigen::VectorXd::Zero(6), x_d_pp = Eigen::VectorXd::Zero(6);
     Eigen::VectorXd column_weights = Eigen::VectorXd::Ones(nq);
     const Eigen::VectorXi n_indices;

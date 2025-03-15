@@ -269,10 +269,12 @@ void BaseWorkspaceController::update_controller_settings()
     nlohmann::json general_config = read_config<>(general_config_filename);
 // PD CONTROLLER
     auto classic_ctl_settings = get_config_value<nlohmann::json>(general_config, "classic_controller_settings");
+    Eigen::MatrixXd K_I_pd = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["PD"], "K_I").data(), 6).asDiagonal();
     Eigen::MatrixXd K_d_pd = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["PD"], "K_d").data(), 6).asDiagonal();
     Eigen::MatrixXd D_d_pd = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["PD"], "D_d").data(), 6).asDiagonal();
 
     // CT CONTROLLER
+    Eigen::MatrixXd K_I_ct = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["CT"], "K_I").data(), 6).asDiagonal();
     Eigen::MatrixXd Kp1_ct = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["CT"], "Kp1").data(), 6).asDiagonal();
     Eigen::MatrixXd Kd1_ct = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["CT"], "Kd1").data(), 6).asDiagonal();
 
@@ -290,8 +292,10 @@ void BaseWorkspaceController::update_controller_settings()
     Eigen::VectorXd W_E_nq = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(reg_settings, "W_E").data(), 7);
     Eigen::MatrixXd W_E = W_E_nq(n_indices).asDiagonal();
 
+    controller_settings.pd_plus_settings.K_I = K_I_pd;
     controller_settings.pd_plus_settings.D_d = D_d_pd;
     controller_settings.pd_plus_settings.K_d = K_d_pd;
+    controller_settings.ct_settings.K_I = K_I_ct;
     controller_settings.ct_settings.Kd1 = Kd1_ct;
     controller_settings.ct_settings.Kp1 = Kp1_ct;
     controller_settings.id_settings.Kd1 = Kd1_id;
@@ -350,26 +354,34 @@ void BaseWorkspaceController::calculateControlData(const Eigen::VectorXd &x)
     Eigen::VectorXd omega_d_p = trajectory_generator.omega_d_p.col(traj_count);
 
     // Errors
-    // Eigen::Matrix3d R_d = q_d.toRotationMatrix();
-    // Eigen::Matrix3d R = robot_model.kinematicsData.R;
-    // Eigen::Matrix3d dR = R_d.transpose() * R;
-    // Eigen::Vector4d q_err_tmp = rotm2quat_v4<double>(dR);
-    // Eigen::Vector3d epsilon = q_err_tmp.tail(3);s
-    // double eta = q_err_tmp(0);
-
-    // Eigen::Quaterniond q_err_tmp(dR);
     Eigen::Matrix3d R_d = q_d.toRotationMatrix();
-    Eigen::Quaterniond quat = robot_model.kinematicsData.quat;
-    Eigen::Quaterniond q_err_tmp = q_d.conjugate() * quat;
-    Eigen::Vector3d epsilon = q_err_tmp.vec();
-    double eta = q_err_tmp.w();
+    Eigen::Matrix3d R = robot_model.kinematicsData.R;
+    Eigen::Matrix3d dR = R_d.transpose() * R;
+    // Eigen::Quaterniond q_err_tmp(dR);
+    Eigen::Vector4d q_err_tmp = rotm2quat_v4<double>(dR);
+    // Eigen::Vector3d q_err = q_err_tmp.tail(3); // Only the orientation error part
+
+    Eigen::Vector3d epsilon = q_err_tmp.tail(3);
+    double eta = q_err_tmp(0);
 
     Eigen::Vector3d q_err = 2 * R_d * (eta * Eigen::MatrixXd::Identity(3, 3) + skew<>(epsilon)) * epsilon;
+    
+    // Write values to CSV file
+    // std::ofstream csv_file("output.csv", std::ios::app);
+    // if (csv_file.tellp() == 0) {
+    //     csv_file << "p_p,omega_e,p_d,p_d_p,p_d_pp,q_d,omega_d,omega_d_p,q_err_tmp,epsilon,eta\n";
+    // }
+    // csv_file << p_p.transpose() << "," << omega_e.transpose() << "," << p_d.transpose() << "," << p_d_p.transpose() << "," << p_d_pp.transpose() << "," << q_d.coeffs().transpose() << "," << omega_d.transpose() << "," << omega_d_p.transpose() << "," << q_err_tmp.transpose() << "," << epsilon.transpose() << "," << eta << "\n";
+    // csv_file.close();
 
+    // Eigen::Quaterniond quat = robot_model.kinematicsData.quat;
+    // Eigen::Quaterniond q_err_tmp = quat * q_d.conjugate();
+    // Eigen::Vector3d q_err = q_err_tmp.vec(); // Only the orientation error part
 
     x_e_p << p_p, omega_e;
     x_err << (p - p_d), q_err; // Error as quaternion
     x_err_p << (p_p - p_d_p), (omega_e - omega_d);
+
     x_d_p << p_d_p, omega_d;
     x_d_pp << p_d_pp, omega_d_p;
 
@@ -469,7 +481,7 @@ Eigen::VectorXd WorkspaceController::update_control(const Eigen::VectorXd &x_nq)
 void WorkspaceController::reset(const casadi_real *const x_k_in)
 {
     Eigen::Map<const Eigen::VectorXd> x_k(x_k_in, nx_red);
-    active_controller->traj_count = 0;
+    active_controller->reset();
     tau_full_prev = Eigen::VectorXd::Zero(nq);
 
     inverse_dyn_controller.q_d_prev = x_k.head(nq_red);
@@ -487,6 +499,7 @@ void WorkspaceController::reset()
 Eigen::VectorXd WorkspaceController::CTController::control(const Eigen::VectorXd &x)
 {
     // Control parameters
+    Eigen::MatrixXd K_I = controller_settings.ct_settings.K_I;
     Eigen::MatrixXd Kd1 = controller_settings.ct_settings.Kd1;
     Eigen::MatrixXd Kp1 = controller_settings.ct_settings.Kp1;
 
@@ -499,7 +512,28 @@ Eigen::VectorXd WorkspaceController::CTController::control(const Eigen::VectorXd
     // Calculate J, J_pinv, J_p, C, M, C_rnea, g, q_p, x_err, x_err_p, x_d_p, x_d_pp
     calculateControlData(x);
 
-    Eigen::VectorXd v = J_pinv * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err - J_p * q_p);
+    Eigen::VectorXd v = J_pinv * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err - K_I*x_I_err - J_p * q_p);
+
+    x_I_err << x_I_err + x_err * dt;
+
+    // print x_I_err each 100 times
+    static int count = 0;
+    if (count % 100 == 0)
+    {
+        Eigen::VectorXd weighted_err = K_I * x_I_err;
+        // std::cout << "J_pinv: " << J_pinv << std::endl;
+        std::cout << "x_d_pp: " << x_d_pp.transpose() << std::endl;
+        std::cout << "Kd1 * x_err_p: " << (Kd1 * x_err_p).transpose() << std::endl;
+        std::cout << "Kp1 * x_err: " << (Kp1 * x_err).transpose() << std::endl;
+        std::cout << "K_I * x_I_err: " << (K_I * x_I_err).transpose() << std::endl;
+        std::cout << "J_p * q_p: " << (J_p * q_p).transpose() << std::endl;
+        std::cout << "v: " << v.transpose() << std::endl<< std::endl;
+        if (count == 1000)
+        {
+            count = 0;
+        }
+    }
+    count++;
 
     // // Control Law Calculation
     Eigen::VectorXd tau = M * v + C_rnea;
@@ -550,13 +584,17 @@ Eigen::VectorXd WorkspaceController::InverseDynamicsController::control(const Ei
 Eigen::VectorXd WorkspaceController::PDPlusController::control(const Eigen::VectorXd &x)
 {
     // Control parameters
+    Eigen::MatrixXd K_I = controller_settings.pd_plus_settings.K_I;
     Eigen::MatrixXd D_d = controller_settings.pd_plus_settings.D_d;
     Eigen::MatrixXd K_d = controller_settings.pd_plus_settings.K_d;
 
     // Calculate J, J_pinv, J_p, C, M, C_rnea, g, q_p, x_err, x_err_p, x_d_p, x_d_pp
     calculateControlData(x);
 
-    Eigen::VectorXd tau = C_rnea + M*J_pinv*(x_d_pp - J_p*q_p) - J.transpose()*(D_d * x_err_p + K_d * x_err);
+    Eigen::VectorXd tau = C_rnea + M*J_pinv*(x_d_pp - J_p*q_p) - J.transpose()*(D_d * x_err_p + K_d * x_err + K_I*x_I_err);
+
+    x_I_err << x_I_err + x_err * dt;
+
     return tau;
 }
 
@@ -606,7 +644,7 @@ void WorkspaceController::switchController(ControllerType type)
         break;
     }
     selected_controller_type = type;
-    active_controller->traj_count = 0;
+    active_controller->reset();
 }
 
 

@@ -68,11 +68,13 @@ RegularizationMode stringToRegularizationMode(const T& str)
 }
 
 struct PDSettings {
+    Eigen::MatrixXd K_I;                // Integral gains diagonal (combined)
     Eigen::MatrixXd D_d;                // Damping matrix
     Eigen::MatrixXd K_d;                // Stiffness matrix for Cartesian PD Control
 };
 
 struct CTSettings {
+    Eigen::MatrixXd K_I;                // Integral gains diagonal (combined)
     Eigen::MatrixXd Kd1;                // Control gains diagonal (combined)
     Eigen::MatrixXd Kp1;                // Control gains proportional (combined)
 };
