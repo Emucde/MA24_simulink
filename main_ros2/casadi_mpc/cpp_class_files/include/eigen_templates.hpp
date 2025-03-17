@@ -193,6 +193,33 @@ Eigen::Vector3d rotm2rpy(const Eigen::Matrix3d &R)
     return rpy;
 }
 
+template <typename T = double>
+Eigen::Matrix3d rpy2rotm(const Eigen::Vector3d &rpy)
+{
+    static_assert(std::is_floating_point<T>::value, "Template parameter must be a floating-point type");
+
+    T alpha = rpy(0); // yaw
+    T beta = rpy(1);  // pitch
+    T gamma = rpy(2); // roll
+
+    Eigen::Matrix3d Rz;
+    Rz << std::cos(alpha), -std::sin(alpha), 0,
+          std::sin(alpha),  std::cos(alpha), 0,
+          0,                0,               1;
+
+    Eigen::Matrix3d Ry;
+    Ry << std::cos(beta), 0, std::sin(beta),
+          0,              1, 0,
+          -std::sin(beta), 0, std::cos(beta);
+
+    Eigen::Matrix3d Rx;
+    Rx << 1, 0,                0,
+          0, std::cos(gamma), -std::sin(gamma),
+          0, std::sin(gamma),  std::cos(gamma);
+
+    return Rz * Ry * Rx;
+}
+
 /**
  * @brief Computes a specific 3x3 matrix based on roll and pitch angles.
  *
