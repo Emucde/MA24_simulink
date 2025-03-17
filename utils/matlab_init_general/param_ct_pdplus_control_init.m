@@ -1,9 +1,9 @@
 %% CT Controller Parameters
-K_d_t = 500*diag([1 1 1])/2;
-K_p_t = K_d_t^2/4;
+K_p_t = 200*diag([1 1 1]);
+K_d_t = sqrt(2 * K_p_t);
 
-K_d_r = 500*diag([1 1 1]);
-K_p_r = K_d_r^2/4;
+K_p_r = 20*diag([1 1 1]);
+K_d_r = sqrt(2 * K_p_t);
 
 ctrl_param.ct.Kd1 = blkdiag(K_d_t, K_d_r);
 ctrl_param.ct.Kp1 = blkdiag(K_p_t, K_p_r);
@@ -41,10 +41,10 @@ ctrl_param.pd.K_d_jointspace = ctrl_param.pd.D_d_jointspace^2/4; % (NOT USED)
 % 4: set sing values sigma_i < eps to sqrt(sigma_i^2 + eps^2)
 % 5: collinearity approach 1: only works if joint is exact replaceable (linear dependent) by one other joint (but not by multiple joints!!)
 % 6: collinearity approach after steinböck: works for all joints
-ctrl_param.regularization.mode = 2;
+ctrl_param.regularization.mode = 1;
 
 % 1:
-ctrl_param.regularization.k = 1e-5;
+ctrl_param.regularization.k = 1e-4;
 
 % 2:
 ctrl_param.regularization.W_bar_N = 1e-3*param_robot.sugihara_limb_vector;

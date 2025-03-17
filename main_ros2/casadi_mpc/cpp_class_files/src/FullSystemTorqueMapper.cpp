@@ -111,13 +111,19 @@ Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueDynamic(
     Eigen::MatrixXd M = robot_data_full.M;
     Eigen::VectorXd C_rnea = pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, Eigen::VectorXd::Zero(nq));
 
+    // Calculate reduced inertia matrix and reduced Coriolis forces
+    pinocchio::crba(robot_model_reduced, robot_data_reduced, q(n_indices));
+    robot_data_reduced.M.triangularView<Eigen::StrictlyLower>() = robot_data_reduced.M.transpose().triangularView<Eigen::StrictlyLower>();
+    Eigen::MatrixXd M_red = robot_data_reduced.M;
+    Eigen::VectorXd C_rnea_red = pinocchio::rnea(robot_model_reduced, robot_data_reduced, q(n_indices), q_p(n_indices), Eigen::VectorXd::Zero(nq_red));
+
     // Slice the inertia matrix and Coriolis forces
-    Eigen::MatrixXd M_red = M(n_indices, n_indices);
+    // Eigen::MatrixXd M_red = M(n_indices, n_indices);
     M_fixed = M(n_indices_fixed, n_indices_fixed);
-    Eigen::VectorXd C_rnea_tilde = C_rnea(n_indices);
+    // Eigen::VectorXd C_rnea_red = C_rnea(n_indices);
 
     // Compute the acceleration for the reduced system
-    Eigen::VectorXd q_pp_red = M_red.ldlt().solve(tau_red - C_rnea_tilde);
+    Eigen::VectorXd q_pp_red = M_red.ldlt().solve(tau_red - C_rnea_red);
     q_pp(n_indices) = q_pp_red; // Update full acceleration vector
 
     // Calculate the resulting full torques

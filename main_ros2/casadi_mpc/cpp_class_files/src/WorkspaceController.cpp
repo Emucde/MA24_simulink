@@ -516,24 +516,24 @@ Eigen::VectorXd WorkspaceController::CTController::control(const Eigen::VectorXd
 
     x_I_err << x_I_err + x_err * dt;
 
-    // print x_I_err each 100 times
-    static int count = 0;
-    if (count % 100 == 0)
-    {
-        Eigen::VectorXd weighted_err = K_I * x_I_err;
-        // std::cout << "J_pinv: " << J_pinv << std::endl;
-        std::cout << "x_d_pp: " << x_d_pp.transpose() << std::endl;
-        std::cout << "Kd1 * x_err_p: " << (Kd1 * x_err_p).transpose() << std::endl;
-        std::cout << "Kp1 * x_err: " << (Kp1 * x_err).transpose() << std::endl;
-        std::cout << "K_I * x_I_err: " << (K_I * x_I_err).transpose() << std::endl;
-        std::cout << "J_p * q_p: " << (J_p * q_p).transpose() << std::endl;
-        std::cout << "v: " << v.transpose() << std::endl<< std::endl;
-        if (count == 1000)
-        {
-            count = 0;
-        }
-    }
-    count++;
+    // // print x_I_err each 100 times
+    // static int count = 0;
+    // if (count % 100 == 0)
+    // {
+    //     Eigen::VectorXd weighted_err = K_I * x_I_err;
+    //     // std::cout << "J_pinv: " << J_pinv << std::endl;
+    //     std::cout << "x_d_pp: " << x_d_pp.transpose() << std::endl;
+    //     std::cout << "Kd1 * x_err_p: " << (Kd1 * x_err_p).transpose() << std::endl;
+    //     std::cout << "Kp1 * x_err: " << (Kp1 * x_err).transpose() << std::endl;
+    //     std::cout << "K_I * x_I_err: " << (K_I * x_I_err).transpose() << std::endl;
+    //     std::cout << "J_p * q_p: " << (J_p * q_p).transpose() << std::endl;
+    //     std::cout << "v: " << v.transpose() << std::endl<< std::endl;
+    //     if (count == 1000)
+    //     {
+    //         count = 0;
+    //     }
+    // }
+    // count++;
 
     // // Control Law Calculation
     Eigen::VectorXd tau = M * v + C_rnea;

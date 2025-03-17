@@ -1,7 +1,7 @@
 {
     "use_gravity": false,
     "use_lowpass_filter": false,
-    "use_ekf": true,
+    "use_ekf": false,
     "use_noise": false,
     "dt": 1e-3,
     "tau_max_jump": 25,
@@ -11,15 +11,15 @@
     "lowpass_filter_omega_c_dq": 200,
     "trajectory_selection": 1,
     "transient_traj_start_time": 0.0,
-    "transient_traj_duration": 2.0,
-    "transient_traj_end_time": 2.0,
+    "transient_traj_duration": 0.0,
+    "transient_traj_end_time": 0.0,
     "default_controller": "Classic",
     "available_controllers": [
         "Classic",
         "Casadi",
         "Crocoddyl"
     ],
-    "default_classic_controller": "PD",
+    "default_classic_controller": "CT",
     "available_classic_controller": [
         "CT",
         "PD",
@@ -84,12 +84,12 @@
         "CT": {
             "K_I": [0, 0, 0, 0, 0, 0],
             "Kp1": [200, 200, 200, 20, 20, 20],
-            "Kd1": [20, 20, 20, 8.944, 8.944, 8.944]
+            "Kd1": [20, 20, 20, 6.32, 6.32, 6.32]
         },
         "PD": {
             "K_I": [0, 0, 0, 0, 0, 0],
             "K_d": [200, 200, 200, 20, 20, 20],
-            "D_d": [20, 20, 20, 8.944, 8.944, 8.944]
+            "D_d": [20, 20, 20, 6.32, 6.32, 6.32]
         },
         "ID": {
             "Kp1": [100, 100, 100, 20, 20, 20],
