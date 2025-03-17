@@ -79,16 +79,18 @@ void RobotModel::computeKinematics()
 {
     // Update Pinocchio Kinematics
     pinocchio::forwardKinematics(robot_model, robot_data, jointData.q, jointData.q_p);
+    pinocchio::computeJointJacobians(robot_model, robot_data, jointData.q);
+    pinocchio::computeJointJacobiansTimeVariation(robot_model, robot_data, jointData.q, jointData.q_p);
     pinocchio::updateFramePlacements(robot_model, robot_data);
 
-    // Compute the Jacobian
-    pinocchio::computeJointJacobians(robot_model, robot_data, jointData.q);
-
+    // Get the Jacobian
     kinematicsData.J = pinocchio::getFrameJacobian(robot_model, robot_data, tcp_frame_id, pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED);
 
+    // Get the time derivative of the Jacobian
     Eigen::MatrixXd dJ(6, nq);
     pinocchio::getFrameJacobianTimeVariation(robot_model, robot_data, tcp_frame_id, pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED, dJ);
     kinematicsData.J_p = dJ;
+
     kinematicsData.H = robot_data.oMf[tcp_frame_id].toHomogeneousMatrix();
 
     kinematicsData.R = kinematicsData.H.topLeftCorner<3, 3>();

@@ -174,17 +174,29 @@ for gravity_used in gravity_configs:
     M_inv = cs.Function('M_inv', [q], [M_inv_SX], ['q'], ['M_inv(q)']) # inverse inertia matrix
 
     # Jacobian of TCP
-    J_SX = cpin.computeFrameJacobian(casadi_model, cdata, q, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+    # Compute frame Jacobian (automatically updates placements)
+    J_SX = cpin.computeFrameJacobian(
+        casadi_model, cdata, q,
+        endEffector_ID,
+        cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED
+    )
     J = cs.Function('J', [q], [J_SX], ['q'], ['J(q)'])
 
-    # alles irgwas
     #J_p_SX = cpin.computeFrameJacobianTimeVariation(casadi_model, cdata, q, q_p, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
     #J_p_SX = cpin.getFrameJacobianTimeVariation(casadi_model, cdata, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
     #J_p_SX = cpin.frameJacobianTimeVariation(casadi_model, cdata, q, q_p, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+    #J_p_SX = cs.reshape(  cs.jacobian(J(q), q) @ q_p, 6 ,n)
 
-    J_p_SX = cs.reshape(  cs.jacobian(J(q), q) @ q_p, 6 ,n)
+    # Compute joint Jacobian time variation derivatives
+    cpin.computeJointJacobiansTimeVariation(casadi_model, cdata, q, q_p)
+
+    J_p_SX = cpin.getFrameJacobianTimeVariation(
+        casadi_model, cdata,
+        endEffector_ID,
+        cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED
+    )
     J_p = cs.Function('J_p', [q, q_p], [J_p_SX], ['q', 'q_p'], ['J_p(q, q_p)'])
-    J_p = SX00_to_SX0(J_p, q, q_p)
+    #J_p = SX00_to_SX0(J_p, q, q_p)
 
     q_pp_aba_SX = cpin.aba(casadi_model, cdata, q, q_p, u)
     q_pp_sol_SX = cs.solve( M(q), u - C_rnea(q, q_p) ) # q_pp_aba leads to error of 1e-13, sol to 0

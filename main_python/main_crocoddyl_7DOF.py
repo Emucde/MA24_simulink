@@ -57,8 +57,8 @@ use_custom_trajectory = False
 param_traj_poly = {}
 if not use_custom_trajectory:
     param_traj_poly['T_start'] = 0
-    param_traj_poly['T_poly'] = 5
-    param_traj_poly['T_end'] = 5
+    param_traj_poly['T_poly'] = 2
+    param_traj_poly['T_end'] = 2
 else:
     param_traj_poly['T_start'] = 0
     param_traj_poly['T_poly'] = 10
@@ -293,7 +293,8 @@ transient_traj, param_traj, title_text =   \
                     traj_init_config, param_robot, param_traj_poly, TCP_frame_id, \
                     use_custom_trajectory, param_target)
 
-read_state_data[:] = x_k_ndof
+if use_data_from_simulink:
+    read_state_data[:] = x_k_ndof
 
 tcp_pose_list, tcp_rot_list, xprev_list, ctrl_prev_list = init_reference_lists(ddp, param_mpc_weight)
 

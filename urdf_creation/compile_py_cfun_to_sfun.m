@@ -14,14 +14,14 @@
 % import casadi.*;
 % output_dir = './s_functions/s_functions_7dof/';
 
-compile_matlab_sfun = true;
-create_some_sources = true;
-
 import casadi.*;
 
 if(~exist('parameter_str', 'var'))
     run('main_matlab/parameters_7dof.m');
 end
+
+compile_matlab_sfun = true;
+create_some_sources = true;
 
 % valid robot_names: fr3_7dof, fr3_6dof, ur5e
 % robot_name = 'fr3_7dof';
