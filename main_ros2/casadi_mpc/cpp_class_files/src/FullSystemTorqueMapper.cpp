@@ -135,11 +135,16 @@ Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueDynamicAlternative(
     const Eigen::VectorXd &q,
     const Eigen::VectorXd &q_p)
 {
+    Eigen::VectorXd q_mod = q;
+    Eigen::VectorXd q_p_mod = q_p;
+    q_mod(n_indices_fixed) = q_ref_fixed;
+    q_p_mod(n_indices_fixed) = Eigen::VectorXd::Zero(nq_fixed);
+
     // Calculate inertia matrix and Coriolis forces
-    pinocchio::crba(robot_model_full, robot_data_full, q);
+    pinocchio::crba(robot_model_full, robot_data_full, q_mod);
     robot_data_full.M.triangularView<Eigen::StrictlyLower>() = robot_data_full.M.transpose().triangularView<Eigen::StrictlyLower>();
     Eigen::MatrixXd M = robot_data_full.M;
-    Eigen::VectorXd C_rnea = pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, Eigen::VectorXd::Zero(nq));
+    Eigen::VectorXd C_rnea = pinocchio::rnea(robot_model_full, robot_data_full, q_mod, q_p_mod, Eigen::VectorXd::Zero(nq));
 
     // Calculate the inverse inertia Matrix (Cholesky is faster and more stable than FullPivLU from M.inverse())
     Eigen::MatrixXd M_inv = robot_data_full.M.llt().solve(Eigen::MatrixXd::Identity(nq, nq));
@@ -185,13 +190,13 @@ void FullSystemTorqueMapper::setFeedforwardTorqueFunction(bool is_kinematic_mpc)
 {
     if (is_kinematic_mpc)
     {
-        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematic;
-        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematicAlternative;
+        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematic;
+        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematicAlternative;
     }
     else
     {
-        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamic;
-        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamicAlternative;
+        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamic;
+        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamicAlternative;
     }
 }
 
@@ -212,7 +217,7 @@ Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &
     Eigen::Map<const Eigen::VectorXd> q(x_k_ndof.head(nq).data(), nq);
     Eigen::Map<const Eigen::VectorXd> q_p(x_k_ndof.tail(nq).data(), nq);
     tau_full = (this->*calcFeedforwardTorqueFunPtr)(u, q, q_p);
-    tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed));
+    // tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed));
 
     // tau_full = enforceTorqueLimits(tau_full); // Apply torque limits
     return tau_full;

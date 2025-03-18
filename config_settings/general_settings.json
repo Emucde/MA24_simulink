@@ -19,7 +19,7 @@
         "Casadi",
         "Crocoddyl"
     ],
-    "default_classic_controller": "CT",
+    "default_classic_controller": "PD",
     "available_classic_controller": [
         "CT",
         "PD",
