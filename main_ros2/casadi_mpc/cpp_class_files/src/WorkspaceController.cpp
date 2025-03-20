@@ -563,7 +563,7 @@ Eigen::VectorXd WorkspaceController::InverseDynamicsController::control(const Ei
         init = false;
     }
 
-    Eigen::VectorXd q_d_pp = J_pinv * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err - J_p * q_p);
+    Eigen::VectorXd q_d_pp = J_pinv * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err - J_p * q_p_d_prev);
 
     // Integrate q_pp two times to get q and q_p
     // Explicit euler with mid point rule
