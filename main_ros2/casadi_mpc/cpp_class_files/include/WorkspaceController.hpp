@@ -51,7 +51,18 @@ public:
     Eigen::MatrixXd computeJacobianRegularization();       // Common method in BaseWorkspaceController
     void calculateControlData(const Eigen::VectorXd &x);   // Common method in BaseWorkspaceController
     void calculateControlDataID(const Eigen::VectorXd &x, const Eigen::VectorXd &x_d);   // Common method in BaseWorkspaceController
-    void reset() { traj_count = 0; x_I_err.setZero(); }
+    void reset() {
+        traj_count = 0;
+        x_I_err.setZero();
+        init = true;
+    }
+    void increment_traj_count()
+    {
+        if (traj_count < traj_data_real_len - 1)
+        {
+            traj_count++;
+        }
+    }
     virtual ~BaseWorkspaceController() = default; // Virtual destructor
 protected:
     RobotModel &robot_model;
@@ -65,6 +76,7 @@ protected:
     Eigen::MatrixXd M, C, C_rnea;
     Eigen::VectorXd g;
     Eigen::VectorXd q, q_p;
+    bool init = true;
     Eigen::VectorXd x_e_p = Eigen::VectorXd::Zero(6);
     Eigen::VectorXd x_I_err = Eigen::VectorXd::Zero(6), x_err = Eigen::VectorXd::Zero(6), x_err_p = Eigen::VectorXd::Zero(6);
     Eigen::VectorXd x_d_p = Eigen::VectorXd::Zero(6), x_d_pp = Eigen::VectorXd::Zero(6);
@@ -75,6 +87,7 @@ protected:
     double& tau_max_jump;
 
 public:
+    Eigen::VectorXd q_d, q_p_d;
     uint traj_count;
 };
 
@@ -186,8 +199,6 @@ private:
                                   double& tau_max_jump)
             : BaseWorkspaceController(robot_model, general_config_filename, trajectory_generator, tau_max_jump) {}
         Eigen::VectorXd control(const Eigen::VectorXd &x) override;
-        Eigen::VectorXd q_d_prev, q_p_d_prev;
-        bool init = true;
         ~InverseDynamicsController() override = default;
     };
 
