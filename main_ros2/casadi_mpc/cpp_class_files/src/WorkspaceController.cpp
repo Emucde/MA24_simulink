@@ -64,7 +64,7 @@ Eigen::MatrixXd BaseWorkspaceController::computeJacobianRegularization()
 
         double epsilon = regularization_settings.eps; // Threshold for small singular values
 
-        S.diagonal() = (S.diagonal().array() < epsilon).select((S.diagonal().array().square() + epsilon * epsilon).sqrt(), S.diagonal());
+        S.diagonal() = (S.diagonal().array() < epsilon).select(S.diagonal().array() / (S.diagonal().array().square() + epsilon * epsilon), S.diagonal());
 
         // Reconstruct the matrix with modified singular values
         Eigen::MatrixXd J_new = svd.matrixU() * S * svd.matrixV().transpose();
