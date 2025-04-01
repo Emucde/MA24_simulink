@@ -98,7 +98,7 @@
             "D_d": [20, 20, 20, 8.944, 8.944, 8.944, 8.944]
         },
         "regularization_settings": {
-            "mode" : "Damping",
+            "mode" : "TikhonovRegularization",
             "k": 1e-4,
             "W_bar_N": [0.110889, 0.099856, 0.147456, 0.007744, 0.011449, 0.0106916],
             "W_E": [1, 1, 1, 1, 1, 1],

@@ -86,6 +86,31 @@ for gravity_used in gravity_configs:
     casadi_model = cpin.Model(pin_model)
     cdata = casadi_model.createData()
 
+    # build reduced model
+    q_0_ref = np.array([0, -np.pi/4, 0, -3 * np.pi/4, 0, np.pi/2, np.pi/4])
+    n_indices = -1 + np.array([1, 2, 4, 5, 6, 7])
+    n_x_indices = np.hstack([n_indices, n_indices+7])
+    jointsToLockIndex = np.setdiff1d(np.arange(0,7), n_indices) # at first use 7dof Model (will be later reduced)
+    jointsToLock = jointsToLock = [f"fr3_joint{i+1}" for i in jointsToLockIndex] # list of joints to lock
+
+    jointsToLockIDs = []
+    for jn in jointsToLock:
+        if casadi_model.existJointName(jn):
+            jointsToLockIDs.append(pin_model.getJointId(jn))
+        else:
+            print("Warning: joint " + str(jn) + " does not belong to the model!")
+
+    initialJointConfig = q_0_ref
+    casadi_model_red = cpin.Model(cpin.buildReducedModel(pin_model, jointsToLockIDs, initialJointConfig))
+    cdata_red = casadi_model_red.createData()
+
+    n_red = casadi_model_red.nq
+    u_red = cs.SX.sym('u', n_red, 1)
+    q_red = cs.SX.sym('q', n_red, 1)
+    q_p_red = cs.SX.sym('q_p', n_red, 1)
+    q_pp_red = cs.SX.sym('q_pp', n_red, 1)
+    x_red = cs.vertcat(q_red, q_p_red)
+
     n = casadi_model.nq
     u = cs.SX.sym('u', n, 1)
     q = cs.SX.sym('q', n, 1)
@@ -117,6 +142,11 @@ for gravity_used in gravity_configs:
     H_SX = cdata.oMf[endEffector_ID].homogeneous
     H = cs.Function('H', [q], [H_SX], ['q'], ['H(q)'])
 
+    cpin.framesForwardKinematics(casadi_model_red, cdata_red, q_red)
+
+    H_red_SX = cdata_red.oMf[endEffector_ID].homogeneous
+    H_red = cs.Function('H_red', [q_red], [H_red_SX], ['q'], ['H(q)'])
+
     quat7dim_SX = cpin.SE3ToXYZQUAT(cdata.oMf[endEffector_ID])
     quat_SX = cs.vertcat(quat7dim_SX[6], quat7dim_SX[3:6])
     quat = cs.Function('quat', [q], [quat_SX], ['q'], ['quat(q)'])
@@ -132,13 +162,22 @@ for gravity_used in gravity_configs:
     C_SX = cpin.computeCoriolisMatrix(casadi_model, cdata, q, q_p) # echte 7x7 Coriolismatrix, cbra
     C = cs.Function('C', [q, q_p], [C_SX], ['q', 'q_p'], ['C(q, q_p)']) # coriolis matrix
 
+    C_red_SX = cpin.computeCoriolisMatrix(casadi_model_red, cdata_red, q_red, q_p_red) # echte 7x7 Coriolismatrix, cbra
+    C_red = cs.Function('C_red', [q_red, q_p_red], [C_red_SX], ['q', 'q_p'], ['C(q, q_p)']) # coriolis matrix
+
     g_v2_SX = cpin.computeGeneralizedGravity(casadi_model, cdata, q)
     g_v2 = cs.Function('g', [q], [g_v2_SX], ['q'], ['g(q)']) 
     g_SX = cpin.rnea(casadi_model, cdata, q, cs.SX(n,1), cs.SX(n,1)) # tau = M*0 + C*0 + g = g
     g = cs.Function('g', [q], [g_SX], ['q'], ['g(q)']) # ist beides rnea, siehe pin doku
 
+    g_red_SX = cpin.rnea(casadi_model_red, cdata_red, q_red, cs.SX(n_red,1), cs.SX(n_red,1)) # tau = M*0 + C*0 + g = g
+    g_red = cs.Function('g_red', [q_red], [g_red_SX], ['q'], ['g(q)']) # ist beides rnea, siehe pin doku
+
     M_SX = cpin.crba(casadi_model, cdata, q)
     M = cs.Function('M', [q], [M_SX], ['q'], ['M(q)']) # inertia matrix
+
+    M_red_SX = cpin.crba(casadi_model_red, cdata_red, q_red)
+    M_red = cs.Function('M_red', [q_red], [M_red_SX], ['q'], ['M(q)']) # inertia matrix
 
     tau_SX = cpin.rnea(casadi_model, cdata, q, q_p, q_pp) # INV DYN: tau = M(q)q_pp + C(q, q_p)q_p + g(q) = M(q)q_pp + C_rnea(q, q_p)
     tau_v2_SX = M(q)@q_pp + C(q, q_p)@q_p + g(q)
@@ -148,6 +187,9 @@ for gravity_used in gravity_configs:
     C_rnea_SX = cpin.rnea(casadi_model, cdata, q, q_p, cs.SX(n,1))# - g_SX # Nur so stimmt es mit Maple überein!
     C_rnea = cs.Function('C_rnea', [q, q_p], [C_rnea_SX], ['q', 'q_p'], ['C_rnea(q, q_p) = C(q, q_p)q_p + g(q)']) # = n(q, q_p) = C(q, q_p)q_p + g(q)
     C_rnea_v2 = cs.Function('C_rnea_v2', [q, q_p], [C(q, q_p)@q_p + g(q)], ['q', 'q_p'], ['C_rnea(q, q_p) = C(q, q_p)q_p + g(q)']) # = n(q, q_p) = C(q, q_p)q_p + g(q)
+
+    C_rnea_red_SX = cpin.rnea(casadi_model_red, cdata_red, q_red, q_p_red, cs.SX(n_red,1))# - g_SX # Nur so stimmt es mit Maple überein!
+    C_rnea_red = cs.Function('C_rnea_red', [q_red, q_p_red], [C_rnea_red_SX], ['q', 'q_p'], ['C_rnea(q, q_p) = C(q, q_p)q_p + g(q)']) # = n(q, q_p) = C(q, q_p)q_p + g(q)
 
     M_mat = cs.SX(n,n)
     for i in range(n):
@@ -182,6 +224,13 @@ for gravity_used in gravity_configs:
     )
     J = cs.Function('J', [q], [J_SX], ['q'], ['J(q)'])
 
+    J_red_SX = cpin.computeFrameJacobian(
+        casadi_model_red, cdata_red, q_red,
+        endEffector_ID,
+        cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED
+    )
+    J_red = cs.Function('J_red', [q_red], [J_red_SX], ['q'], ['J(q)'])
+
     #J_p_SX = cpin.computeFrameJacobianTimeVariation(casadi_model, cdata, q, q_p, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
     #J_p_SX = cpin.getFrameJacobianTimeVariation(casadi_model, cdata, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
     #J_p_SX = cpin.frameJacobianTimeVariation(casadi_model, cdata, q, q_p, endEffector_ID, cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
@@ -198,6 +247,18 @@ for gravity_used in gravity_configs:
     J_p = cs.Function('J_p', [q, q_p], [J_p_SX], ['q', 'q_p'], ['J_p(q, q_p)'])
     #J_p = SX00_to_SX0(J_p, q, q_p)
 
+    cpin.computeJointJacobiansTimeVariation(casadi_model_red, cdata_red, q_red, q_p_red)
+
+    J_p_red_SX = cpin.getFrameJacobianTimeVariation(
+        casadi_model_red, cdata_red,
+        endEffector_ID,
+        cpin.ReferenceFrame.LOCAL_WORLD_ALIGNED
+    )
+    J_p_red = cs.Function('J_p_red', [q_red, q_p_red], [J_p_red_SX], ['q', 'q_p'], ['J_p(q, q_p)'])
+
+    q_pp_aba_red_SX = cpin.aba(casadi_model_red, cdata_red, q_red, q_p_red, u_red)
+    sys_fun_qpp_aba_red = cs.Function('sys_fun_qpp_aba_red', [q_red, q_p_red, u_red], [q_pp_aba_red_SX], ['q', 'q_p', 'tau'], ['q_pp'])
+
     q_pp_aba_SX = cpin.aba(casadi_model, cdata, q, q_p, u)
     q_pp_sol_SX = cs.solve( M(q), u - C_rnea(q, q_p) ) # q_pp_aba leads to error of 1e-13, sol to 0
     q_pp_sol_v2_SX = cs.solve( M(q), u - C(q, q_p) @ q_p - g(q) ) # q_pp_aba leads to error of 1e-13, sol to 0
@@ -213,6 +274,7 @@ for gravity_used in gravity_configs:
 
     # robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'g(q)'])
     robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), C(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'C(q, q_p)', 'g(q)'])
+    robot_model_bus_fun_red = cs.Function('robot_model_bus_fun_red', [q_red, q_p_red], [H_red(q_red), J_red(q_red), J_p_red(q_red, q_p_red), M_red(q_red), C_rnea_red(q_red, q_p_red), C_red(q_red, q_p_red), g_red(q_red)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'C(q, q_p)', 'g(q)'])
 
     # get hom. transformation matrices of all joints
     joint_names = casadi_model.names.tolist() # first joint is 'universal_joint' (ignore it)
@@ -241,9 +303,11 @@ for gravity_used in gravity_configs:
         J_p.save(s_functions_path + 'geo_jacobian_endeffector_p_py.casadi')
 
         robot_model_bus_fun.save(s_functions_path + 'robot_model_bus_fun_py.casadi')
+        robot_model_bus_fun_red.save(s_functions_path + 'robot_model_bus_fun_red_py.casadi')
     else:
         C_rnea.save(s_functions_path + 'n_q_coriols_qp_no_gravity_py.casadi')
 
+    sys_fun_qpp_aba_red.save(s_functions_path + 'sys_fun_qpp_aba_red' + append_gravity_str + '_py.casadi')
     sys_fun_qpp_aba.save(s_functions_path + 'sys_fun_qpp_aba' + append_gravity_str + '_py.casadi')
     sys_fun_qpp_sol.save(s_functions_path + 'sys_fun_qpp_sol' + append_gravity_str + '_py.casadi')
     sys_fun_x_aba.save(s_functions_path + 'sys_fun_x_aba' + append_gravity_str + '_py.casadi')

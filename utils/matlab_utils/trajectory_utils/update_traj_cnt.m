@@ -24,7 +24,7 @@ function [run_flag, cnt] = update_traj_cnt(state_traj, run_flag, cnt, N)
             if(cnt < N)
                 cnt = cnt + 1;
             end
-        elseif(reset_val == 1 && cnt == N) % sonst springt er
+        elseif(reset_val == 1 && cnt >= N) % sonst springt er
             cnt = 1;
         end
     elseif(run_flag == 1)
