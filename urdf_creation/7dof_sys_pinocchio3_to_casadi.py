@@ -297,6 +297,7 @@ for gravity_used in gravity_configs:
 
         g.save(s_functions_path + 'gravitational_forces_py.casadi')
         H.save(s_functions_path + 'hom_transform_endeffector_py.casadi')
+        H_red.save(s_functions_path + 'hom_transform_endeffector_red_py.casadi')
         quat.save(s_functions_path + 'quat_endeffector_py.casadi')
         quat_R.save(s_functions_path + 'quat_R_endeffector_py.casadi')
         J.save(s_functions_path + 'geo_jacobian_endeffector_py.casadi')
