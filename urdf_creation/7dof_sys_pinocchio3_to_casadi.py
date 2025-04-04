@@ -27,6 +27,51 @@ def SX00_to_SX0(J_fun, q, q_p=None):
     else:
         return cs.Function(J_fun.name(), [q, q_p], [J_val], J_fun.name_in(), J_fun.name_out())
 
+def rotm2rpy_casadi(R):
+    """Converts a rotation matrix to roll, pitch, and yaw angles (extrinsic ZYX convention)
+    
+    Args:
+        R: 3x3 CasADi rotation matrix
+    
+    Returns:
+        ca.vertcat(alpha, beta, gamma): CasADi vector of RPY angles
+    """
+    # Extract elements from rotation matrix
+    r11 = R[0,0]; r12 = R[0,1]; r13 = R[0,2]
+    r21 = R[1,0]; r22 = R[1,1]; r23 = R[1,2]
+    r31 = R[2,0]; r32 = R[2,1]; r33 = R[2,2]
+
+    # Calculate pitch (beta)
+    beta = cs.atan2(-r31, cs.sqrt(r32**2 + r33**2))
+    cos_beta = cs.cos(beta)
+    
+    # Singularity threshold
+    delta = 1e-13
+    
+    # Calculate yaw (gamma)
+    gamma = cs.if_else(
+        beta > cs.pi/2 - delta,
+        cs.if_else(beta < cs.pi/2 + delta, cs.atan2(r12, r13), cs.atan2(r32/cos_beta, r33/cos_beta)),
+        cs.if_else(
+            beta > -cs.pi/2 - delta,
+            cs.if_else(beta < -cs.pi/2 + delta, cs.atan2(-r12, -r13), cs.atan2(r32/cos_beta, r33/cos_beta)),
+            cs.atan2(r32/cos_beta, r33/cos_beta)
+        )
+    )
+    
+    # Calculate roll (alpha)
+    alpha = cs.if_else(
+        beta > cs.pi/2 - delta,
+        cs.if_else(beta < cs.pi/2 + delta, 0, cs.atan2(r21/cos_beta, r11/cos_beta)),
+        cs.if_else(
+            beta > -cs.pi/2 - delta,
+            cs.if_else(beta < -cs.pi/2 + delta, 0, cs.atan2(r21/cos_beta, r11/cos_beta)),
+            cs.atan2(r21/cos_beta, r11/cos_beta)
+        )
+    )
+    
+    return cs.vertcat(alpha, beta, gamma)
+
 # robot_name = "fr3_7dof"
 # robot_name = "fr3_6dof"
 robot_name = "fr3_no_hand_6dof"
@@ -142,10 +187,35 @@ for gravity_used in gravity_configs:
     H_SX = cdata.oMf[endEffector_ID].homogeneous
     H = cs.Function('H', [q], [H_SX], ['q'], ['H(q)'])
 
+    phi = rotm2rpy_casadi(H_SX[:3,:3])
+    yy = cs.SX(6,1)
+    yy[:3] = f_e(q)
+    yy[3::] = phi
+
+    J_a_SX = cs.simplify(cs.jacobian(yy, q))
+    J_a_p_SX = cs.simplify(cs.reshape(  cs.jacobian(J_a_SX, q) @ q_p, 6 ,n))
+
+    # Create functions for J_a and J_a_p
+    J_a = cs.Function('J_a', [q], [J_a_SX], ['q'], ['J_a(q)'])
+    J_a_p = cs.Function('J_a_p', [q, q_p], [J_a_p_SX], ['q', 'q_p'], ['J_a_p(q, q_p)'])
+
     cpin.framesForwardKinematics(casadi_model_red, cdata_red, q_red)
 
+    f_e_red = cs.Function('f_e_red', [q_red], [cdata_red.oMf[endEffector_ID].translation], ['q'], ['f_e'])
     H_red_SX = cdata_red.oMf[endEffector_ID].homogeneous
     H_red = cs.Function('H_red', [q_red], [H_red_SX], ['q'], ['H(q)'])
+
+    phi_red = rotm2rpy_casadi(H_red_SX[:3, :3])
+    yy_red = cs.SX(6, 1)
+    yy_red[:3] = f_e_red(q_red)
+    yy_red[3:] = phi_red
+
+    J_a_red_SX = cs.simplify(cs.jacobian(yy_red, q_red))
+    J_a_p_red_SX = cs.simplify(cs.reshape(cs.jacobian(J_a_red_SX, q_red) @ q_p_red, 6, n_red))
+
+    # Create functions for J_a_red and J_a_p_red
+    J_a_red = cs.Function('J_a_red', [q_red], [J_a_red_SX], ['q'], ['J_a_red(q)'])
+    J_a_p_red = cs.Function('J_a_p_red', [q_red, q_p_red], [J_a_p_red_SX], ['q', 'q_p'], ['J_a_p_red(q, q_p)'])
 
     quat7dim_SX = cpin.SE3ToXYZQUAT(cdata.oMf[endEffector_ID])
     quat_SX = cs.vertcat(quat7dim_SX[6], quat7dim_SX[3:6])
@@ -275,6 +345,8 @@ for gravity_used in gravity_configs:
     # robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'g(q)'])
     robot_model_bus_fun = cs.Function('robot_model_bus_fun', [q, q_p], [H(q), J(q), J_p(q, q_p), M(q), C_rnea(q, q_p), C(q, q_p), g(q)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'C(q, q_p)', 'g(q)'])
     robot_model_bus_fun_red = cs.Function('robot_model_bus_fun_red', [q_red, q_p_red], [H_red(q_red), J_red(q_red), J_p_red(q_red, q_p_red), M_red(q_red), C_rnea_red(q_red, q_p_red), C_red(q_red, q_p_red), g_red(q_red)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'C(q, q_p)', 'g(q)'])
+    #robot_model_bus_fun_red = cs.Function('robot_model_bus_fun_red', [q_red, q_p_red], [H_red(q_red), J_red(q_red), J_p_red(q_red, q_p_red), J_a_red(q_red), J_a_p_red(q_red, q_p_red), M_red(q_red), C_rnea_red(q_red, q_p_red), C_red(q_red, q_p_red), g_red(q_red)], ['q', 'q_p'], ['H(q)', 'J(q)', 'J_p(q, q_p)', 'J_a(q)', 'J_a_p(q, q_p)', 'M(q)', 'n(q, q_p) = C(q, q_p)q_p + g(q)', 'C(q, q_p)', 'g(q)'])
+    #J_a and J_a_p are wrong.
 
     # get hom. transformation matrices of all joints
     joint_names = casadi_model.names.tolist() # first joint is 'universal_joint' (ignore it)

@@ -18,5 +18,5 @@ function tmpreturn = T_eul_p(Phi, Phi_p)
   m(2,3) = (t11 * t2 + t5 * t8);
   m(3,1) = 0;
   m(3,2) = 0;
-  m(3,3) = -(t12 * t7);
+  m(3,3) = -(t7 * t12);
   tmpreturn = m;

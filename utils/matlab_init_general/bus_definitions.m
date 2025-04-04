@@ -116,6 +116,8 @@ bus_temp_struct.q_pp = zeros(n_red,1);
 bus_temp_struct.H = zeros(4);
 bus_temp_struct.J = zeros(6, n_red);
 bus_temp_struct.J_p = zeros(6, n_red);
+% bus_temp_struct.J_a = zeros(6, n_red);
+% bus_temp_struct.J_a_p = zeros(6, n_red);
 bus_temp_struct.M = zeros(n_red);
 bus_temp_struct.C_rnea = zeros(n_red, 1); % = C_rnea(q, q_p) = C(q, q_p)q_p + g(q) = n(q, q_p)
 bus_temp_struct.C = zeros(n_red);
