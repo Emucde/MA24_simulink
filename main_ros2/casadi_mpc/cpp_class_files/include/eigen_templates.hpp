@@ -343,6 +343,46 @@ Eigen::VectorXd calculateRPYVelocitiesAndAccelerations(
 }
 
 template <typename T = double>
+Eigen::MatrixXd T_ext_inv(const Eigen::Vector3d& Phi) {
+    Eigen::MatrixXd m(6, 6);
+
+    T phi   = Phi(0);
+    T theta = Phi(1);
+    
+    // First 3 rows: identity block
+    m << 1, 0, 0, 0, 0, 0,
+         0, 1, 0, 0, 0, 0,
+         0, 0, 1, 0, 0, 0,
+         
+    // Fourth row
+         0, 0, 0, cos(phi)*sin(theta)/cos(theta), sin(phi)*sin(theta)/cos(theta), 1,
+         
+    // Fifth row
+         0, 0, 0, -sin(phi), cos(phi), 0,
+         
+    // Sixth row
+         0, 0, 0, cos(phi)/cos(theta), sin(phi)/cos(theta), 0;
+    
+    return m;
+}
+
+template <typename T = double>
+Eigen::MatrixXd dT_ext(const Eigen::Vector3d& Phi, const Eigen::Vector3d& Phi_p) {
+    static_assert(std::is_floating_point<T>::value, "Template parameter must be a floating-point type");
+
+    Eigen::MatrixXd dT_mat(6, 6);
+    dT_mat.setZero(); // Initialize to a zero matrix
+
+    // Compute the T_rpy_p matrix
+    Eigen::Matrix3d T_rpy_p_mat = T_rpy_p<T>(Phi, Phi_p);
+
+    // Populate the lower-right block with T_rpy_p
+    dT_mat.block<3, 3>(3, 3) = T_rpy_p_mat;
+
+    return dT_mat;
+}
+
+template <typename T = double>
 Eigen::Matrix3d quat2rotm(Eigen::Matrix<T, 4, 1> q)
 {
     static_assert(std::is_floating_point<T>::value, "Template parameter must be a floating-point type");

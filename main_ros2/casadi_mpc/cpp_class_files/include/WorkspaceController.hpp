@@ -50,7 +50,9 @@ public:
     void update_controller_settings();
     Eigen::MatrixXd computeJacobianRegularization();       // Common method in BaseWorkspaceController
     void calculateControlData(const Eigen::VectorXd &x);   // Common method in BaseWorkspaceController
+    void calculateControlDataRPY(const Eigen::VectorXd &x);   // Common method in BaseWorkspaceController
     void calculateControlDataID(const Eigen::VectorXd &x, const Eigen::VectorXd &x_d);   // Common method in BaseWorkspaceController
+    void stateObserver(const Eigen::VectorXd &x); // Common method in BaseWorkspaceController
     void reset() {
         traj_count = 0;
         x_I_err.setZero();

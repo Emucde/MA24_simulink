@@ -86,6 +86,11 @@ struct IDSettings {
     Eigen::MatrixXd K_d;                // Stiffness matrix for Joint space PD Control
 };
 
+struct StateObserverSettings {
+    Eigen::MatrixXd Kd1;                // Control gains Inverse dynamics diagonal (combined)
+    Eigen::MatrixXd Kp1;                // Control gains Inverse dynamics proportional (combined)
+};
+
 struct RegularizationSettings {
     RegularizationMode mode;            // Regularization mode
     double k;                           // Regularization parameter J_pinv = (J^T J + k I)^-1 J^T
@@ -100,6 +105,7 @@ struct ControllerSettings {
     PDSettings pd_plus_settings;        // PD controller settings
     CTSettings ct_settings;              // CT controller settings
     IDSettings id_settings;             // Inverse Dynamics controller settings
+    StateObserverSettings state_observer_settings; // State observer settings
     RegularizationSettings regularization_settings; // Regularization settings
 };
 
