@@ -288,6 +288,10 @@ void BaseWorkspaceController::update_controller_settings()
     Eigen::MatrixXd K_d_id = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["ID"], "K_d").data(), 6).asDiagonal();
     Eigen::MatrixXd D_d_id = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["ID"], "D_d").data(), 6).asDiagonal();
 
+    // State Observer
+    Eigen::MatrixXd Kd1_state_observer = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["StateObserver"], "Kd1").data(), 6).asDiagonal();
+    Eigen::MatrixXd Kp1_state_observer = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(classic_ctl_settings["StateObserver"], "Kp1").data(), 6).asDiagonal();
+
     // REGULARIZATION SETTINGS
     auto reg_settings = get_config_value<nlohmann::json>(classic_ctl_settings, "regularization_settings");
     Eigen::VectorXd W_bar_N_nq = Eigen::VectorXd::Map(get_config_value<std::vector<double>>(reg_settings, "W_bar_N").data(), 7);
@@ -305,6 +309,8 @@ void BaseWorkspaceController::update_controller_settings()
     controller_settings.id_settings.Kp1 = Kp1_id;
     controller_settings.id_settings.D_d = D_d_id;
     controller_settings.id_settings.K_d = K_d_id;
+    controller_settings.state_observer_settings.Kd1 = Kd1_state_observer;
+    controller_settings.state_observer_settings.Kp1 = Kp1_state_observer;
     controller_settings.regularization_settings.mode = stringToRegularizationMode<std::string>(get_config_value<std::string>(reg_settings, "mode"));
     controller_settings.regularization_settings.k = get_config_value<double>(reg_settings, "k");
     controller_settings.regularization_settings.W_bar_N = W_bar_N;
@@ -379,6 +385,65 @@ void BaseWorkspaceController::calculateControlData(const Eigen::VectorXd &x)
     J_pinv = computeJacobianRegularization();
 }
 
+void BaseWorkspaceController::calculateControlDataRPY(const Eigen::VectorXd &x)
+{
+    // Update the robot model state with joint positions and velocities
+    robot_model.updateState(x);
+
+    // Parameters
+    q = robot_model.jointData.q;     // Time derivative of generalized coordinates
+    q_p = robot_model.jointData.q_p; // Time derivative of generalized coordinates
+
+    // Get matrices and variables from the robot model
+    M = robot_model.dynamicsData.M; // Inertia matrix
+    C = robot_model.dynamicsData.C; // Coriolis matrix
+    C_rnea = robot_model.dynamicsData.C_rnea; // Coriolis matrix computed with RNEA
+    g = robot_model.dynamicsData.g; // Gravitational forces
+
+    Eigen::MatrixXd J_geo = robot_model.kinematicsData.J;     // Geometric Jacobian to end-effector
+    Eigen::MatrixXd J_geo_p = robot_model.kinematicsData.J_p; // Time derivative of geometric Jacobian
+    //Eigen::Matrix3d R = robot_model.kinematicsData.R;     // Rotation matrix of end-effector
+
+    // Current pose of end-effector
+    Eigen::Vector3d p = robot_model.kinematicsData.p;
+    Eigen::Matrix3d R = robot_model.kinematicsData.R;
+
+    Eigen::Vector3d phi = rotm2rpy<double>(R); // Roll, pitch, yaw angles
+
+    J = T_ext_inv<>(phi) * J_geo; // analytical Jacobian to end-effector
+
+    Eigen::VectorXd y_p = J * q_p;
+    Eigen::Vector3d p_p = y_p.head(3);     // Linear velocity of the end-effector
+    Eigen::Vector3d phi_p = y_p.tail(3); // Angular velocity of the end-effector
+
+    J_p = T_ext_inv<>(phi) * (J_geo_p - dT_ext<>(phi, phi_p) * J); // Time derivative of analytical Jacobian
+
+    // Desired trajectory
+    Eigen::VectorXd p_d = trajectory_generator.p_d.col(traj_count);
+    Eigen::VectorXd p_d_p = trajectory_generator.p_d_p.col(traj_count);
+    Eigen::VectorXd p_d_pp = trajectory_generator.p_d_pp.col(traj_count);
+
+    Eigen::MatrixXd phi_d = trajectory_generator.phi_d.col(traj_count);     // Target rpy orientation
+    Eigen::MatrixXd phi_d_p = trajectory_generator.phi_d_p.col(traj_count); // Target rpy orientation velocity
+    Eigen::MatrixXd phi_d_pp = trajectory_generator.phi_d_pp.col(traj_count); // Target rpy orientation acceleration
+
+    // Errors
+    Eigen::Matrix3d R_d = rpy2rotm<double>(phi_d);
+    Eigen::Matrix3d dR = R * R_d.transpose();
+    
+    Eigen::Vector3d phi_err = rotm2rpy<double>(dR);
+
+    x_e_p << p_p, phi_p;
+
+    x_err << (p - p_d), phi_err; // Error as quaternion
+    x_err_p << (p_p - p_d_p), (phi_p - phi_d_p);
+
+    x_d_p << p_d_p, phi_d_p;
+    x_d_pp << p_d_pp, phi_d_pp;
+
+    J_pinv = computeJacobianRegularization();
+}
+
 void BaseWorkspaceController::calculateControlDataID(const Eigen::VectorXd &x, const Eigen::VectorXd &x_d)
 {
     /////////// all is dependent of estimated state x_d /////////////////////
@@ -438,6 +503,31 @@ void BaseWorkspaceController::calculateControlDataID(const Eigen::VectorXd &x, c
     C = robot_model.dynamicsData.C; // Coriolis matrix
     C_rnea = robot_model.dynamicsData.C_rnea; // Coriolis matrix computed with RNEA
     g = robot_model.dynamicsData.g; // Gravitational forces
+}
+
+void BaseWorkspaceController::stateObserver(const Eigen::VectorXd &x)
+{
+    // Control parameters
+    Eigen::MatrixXd Kd1 = controller_settings.state_observer_settings.Kd1;
+    Eigen::MatrixXd Kp1 = controller_settings.state_observer_settings.Kp1;
+
+    if (init) // Initialize on first iteration
+    {
+        q_d = x.head(nq);
+        q_p_d = x.tail(nq);
+        init = false;
+    }
+
+    Eigen::VectorXd x_d = Eigen::VectorXd::Zero(nx);
+    x_d << q_d, q_p_d;
+
+    calculateControlDataID(x, x_d);
+
+    Eigen::VectorXd q_d_pp = J_pinv * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err - J_p * q_p_d);
+
+    // Integrate q_pp two times to get q and q_p
+    q_d = q_d + dt * q_p_d;
+    q_p_d = q_p_d + dt * q_d_pp;
 }
 
 Eigen::VectorXd WorkspaceController::update_control(const Eigen::VectorXd &x_nq)
@@ -530,7 +620,6 @@ Eigen::VectorXd WorkspaceController::InverseDynamicsController::control(const Ei
 
     return tau;
 }
-
 
 Eigen::VectorXd WorkspaceController::PDPlusController::control(const Eigen::VectorXd &x)
 {
