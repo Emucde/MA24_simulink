@@ -630,7 +630,21 @@ Eigen::VectorXd WorkspaceController::PDPlusController::control(const Eigen::Vect
 
     calculateControlData(x);
 
-    Eigen::VectorXd tau = C_rnea + M*J_pinv*(x_d_pp - J_p*q_p) - J.transpose()*(D_d * x_err_p + K_d * x_err + K_I*x_I_err);
+    Eigen::MatrixXd M_inv = M.inverse();
+    Eigen::MatrixXd lambda = (J * M_inv * J.transpose()).inverse();
+    J_pinv = M_inv * J.transpose() * lambda;
+    Eigen::MatrixXd mu_bar = lambda * (J * M_inv * C - J_p);
+    Eigen::MatrixXd mu_x = mu_bar * J_pinv;
+    Eigen::VectorXd F_g = lambda * J * M_inv * g;
+
+    Eigen::VectorXd F = lambda * x_d_pp + mu_bar * q_p - mu_x * x_err_p + 0 * F_g - D_d * x_err_p - K_d * x_err - K_I * x_I_err;
+
+    Eigen::MatrixXd K_0 = Eigen::MatrixXd::Identity(7, 7);
+    Eigen::MatrixXd K_1 = Eigen::MatrixXd::Identity(7, 7);
+    const Eigen::VectorXd q_n = (Eigen::VectorXd(7) << 0, -M_PI / 4, 0, -3 * M_PI / 4, 0, M_PI / 2, M_PI / 4).finished();
+    Eigen::VectorXd tau_n = (Eigen::MatrixXd::Identity(7, 7) - J.transpose() * J_pinv.transpose()) * (-K_0 * q_p - K_1 * (q - q_n));
+
+    Eigen::VectorXd tau = J.transpose() * F + g;
 
     x_I_err << x_I_err + x_err * dt;
 

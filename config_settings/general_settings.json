@@ -13,13 +13,13 @@
     "transient_traj_start_time": 0.0,
     "transient_traj_duration": 2.0,
     "transient_traj_end_time": 2.0,
-    "default_controller": "Crocoddyl",
+    "default_controller": "Classic",
     "available_controllers": [
         "Classic",
         "Casadi",
         "Crocoddyl"
     ],
-    "default_classic_controller": "CT",
+    "default_classic_controller": "PD",
     "available_classic_controller": [
         "CT",
         "PD",
@@ -88,8 +88,8 @@
         },
         "PD": {
             "K_I": [0, 0, 0, 0, 0, 0],
-            "K_d": [500, 500, 500, 500, 500, 500],
-            "D_d": [30, 30, 30, 30, 30, 30]
+            "K_d": [500, 500, 500, 20, 20, 20],
+            "D_d": [20, 20, 20, 6.32, 6.32, 6.32]
         },
         "ID": {
             "Kp1": [100, 100, 100, 20, 20, 20],
