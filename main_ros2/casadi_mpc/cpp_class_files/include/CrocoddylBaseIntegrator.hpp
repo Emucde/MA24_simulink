@@ -4,7 +4,7 @@
 #include <crocoddyl/core/integrator/euler.hpp>
 #include <crocoddyl/core/integrator/rk.hpp> // Include the RK Integrator
 #include <iostream>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 class BaseCrocoddylIntegrator
 {
@@ -12,8 +12,8 @@ public:
     BaseCrocoddylIntegrator(const std::string &int_type) : int_type(int_type) {};
 
     // Pure virtual function
-    virtual boost::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
-        const boost::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) = 0;
+    virtual std::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
+        const std::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) = 0;
     virtual ~BaseCrocoddylIntegrator() = default;
 
 protected:
@@ -24,10 +24,10 @@ class IntegratorEuler : public BaseCrocoddylIntegrator
 {
 public:
     IntegratorEuler(std::string int_type) : BaseCrocoddylIntegrator(int_type) {}
-    boost::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
-        const boost::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) override
+    std::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
+        const std::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) override
     {
-        return boost::make_shared<crocoddyl::IntegratedActionModelEuler>(DAM, dt);
+        return std::make_shared<crocoddyl::IntegratedActionModelEuler>(DAM, dt);
     }
 };
 
@@ -35,10 +35,10 @@ class IntegratorRK2 : public BaseCrocoddylIntegrator
 {
 public:
     IntegratorRK2(std::string int_type) : BaseCrocoddylIntegrator(int_type) {}
-    boost::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
-        const boost::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) override
+    std::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
+        const std::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) override
     {
-        return boost::make_shared<crocoddyl::IntegratedActionModelRK>(DAM, crocoddyl::RKType(2), dt);
+        return std::make_shared<crocoddyl::IntegratedActionModelRK>(DAM, crocoddyl::RKType(2), dt);
     }
 };
 
@@ -47,10 +47,10 @@ class IntegratorRK3 : public BaseCrocoddylIntegrator
 {
 public:
     IntegratorRK3(std::string int_type) : BaseCrocoddylIntegrator(int_type) {}
-    boost::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
-        const boost::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) override
+    std::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
+        const std::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) override
     {
-        return boost::make_shared<crocoddyl::IntegratedActionModelRK>(DAM, crocoddyl::RKType(3), dt);
+        return std::make_shared<crocoddyl::IntegratedActionModelRK>(DAM, crocoddyl::RKType(3), dt);
     }
 };
 
@@ -59,10 +59,10 @@ class IntegratorRK4 : public BaseCrocoddylIntegrator
 {
 public:
     IntegratorRK4(std::string int_type) : BaseCrocoddylIntegrator(int_type) {}
-    boost::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
-        const boost::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) override
+    std::shared_ptr<crocoddyl::IntegratedActionModelAbstract> integrate(
+        const std::shared_ptr<crocoddyl::DifferentialActionModelAbstract> &DAM, double dt) override
     {
-        return boost::make_shared<crocoddyl::IntegratedActionModelRK>(DAM, crocoddyl::RKType(4), dt);
+        return std::make_shared<crocoddyl::IntegratedActionModelRK>(DAM, crocoddyl::RKType(4), dt);
     }
 };
 

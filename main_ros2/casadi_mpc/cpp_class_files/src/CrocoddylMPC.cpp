@@ -211,36 +211,36 @@ void CrocoddylMPC::create_mpc_solver()
     residual_frame_rotation_models.resize(N_MPC+1);
 
     auto model =
-        boost::make_shared<crocoddyl::StateMultibody::PinocchioModel>(robot_model.robot_model);
+        std::make_shared<crocoddyl::StateMultibody::PinocchioModel>(robot_model.robot_model);
 
-    auto state = boost::make_shared<crocoddyl::StateMultibody>(model);
+    auto state = std::make_shared<crocoddyl::StateMultibody>(model);
 
     // Create the running cost model list
-    std::vector<boost::shared_ptr<crocoddyl::ActionModelAbstract>> runningCostModels;
-    boost::shared_ptr<crocoddyl::ActionModelAbstract> terminalCostModel;
+    std::vector<std::shared_ptr<crocoddyl::ActionModelAbstract>> runningCostModels;
+    std::shared_ptr<crocoddyl::ActionModelAbstract> terminalCostModel;
 
-    auto actuationModel = boost::make_shared<crocoddyl::ActuationModelFull>(state);
+    auto actuationModel = std::make_shared<crocoddyl::ActuationModelFull>(state);
 
     crocoddyl::ActivationBounds state_bounds(x_min, x_max);
     crocoddyl::ActivationBounds ctrl_bounds(u_min, u_max);
 
-    auto activation_state_bound = boost::make_shared<crocoddyl::ActivationModelWeightedQuadraticBarrier>(
+    auto activation_state_bound = std::make_shared<crocoddyl::ActivationModelWeightedQuadraticBarrier>(
         state_bounds, get_param_vec("R_x_bounds"));
-    auto activation_ctrl_bound = boost::make_shared<crocoddyl::ActivationModelQuadraticBarrier>(
+    auto activation_ctrl_bound = std::make_shared<crocoddyl::ActivationModelQuadraticBarrier>(
         ctrl_bounds);
-    auto activation_q_yt = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+    auto activation_q_yt = std::make_shared<crocoddyl::ActivationModelWeightedQuad>(
         get_param_vec("Q_yt"));
-    auto activation_q_yt_terminate = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+    auto activation_q_yt_terminate = std::make_shared<crocoddyl::ActivationModelWeightedQuad>(
         get_param_vec("Q_yt_terminal"));
-    auto activation_q_yr = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+    auto activation_q_yr = std::make_shared<crocoddyl::ActivationModelWeightedQuad>(
         get_param_vec("Q_yr"));
-    auto activation_q_yr_terminate = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+    auto activation_q_yr_terminate = std::make_shared<crocoddyl::ActivationModelWeightedQuad>(
         get_param_vec("Q_yr_terminal"));
-    auto activation_q_qp = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+    auto activation_q_qp = std::make_shared<crocoddyl::ActivationModelWeightedQuad>(
         get_param_vec("R_x"));
-    auto activation_q_qpp = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+    auto activation_q_qpp = std::make_shared<crocoddyl::ActivationModelWeightedQuad>(
         get_param_vec("R_q_pp"));
-    auto activation_q_xprev = boost::make_shared<crocoddyl::ActivationModelWeightedQuad>(
+    auto activation_q_xprev = std::make_shared<crocoddyl::ActivationModelWeightedQuad>(
         get_param_vec("R_xprev"));
 
     double scalar_weight = 0;
@@ -251,56 +251,56 @@ void CrocoddylMPC::create_mpc_solver()
         q_d = trajectory_generator.q_d.col(mpc_traj_indices[i]);
         R_d = quat2rotm<double>(q_d);
 
-        auto residual_xreg_bound = boost::make_shared<crocoddyl::ResidualModelState>(
+        auto residual_xreg_bound = std::make_shared<crocoddyl::ResidualModelState>(
         state, x_mean); // r = x_mean - x
         residual_state_models[i]["stateRegBound"] = residual_xreg_bound;
-        auto residual_ureg_bound = boost::make_shared<crocoddyl::ResidualModelControl>(
+        auto residual_ureg_bound = std::make_shared<crocoddyl::ResidualModelControl>(
             state, Eigen::VectorXd::Zero(nq_red)); // r = u
         residual_control_models[i]["ctrlRegBound"] = residual_ureg_bound;
-        auto residual_q_yt = boost::make_shared<crocoddyl::ResidualModelFrameTranslation>(
+        auto residual_q_yt = std::make_shared<crocoddyl::ResidualModelFrameTranslation>(
             state, robot_model.tcp_frame_id, p_d); // r = p_d - p
         residual_frame_translation_models[i]["TCP_pose"] = residual_q_yt;
-        auto residual_q_yr = boost::make_shared<crocoddyl::ResidualModelFrameRotation>(
+        auto residual_q_yr = std::make_shared<crocoddyl::ResidualModelFrameRotation>(
             state, robot_model.tcp_frame_id, R_d); // r = R_d^T * R
         residual_frame_rotation_models[i]["TCP_rot"] = residual_q_yr;
-        auto residual_q_qp = boost::make_shared<crocoddyl::ResidualModelState>(
+        auto residual_q_qp = std::make_shared<crocoddyl::ResidualModelState>(
             state, Eigen::VectorXd::Zero(nx_red)); // r = q_p
         residual_state_models[i]["q_pReg"] = residual_q_qp;
-        auto residual_q_qpp = boost::make_shared<crocoddyl::ResidualModelJointAcceleration>(
+        auto residual_q_qpp = std::make_shared<crocoddyl::ResidualModelJointAcceleration>(
             state, Eigen::VectorXd::Zero(nq_red)); // r = q_pp
         residual_joint_acceleration_models[i]["q_ppReg"] = residual_q_qpp;
-        auto residual_xprev = boost::make_shared<crocoddyl::ResidualModelState>(
+        auto residual_xprev = std::make_shared<crocoddyl::ResidualModelState>(
             state, Eigen::VectorXd::Zero(nx_red)); // r = x_prev - x_prev_ref (is later set)
         residual_state_models[i]["xprevReg"] = residual_xprev;
-        auto residual_u = boost::make_shared<crocoddyl::ResidualModelControl>(
+        auto residual_u = std::make_shared<crocoddyl::ResidualModelControl>(
             state, Eigen::VectorXd::Zero(nq_red)); // r = u
         residual_control_models[i]["ctrlReg"] = residual_u;
-        auto residual_u_prev = boost::make_shared<crocoddyl::ResidualModelControl>(
+        auto residual_u_prev = std::make_shared<crocoddyl::ResidualModelControl>(
             state, Eigen::VectorXd::Zero(nq_red)); // r = u - u_prev (is later set)
         residual_control_models[i]["ctrlPrev"] = residual_u_prev;
-        auto xRegBoundCost = boost::make_shared<crocoddyl::CostModelResidual>(
+        auto xRegBoundCost = std::make_shared<crocoddyl::CostModelResidual>(
             state, activation_state_bound, residual_xreg_bound);
-        auto uRegBoundCost = boost::make_shared<crocoddyl::CostModelResidual>(
+        auto uRegBoundCost = std::make_shared<crocoddyl::CostModelResidual>(
             state, activation_ctrl_bound, residual_ureg_bound);
-        auto q_qpCost = boost::make_shared<crocoddyl::CostModelResidual>(
+        auto q_qpCost = std::make_shared<crocoddyl::CostModelResidual>(
             state, activation_q_qp, residual_q_qp);
-        auto q_qppCost = boost::make_shared<crocoddyl::CostModelResidual>(
+        auto q_qppCost = std::make_shared<crocoddyl::CostModelResidual>(
             state, activation_q_qpp, residual_q_qpp);
-        auto xprevCost = boost::make_shared<crocoddyl::CostModelResidual>(
+        auto xprevCost = std::make_shared<crocoddyl::CostModelResidual>(
             state, activation_q_xprev, residual_xprev);
-        auto uRegCost = boost::make_shared<crocoddyl::CostModelResidual>(
+        auto uRegCost = std::make_shared<crocoddyl::CostModelResidual>(
             state, residual_u); // ActivationModelQuadTpl as default activation model
-        auto uRegPrevCost = boost::make_shared<crocoddyl::CostModelResidual>(
+        auto uRegPrevCost = std::make_shared<crocoddyl::CostModelResidual>(
             state, residual_u_prev); // ActivationModelQuadTpl as default activation model
 
         if (i < N_MPC)
         {
-            auto q_ytCost = boost::make_shared<crocoddyl::CostModelResidual>(
+            auto q_ytCost = std::make_shared<crocoddyl::CostModelResidual>(
                 state, activation_q_yt, residual_q_yt);
-            auto q_yrCost = boost::make_shared<crocoddyl::CostModelResidual>(
+            auto q_yrCost = std::make_shared<crocoddyl::CostModelResidual>(
                 state, activation_q_yr, residual_q_yr);
 
-            auto runningDifferentialCostModel = boost::make_shared<crocoddyl::CostModelSum>(state);
+            auto runningDifferentialCostModel = std::make_shared<crocoddyl::CostModelSum>(state);
 
             scalar_weight = get_param<double>("q_x_bound_cost");
             if (scalar_weight > 0)
@@ -357,7 +357,7 @@ void CrocoddylMPC::create_mpc_solver()
                 cost_models[i]["ctrlPrev"] = runningDifferentialCostModel->get_costs().at("ctrlPrev");
             }
 
-            auto DAM = boost::make_shared<crocoddyl::DifferentialActionModelFreeFwdDynamics>(
+            auto DAM = std::make_shared<crocoddyl::DifferentialActionModelFreeFwdDynamics>(
             state, actuationModel, runningDifferentialCostModel);
 
             if(i==0)
@@ -367,16 +367,16 @@ void CrocoddylMPC::create_mpc_solver()
             // integrate the differential cost models
             auto IAM = integrator->integrate(DAM, dt_int);
             runningCostModels.push_back(
-                boost::static_pointer_cast<crocoddyl::ActionModelAbstract>(IAM));
+                std::static_pointer_cast<crocoddyl::ActionModelAbstract>(IAM));
         }
         else
         {
-            auto q_yt_terminateCost = boost::make_shared<crocoddyl::CostModelResidual>(
+            auto q_yt_terminateCost = std::make_shared<crocoddyl::CostModelResidual>(
             state, activation_q_yt_terminate, residual_q_yt);
-            auto q_yr_terminateCost = boost::make_shared<crocoddyl::CostModelResidual>(
+            auto q_yr_terminateCost = std::make_shared<crocoddyl::CostModelResidual>(
                 state, activation_q_yr_terminate, residual_q_yr);
 
-            auto terminalDifferentialCostModel = boost::make_shared<crocoddyl::CostModelSum>(state);
+            auto terminalDifferentialCostModel = std::make_shared<crocoddyl::CostModelSum>(state);
 
             scalar_weight = get_param<double>("q_x_bound_cost");
             if (scalar_weight > 0)
@@ -434,21 +434,21 @@ void CrocoddylMPC::create_mpc_solver()
             }
 
             // Integrate the terminal cost model
-            auto terminalDAM = boost::make_shared<crocoddyl::DifferentialActionModelFreeFwdDynamics>(
+            auto terminalDAM = std::make_shared<crocoddyl::DifferentialActionModelFreeFwdDynamics>(
                 state, actuationModel, terminalDifferentialCostModel);
 
             auto terminalIAM = integrator->integrate(terminalDAM, dt_MPC);
 
-            terminalCostModel = boost::static_pointer_cast<crocoddyl::ActionModelAbstract>(terminalIAM);
+            terminalCostModel = std::static_pointer_cast<crocoddyl::ActionModelAbstract>(terminalIAM);
         }
     }
 
-    auto problem = boost::make_shared<crocoddyl::ShootingProblem>(Eigen::VectorXd::Zero(nx_red), runningCostModels, terminalCostModel);
+    auto problem = std::make_shared<crocoddyl::ShootingProblem>(Eigen::VectorXd::Zero(nx_red), runningCostModels, terminalCostModel);
 
     problem_reference = problem;
 
-    ddp = boost::static_pointer_cast<crocoddyl::SolverAbstract>(
-        boost::make_shared<crocoddyl::SolverBoxDDP>(problem));
+    ddp = std::static_pointer_cast<crocoddyl::SolverAbstract>(
+        std::make_shared<crocoddyl::SolverBoxDDP>(problem));
 }
 
 void CrocoddylMPC::set_references(const Eigen::VectorXd &x_k)

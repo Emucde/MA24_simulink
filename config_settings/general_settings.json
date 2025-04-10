@@ -13,13 +13,13 @@
     "transient_traj_start_time": 0.0,
     "transient_traj_duration": 2.0,
     "transient_traj_end_time": 2.0,
-    "default_controller": "Classic",
+    "default_controller": "Crocoddyl",
     "available_controllers": [
         "Classic",
         "Casadi",
         "Crocoddyl"
     ],
-    "default_classic_controller": "PD",
+    "default_classic_controller": "CT",
     "available_classic_controller": [
         "CT",
         "PD",

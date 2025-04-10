@@ -27,7 +27,7 @@
 #include <crocoddyl/core/activations/quadratic-barrier.hpp>
 #include <crocoddyl/core/activations/weighted-quadratic.hpp>
 #include <crocoddyl/core/optctrl/shooting.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 #include <pinocchio/algorithm/crba.hpp>
 #include <pinocchio/algorithm/rnea.hpp>
@@ -113,14 +113,14 @@ private:
     std::vector< Eigen::VectorXd > us_init_guess;
     Eigen::VectorXi mpc_traj_indices; // MPC stepwidth indices for sampling trajectory data
 
-    boost::shared_ptr<crocoddyl::SolverAbstract> ddp;
-    std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::CostItem>>> cost_models;
-    std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::ResidualModelState>>> residual_state_models;
-    std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::ResidualModelJointAcceleration>>> residual_joint_acceleration_models;
-    std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::ResidualModelControl>>> residual_control_models;
-    std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::ResidualModelFrameTranslation>>> residual_frame_translation_models;
-    std::vector<std::map<std::string, boost::shared_ptr<crocoddyl::ResidualModelFrameRotation>>> residual_frame_rotation_models;
-    boost::shared_ptr<crocoddyl::ShootingProblem> problem_reference;
+    std::shared_ptr<crocoddyl::SolverAbstract> ddp;
+    std::vector<std::map<std::string, std::shared_ptr<crocoddyl::CostItem>>> cost_models;
+    std::vector<std::map<std::string, std::shared_ptr<crocoddyl::ResidualModelState>>> residual_state_models;
+    std::vector<std::map<std::string, std::shared_ptr<crocoddyl::ResidualModelJointAcceleration>>> residual_joint_acceleration_models;
+    std::vector<std::map<std::string, std::shared_ptr<crocoddyl::ResidualModelControl>>> residual_control_models;
+    std::vector<std::map<std::string, std::shared_ptr<crocoddyl::ResidualModelFrameTranslation>>> residual_frame_translation_models;
+    std::vector<std::map<std::string, std::shared_ptr<crocoddyl::ResidualModelFrameRotation>>> residual_frame_rotation_models;
+    std::shared_ptr<crocoddyl::ShootingProblem> problem_reference;
 
     const Eigen::Vector3i p_d_rows{0, 1, 2};
     const Eigen::Vector4i q_d_rows{9, 10, 11, 12};
