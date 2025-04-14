@@ -4,9 +4,12 @@ single_sing_pose = readmatrix('./main_c/sorted_output_single.csv');
 double_sing_pose = readmatrix('./main_c/sorted_output_doublesing_7.csv');
 
 figure(3);
-plot(single_sing_pose(:, 4));
-figure(4);
-plot(double_sing_pose);
+plot(single_sing_pose);
+legend({'q_1', 'q_2', 'q_3', 'q_4', 'q_5', 'q_6', 'q_7'});
+xlabel('Singularity Number');
+ylabel('rad')
+%figure(4);
+%plot(double_sing_pose);
 
 % 110612, 129903
 q1=double_sing_pose(110612, :);
