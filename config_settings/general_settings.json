@@ -19,7 +19,7 @@
         "Casadi",
         "Crocoddyl"
     ],
-    "default_classic_controller": "PD",
+    "default_classic_controller": "ID",
     "available_classic_controller": [
         "CT",
         "PD",
@@ -103,12 +103,12 @@
         },
         "regularization_settings": {
             "mode" : "Damping",
-            "k": 1e-4,
+            "k": 1e-2,
             "W_bar_N": [0.110889, 0.099856, 0.147456, 0.007744, 0.011449, 0.0106916],
             "W_E": [1, 1, 1, 1, 1, 1],
-            "eps": 1e-3,
+            "eps": 1e-1,
             "eps_collinear": 1e-2,
-            "lambda_min": 1e-2
+            "lambda_min": 1e-4
         },
         "available_regularization_settings": [
             "None",
