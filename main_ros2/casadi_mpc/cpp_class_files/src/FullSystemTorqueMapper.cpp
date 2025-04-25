@@ -190,13 +190,13 @@ void FullSystemTorqueMapper::setFeedforwardTorqueFunction(bool is_kinematic_mpc)
 {
     if (is_kinematic_mpc)
     {
-        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematic;
-        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematicAlternative;
+        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematic;
+        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematicAlternative;
     }
     else
     {
-        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamic;
-        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamicAlternative;
+        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamic;
+        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamicAlternative;
     }
 }
 
@@ -217,7 +217,7 @@ Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &
     Eigen::Map<const Eigen::VectorXd> q(x_k_ndof.head(nq).data(), nq);
     Eigen::Map<const Eigen::VectorXd> q_p(x_k_ndof.tail(nq).data(), nq);
     tau_full = (this->*calcFeedforwardTorqueFunPtr)(u, q, q_p);
-    // tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed));
+    tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed));
 
     // tau_full = enforceTorqueLimits(tau_full); // Apply torque limits
     return tau_full;
