@@ -190,12 +190,18 @@ namespace franka_example_controllers
             base_controller->simulateModelRK4(state.data(), tau_full.data(), Ts);
             if (solver_step_counter % solver_steps == 0)
             {
-                solve();
+                // solve();
                 // std::async(std::launch::async, &CommonROSBaseController::solve, this);
                 // std::thread solver_thread([this]() {
                 //     solve();
                 // });
                 // solver_thread.detach();
+                static std::future<void> solver_future;
+                if (solver_future.valid() && solver_future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
+                    RCLCPP_WARN(get_node()->get_logger(), "Solver is still running, using previous solution.");
+                } else {
+                    solver_future = std::async(std::launch::async, &CommonROSBaseController::solve, this);
+                }
             }
 
             if (solver_step_counter >= 1000)
