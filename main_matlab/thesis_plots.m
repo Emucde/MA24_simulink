@@ -129,10 +129,11 @@ export_selected_columns_ID( ...
 
 % TRAJ 4 ID ThresholdSmallSingularValues
 
-export_selected_columns_ID( ...
+export_selected_columns_ID_crash( ...
     '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250309/Traj4/ID_ThresholdSmallSingularValues_505050_crash/robot_plots_20250503_160758.csv', ...
     '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter5/Traj4_ID_ThresholdSmallSingularValues.csv', ...
-    steps ...
+    steps, ...
+    5740 ...
 );
 
 export_selected_columns_ID( ...
@@ -144,7 +145,7 @@ export_selected_columns_ID( ...
 % TRAJ 4 Crocoddyl NMPC 20 N step 1
 
 export_selected_columns( ...
-    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250503/traj4/Crocoddyl_N_step_1_N_MPC_20_yr1e5_best/robot_plots_20250503_155047.csv', ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250503/traj4/Crocoddyl_N_step_1_N_MPC_20_yr1e5_v5_best/robot_plots_20250505_123517.csv', ...
     '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter5/Traj4_Crocoddyl_NMPC_20_N_step_1.csv', ...
     steps ...
 );
@@ -190,7 +191,7 @@ export_selected_columns_ID( ...
 % TRAJ 5 Crocoddyl NMPC 20 N step 1
 
 export_selected_columns( ...
-    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250503/traj5/Crocoddyl_N_step_1_N_MPC_20_yr1e3_v5_best/robot_plots_20250503_161352.csv', ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250503/traj5/Crocoddyl_N_step_1_N_MPC_20_yr1e3_v7_best/robot_plots_20250505_161447.csv', ...
     '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter5/Traj5_Crocoddyl_NMPC_20_N_step_1.csv', ...
     steps ...
 );
@@ -254,5 +255,37 @@ function export_selected_columns_ID(input_csv, output_csv, steps)
     exportTable.tau_5 = data.("tau_5")(2000:steps:end);
     exportTable.tau_6 = data.("tau_6")(2000:steps:end);
     exportTable.tau_7 = data.("tau_7")(2000:steps:end);
+    writetable(exportTable, output_csv);
+end
+
+function export_selected_columns_ID_crash(input_csv, output_csv, steps, zero_index)
+    data = readtable(input_csv, 'VariableNamingRule', 'preserve');
+    exportTable = table();
+
+    mult = zeros(10001,1);
+    mult(1:zero_index) = 1;
+    mult = mult(1:steps:end);
+    exportTable.time = data.("t (s)")(1:steps:end-1999);
+    exportTable.e_x = 1e3*mult.*data.("e_x (m)")(2000:steps:end);
+    exportTable.e_y = 1e3*mult.*data.("e_y (m)")(2000:steps:end);
+    exportTable.e_z = 1e3*mult.*data.("e_z (m)")(2000:steps:end);
+    exportTable.quat_err_2 = mult.*data.("quat_err_2")(2000:steps:end);
+    exportTable.quat_err_3 = mult.*data.("quat_err_3")(2000:steps:end);
+    exportTable.quat_err_4 = mult.*data.("quat_err_4")(2000:steps:end);
+    exportTable.manip = mult.*data.("Manip. w = √( det( JJ⸆ ) )")(2000:steps:end);
+    exportTable.qd_1 = mult.*data.("q̇_1")(2000:steps:end);
+    exportTable.qd_2 = mult.*data.("q̇_2")(2000:steps:end);
+    exportTable.qd_3 = mult.*data.("q̇_3")(2000:steps:end);
+    exportTable.qd_4 = mult.*data.("q̇_4")(2000:steps:end);
+    exportTable.qd_5 = mult.*data.("q̇_5")(2000:steps:end);
+    exportTable.qd_6 = mult.*data.("q̇_6")(2000:steps:end);
+    exportTable.qd_7 = mult.*data.("q̇_7")(2000:steps:end);
+    exportTable.tau_1 = mult.*data.("tau_1")(2000:steps:end);
+    exportTable.tau_2 = mult.*data.("tau_2")(2000:steps:end);
+    exportTable.tau_3 = mult.*data.("tau_3")(2000:steps:end);
+    exportTable.tau_4 = mult.*data.("tau_4")(2000:steps:end);
+    exportTable.tau_5 = mult.*data.("tau_5")(2000:steps:end);
+    exportTable.tau_6 = mult.*data.("tau_6")(2000:steps:end);
+    exportTable.tau_7 = mult.*data.("tau_7")(2000:steps:end);
     writetable(exportTable, output_csv);
 end
