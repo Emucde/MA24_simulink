@@ -17,8 +17,8 @@ for traj_idx = traj_indices
     q_d_table = array2table([time_data, q_d_data], 'VariableNames', {'time', 'quat1', 'quat2', 'quat3', 'quat4'});
     
     % Save the data as CSV files
-    writetable(p_d_table, sprintf('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter4/p_d_data_traj%d.csv', traj_idx));
-    writetable(q_d_table, sprintf('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter4/q_d_data_traj%d.csv', traj_idx));
+    writetable(p_d_table, sprintf('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter3/p_d_data_traj%d.csv', traj_idx));
+    writetable(q_d_table, sprintf('/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter3/q_d_data_traj%d.csv', traj_idx));
 end
 
 % TRAJ 1 ID Damping
@@ -202,6 +202,43 @@ export_selected_columns( ...
     steps ...
 );
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SIMULATIONEN %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% MPC1_dyn_classic_N_MPC_5 - Casadi
+export_selected_columns_simus( ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250528/traj1/MPC1_dyn_classic_N_MPC_5/robot_plots_20250530_134202.csv', ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter4/MPC1_dyn_classic_N_MPC_5.csv', ...
+    steps ...
+);
+
+% Crocoddyl_N_step_1_N_MPC_5 - Crocoddyl
+export_selected_columns_simus( ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250528/traj1/Crocoddyl_N_step_1_N_MPC_5/robot_plots_20250530_134355.csv', ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter4/Crocoddyl_N_step_1_N_MPC_5.csv', ...
+    steps ...
+);
+
+% MPC2_dyn_parametric_N_MPC_5 - Casadi
+export_selected_columns_simus( ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250528/traj1/MPC2_dyn_parametric_N_MPC_5/robot_plots_20250530_134540.csv', ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter4/MPC2_dyn_parametric_N_MPC_5.csv', ...
+    steps ...
+);
+
+% MPC3_kin_int_thelenberg_N_MPC_5 - Casadi
+export_selected_columns_simus( ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250528/traj1/MPC3_kin_int_thelenberg_N_MPC_5/robot_plots_20250530_134622.csv', ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter4/MPC3_kin_int_thelenberg_N_MPC_5.csv', ...
+    steps ...
+);
+
+% MPC3_kin_int_parametric_N_MPC_5 - Casadi
+export_selected_columns_simus( ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250528/traj1/MPC3_kin_int_parametric_N_MPC_5/robot_plots_20250530_134725.csv', ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter4/MPC3_kin_int_parametric_N_MPC_5.csv', ...
+    steps ...
+);
+
+
 function export_selected_columns(input_csv, output_csv, steps)
     data = readtable(input_csv, 'VariableNamingRule', 'preserve');
     exportTable = table();
@@ -287,5 +324,34 @@ function export_selected_columns_ID_crash(input_csv, output_csv, steps, zero_ind
     exportTable.tau_5 = mult.*data.("tau_5")(2000:steps:end);
     exportTable.tau_6 = mult.*data.("tau_6")(2000:steps:end);
     exportTable.tau_7 = mult.*data.("tau_7")(2000:steps:end);
+    writetable(exportTable, output_csv);
+end
+
+function export_selected_columns_simus(input_csv, output_csv, steps)
+    data = readtable(input_csv, 'VariableNamingRule', 'preserve');
+    exportTable = table();
+    exportTable.time = data.("t (s)")(1:steps:end);
+    exportTable.e_x = 1e3*data.("e_x (m)")(1:steps:end);
+    exportTable.e_y = 1e3*data.("e_y (m)")(1:steps:end);
+    exportTable.e_z = 1e3*data.("e_z (m)")(1:steps:end);
+    exportTable.quat_err_2 = data.("quat_err_2")(1:steps:end);
+    exportTable.quat_err_3 = data.("quat_err_3")(1:steps:end);
+    exportTable.quat_err_4 = data.("quat_err_4")(1:steps:end);
+    exportTable.manip = data.("Manip. w = √( det( JJ⸆ ) )")(1:steps:end);
+    exportTable.qd_1 = data.("q̇_1")(1:steps:end);
+    exportTable.qd_2 = data.("q̇_2")(1:steps:end);
+    exportTable.qd_3 = data.("q̇_3")(1:steps:end);
+    exportTable.qd_4 = data.("q̇_4")(1:steps:end);
+    exportTable.qd_5 = data.("q̇_5")(1:steps:end);
+    exportTable.qd_6 = data.("q̇_6")(1:steps:end);
+    exportTable.qd_7 = data.("q̇_7")(1:steps:end);
+    exportTable.tau_1 = data.("tau_1")(1:steps:end);
+    exportTable.tau_2 = data.("tau_2")(1:steps:end);
+    exportTable.tau_3 = data.("tau_3")(1:steps:end);
+    exportTable.tau_4 = data.("tau_4")(1:steps:end);
+    exportTable.tau_5 = data.("tau_5")(1:steps:end);
+    exportTable.tau_6 = data.("tau_6")(1:steps:end);
+    exportTable.tau_7 = data.("tau_7")(1:steps:end);
+    exportTable.freq_per_Ta_step = data.("freq_per_Ta_step")(1:steps:end);
     writetable(exportTable, output_csv);
 end
