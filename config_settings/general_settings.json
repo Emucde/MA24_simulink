@@ -11,9 +11,9 @@
     "lowpass_filter_omega_c_dq": 200,
     "trajectory_selection": 1,
     "transient_traj_start_time": 0.0,
-    "transient_traj_duration": 2.0,
-    "transient_traj_end_time": 2.0,
-    "default_controller": "Crocoddyl",
+    "transient_traj_duration": 0.0,
+    "transient_traj_end_time": 0.0,
+    "default_controller": "Casadi",
     "available_controllers": [
         "Classic",
         "Casadi",
@@ -26,7 +26,7 @@
         "ID"
     ],
     "use_casadi_planner": false,
-    "default_casadi_mpc": "MPC2_dyn_parametric_N_MPC_5",
+    "default_casadi_mpc": "MPC1_dyn_classic_N_MPC_5",
     "available_casadi_mpc": [
         "MPC1_dyn_classic_N_MPC_3",
         "MPC1_dyn_classic_N_MPC_5",
