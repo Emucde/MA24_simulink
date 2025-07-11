@@ -1,7 +1,7 @@
 var ws;//aktuelle websocket sitzung
 var ws_data_logger;//aktuelle websocket sitzung
 
-window.onload = start;
+document.addEventListener('DOMContentLoaded', start);
 
 function get_formatted_date() {
     return new Date().toLocaleString('de-AT', {

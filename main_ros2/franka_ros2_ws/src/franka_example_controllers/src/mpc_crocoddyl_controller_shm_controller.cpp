@@ -76,8 +76,8 @@ namespace franka_example_controllers
                 for (int i = 0; i < nq; ++i) {
                     command_interfaces_[i].set_value(tau_full[i]);
                 }
-            }
 #endif
+            }
         }
         else
         {

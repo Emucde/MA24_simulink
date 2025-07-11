@@ -187,10 +187,12 @@ namespace franka_example_controllers
         if (controller_started)
         {
 
-            base_controller->simulateModelRK4(state.data(), tau_full.data(), Ts);
+            // base_controller->simulateModelRK4(state.data(), tau_full.data(), Ts);
             if (solver_step_counter % solver_steps == 0)
             {
-                // solve();
+#ifdef SIMULATION_MODE
+                solve();
+#else
                 // std::async(std::launch::async, &CommonROSBaseController::solve, this);
                 // std::thread solver_thread([this]() {
                 //     solve();
@@ -202,6 +204,7 @@ namespace franka_example_controllers
                 } else {
                     solver_future = std::async(std::launch::async, &CommonROSBaseController::solve, this);
                 }
+#endif
             }
 
             if (solver_step_counter >= 1000)
