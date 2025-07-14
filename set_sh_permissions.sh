@@ -6,3 +6,4 @@ chmod +x ./main_ros2/casadi_mpc/build.sh
 chmod +x ./main_ros2/casadi_mpc/create_libfile_list.sh
 chmod +x ./main_ros2/casadi_mpc/create_sourcefile_list.sh
 chmod +x ./main_ros2/nodejs_ros2_gui/run_nodejs.sh
+chmod +x ./main_ros2/franka_ros2_ws/run_ros2.sh

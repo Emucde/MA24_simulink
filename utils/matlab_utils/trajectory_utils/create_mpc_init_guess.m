@@ -105,5 +105,3 @@ else
     file_list = cellfun(@(file) [s_fun_path, '/initial_guess/', file], {init_guess_files.name}, 'UniformOutput', false);
     cellfun(@load, file_list);
 end
-
-init_MPC_weights; % why necessary?
