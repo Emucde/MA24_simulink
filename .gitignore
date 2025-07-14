@@ -12,7 +12,6 @@ slprj
 *.log
 LibraryFiles.cmake
 SourceFiles.cmake
-*.csv
 .tmp
 videos
 main_simulink/simulink_log/*.txt
