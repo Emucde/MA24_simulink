@@ -444,16 +444,13 @@ void BaseWorkspaceController::calculateControlDataRPY(const Eigen::VectorXd &x)
     J_pinv = computeJacobianRegularization();
 }
 
-void BaseWorkspaceController::calculateControlDataID(const Eigen::VectorXd &x, const Eigen::VectorXd &x_d)
+void BaseWorkspaceController::calculateControlDataID(const Eigen::VectorXd &x)
 {
-    /////////// all is dependent of estimated state x_d /////////////////////
-    robot_model.jointData.q = x_d.head(nq);
-    robot_model.jointData.q_p = x_d.tail(nq);
-    robot_model.computeKinematics();
+    robot_model.updateState(x);
 
     // Parameters
-    q = robot_model.jointData.q;     // Time derivative of generalized coordinates
-    q_p = robot_model.jointData.q_p; // Time derivative of generalized coordinates
+    q = x.head(nq);     // Time derivative of generalized coordinates
+    q_p = x.tail(nq); // Time derivative of generalized coordinates
 
     // Current pose of end-effector
     Eigen::Vector3d p = robot_model.kinematicsData.p;
@@ -494,11 +491,6 @@ void BaseWorkspaceController::calculateControlDataID(const Eigen::VectorXd &x, c
     x_d_p << p_d_p, omega_d;
     x_d_pp << p_d_pp, omega_d_p;
 
-    /////////// all is dependent of measured state x /////////////////////
-    robot_model.jointData.q = x.head(nq);
-    robot_model.jointData.q_p = x.tail(nq);
-    robot_model.computeDynamics();
-
     M = robot_model.dynamicsData.M; // Inertia matrix
     C = robot_model.dynamicsData.C; // Coriolis matrix
     C_rnea = robot_model.dynamicsData.C_rnea; // Coriolis matrix computed with RNEA
@@ -521,7 +513,7 @@ void BaseWorkspaceController::stateObserver(const Eigen::VectorXd &x)
     Eigen::VectorXd x_d = Eigen::VectorXd::Zero(nx);
     x_d << q_d, q_p_d;
 
-    calculateControlDataID(x, x_d);
+    calculateControlDataID(x);
 
     Eigen::VectorXd q_d_pp = J_pinv * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err - J_p * q_p_d);
 
@@ -602,10 +594,7 @@ Eigen::VectorXd WorkspaceController::InverseDynamicsController::control(const Ei
         init = false;
     }
 
-    Eigen::VectorXd x_d = Eigen::VectorXd::Zero(nx);
-    x_d << q_d, q_p_d;
-
-    calculateControlDataID(x, x_d);
+    calculateControlDataID(x);
 
     Eigen::VectorXd q_d_pp = J_pinv * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err - J_p * q_p_d);
 

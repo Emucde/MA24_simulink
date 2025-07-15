@@ -2,7 +2,7 @@ controller_manager:
   ros__parameters:
     update_rate: 1000  # Hz
     use_rate_limiter: true
-    cutoff_frequency: 100
+    cutoff_frequency: 1000
 
     gravity_compensation_example_controller:
       type: franka_example_controllers/GravityCompensationExampleController
@@ -29,13 +29,13 @@ move_to_start_example_controller:
   ros__parameters:
     arm_id: panda
     k_gains:
-      - 600.0
-      - 600.0
-      - 600.0
-      - 600.0
-      - 250.0
-      - 150.0
-      - 50.0
+      - 2000.0
+      - 2000.0
+      - 2000.0
+      - 2000.0
+      - 500.0
+      - 300.0
+      - 100.0
     d_gains:
       - 30.0
       - 30.0
