@@ -609,14 +609,14 @@ Eigen::VectorXd WorkspaceController::InverseDynamicsController::control(const Ei
 
     Eigen::VectorXd q_d_pp = J_pinv * (x_d_pp - Kd1 * x_err_p - Kp1 * x_err - J_p * q_p_d);
 
+    // Integrate q_pp two times to get q and q_p
+    q_d = q_d + dt * q_p_d;
+    q_p_d = q_p_d + dt * q_d_pp;
+
     q = x.head(nq);
     q_p = x.tail(nq);
 
     Eigen::VectorXd tau = M * q_d_pp + C * q_p_d + g - D_d * (q_p - q_p_d) - K_d * (q - q_d);
-
-    // Integrate q_pp two times to get q and q_p
-    q_d = q_d + dt * q_p_d;
-    q_p_d = q_p_d + dt * q_d_pp;
 
     return tau;
 }
