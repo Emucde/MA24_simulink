@@ -80,6 +80,7 @@ while true; do
         break
     else
         echo "ROS2 crashed. Restarting..."
+        pkill ros2_control_no
         sleep 1
     fi
 done

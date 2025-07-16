@@ -33,9 +33,9 @@ move_to_start_example_controller:
       - 2000.0
       - 2000.0
       - 2000.0
+      - 1000.0
       - 500.0
-      - 300.0
-      - 100.0
+      - 250.0
     d_gains:
       - 30.0
       - 30.0
@@ -43,6 +43,6 @@ move_to_start_example_controller:
       - 30.0
       - 10.0
       - 10.0
-      - 5.
+      - 5.0
     enable_single_joint_homing: true
     trajectory_selection: 1
