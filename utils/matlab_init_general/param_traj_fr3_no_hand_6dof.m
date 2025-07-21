@@ -199,30 +199,30 @@ q5=[1.223525 0.807631 0 -1.073598 1.237168 3.414369 1.435172];
 
 %% Trajectory 3: Smooth Singularity, Polynomial
 % Define the joint configurations as a cell array
-try
-    single_sing_pose = readmatrix('./main_c/sorted_output_single.csv');
-    N_row = length(single_sing_pose);
-    indices = [466585, 466805, 466921, 467091, 467255, 424383, 46463];
-    N_points = length(indices);
-    start_time = 0;
-    end_time = 10;
-    time = linspace(start_time, end_time, N_points);
-    q = single_sing_pose(indices, :);
-    
-catch
+
+% Gute Trajektorien (gut für mpc)
+% [1.232434 -0.668604 0 -1.217097 0 2.155764 1.466212];
+% [1.232434 -0.668604 0 -1.217097 1.39176 2.155764 1.466212];
+% [1.232434 -0.668604 0 -1.217097 0 2.155764 1.466212];
+
+% [1.232434 -0.668604 0 -1.217097 1.39176 0 1.466212];
+% [1.232434 -0.668604 0 -1.217097 1.39176 2.155764 1.466212];
+% [1.232434 -0.668604 0 -1.217097 1.39176 0 1.466212];
+
+% schlecht für mpc
+% [1.232434 0 0 -1.217097 1.39176 2.155764 1.466212];
+% [1.232434 -0.668604 0 -1.217097 1.39176 2.155764 1.466212];
+% [1.232434 0 0 -1.217097 1.39176 2.155764 1.466212];
+
     q = [
-        [1.000342 -0.606696 0 -1.075555 1.078343 2.629348 1.173911];
-        [1.230009 0.828349 0 -1.137286 1.226867 3.405086 1.439463];
+        [1.232434 -0.668604 0 -1.217097 0 2.155764 1.466212];
         [1.232434 -0.668604 0 -1.217097 1.39176 2.155764 1.466212];
-        [0.105523 -0.632875 0 -1.1298 1.039899 2.054842 -1.059827];
-        [1.258925 -0.669717 0 -1.038616 0.358037 2.77123 1.476863];
-        [1.366694 -0.494639 0 -0.900858 1.423274 2.936039 0.951906];
+        [1.232434 -0.668604 0 -1.217097 0 2.155764 1.466212];
     ];
     N_points=size(q,1);
     start_time = 0;
     end_time = 10;
     time = linspace(start_time, end_time, N_points);
-end
 
 disp('------------------------------------');
 fprintf('Trajectory %d\n\n', cnt);
@@ -245,11 +245,11 @@ traj_struct.N = N_points;
 traj_struct.q_0 = q(1, :)';
 traj_struct.q_0_p = zeros(n,1);
 traj_struct.q_0_pp = zeros(n,1);
-traj_struct.joint_points = -ones(n,traj_struct.N);
+traj_struct.joint_points = q';
 traj_struct.pose = x;
 traj_struct.rotation = R;
 traj_struct.time = time;
-traj_struct.traj_type = [traj_mode.polynomial];
+traj_struct.traj_type = [traj_mode.polynomial_jointspace];
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda (1/s)', -3.5); % Param differential filter 5th order trajectory
 traj_struct = create_param_diff_filter(traj_struct, param_global, 'lambda', 0, 'n_order', 6, 'n_input', n, 'diff_filter_jointspace');
 traj_struct = create_param_sin_poly(traj_struct, param_global); % Param for sinus poly trajectory
@@ -281,6 +281,9 @@ cnt = cnt+1;
         [-0.079543 -0.811266  0.000000 -1.467184  1.283216  1.668681  0.686408];
     ];
     N_points=size(q,1);
+    start_time = 0;
+    end_time = 10;
+    time = linspace(start_time, end_time, N_points);
 % end
 
 disp('------------------------------------');
