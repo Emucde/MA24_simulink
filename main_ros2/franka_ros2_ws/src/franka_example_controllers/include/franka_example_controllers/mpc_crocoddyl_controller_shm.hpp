@@ -42,10 +42,18 @@ using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface
 namespace franka_example_controllers
 {
 
-        /**
-         * The gravity compensation controller only sends zero torques so that the robot does gravity
-         * compensation
-         */
+        /*
+        This class implements a Model Predictive Controller (MPC) using the Crocoddyl library via python.
+        It inherits from the CommonROSBaseController and provides methods to configure, activate, and update the
+        controller state. The controller uses a CrocoddylController object only for simulation purposes.
+
+        This class uses shared memory to communicate with the a separate python process that runs the Crocoddyl MPC.
+        It reads the state data from ROS2 state interfaces and writes it into the shared memory.
+        It sends then a semaphore to the shared memory controller which runs in background. After the
+        shared memory controller has computed the control inputs, it writes them back into the shared memory and
+        sets a valid flag. The ROS2 controller reads the control inputs if the valid flag is set and sends it to
+        the command interface.
+        */
         class ModelPredictiveControllerCrocoddylSHM : public controller_interface::ControllerInterface
         {
         public:

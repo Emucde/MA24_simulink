@@ -50,6 +50,14 @@ namespace franka_example_controllers
         int8_t torques_valid = 0;
     };
 
+    /*
+    This class serves as a base controller for all ROS2 controllers in the Franka example package.
+    It provides common functionality such as reading and writing to shared memory, managing the controller state,
+    and handling the controller lifecycle. It also provides methods for solving the MPC problem and computing
+    the optimal control inputs. The class is designed to be inherited by specific controller implementations.
+    It uses the CommonBaseController to handle the common functionality and provides a unified interface for
+    the controllers to interact with the ROS2 ecosystem.
+    */
     class CommonROSBaseController : public controller_interface::ControllerInterface
     {
     public:

@@ -53,10 +53,11 @@ using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface
 
 namespace franka_example_controllers
 {
-    /**
-     * The gravity compensation controller only sends zero torques so that the robot does gravity
-     * compensation
-     */
+    /*
+    This class implements a Model Predictive Controller (MPC) using the CasADi library.
+    It inherits from the CommonROSBaseController and provides methods to configure, activate, and update the
+    controller state. The controller uses a CasadiController object to solve the MPC problem and compute the optimal control inputs.
+    */
     class ModelPredictiveControllerCasadi : public franka_example_controllers::CommonROSBaseController
     {
     public:

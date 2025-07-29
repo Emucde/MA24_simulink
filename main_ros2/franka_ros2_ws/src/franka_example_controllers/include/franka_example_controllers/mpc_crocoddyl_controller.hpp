@@ -57,10 +57,12 @@ using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface
 
 namespace franka_example_controllers
 {
-    /**
-     * The gravity compensation controller only sends zero torques so that the robot does gravity
-     * compensation
-     */
+    /*
+    This class implements a Model Predictive Controller (MPC) directly in C++ by using the crocoddyl library.
+    It inherits from the CommonROSBaseController and provides methods to configure, activate, and update the
+    controller state. The controller uses a CrocoddylController object to solve the MPC problem
+    in a separate thread and compute the optimal control inputs.
+    */
     class ModelPredictiveControllerCrocoddyl : public franka_example_controllers::CommonROSBaseController
     {
     public:

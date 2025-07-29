@@ -12,6 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+This file defines the MoveToStartExampleController, which is a controller for moving the robot to a predefined start position.
+It inherits from the controller_interface::ControllerInterface and implements the necessary methods to configure, activate,
+and update the controller state. The controller uses a motion generator to compute the trajectory to the start position.
+*/
+
 #pragma once
 
 #include <memory>

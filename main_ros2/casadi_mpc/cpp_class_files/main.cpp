@@ -1,3 +1,9 @@
+/*
+This file contains the main entry point for the CasADi MPC application for offline simulation or shared memory mode.
+It initializes the SharedMemoryController and runs either the simulation or shared memory mode based on command line
+arguments.
+*/
+
 #include <iostream>
 #include "SharedMemoryController.hpp"
 #include "SharedMemory.hpp"

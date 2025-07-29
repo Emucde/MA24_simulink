@@ -57,10 +57,13 @@ using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface
 
 namespace franka_example_controllers
 {
-    /**
-     * The gravity compensation controller only sends zero torques so that the robot does gravity
-     * compensation
-     */
+    /*
+    This class implements a conventional workspace controller for the Franka robot.
+    It inherits from the CommonROSBaseController and provides methods to configure, activate, and update the
+    controller state. The controller uses a WorkspaceController object to compute the control inputs based on the
+    current state of the robot and the desired trajectory. It also provides a service to switch between
+    different workspace controller types.
+    */
     class ConventionalWorkspaceController : public franka_example_controllers::CommonROSBaseController
     {
     public:
