@@ -5,7 +5,7 @@ end
 steps = 10;
 
 % Extract the data for each trajectory
-traj_indices = [1, 2, 4, 5];
+traj_indices = [1, 2, 3, 4, 5];
 for traj_idx = traj_indices
     % Extract the data
     time_data = param_traj_data.t(1:steps:10000)';
@@ -22,7 +22,7 @@ for traj_idx = traj_indices
 end
 
 % TRAJ 1 ID Damping
-disp('Exporting Traj 1 ID Damping data...');
+disp('Exporting Traj 1...');
 
 export_selected_columns_ID( ...
     '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250309/Traj1/ID_damping/robot_plots_20250415_094713.csv', ...
@@ -70,7 +70,7 @@ export_selected_columns( ...
 
 % TRAJ 2 ID Damping
 
-disp('Exporting Traj 2 ID Damping data...');
+disp('Exporting Traj 2...');
 
 export_selected_columns_ID( ...
     '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250309/Traj2/ID_damping/robot_plots_20250425_103626.csv', ...
@@ -116,9 +116,41 @@ export_selected_columns( ...
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% TRAJ 3 Feasible Trajectory
+
+disp('Exporting Traj 3...');
+
+% TRAJ 3 ID Damping
+
+export_selected_columns( ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250716/feasible_traj/Damping_simulation/robot_plots_20250722_124136.csv', ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter5/Traj3_ID_damping_simulation.csv', ...
+    steps ...
+    );
+
+% TRAJ 3 ID ThresholdSmallSingularValues
+
+export_selected_columns( ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250716/feasible_traj/Threshholding_simulation/robot_plots_20250722_124148.csv', ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter5/Traj3_ID_ThresholdSmallSingularValues_simulation.csv', ...
+    steps ...
+);
+
+% TRAJ 3 Crocoddyl NMPC 20 N step 1
+
+export_selected_columns_um( ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250716/feasible_traj/Crocoddyl_simulation/robot_plots_20250722_124200.csv', ...
+    '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/thesis_latex/Master-Thesis-2024-25/doc/tex/figures/chapter5/Traj3_Crocoddyl_NMPC_20_N_step_1_simulation.csv', ...
+    steps ...
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % TRAJ 4 ID Damping
 
-disp('Exporting Traj 4 ID Damping data...');
+disp('Exporting Traj 4...');
 
 export_selected_columns( ...
     '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250716/traj3/Damping_3_best/robot_plots_20250718_144134.csv', ...
@@ -166,7 +198,7 @@ export_selected_columns( ...
 
 % TRAJ 5 ID Damping
 
-disp('Exporting Traj 5 ID Damping data...');
+disp('Exporting Traj 5...');
 
 export_selected_columns( ...
     '/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/messungen/250716/traj4/Damping_101010/robot_plots_20250720_132008.csv', ...
@@ -254,6 +286,34 @@ function export_selected_columns(input_csv, output_csv, steps)
     exportTable.e_x = 1e3*data.("e_x (m)")(1:steps:end);
     exportTable.e_y = 1e3*data.("e_y (m)")(1:steps:end);
     exportTable.e_z = 1e3*data.("e_z (m)")(1:steps:end);
+    exportTable.quat_err_2 = data.("quat_err_2")(1:steps:end);
+    exportTable.quat_err_3 = data.("quat_err_3")(1:steps:end);
+    exportTable.quat_err_4 = data.("quat_err_4")(1:steps:end);
+    exportTable.manip = data.("Manip. w = √( det( JJ⸆ ) )")(1:steps:end);
+    exportTable.qd_1 = data.("q̇_1")(1:steps:end);
+    exportTable.qd_2 = data.("q̇_2")(1:steps:end);
+    exportTable.qd_3 = data.("q̇_3")(1:steps:end);
+    exportTable.qd_4 = data.("q̇_4")(1:steps:end);
+    exportTable.qd_5 = data.("q̇_5")(1:steps:end);
+    exportTable.qd_6 = data.("q̇_6")(1:steps:end);
+    exportTable.qd_7 = data.("q̇_7")(1:steps:end);
+    exportTable.tau_1 = data.("tau_1")(1:steps:end);
+    exportTable.tau_2 = data.("tau_2")(1:steps:end);
+    exportTable.tau_3 = data.("tau_3")(1:steps:end);
+    exportTable.tau_4 = data.("tau_4")(1:steps:end);
+    exportTable.tau_5 = data.("tau_5")(1:steps:end);
+    exportTable.tau_6 = data.("tau_6")(1:steps:end);
+    exportTable.tau_7 = data.("tau_7")(1:steps:end);
+    writetable(exportTable, output_csv);
+end
+
+function export_selected_columns_um(input_csv, output_csv, steps)
+    data = readtable(input_csv, 'VariableNamingRule', 'preserve');
+    exportTable = table();
+    exportTable.time = data.("t (s)")(1:steps:end);
+    exportTable.e_x = 1e6*data.("e_x (m)")(1:steps:end);
+    exportTable.e_y = 1e6*data.("e_y (m)")(1:steps:end);
+    exportTable.e_z = 1e6*data.("e_z (m)")(1:steps:end);
     exportTable.quat_err_2 = data.("quat_err_2")(1:steps:end);
     exportTable.quat_err_3 = data.("quat_err_3")(1:steps:end);
     exportTable.quat_err_4 = data.("quat_err_4")(1:steps:end);
