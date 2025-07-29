@@ -1,3 +1,9 @@
+# main_python/data_to_visualization.py
+# This script processes trajectory data from a CSV file and visualizes the robot's motion using Meshcat.
+# It supports different robot configurations and can handle both UR5e and FR3 robots.
+# The trajectory data includes position, velocity, and orientation information, which is converted into a format
+# suitable for visualization.
+
 import os
 import sys
 import numpy as np

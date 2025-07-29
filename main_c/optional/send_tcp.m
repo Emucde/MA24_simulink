@@ -1,3 +1,8 @@
+% Testing TCP/IP communication in MATLAB
+% This script sets up a TCP client that connects to a server at localhost on port 1337.
+% It listens for incoming data and sends a predefined dataset when data is received.
+% The data consists of a cosine wave with added noise.
+
 clc;
 clear;
 close all;

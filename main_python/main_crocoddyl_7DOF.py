@@ -1,3 +1,23 @@
+# main_crocoddyl_7DOF.py
+# This script is used to run a Model Predictive Control (MPC) for a 7-DOF robot using Crocoddyl.
+# It initializes the robot model, loads trajectory data, sets up the MPC problem, and runs the control loop.
+# The script can be used with or without data from Simulink or C++, and it can visualize the results in real-time.
+# It also includes functionality for debouncing buttons and handling shared memory for inter-process communication.
+
+# It has multiple modes:
+# - Offline mode: where it runs the MPC without real-time data, using pre-computed trajectories.
+# - Control mode: where it reads data from Simulink and sends control commands via shared memory.
+# - Data logging mode (Readonly mode): where it reads data from shared memory and logs it for later analysis.
+# - Explicit MPC mode: where it runs the MPC without real-time data, using pre-computed trajectories.
+
+# The offline mode is useful for testing and debugging the MPC algorithm without the need for real-time data.
+# It can be selected by setting `use_data_from_simulink` to `False`.
+
+# The online mode (control mode, data logging mode) is used to run the MPC in real-time. It always logs data for later analysis.
+
+# The Control mode is used to run the MPC in real-time, reading data from Simulink and sending control commands via shared memory.
+# The data logging mode (Readonly mode) is used from C++ and ROS2 to visualize the results in a web interface.
+
 import os
 import sys
 import numpy as np
@@ -43,14 +63,6 @@ explicit_mpc = False
 
 # use_multisolving = False
 # n_proc = 1 # number of processes for parallel solving
-# TODO! Es stellt sich aber noch die Frage, ob es tatsächlich etwas bringt.
-# Dabei muss ich den Code hier überarbeiten, denn es müssen n_proc unabhängige
-# ddp objekte in n_proc unabhängigen Prozessen, die auf n_proc Kernen laufen
-# erstellt werden. Auch die Referenzwerte werden in den parallelen Prozessen
-# geschrieben. Dadurch kommt es zu keinen Reduktionen in der Laufzeit. Allerdings
-# wäre es viel einfacher, wenn ich eine Klasse dazu schrieben würde. Aber dann kann
-# ich es gleich in C++ machen. Dort kann ich noch um einiges mehr Performance herausholen
-# da dort auch das Referenzwerte schreiben viel schneller geht.
 
 use_custom_trajectory = False
 
@@ -65,6 +77,7 @@ else:
     param_traj_poly['T_end'] = 10
     param_traj_poly['T_max_horizon'] = 2
 
+# Initialize shared memory
 if use_data_from_simulink or explicit_mpc:
     # only available for franka research 3 robot (n_dof = 7)
 
@@ -100,6 +113,7 @@ if use_data_from_simulink or explicit_mpc:
 robot_name = 'fr3_6dof_no_hand'
 fr3_kin_model = False
 
+# Set the robot model and trajectory parameters based on the robot name
 if robot_name == 'ur5e_6dof':
     n_dof = 6 # (input data from simulink are 7dof states q, qp)
     mesh_dir = os.path.join(os.path.dirname(__file__), '..', 'stl_files/Meshes_ur5e')
@@ -158,7 +172,6 @@ n_indices_fixed = n_indices_all[~np.isin(n_indices_all, n_indices)]
 robot_model_full, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_model_path, mesh_dir)
 
 robot_data_full = robot_model_full.createData()
-# robot = pin.robot_wrapper.RobotWrapper.BuildFromURDF(urdf_model_path, mesh_dir)
 
 # https://gepettoweb.laas.fr/doc/stack-of-tasks/pinocchio/master/doxygen-html/md_doc_b_examples_e_reduced_model.html
 # create reduced model:
@@ -174,7 +187,6 @@ if len(n_indices) != robot_model_full.nq:
     
     # Set initial position of both fixed and revoulte joints
     initialJointConfig = q_0_ref
-    # initialJointConfig[n_indices] = q_0
 
     robot_model = pin.buildReducedModel(robot_model_full, jointsToLockIDs, initialJointConfig)
 else:
@@ -238,10 +250,6 @@ if use_data_from_simulink:
 else:
     current_traj_select = manual_traj_select
 
-#################################TEMP
-# current_traj_select = manual_traj_select
-# data_from_simulink_traj_switch[0] = current_traj_select
-##########################
 traj_data, traj_init_config = process_trajectory_data(current_traj_select-1, traj_data_all, traj_param_all)
 
 q_0_ref = traj_init_config['q_0']
@@ -263,15 +271,8 @@ param_robot = {
 #########################################################################################################
 ############################################# INIT MPC ##################################################
 #########################################################################################################
-# T_horizon = 45e-3
-# N_MPC = 3
-# for run in range(40):
 x_k_ndof = np.zeros(2*n_dof)
 x_k_ndof[:n_dof] = q_0_ref
-# x_k_ndof[n_x_indices] = np.array([-4.71541765e-05, -7.70960138e-01, -2.35629353e+00, 8.63920206e-05, \
-#                                 1.57111388e+00, 7.85625356e-01, 1.18528803e-04, 1.41223310e-03, \
-#                                 4.93944513e-04, -9.78304970e-04, -2.07886725e-04, -3.13358760e-03])
-# x_k_ndof[n_dof::] = 0 # weil er stillsteht, jegliche Geschwindigkeitsmessung ist noise!
 x_k = x_k_ndof[n_x_indices]
 
 pin.forwardKinematics(robot_model_full, robot_data_full, q_0_ref)
@@ -336,6 +337,10 @@ reload_page=True
 
 u_prev = 0
 
+#########################################################################################################
+############################################# INIT Logging ##############################################
+#########################################################################################################
+
 measureSolver = TicToc()
 measureSimu = TicToc()
 measureTotal = TicToc()
@@ -345,15 +350,6 @@ tau_i_prev = np.zeros(n_dof)
 init_cnt = 0
 init_cnt_max = 100
 
-# add arrays for multisolving
-# cost_array = multiprocessing.Array('d', n_proc)
-# u_opt_array = multiprocessing.Array('d', n_proc*nq)
-# has_converged_array = multiprocessing.Array('i', n_proc)
-
-# folderpath1 = "/media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/mails/240916_meeting/"
-# folderpath2 = "/home/rslstudent/Students/Emanuel/crocoddyl_html_files/"
-# paths = [folderpath1, folderpath2]
-# folderpath = next((path for path in paths if os.path.exists(path)), None)
 folderpath="./main_ros2/nodejs_ros2_gui/public"
 
 plot_name = 'robot_plots.html'
@@ -386,7 +382,7 @@ try:
                     x_k = x_k_ndof[n_x_indices]
                     new_data_flag = True
 
-                # Daten von Simulink lesen
+                # Read data from shared memory from Simulink or C++
                 start = start_button.debounce(data_from_simulink_start[:])
                 reset = reset_button.debounce(data_from_simulink_reset[:])
                 stop = stop_button.debounce(data_from_simulink_stop[:])
@@ -406,8 +402,8 @@ try:
                         measureTotal.reset()
                         measureTotal.tic()
 
-                        # Selbst wenn die Messung zu beginn eine Jointgeschwindigkeit ausgibt, wird diese auf 0 gesetzt
-                        # weil der Roboter zu beginn stillsteht und es damit nur noise ist
+                        # Even if the measurement initially reports a joint velocity, it is set to 0
+                        # because the robot is stationary at the beginning and any value is just noise
                         x_k_ndof[n_dof::] = 0
                         init_cnt = 0
 
@@ -737,71 +733,6 @@ try:
             ##################################################################################
             ################ Set new data for the next optimization problem ##################
             ##################################################################################
-
-
-            # if mpc_settings['version'] == 'MPC_v3_bounds_yN_ref':
-            #     xs_init_guess_prev = np.array(xs_init_guess)
-            #     xs_init_guess_model2 = xs_init_guess_prev[:, 6::]
-            #     xs_init_guess_model2[:,nq:nx] = 0
-
-            #     # v2: update reference values
-            #     for j, runningModel in enumerate(ddp.problem.runningModels):
-            #         ddp.problem.runningModels[j].model1.differential.y_d = p_d[:, i+MPC_traj_indices[j]]
-            #         ddp.problem.runningModels[j].model1.differential.y_d_p = p_d_p[:, i+MPC_traj_indices[j]]
-            #         ddp.problem.runningModels[j].model1.differential.y_d_pp = p_d_pp[:, i+MPC_traj_indices[j]]
-
-            #         ddp.problem.runningModels[j].model2.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
-            #         if(nq >= 6):
-            #             ddp.problem.runningModels[j].model2.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
-            #         ddp.problem.runningModels[j].model2.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_model2[j]
-            #         ddp.problem.runningModels[j].model2.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_model2[j]
-            #         ddp.problem.runningModels[j].model2.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-            #         ddp.problem.runningModels[j].model2.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-
-            #     ddp.problem.terminalModel.model2.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
-            #     if(nq >= 6):
-            #         ddp.problem.terminalModel.model2.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
-            #     ddp.problem.terminalModel.model2.differential.costs.costs["stateReg"].cost.residual.reference = xs_init_guess_model2[j+1]
-            #     ddp.problem.terminalModel.model2.differential.costs.costs["stateRegBound"].cost.residual.reference = xs_init_guess_model2[j+1]
-            #     ddp.problem.terminalModel.model2.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-            #     ddp.problem.terminalModel.model2.differential.costs.costs["ctrlRegBound"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-                
-            #     x0_new = x_k
-            #     x0_new[:6] = xs_init_guess_prev[1, :6]
-            #     ddp.problem.x0 = x0_new
-            # else:
-
-            
-
-            # # v2: update reference values
-            # for j, runningModel in enumerate(ddp.problem.runningModels):
-            #     if j > 0:
-            #         ddp.problem.runningModels[j].differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j]]
-            #         if(nq >= 6):
-            #             ddp.problem.runningModels[j].differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j]]
-                
-            #     # if(param_mpc_weight['q_pp_common_weight'] > 0):
-            #     #     ddp.problem.runningModels[j].differential.costs.costs["q_ppReg"].cost.residual.reference = np.zeros(nq) # because qpp is calculated approximated
-            #     if(param_mpc_weight['q_xprev_common_weight'] > 0):
-            #         ddp.problem.runningModels[j].differential.costs.costs["xprevReg"].cost.residual.reference = xs_init_guess_prev[j]
-            #     # ddp.problem.runningModels[j].differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-            #     if(param_mpc_weight['q_uprev_cost'] > 0):
-            #         ddp.problem.runningModels[j].differential.costs.costs["ctrlPrev"].cost.residual.reference = us_init_guess_prev[j] #first us[0] is torque for gravity compensation
-            #     # ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.activation.bounds.lb = us_init_guess_prev[j] - 0.1
-            #     # ddp.problem.runningModels[j].differential.costs.costs["ctrlRegBound"].cost.activation.bounds.ub = us_init_guess_prev[j] + 0.1
-
-            # ddp.problem.terminalModel.differential.costs.costs["TCP_pose"].cost.residual.reference = p_d[:, i+MPC_traj_indices[j+1]]
-            # if(nq >= 6):
-            #     ddp.problem.terminalModel.differential.costs.costs["TCP_rot"].cost.residual.reference = R_d[:, :, i+MPC_traj_indices[j+1]]
-            # # if(param_mpc_weight['q_pp_common_weight'] > 0):
-            # #     ddp.problem.terminalModel.differential.costs.costs["q_ppReg"].cost.residual.reference = np.zeros(nq) # because qpp is calculated approximated
-            # if(param_mpc_weight['q_xprev_common_weight'] > 0):
-            #     ddp.problem.terminalModel.differential.costs.costs["xprevReg"].cost.residual.reference = xs_init_guess_prev[j+1]
-            # # ddp.problem.terminalModel.differential.costs.costs["ctrlReg"].cost.residual.reference = g_k #first us[0] is torque for gravity compensation
-            # if(param_mpc_weight['q_uprev_cost'] > 0):
-            #     ddp.problem.terminalModel.differential.costs.costs["ctrlPrev"].cost.residual.reference = us_init_guess_prev[j] #first us[0] is torque for gravity compensation
-            # # ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.activation.bounds.lb = us_init_guess_prev[j] - 0.1
-            # # ddp.problem.terminalModel.differential.costs.costs["ctrlRegBound"].cost.activation.bounds.ub = us_init_guess_prev[j] + 0.1
 
             ddp.problem.x0 = x_k
             # v2 end

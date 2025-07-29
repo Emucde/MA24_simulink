@@ -1,4 +1,6 @@
 #!/bin/bash
+# This script is used to run the main Python script for the 7DOF manipulator simulation.
+# It is run by using the task runner extension in VSCode.
 
 if [ ! -d "/opt/ros/humble" ]; then
 	eval "$(conda shell.bash hook)"

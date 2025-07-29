@@ -1,5 +1,4 @@
-%cd /media/daten/Projekte/Studium/Master/Masterarbeit_SS2024/2DOF_Manipulator/MA24_simulink/
-%cd ..
+% This file initializes the parameters for the franka research 3 robot.
 
 filepath = fileparts(mfilename('fullpath'));
 if(~strcmp([pwd, '/main_matlab'], filepath))
@@ -7,6 +6,7 @@ if(~strcmp([pwd, '/main_matlab'], filepath))
 end
 
 %% INIT
+% remove old paths
 if(exist('parameter_str', 'var') && strcmp(parameter_str, "parameters_2dof"))
     rmpath('./utils/matlab_init_2dof');
     rmpath('./maple/maple_generated/2_dof_system');
@@ -17,7 +17,8 @@ if(  ~( exist('mpc_casadi_main_state', 'var') && strcmp(mpc_casadi_main_state, "
     clc;
 end
 
-
+% clear all variables if dont_clear is not set
+% this is useful if the parameters_7dof.m is called from another script
 if(~exist('dont_clear', 'var'))
     clear;
 end
@@ -26,16 +27,14 @@ if(~exist('reset_started_flag', 'var'))
     reset_started_flag = false; % only useful if dont_clear is set
 end
 
+% this is useful if the parameters_7dof.m is called from another script
 if(  ~exist('overwrite_offline_traj_forced_extern', 'var') )
     overwrite_offline_traj_forced_extern = false;  % only useful if dont_clear is set
 end
 
 fprintf('Start Execution of ''parameters_7dof.m''\n\n');
 
-%start_in_singularity = false;
-%trajectory_out_of_workspace = false; % TODO: einfach offset 0 setzten
-%x_traj_out_of_workspace_value = 0.1;
-
+% Parameters
 full_reset_flag = false; % Please set this flag true after cloning or if a full reset should be  done.
 overwrite_offline_traj_forced = false; % if true then init guess is also created
 warm_start = true;
@@ -89,40 +88,26 @@ param_robot_init;
 special_comment_mode = false; % all opti mpc are commented in
 comment_in_out_mpc_blocks;
 
-activate_simulink_logs;
+activate_simulink_logs; % activate simulink logs for all blocks
 
-bus_definitions;
+bus_definitions; % initialize simulink bus definitions
 
-init_MPC_weights; %% set MPC weights
+init_MPC_weights; % set MPC weights
 
-create_trajectories;
+create_trajectories; % create trajectories for the robot
 %  figure(2);
 %  plot(param_traj_data.p_d(:,:,4)')
 %create_mpc_init_guess;
 
 change_simulink_traj_combo_box; % saves system!
 
-create_trajectory_frame_data;
-create_traj_data_bus;
+create_trajectory_frame_data; % create data for the KOS in the simulation videos
+create_traj_data_bus; % create bus for trajectory data
 
-param_ct_pdplus_control_init;
-param_EKF_init;
+param_ct_pdplus_control_init; % init standard controller parameters
+param_EKF_init; % init EKF parameters if needed
 
-param_debug;
-
-%set_param('sim_discrete_7dof/Visualization/Spline', 'MarkerSize', '1');
-%%
-% bspline_arr = acin_text_spline_test([0.3 0.7 0.5], 1/4, 1/2);
-% N_dat = 1000;
-% sigma = zeros(N_dat, 3);
-% i=1;
-% for theta=0:1/N_dat:1
-    % CC = spline_fun(theta, 1, bspline_arr(4));
-    % sigma(i, :) = CC(:,1)';
-    % i=i+1;
-% end
-% 
-% plot3(sigma(:,1), sigma(:,2), sigma(:,3), 'LineWidth', 1, 'Color', 'blue');
+param_debug; % init debug parameters
 
 fprintf('\nExecution of ''parameters_7dof.m'' finished\n');
 fprintf('--------------------------------------------------------------------\n');

@@ -1,3 +1,9 @@
+# websocket_fr3.py
+# This script implements a WebSocket server that handles multiple clients.
+# It listens for incoming messages from clients and broadcasts them to all connected clients.
+
+# It is used to update the html plot data in the web interface if the MPC is restarted or the simulation is reset.
+
 import asyncio
 import websockets
 

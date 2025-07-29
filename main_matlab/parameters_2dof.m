@@ -1,4 +1,6 @@
-%% INIT
+% This file is deprecated and should not be used anymore.
+% It is kept for reference only.
+% It is used to initialize the 2DOF manipulator simulation environment in MATLAB.
 if(exist('parameter_str', 'var') && strcmp(parameter_str, "parameters_7dof"))
     rmpath('../utils/matlab_init_7dof');
     rmpath('../maple/maple_generated/7_dof_system');

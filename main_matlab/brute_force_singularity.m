@@ -1,3 +1,10 @@
+% This code creates a simulation of a singularity analysis for a 7-DOF robot.
+% It initializes the robot parameters, sets up the simulation environment,
+% and runs the simulation multiple times, checking the feasibility of the
+% joint configurations.
+% The results are saved in text files and videos, and the simulation is
+% repeated for a specified number of iterations.
+
 clc;clear;
 parameters_7dof;
 
@@ -7,7 +14,7 @@ dont_clear = true;
 
 
 for i = 1:1
-    % Erstellen Sie eindeutige Namen für die Textdatei und das Video
+    % create unique names for the text file and video
     current_time = datetime('now', 'Format', 'yyyyMMdd_HHmmss_SSS');
     textFileName = sprintf('videos/%05d/max2_simulation_%05d_%s.txt', i, i, char(current_time));
     videoFileName = sprintf('videos/%05d/max2_simulation_%05d_%s', i, char(current_time));
@@ -22,10 +29,10 @@ for i = 1:1
         mkdir(sprintf('videos/%05d', i));
     end
     
-    % Starten Sie die Aufzeichnung des Command Window
+    % start diary to record the simulation output
     diary(textFileName);
     
-    % Führen Sie die Simulation aus
+    % run the simulation
     sim_out = sim('sim_discrete_7dof');
     q = sim_out.q;
     q_p = sim_out.q_p;
@@ -49,7 +56,7 @@ for i = 1:1
         % copy all files from folder [s_fun_path, '/trajectory_data/'] into %05d folder
         copyfile([s_fun_path, '/trajectory_data/'], sprintf('videos/%05d', i));
     %else
-        % Löschen Sie die Textdatei und das Video
+        % remove the text file and video file if q is not feasible
         %delete(textFileName);
         %delete([videoFileName, '.avi']);
 

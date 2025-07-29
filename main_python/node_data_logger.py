@@ -1,3 +1,11 @@
+# main_python/node_data_logger.py
+# This script is responsible for logging data from shared memory and sending it to a WebSocket server
+# It connects to the WebSocket server at ws://localhost:8081 and sends data every 10 iterations
+# It uses shared memory to read control data and a semaphore to synchronize access
+# The script runs indefinitely, retrying every 5 seconds in case of connection errors
+
+# It is used for the online plot in the web interface to visualize the torque data from the robot
+
 import asyncio
 import websockets
 import posix_ipc

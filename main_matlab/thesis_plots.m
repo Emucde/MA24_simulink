@@ -1,3 +1,7 @@
+% This script is used to generate plots for the master thesis
+% It exports data from various trajectories and simulations to smaller CSV files
+% only each 10th step is exported to reduce file size
+
 if(~exist('parameter_str', 'var'))
     parameters_7dof;
 end

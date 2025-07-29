@@ -1,3 +1,7 @@
+% This script is used to generate the MPCs for the FR3 robot
+% and to compile them into s-functions for Simulink or for external usage.
+% It also creates header files and source files for the MPCs for usage in C++ or C.
+
 % Init scripts
 if(~exist('parameter_str', 'var')) % otherwise parameter_str is already defined from parameters_xdof
     %parameter_str = "parameters_2dof"; % default value
@@ -249,7 +253,7 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     param_casadi_fun_struct = param_casadi_fun_struct_list{mpc_idx};
     
     casadi_func_name = param_casadi_fun_struct.name;
-    Ts_MPC           = param_casadi_fun_struct.Ts     ; % MUSS TRAJEKTORIE OFFLINE BERECHNEN DAMIT DAS von param_global.Ta ABWEICHEN DARF
+    Ts_MPC           = param_casadi_fun_struct.Ts     ; % Sample time for MPC
     rk_iter          = param_casadi_fun_struct.rk_iter; % intermediate steps for runge kutta (rk_iter = 1 means no intermediate steps): DT = T_horizon_MPC/N_MPC/rk_iter;
     N_MPC            = param_casadi_fun_struct.N_MPC  ; % Number of control intervals - so lang prädiziert man N=0: keine Prädiktion
     T_horizon_MPC    = Ts_MPC*N_MPC;                    % Time horizon
@@ -260,7 +264,7 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     compile_mode     = param_casadi_fun_struct.compile_mode;
     int_method       = param_casadi_fun_struct.int_method;
     fixed_parameter  = param_casadi_fun_struct.fixed_parameter;
-    weights_and_limits_as_parameter = ~fixed_parameter; %[todo, replace]
+    weights_and_limits_as_parameter = ~fixed_parameter; % more flexible, not hardcoded parameters
     
     disp(['mpc_casadi_main.m: Selected MPC: ', casadi_func_name]);
     fprintf('--------------------------------------------------------------------\n\n');
@@ -317,9 +321,6 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     end
     
     %% Pre Simulation
-    % TODO: S-funktion slx file und inputs und outputs angeben. Wird aber nicht
-    % viel schneller als die eigentliche Simulation sein.
-    %disp(['Bevor "if(fullsimu)" Rechenzeit: ', sprintf('%f', toc), ' s']);
     if(fullsimu)
         
         if(exist(MPC_matlab_name, 'file') == 3)
@@ -444,9 +445,8 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     param_MPC_settings = param_MPC;
     
     mergestructs = @(x,y) cell2struct([struct2cell(x);struct2cell(y)],[fieldnames(x);fieldnames(y)]);
-    param_MPC = mergestructs(param_MPC, sol_indices); % wird in create_init_guess ueberschrieben... [TODO]
+    param_MPC = mergestructs(param_MPC, sol_indices); % wird in create_init_guess ueberschrieben...
     
-    % sauberes firststart-init [TODO]
     % create mpc_settings folder if not exist
     if ~exist(mpc_settings_path, 'dir')
         mkdir(mpc_settings_path);
@@ -455,11 +455,11 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     eval(mpc_settings_struct_name+"=param_MPC;"); % set new struct name
     save(""+mpc_settings_path+mpc_settings_struct_name+'.mat', mpc_settings_struct_name);
     
-    % Im unterschied zu 'overwrite_offline_traj_forced' in parameters_7dof.m werden hier nur
-    % die init guess für die gerade zu kompilierende MPC erstellt. Update: Wenn der neue Prädiktionshorizont
-    % länger ist als die Trajektorie, dann muss die Trajektorie verlängert werden und auch alle init guess
-    % erstellt werden. Es müssen aber nur die Init guess für die aktuelle MPC erstellt werden, da alle anderen
-    % Init guess für die anderen MPCS ja durch eine Trajektorienverlängerung unverändert bleiben.
+    % Unlike 'overwrite_offline_traj_forced' in parameters_7dof.m, here only
+    % the initial guess for the currently compiled MPC is created. Update: If the new prediction horizon
+    % is longer than the trajectory, then the trajectory must be extended and all initial guesses
+    % must be created. However, only the initial guess for the current MPC needs to be created, since all other
+    % initial guesses for the other MPCs remain unchanged by a trajectory extension.
     
     if(ceil(1 + (T_horizon_MPC + param_global.T_sim) / param_global.Ta) > traj_settings.N_data )
         overwrite_offline_traj_forced = true;
@@ -501,10 +501,10 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
         if(~generate_realtime_udp_c_fun)
             warning('mpc_casadi_main.m: Warning: generate_realtime_udp_c_fun is false. This is needed for the matlab s-function!');
         end
-        % re-define same casadi function with new name
-        % Da der Name von f_opt der matlab name ist und im Objekt gespeichert ist verwendet
-        % die Funktion casadi_fun_to_mex ebenfalls diesen Namen und er muss daher nicht
-        % übergeben werden.
+        % Re-define the same Casadi function with a new name
+        % Since the name of f_opt is the Matlab name and is stored in the object,
+        % the function casadi_fun_to_mex also uses this name, so it does not need
+        % to be passed separately.
         %f_opt = Function(MPC_matlab_name, input_vars_MX, output_vars_MX);
         casadi_fun_to_mex(f_opt, [output_dir, 'mpc_c_sourcefiles'], [s_fun_path, '/matlab_functions'], MPC_matlab_name, coptimflags);
         disp(['Compile time for matlab s-function: ', num2str(toc), ' s']);
@@ -512,6 +512,8 @@ for mpc_idx = 1 : length(param_casadi_fun_struct_list)
     
 end
 
+% Generate global headers for C
+% This is only done once, so it is not in the loop above.
 if(generate_realtime_udp_c_fun)
     mpc_c_sourcefile_path = [s_fun_path, '/mpc_c_sourcefiles/'];
     casadi_opt_problem_paths = ['./utils/utils_casadi/casadi_mpc_definitions/'];
@@ -523,6 +525,7 @@ if(generate_realtime_udp_c_fun)
     fprintf('--------------------------------------------------------------------\n\n');
 end
 
+% Reload parameters if needed
 if(reload_parameters_m)
     fprintf("mpc_casadi_main.m: Reload parameters.m:\n\n");
     mpc_casadi_main_state = 'running';

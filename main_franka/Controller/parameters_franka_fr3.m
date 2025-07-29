@@ -11,26 +11,31 @@ parameters_7dof;
 
 cd /home/rslstudent/Students/Emanuel/MA24_simulink/main_franka/Controller
 
-param_global.Ta = 1e-3; %nötig?
+param_global.Ta = 1e-3;
 n=7;
 T_sim = 10;
 
+% Initialize the robot parameters
 bus_definitions;
 robot_name = 'fr3_no_hand_6dof';
 param_robot_init;
 
+% define the robot IP address
 %robot_ip = '172.16.10.2';
 robot_ip = '172.16.0.2';
 % restoredefaultpath
 % addpath(genpath('./s_functions'));
 
+% Initialize the franka interface
 if(~exist('init_franka_flag', 'var'))
     init_franka_matlab('0.13.0');
     init_franka_flag = true;
 end
 
+% Initialize the robot
 q_init = [0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4]';
 
+% Open the Simulink model
 open_simulink_on_start = true;
 %if(~bdIsLoaded(simulink_main_model_name) && open_simulink_on_start && sum(strfind([getenv().keys{:}], 'VSCODE')) == 0)
 % && ~isSimulinkStarted funktioniert einfach nicht.
@@ -45,7 +50,6 @@ end
 
 
 % Reset all inputs so that it must not recompile
-
 state_traj_const_names = {'Start Trajectory', 'Reset Trajectory', 'Stop Trajectory', 'home', 'home mode'};
 for i = 1:length(state_traj_const_names)
     set_param(['realtime_simu_franka_fr3/', state_traj_const_names{i}], 'Value', '0')

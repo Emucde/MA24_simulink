@@ -1,3 +1,7 @@
+% This script generates a spline trajectory based on singularity poses
+% from a 7-DOF robot arm. It reads singularity poses from a CSV file, processes them, and fits a B-spline curve to the data.
+% The script also visualizes the singularity poses and the resulting spline trajectory.
+
 %run('main_matlab/parameters_7dof.m');
 
 single_sing_pose = readmatrix('./main_c/sorted_output_single.csv');

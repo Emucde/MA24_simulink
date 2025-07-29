@@ -1,3 +1,6 @@
+# This program is used to test the shared memory communication between Python and Simulink.
+# It creates shared memory segments for data exchange and simulates the data flow.
+
 from multiprocessing import shared_memory
 import numpy as np
 import time

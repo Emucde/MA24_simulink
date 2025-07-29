@@ -1,3 +1,6 @@
+# main_crocoddyl_2DOF.py
+# This script implements a Model Predictive Control (MPC) for a 2-DOF planar manipulator using the Crocoddyl library.
+
 import os
 import sys
 import numpy as np
