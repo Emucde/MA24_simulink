@@ -1,3 +1,9 @@
+/*
+This file defines the configuration for the WorkspaceController.
+It includes settings for different controller types, regularization modes,
+and various parameters related to the robot's dynamics and kinematics.
+*/
+
 #ifndef WORKSPACE_CONTROLLER_CONFIG_HPP
 #define WORKSPACE_CONTROLLER_CONFIG_HPP
 

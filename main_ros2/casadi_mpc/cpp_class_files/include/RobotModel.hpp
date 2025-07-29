@@ -17,6 +17,14 @@
 #include <string>
 #include "json.hpp"
 
+/*
+This class represents the robot model and its associated data.
+It includes methods for kinematics and dynamics calculations,
+as well as state updates based on joint positions and velocities.
+It uses the Pinocchio library for robot kinematics and dynamics.
+The class is initialized with a URDF file and robot configuration,
+and it can handle both full and reduced models based on the provided configuration.
+*/
 class RobotModel
 {
 public:

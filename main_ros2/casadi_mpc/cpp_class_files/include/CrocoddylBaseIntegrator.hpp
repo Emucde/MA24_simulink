@@ -1,3 +1,8 @@
+/*
+This file defines the base class for Crocoddyl integrators and specific implementations
+for Euler and Runge-Kutta methods. The base class is abstract and requires derived classes to implement the integrate method.
+*/
+
 #ifndef CROCODDYL_BASE_INTEGRATOR_HPP
 #define CROCODDYL_BASE_INTEGRATOR_HPP
 
@@ -6,6 +11,9 @@
 #include <iostream>
 #include <memory>
 
+/*
+This class serves as a base for different integrators in the Crocoddyl framework.
+*/
 class BaseCrocoddylIntegrator
 {
 public:
@@ -20,6 +28,11 @@ protected:
     const std::string int_type;
 };
 
+/*
+This class implements the Euler integrator for the Crocoddyl framework.
+It inherits from BaseCrocoddylIntegrator and implements the integrate method.
+It uses the IntegratedActionModelEulerTpl class to perform the integration.
+*/
 class IntegratorEuler : public BaseCrocoddylIntegrator
 {
 public:
@@ -31,6 +44,11 @@ public:
     }
 };
 
+/*
+This class implements the Runge-Kutta 2nd order integrator for the Crocoddyl framework.
+It inherits from BaseCrocoddylIntegrator and implements the integrate method.
+It uses the IntegratedActionModelRKTpl class to perform the integration.
+*/
 class IntegratorRK2 : public BaseCrocoddylIntegrator
 {
 public:
@@ -42,7 +60,11 @@ public:
     }
 };
 
-// Example class for Runge-Kutta 3rd order integration
+/*
+This class implements the Runge-Kutta 3rd order integrator for the Crocoddyl framework.
+It inherits from BaseCrocoddylIntegrator and implements the integrate method.
+It uses the IntegratedActionModelRKTpl class to perform the integration.
+*/
 class IntegratorRK3 : public BaseCrocoddylIntegrator
 {
 public:
@@ -54,7 +76,11 @@ public:
     }
 };
 
-// Example class for Runge-Kutta 4th order integration
+/*
+This class implements the Runge-Kutta 4th order integrator for the Crocoddyl framework.
+It inherits from BaseCrocoddylIntegrator and implements the integrate method.
+It uses the IntegratedActionModelRKTpl class to perform the integration.
+*/
 class IntegratorRK4 : public BaseCrocoddylIntegrator
 {
 public:

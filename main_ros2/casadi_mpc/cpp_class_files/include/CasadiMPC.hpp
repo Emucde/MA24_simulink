@@ -16,6 +16,11 @@
 
 // #define DEBUG 1
 
+/*
+This class implements a Model Predictive Control (MPC) using the CasADi library.
+It inherits from CommonBaseMPC and provides methods to solve the MPC problem,
+switch trajectories, and manage the MPC configuration. It is used by CasadiController
+*/
 class CasadiMPC : public CommonBaseMPC
 {
 private:

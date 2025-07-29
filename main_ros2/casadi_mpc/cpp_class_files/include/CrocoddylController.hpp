@@ -25,6 +25,12 @@
 #include "CrocoddylMPC.hpp"
 #include "CrocoddylMPCType.hpp"
 
+/*
+This class implements the Crocoddyl controller for the robot.
+It inherits from CommonBaseController and provides methods to update control inputs,
+switch trajectories, and manage the MPC (Model Predictive Control) configurations.
+It uses the class CrocoddylMPC as the main MPC solver for the robot control.
+*/
 class CrocoddylController : public CommonBaseController
 {
 public:

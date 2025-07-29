@@ -1,3 +1,9 @@
+/*
+This file contains template definitions and utility functions for the Eigen library.
+It includes definitions for matrix and vector operations, JSON handling, and utility functions
+for reading configuration files.
+*/
+
 #ifndef EIGEN_TEMPLATES_HPP
 #define EIGEN_TEMPLATES_HPP
 

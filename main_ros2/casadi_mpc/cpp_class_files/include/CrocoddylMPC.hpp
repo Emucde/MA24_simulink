@@ -47,6 +47,10 @@
 #include "CrocoddylBaseIntegrator.hpp"
 #include "CrocoddylMPCType.hpp"
 
+/*
+This class implements the Crocoddyl MPC (Model Predictive Control) for the robot.
+It inherits from CommonBaseMPC and provides methods to set up and solve the MPC problem.
+*/
 class CrocoddylMPC : public CommonBaseMPC
 {
 public:

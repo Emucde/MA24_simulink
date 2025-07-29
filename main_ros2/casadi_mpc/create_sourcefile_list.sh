@@ -1,4 +1,5 @@
 #!/bin/bash
+# This script generates a CMakeLists.txt file with the current source files for the casadi_mpc project.
 
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 

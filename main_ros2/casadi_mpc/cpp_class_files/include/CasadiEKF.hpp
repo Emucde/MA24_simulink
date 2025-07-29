@@ -12,6 +12,14 @@
 #include "fr3_ekf_addressdef.h"
 #include "eigen_templates.hpp"
 
+/*
+This class implements an Extended Kalman Filter (EKF) using the CasADi library.
+It is designed to work with a specific robot configuration and uses JSON for configuration management.
+The EKF is initialized with a configuration file that defines the system parameters, noise characteristics, and
+measurement models.
+The class provides methods for predicting the next state based on control inputs and updating the state based on
+measurements.
+*/
 class CasadiEKF
 {
 public:

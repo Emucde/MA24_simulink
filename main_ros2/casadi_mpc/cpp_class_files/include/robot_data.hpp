@@ -1,3 +1,8 @@
+/*
+This file is used in RobotModel.hpp to define the data structures
+for joint, kinematics, and dynamics information of the robot.
+*/
+
 #ifndef ROBOT_DATA_HPP
 #define ROBOT_DATA_HPP
 

@@ -13,6 +13,13 @@
 #include "rclcpp/logger.hpp"  // for Logger
 #include "rclcpp/logging.hpp" // for RCLCPP_ERROR
 
+/*
+This file defines the SharedMemory class for managing shared memory and semaphores.
+It includes methods for opening, reading, writing, and closing shared memory blocks
+and semaphores. The class supports both reading and writing operations,
+and it can handle multiple shared memory blocks and semaphores.
+It also provides a logging mechanism to report errors.
+*/
 class BaseLogger
 {
 public:

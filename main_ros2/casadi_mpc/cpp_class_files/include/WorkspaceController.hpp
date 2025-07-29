@@ -24,6 +24,16 @@
 #include "RobotModel.hpp"
 #include "TrajectoryGenerator.hpp"
 
+/*
+This class implements a workspace controller for a robot model.
+It provides methods for controlling the robot's movements in a workspace,
+including calculating control data, updating state, and handling different controller types.
+It uses the Pinocchio library for kinematics and dynamics calculations.
+It supports different controller types such as CT, PDPlus, and InverseDynamics.
+It also includes methods for trajectory generation and handling.
+It is designed to be used in a robotics context, where the robot's state is updated based on joint positions and velocities.
+The class is initialized with a URDF file and robot configuration, and it can handle both full and reduced models based on the provided configuration.
+*/
 class BaseWorkspaceController
 {
 public:
@@ -93,6 +103,13 @@ public:
     uint traj_count;
 };
 
+
+/*
+This class implements a general workspace controller for a robot model.
+It inherits from CommonBaseController and provides methods for controlling the robot's movements in a workspace.
+The used workspace controller can be CT, PDPlus, or InverseDynamics and is based on the class BaseWorkspaceController.
+The class BaseWorkspaceController provides the common functionality for all workspace controllers.
+*/
 class WorkspaceController : public CommonBaseController
 {
 public:

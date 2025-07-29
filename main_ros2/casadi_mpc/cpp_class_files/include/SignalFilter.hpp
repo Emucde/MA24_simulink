@@ -4,6 +4,12 @@
 #include <Eigen/Dense>
 #include "eigen_templates.hpp"
 
+/*
+This class implements a signal filter for joint states.
+It uses a low-pass filter for position and velocity signals.
+The filter coefficients are initialized based on the general configuration file.
+The filter can be reset to a new state and can process joint states to produce filtered outputs.
+*/
 class SignalFilter {
 public:   
     // Constructor to initialize the filter with the number of degrees of freedom (DOF) and initial state

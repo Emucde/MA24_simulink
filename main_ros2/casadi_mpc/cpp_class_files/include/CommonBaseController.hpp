@@ -14,6 +14,13 @@
 #include "TrajectoryGenerator.hpp"
 #include "FullSystemTorqueMapper.hpp"
 
+/*
+CommonBaseController is an abstract base class for robot controllers.
+It provides a common interface and shared functionality for different types of controllers.
+It includes methods for simulating the robot model, updating control inputs, managing trajectories,
+and handling error flags.
+It is used by CrocoddylController and CasadiController to implement common functionalities.
+*/
 class CommonBaseController
 {
 public:

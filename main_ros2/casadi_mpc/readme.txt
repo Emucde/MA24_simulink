@@ -1,6 +1,10 @@
 There are many methods to get the shared library files:
 # MPC01, MPC6, MPC7 takes extremely long to compile if using opti sfun (due to full rigid body model)
 
+# Supported way:
+# run "Build ALL (ROS2 Release) task in VSCODE.
+# other ways are deprecated.
+
 ----------------------------------------------------------------
 # Way 1: manually (optional: add optimization flag -O3):
 

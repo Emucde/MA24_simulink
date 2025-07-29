@@ -44,6 +44,11 @@
 //                                                Member: traj_data_out
 //                                                Length: traj_data_out_len;
 
+/*
+This class generates trajectories for the robot model.
+It can create trajectories based on polynomial functions or read them from files.
+It supports both transient trajectories and full trajectories from files.
+*/
 class TrajectoryGenerator
 {
 public:

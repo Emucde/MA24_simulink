@@ -29,6 +29,11 @@
 #include <random>
 #include <cmath>
 
+/*
+This class is a special controller that implements a standalone Shared Memory Controller. It get's
+its data from ROS or Simulink and writes the control data back to ROS or Simulink.
+It can be also used for simulation purposes.
+*/
 class SharedMemoryController {
 public:
     SharedMemoryController(const std::string &masterDir, bool use_custom_list);

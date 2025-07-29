@@ -19,6 +19,9 @@
 #include "CasadiMPC.hpp"
 #include "error_flags.h"
 
+/*
+Base class for different MPC solvers.
+*/
 class BaseSolver
 {
 public:
@@ -40,6 +43,14 @@ protected:
     Eigen::VectorXd u_opt = Eigen::VectorXd::Zero(nq_red);
 };
 
+/*
+This class implements a CasADi-based controller for the fr3 robot manipulator.
+It includes methods for solving the MPC, updating configurations, and managing trajectories.
+It is designed to work with the CasADi library for optimal control problems.
+It inherits from CommonBaseController and uses various CasADi types for MPC functionality.
+It also includes a BaseSolver interface for different solver implementations, such as
+StandardSolver (Standard MPC) and PlannerSolver (Planner MPC)
+*/
 class CasadiController : public CommonBaseController
 {
 private:

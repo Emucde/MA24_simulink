@@ -1,4 +1,6 @@
 #!/bin/bash
+# This script builds the casadi_mpc project for ROS2, optionally creating a standalone Makefile or using CMake.
+# It also supports clearing build directories, running the executable, and using include-what-you-use (iwyu).
 source ~/.bashrc
 
 # Default to debug build

@@ -16,6 +16,12 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry> // For rotations and quaternions
 
+/*
+This class is responsible for mapping the reduced joint torques to the full joint torques.
+It uses the robot model defined in the URDF file and the configuration parameters provided.
+It also provides methods to calculate the feedforward torques based on kinematic and dynamic models.
+It can simulate the robot model using Euler or RK4 methods.
+*/
 class FullSystemTorqueMapper
 {
 public:

@@ -1,4 +1,7 @@
 #!/bin/bash
+# This script generates a CMakeLists.txt file for the Franka ROS2 MPC project.
+# It finds all shared libraries in the specified directories, sorts them by modification time,
+# and writes them into a CMakeLists.txt file for use in the project.
 
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 

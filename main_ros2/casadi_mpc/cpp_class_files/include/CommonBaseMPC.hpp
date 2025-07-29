@@ -10,6 +10,10 @@
 #include "FullSystemTorqueMapper.hpp"
 #include "error_flags.h"
 
+/*
+This class serves as a base class for Model Predictive Control (MPC) implementations.
+It is used by CrocoddylMPC and CasadiMPC to provide a common interface and shared functionality.
+*/
 class CommonBaseMPC
 {
 public:
