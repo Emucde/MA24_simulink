@@ -1,3 +1,27 @@
+/*
+This program creates a WebSocket server that communicates with a ROS 2 system.
+It allows clients to connect and send commands to control various robotic controllers,
+switch trajectories, and manage services. The server also handles homing operations
+and provides real-time updates on the status of the controllers.
+- It includes error handling for ROS 2 connection issues and can restart the ROS 2 node
+if necessary.
+- It uses the 'ws' library for WebSocket communication, 'express' for serving static files
+and HTML pages, and 'child_process' to execute shell commands for managing ROS 2 processes
+and services.
+- It also includes a function to search for trajectory names in a specified MATLAB file.
+- The server listens on port 8080 for WebSocket connections and serves a static HTML page
+at the root URL.
+- It also listens on port 8081 for data logger WebSocket connections.
+The server handles various commands such as starting, stopping, resetting controllers,
+switching trajectories, and performing homing operations.
+- It broadcasts messages to all connected clients and handles incoming messages
+from clients to perform the requested actions.
+- It also includes a function to kill processes matching a specific pattern.
+- It uses a JSON configuration file to manage available Casadi MPCs and workspace controllers.
+- It handles unhandled promise rejections and signals for graceful shutdown.
+*/
+
+// Import necessary modules
 const http = require('http');
 const WebSocket = require('ws');
 const express = require('express');
@@ -15,6 +39,7 @@ const wss_data_logger = new WebSocket.Server({ port: 8081 });
 const clients = new Set();
 const clients_data_logger = new Set();
 
+// Global variables
 var controller_names = null;
 var controller_active_states = null;
 var active_controller_idx = null;
@@ -58,6 +83,9 @@ function kill_process(pattern, callback) {
     });
 }
 
+/** * Function to restart the ROS 2 node.
+ * @returns {Promise} - A promise that resolves when the node is restarted.
+ */
 async function init_ros() {
     try {
         const result = await get_controller_info();
@@ -84,6 +112,7 @@ async function init_ros() {
     }
 }
 
+// Check ROS connection every 5 seconds
 async function check_ros_connection() {
     setInterval(async function () {
         var is_alive = await checkROSConnection();
@@ -96,6 +125,7 @@ async function check_ros_connection() {
     }, 5000);
 }
 
+// Get controller info and update global variables
 async function update() {
     var result = await get_controller_info()
     if(result.ok)
@@ -110,6 +140,14 @@ async function update() {
     return result;
 }
 
+/*
+
+* Function to check the result of a command.
+* @param {Object} result - The result object from the command.
+* @param {string} checked_command - The command that was checked.
+* @param {Object} data - Additional data related to the command.
+* @returns {Object} - An object containing the status and name of the command.
+*/
 async function check(result, checked_command, data)
 {
     var status = '[' + data.command + ']: ';
@@ -225,6 +263,7 @@ function broadcast(message) {
     });
 }
 
+// broadcasting data logger
 function broadcast_data_logger(message) {
     clients_data_logger.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
@@ -233,6 +272,11 @@ function broadcast_data_logger(message) {
     });
 }
 
+/** * Function to perform homing operation.
+ * @param {WebSocket} ws - The WebSocket connection to send messages to the client.
+ * @param {Object} data - The data object containing command and trajectory number.
+ * @returns {Object} - An object containing the status of the homing operation.
+ */
 async function performHoming(ws, data) {
     let log_check;
 
@@ -283,7 +327,16 @@ async function performHoming(ws, data) {
     return log_check;
 }
 
-
+/**
+ * Main function to initialize the WebSocket server and handle connections.
+ * It sets up the WebSocket server, handles incoming messages, and manages client connections.
+ * It also listens for connections on the data logger WebSocket server.
+ * The function handles various commands from clients, such as starting, stopping, and resetting controllers,
+ * switching trajectories, and performing homing operations.
+ * It broadcasts messages to all connected clients and handles errors gracefully.
+ * It also checks the ROS connection status and restarts the ROS node if necessary.
+ * The function listens for unhandled promise rejections and signals for graceful shutdown.
+ */
 async function main() {
     wss_data_logger.on('connection', (ws) => {
         clients_data_logger.add(ws);
@@ -484,6 +537,9 @@ main().catch(error => {
     process.exit(1);
 });
 
+// Handle unhandled promise rejections
+// This will catch any unhandled promise rejections in the application
+// and log the error, then attempt to restart the ROS node if necessary.
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 
@@ -519,6 +575,8 @@ process.on('unhandledRejection', (reason, promise) => {
     // process.exit(1);
 });
 
+// Handle graceful shutdown on SIGTERM
+// This will allow the application to perform cleanup operations before exiting.
 process.on('SIGTERM', () => {
     console.log('Received SIGTERM. Shutting down gracefully.');
     // Perform cleanup operations here

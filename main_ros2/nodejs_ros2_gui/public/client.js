@@ -1,8 +1,14 @@
 var ws;//aktuelle websocket sitzung
 var ws_data_logger;//aktuelle websocket sitzung
 
+// Function to start the application
 document.addEventListener('DOMContentLoaded', start);
 
+/** * Function to get the current date and time formatted as a string
+ * This function returns the current date and time in the format "HH:MM:SS",
+ * using the 'de-AT' locale for formatting.
+ * @returns {string} - The formatted date and time string.
+ */
 function get_formatted_date() {
     return new Date().toLocaleString('de-AT', {
         hour: '2-digit',
@@ -11,6 +17,12 @@ function get_formatted_date() {
     });
 }
 
+/** * Function to convert a byte array to a float
+ * This function takes a byte array, creates an ArrayBuffer,
+ * and then uses a DataView to read the float value from it.
+ * @param {Uint8Array} byteArray - The byte array containing the float data.
+ * @returns {number} - The float value represented by the byte array.
+ */
 function byteArrayToFloat(byteArray) {
     const size = byteArray.size;
     const buffer = new ArrayBuffer(size);
@@ -23,12 +35,23 @@ function byteArrayToFloat(byteArray) {
     return view.getFloat32(0, true); // true for little-endian
 }
 
+/** * Function to receive a Float32Array from a Blob
+ * This function converts the Blob data into an ArrayBuffer,
+ * then creates a Float32Array from it, and finally converts it to a regular array.
+ * @param {Blob} blob - The Blob containing the Float32Array data.
+ * @returns {Promise<Array>} - A promise that resolves to an array of float values.
+ */
 async function receiveFloatArray(blob) {
     const arrayBuffer = await blob.arrayBuffer();
     const float32Array = new Float32Array(arrayBuffer);
     return Array.from(float32Array);
   }
 
+/** Function to start the application
+ * This function initializes the WebSocket connections and sets up the Dygraph for plotting.
+ * It also updates the connection status and handles incoming messages from the WebSocket.
+ * It is called when the DOM content is loaded.
+ */
 function start() {
     createdygraph(dataLength);
     document.getElementById("timeconn").innerHTML = get_formatted_date();
@@ -186,6 +209,9 @@ function start() {
     };
 }
 
+/////////////////////////
+// Add Event listeners //
+/////////////////////////
 document.getElementById('start').addEventListener('click', () => {
     var traj_num = get_trajectory();
     var active_controller_name = get_controller();
@@ -263,6 +289,7 @@ toggle.addEventListener('change', () => {
     localStorage.setItem('theme', toggle.checked ? 'light' : 'dark');
 });
 
+// Function to get the currently selected trajectory
 function get_trajectory() {
     var current_element = document.querySelector('#trajectory');
     var traj_num = parseInt(current_element.value, 10);
@@ -273,12 +300,14 @@ function get_trajectory() {
     return traj_num;
 }
 
+// Function to get the currently selected controller
 function get_controller() {
     var current_element = document.querySelector('#controller');
     var active_controller_name = current_element.value;
     return active_controller_name;
 }
 
+// Function to handle controller change
 function controller_change() {
     var current_element = document.querySelector('#controller');
     var active_controller_name = current_element.value;
@@ -292,12 +321,14 @@ function controller_change() {
         document.getElementById("conventional_workspace_controller").classList.remove("hide");
 }
 
+// Function to get the selected MPC type
 function get_mpc(current_element) {
     var current_element = document.querySelector('#casadi_mpcs');
     var mpc_type = parseInt(current_element.value, 10);
     return mpc_type;
 }
 
+// Function to handle click events on plot or video links
 function click_fun(element, number) {
     var main_div = element.parentNode.parentNode;
     var plot_iframe = main_div.querySelectorAll('iframe')[number];
@@ -319,6 +350,7 @@ function click_fun(element, number) {
     plot_iframe.setAttribute('is_shown', 1);
 }
 
+// Function to hide or show iframe plots or videos
 function hide_iframe(element, number) {
     var main_div = element.parentNode.parentNode;
     var plot_iframe = main_div.querySelectorAll('iframe')[number];
@@ -355,6 +387,7 @@ function hide_iframe(element, number) {
     }
 }
 
+// Function to hide or show settings
 function hide_settings(element) {
     var main_div = element.parentNode.parentNode;
     var next_code_area = main_div.querySelector('pre')
@@ -372,6 +405,7 @@ function hide_settings(element) {
     }
 }
 
+// Function to load all data from links
 function load_all_data() {
     var a_tags = document.querySelectorAll('a');
     a_tags.forEach(function (el, i) {
@@ -384,6 +418,7 @@ function load_all_data() {
     });
 }
 
+// Function to change video size
 function change_video_size(element) {
 
     var act_size = element.getAttribute('act_size');
@@ -398,6 +433,7 @@ function change_video_size(element) {
     });
 }
 
+// Function to toggle autoplay state
 function autoplay(element) {
     var is_on = element.getAttribute('is_on');
     var new_state = is_on == "1" ? "0" : "1";
@@ -405,6 +441,7 @@ function autoplay(element) {
     element.innerHTML = new_state == "1" ? "Autoplay ON" : "Autoplay OFF";
 }
 
+// Function to change button positions based on window size
 function change_button_positions() {
     console.log(window.innerHeight);
     console.log(window.innerWidth);

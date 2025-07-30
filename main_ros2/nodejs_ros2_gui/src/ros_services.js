@@ -1,7 +1,15 @@
+/*
+This program creates a ROS 2 Node using rclnodejs and provides various service call handlers
+to interact with a robotic controller. It includes functions to start, stop, and reset services,
+switch trajectories, load and configure controllers, and manage parameters. The code also includes
+functions to check the ROS connection and restart the node if necessary.
+*/
+
 const rclnodejs = require('rclnodejs');
 
 let node;
 
+// Function to initialize the ROS 2 Node
 async function initializeNode() {
     if (!rclnodejs._initialized) {
         await rclnodejs.init();
@@ -12,6 +20,12 @@ async function initializeNode() {
     return node;
 }
 
+// Function to restart the ROS 2 Node
+// This function checks if the node is already initialized and destroys it if it is.
+// It then shuts down the rclnodejs library and re-initializes it.
+// After re-initialization, it creates a new node instance and starts spinning it.
+// This is useful for resetting the node state or reloading configurations without restarting the entire application.
+// It returns the newly created node instance.
 async function restartNode() {
     if (node) {
       console.log('Shutting down existing node...');
@@ -36,6 +50,11 @@ initializeNode().catch(error => {
     console.error('Error initializing ROS 2 Node:', error);
 });
 
+// Function to check if the ROS connection is available
+// This function checks if the 'controller_manager' node is available
+// and returns true if it is, otherwise returns false.
+// It uses the getNodeNames method to retrieve the list of available nodes.
+// If the node is not available, it logs an error message and returns false.
 async function checkROSConnection() {
     try {
         // Get the list of available topics
@@ -58,7 +77,7 @@ async function startService(active_controller_name) {
     return callService(client, {})
 }
 
-
+// ros2 service call /reset_mpc_service mpc_interfaces/srv/SimpleCommand "{}"
 async function resetService(active_controller_name) {
     const client = node.createClient('mpc_interfaces/srv/SimpleCommand', '/'+active_controller_name+'/reset_mpc_service');
     return callService(client, {});
@@ -75,6 +94,8 @@ async function switchTrajectory(active_controller_name, trajSelect) {
     return callService(client, { traj_select: trajSelect });
 }
 
+// Function to load and configure a controller
+// Equivalent to the ROS 2 CLI commands:
 // ros2 service call /controller_manager/load_controller controller_manager_msgs/srv/LoadController "{name: 'move_to_start_example_controller'}"
 // ros2 service call /controller_manager/configure_controller controller_manager_msgs/srv/ConfigureController "{name: 'move_to_start_example_controller'}"
 async function load_and_configure_controller_intern(controller_name) {
@@ -94,6 +115,8 @@ async function unloadController(controllerName) {
     return callService(client, { name: controllerName });
 }
 
+// Function to set the enable_single_joint_homing parameter
+// Equivalent to the ROS 2 CLI command:
 // ros2 param set /move_to_start_example_controller enable_single_joint_homing false
 async function set_enable_single_joint_homing(active_controller_name, enable) {
     const client = node.createClient('rcl_interfaces/srv/SetParameters', '/' + active_controller_name + '/set_parameters');
@@ -117,6 +140,7 @@ async function set_enable_single_joint_homing(active_controller_name, enable) {
     }
 }
 
+// Function to set the trajectory selection for homing
 async function set_trajectory_selection_homing(active_controller_name, value) {
     const client = node.createClient('rcl_interfaces/srv/SetParameters', '/' + active_controller_name + '/set_parameters');
     const request = {
@@ -192,7 +216,20 @@ function objectToString(obj) {
     return `{ ${entries.map(([key, value]) => `${key}: ${value}`).join(', ')} }`;
 }
 
+/** Function to call a ROS service with a request object.
+* @param {Object} client - The ROS service client.
+* @param {Object} request - The request object to send to the service.
+* @returns {Promise} - A promise that resolves with the response from the service.
+* @throws {Error} - Throws an error if the service is not available, if the request times out,
+*                   or if no response is received from the service.
+* @description This function checks if the service is available, sends the request, and handles the response.
+*                  It uses a timeout to ensure that the request does not hang indefinitely.
+*                  If the service is not available or if the request times out, it rejects the promise
+*                  with an appropriate error message. If a response is received, it resolves the promise
+*                  with the entire response object. If no response is received, it rejects the promise
+*                  with an error indicating that no response was received.
 
+*/
 function callService(client, request) {
     return new Promise((resolve, reject) => {
         // First, check if the service is available
@@ -217,6 +254,14 @@ function callService(client, request) {
     });
 }
 
+/** Function to call multiple services in sequence.
+* @param {Array} clients - An array of service clients.
+* @param {Array} requests - An array of request objects corresponding to each client.
+* @param {Array} status_strings - An array of status strings for logging.
+* @returns {Promise} - A promise that resolves with the combined results of all service calls.
+* @throws {Error} - Throws an error if the number of clients and requests do not match,
+*                   or if any service call fails.
+*/
 async function callMultipleServices(clients, requests, status_strings) {
     if (clients.length !== requests.length) {
         throw new Error('Error: The number of clients and requests must match.');
@@ -265,6 +310,9 @@ async function callMultipleServices(clients, requests, status_strings) {
     return results; // Return the array of responses
 }
 
+/** Function to get information about the available controllers.
+* @returns {Promise} - A promise that resolves with the controller information.
+*/
 async function get_controller_info() {
     const client = node.createClient(
         'controller_manager_msgs/srv/ListControllers',
@@ -361,4 +409,5 @@ async function get_controller_info() {
     return { controller_names, controller_active_states, active_controller_idx, active_controller_name, ok: true, name: name };
 }
 
-module.exports = { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, deactivate_control, activate_control, get_controller_info, objectToString, set_enable_single_joint_homing, set_trajectory_selection_homing};
+// export module functions
+module.exports = { checkROSConnection, restartNode, startService, resetService, stopService, switchTrajectory, switch_control, switch_casadi_mpc, switch_workspace_controller, deactivate_control, activate_control, get_controller_info, objectToString, set_enable_single_joint_homing, set_trajectory_selection_homing };

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# This script is used to run the Node.js application in a ROS 2 environment.
+# It is a websocket server that communicates with the ROS 2 system and can
+# be opened by using http://localhost:8080
+
 # enable ros
 if [ ! -d "/opt/ros/humble" ]; then
     source $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh

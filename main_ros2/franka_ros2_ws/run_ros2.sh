@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This script sets up the ROS2 environment and launches the Franka MPC controller.
+# It supports both release and debug builds and provides a help message for usage.
+
 # Enable colorized output and logging to stdout
 export RCUTILS_COLORIZED_OUTPUT=1
 export RCUTILS_LOGGING_USE_STDOUT=1
