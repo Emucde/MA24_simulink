@@ -1,4 +1,8 @@
 function R = quaternion2rotation(q)
+% quaternion2rotation converts a quaternion to a rotation matrix.
+%   R = quaternion2rotation(q) converts a quaternion q to a 3x3 rotation
+%   matrix R. The quaternion q is expected to be in the format [s, x, y, z],
+%   where s is the scalar part and (x, y, z) are the vector part.
     q = double(q);
     s = q(1);
     x = q(2);

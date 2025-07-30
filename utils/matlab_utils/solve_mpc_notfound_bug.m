@@ -1,4 +1,17 @@
 function solve_mpc_notfound_bug(simulink_main_model_name, mode)
+% solve_mpc_notfound_bug - Fixes the MPC not found bug in Simulink.
+% This function comments out all MPC blocks, reloads them, compiles the
+% Simulink model, and then uncomment them to ensure that the MPCs are
+% correctly loaded and found during simulation.
+% Usage:
+%   solve_mpc_notfound_bug(simulink_main_model_name, mode)
+% Inputs:
+%   simulink_main_model_name - Name of the main Simulink model (default is 'sim_discrete_7dof').
+%   mode - Operation mode, can be 'both', 'comment', 'uncomment', or 'reload'.
+%          'both' - Comment out MPCs, reload them, compile, and uncomment.
+%          'comment' - Only comment out MPCs and reload them.
+%          'uncomment' - Only uncomment MPCs.
+%          'reload' - Only reload MPCs without commenting.
 arguments
     simulink_main_model_name char = 'sim_discrete_7dof'
     mode char = 'both' % 'both', 'comment', 'uncomment', 'reload'

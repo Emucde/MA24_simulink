@@ -1,3 +1,6 @@
+% param_robot_ur5e_init.m
+% Initialization of the UR5e robot parameters for simulation and visualization
+
 param_vis.T = T_sim;
 
 Rx = @(al) [1 0 0; 0 cos(al) -sin(al); 0 sin(al) cos(al)];

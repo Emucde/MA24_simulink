@@ -1,4 +1,10 @@
-%% Calculate target positions
+%% This file initializes the trajectory parameters for the FR3 robot without hand, in 6 degrees of freedom (6DoF).
+% It includes various trajectories for the robot to follow, defined in a structured manner.
+% The trajectories are designed to test the robot's inverse kinematics and control capabilities.
+% The code is structured to allow for both predefined and random trajectories.
+% The trajectories are defined in terms of joint angles, end-effector positions, and orientations.
+% The code also includes parameters for the robot's dynamics and control.
+% The trajectories are created using polynomial and sinusoidal functions.
 cnt = 1;
 random_traj = false;
 

@@ -1,6 +1,8 @@
 import casadi.*;
 
 %% GENERATE OFFLINE TRAJECTORY
+% This script generates the offline trajectory data for the MPC.
+% It is used to create the param_traj struct and the param_traj_data struct.
 param_MPC_traj_data_mat_file = [s_fun_path, '/trajectory_data/param_traj_data.mat'];
 param_MPC_traj_data_bin_file = [s_fun_path, '/trajectory_data/param_traj_data.bin'];
 param_MPC_x0_init_bin_file = [s_fun_path, '/trajectory_data/param_x0_init.bin'];

@@ -1,3 +1,8 @@
+% This file creates the parameters for the 2 DOF robot manipulator.
+% It initializes the robot's degrees of freedom (DOF), task space dimensions,
+% and physical properties such as mass, inertia, and dimensions of the robot's links.
+% The parameters are used in simulations and control algorithms for the robot.
+
 %% PARAM ROBOT
 
 param_robot.n_DOF = 2; % DOF

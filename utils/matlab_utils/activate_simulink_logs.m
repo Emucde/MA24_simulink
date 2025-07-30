@@ -1,4 +1,8 @@
 % activate_simulink_logs
+% This function activates logging for Simulink models and sets up the
+% diagnostic viewer to log simulation data. It retrieves the selected
+% trajectory and controller from the Simulink model's combo boxes and
+% formats their labels for use in the log file name.
 
 % get_param(blk_name, 'ObjectParameters');
 if(bdIsLoaded(simulink_main_model_name))

@@ -1,3 +1,11 @@
+% Main script for B-spline curve fitting with directional constraints
+% This script demonstrates how to fit a B-spline curve to given data points
+% with specified tangential vectors at the endpoints and intermediate points.
+% It uses the `bsplineCurveFitting` function to compute the control points
+% and then visualizes the resulting curve and its derivatives.
+% The script also includes an example of how to compute the basis functions
+% and their derivatives efficiently.
+
 clc;clear;
 
 % Inputdaten:

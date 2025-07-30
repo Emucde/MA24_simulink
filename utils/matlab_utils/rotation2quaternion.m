@@ -1,5 +1,7 @@
 % Author:
 %  Mark Tincknell, MIT LL, 29 July 2011, revised 25 July 2017
+% It is not used because it is not robust enough and can lead to NaN values.
+% Please use rotm2quat_v4 instead.
 function eout = rotation2quaternion( R )
   % function eout = RotMat2e( R )
   % One Rotation Matrix -> one quaternion

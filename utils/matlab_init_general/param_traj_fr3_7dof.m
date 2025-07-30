@@ -1,4 +1,6 @@
-%% Calculate target positions
+%% This file initializes the parameters for a trajectory in the 7-DOF FR3 robot.
+% It sets up the initial and target poses, weights for the cost function,
+% and creates several trajectory structures with different types.
 Q_pos = 1e0 * eye(m);  % Weight for the position error in the cost function.
 Q_m = 0.5;             % Weight for the manipulability error in the cost function.
 Q_q = 1e5 * eye(n);    % Weight for the deviaton of q_sol to q_d

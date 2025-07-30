@@ -1,4 +1,7 @@
 function param_casadi_fun_name = init_custom_mpc_list()
+% init_custom_mpc_list
+%   This function initializes a structure containing the names and parameters
+%   of various Model Predictive Control (MPC) configurations.
     
     param_casadi_fun_name = struct;
     

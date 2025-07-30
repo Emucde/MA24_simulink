@@ -1,4 +1,8 @@
 function param_traj_data_out = param_traj_data_fun(traj_settings, method, data_index, param_traj_data_in, set_data)
+%PARAM_TRAJ_DATA_FUN Function to handle trajectory data in a structured way
+%   This function initializes, sets, or retrieves trajectory data based on the
+%   specified method. It operates on a structured format that contains trajectory
+%   data, allowing for easy manipulation and access to the data.
     arguments
         traj_settings struct
         method string {mustBeMember(method, {'init', 'set', 'get'})}

@@ -1,4 +1,10 @@
 function [param_traj_data] = generate_trajectory(param_traj, init_bus_param, traj_settings)
+%GENERATE_TRAJECTORY Generates the trajectory data based on the provided parameters and initial bus parameters.
+%   param_traj     - Structure containing trajectory parameters.
+%   init_bus_param - Initial bus parameters containing initial state information.
+%   traj_settings  - Structure containing settings for trajectory generation.
+%% Outputs:
+%   param_traj_data - Structure containing the generated trajectory data.
     N_traj = param_traj.N_traj;
     N_data = traj_settings.N_data;
     t = traj_settings.t;

@@ -1,3 +1,4 @@
+% This file was only used for testing purposes.
 % K_p_r = eye(3);
 % z2 = [1.23;2.709;3.23;4.00000019]/norm([1.23;2.709;3.23;4.00000019]); %xe0(4:7);
 % q_eps = z2(2:4);

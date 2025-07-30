@@ -1,3 +1,6 @@
+% init_mpc_weights_fr3_7dof.m
+% This script initializes the MPC weights for the FR3 robot.
+
 x_min = [param_robot.q_limit_lower; param_robot.q_p_limit_lower];
 x_max = [param_robot.q_limit_upper; param_robot.q_p_limit_upper];
 

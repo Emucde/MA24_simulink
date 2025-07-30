@@ -1,3 +1,8 @@
+% This file creates the parameters for the trajectory filter
+% for the 2DOF manipulator.
+% It is used in the Simulink model to filter the desired trajectory
+% inputs for the manipulator.
+
 %% Filter für xyz:
 lambda = -10;  %Eigenwert für Sollwertfilter, die Zeitkonstante ist dann
 % ja tau = 1/(abs(lambda)) in Sekunden, d. h. bei schnelleren

@@ -1,4 +1,14 @@
 function traj_struct_out = create_param_diff_filter(traj_struct, param_global, text1, lambda, text2, n_order, text3, n_input, type)
+%CREATE_PARAM_DIFF_FILTER Create a differential filter for trajectory parameters.
+%   traj_struct_out = CREATE_PARAM_DIFF_FILTER(traj_struct, param_global, text1, lambda, text2, n_order, text3, n_input, type)
+%   creates a differential filter for trajectory parameters based on the provided
+%   trajectory structure and global parameters. The filter is designed to
+%   compute the derivative of the trajectory parameters, which can be useful for
+%   trajectory tracking and control applications.
+%   The function allows customization of the filter's properties such as the
+%   eigenvalue (lambda), order of the filter (n_order), and number of inputs
+%   (n_input). The type of filter can also be specified, either as a standard
+%   differential filter or a joint space differential filter.
     arguments
         traj_struct struct {mustBeNonempty}
         param_global struct {mustBeNonempty}

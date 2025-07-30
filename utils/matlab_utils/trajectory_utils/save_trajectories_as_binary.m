@@ -1,4 +1,14 @@
 function save_trajectories_as_binary(param_traj_data, param_traj, traj_file, q0_init_file)
+% save_trajectories_as_binary - Saves trajectory data and initial conditions as binary files.
+% Syntax:
+%   save_trajectories_as_binary(param_traj_data, param_traj, traj_file, q0_init_file)
+% Inputs:
+%   param_traj_data - A structure containing trajectory data including positions, velocities, and orientations.
+%   param_traj - A structure containing initial conditions for the trajectory.
+%   traj_file - The name of the file where the trajectory data will be saved.
+%   q0_init_file - The name of the file where the initial conditions will be saved.
+% Outputs:
+%   Two binary files containing the trajectory data and initial conditions. Used for C++ in ROS2.
 
     % Extract sizes of the trajectory data.
     traj_size = size(param_traj_data.p_d);

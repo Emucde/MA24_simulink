@@ -1,4 +1,7 @@
 import casadi.*;
+% Create initial guess for MPC optimization problem
+% This script calculates the initial guess for the MPC optimization problem
+% based on the provided trajectory settings and parameters.
 
 if(overwrite_init_guess)
 

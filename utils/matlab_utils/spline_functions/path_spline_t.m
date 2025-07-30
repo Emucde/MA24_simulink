@@ -1,5 +1,13 @@
 function [sigma, dsigma, ddsigma, dddsigma] = path_spline_t(theta, param_path)
-    %% 
+    %% path_spline_t - Evaluate a B-spline path at a given parameter theta.
+    %  Inputs:
+    %    theta - parameter value in [0,1] for the path  
+    %    param_path - structure containing the B-spline path parameters
+    %  Outputs:
+    %    sigma - position on the path
+    %    dsigma - first derivative (tangent vector)
+    %    ddsigma - second derivative (curvature vector)
+    %    dddsigma - third derivative (jerk vector)
     theta_limit=max(min(theta,1-1e-6),0);
 
     degree=3;

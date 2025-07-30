@@ -1,4 +1,6 @@
 function v=unskew(S)
+  % UNSKEW - Converts a skew-symmetric matrix to a vector.
+  % Usage: v=unskew(S)
   tmp=S+S';
   tmp_norm=norm(tmp);
   if(length(S)~=3)

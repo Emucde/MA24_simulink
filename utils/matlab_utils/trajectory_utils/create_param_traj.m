@@ -1,4 +1,5 @@
 %% Trajectory selection
+% Select the appropriate trajectory parameters based on the robot name.
 
 if(strcmp(robot_name, 'fr3_7dof'))
     param_traj_fr3_7dof;

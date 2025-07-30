@@ -1,4 +1,16 @@
 function [x_d, x_kp1] = create_diff_filter_traj_jointspace(traj_select, t, x_k, param_traj, init_bus_param)
+    % create_diff_filter_traj_jointspace - Create trajectory in joint space using a differential filter.
+    % Syntax:
+    %   [x_d, x_kp1] = create_diff_filter_traj_jointspace(traj_select, t, x_k, param_traj, init_bus_param)
+    % Inputs:
+    %   traj_select - Index of the trajectory to select.
+    %   t - Time vector.
+    %   x_k - Current state vector.
+    %   param_traj - Structure containing trajectory parameters.
+    %   init_bus_param - Initial bus parameters.
+    % Outputs:
+    %   x_d - Desired state vector at time t.
+    %   x_kp1 - State vector at the next time step.
     param_diff_filter = param_traj.diff_filter_jointspace(traj_select).diff_filter_jointspace;
 
     start_index = param_traj.start_index(traj_select);

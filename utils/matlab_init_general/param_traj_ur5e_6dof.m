@@ -1,3 +1,7 @@
+% This file initializes trajectories for the UR5e robot in MATLAB.
+% It defines several trajectories with different parameters and types,
+% including polynomial and sinusoidal trajectories, as well as handling
+% singularities in the robot's workspace.
 %% TRAJECTORY 1: Polynomial 5. Order & WRIST SINGULARITY 1
 cnt = 1;
 

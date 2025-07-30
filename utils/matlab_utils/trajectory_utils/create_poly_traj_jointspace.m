@@ -1,4 +1,12 @@
-function [x_d] = create_poly_traj_jointspace(traj_select, t, param_traj, init_bus_param)  
+function [x_d] = create_poly_traj_jointspace(traj_select, t, param_traj, init_bus_param) 
+% create_poly_traj_jointspace - Creates a polynomial trajectory in joint space
+% Inputs:
+%   traj_select - Index of the trajectory to select
+%   t - Time at which to evaluate the trajectory
+%   param_traj - Structure containing trajectory parameters
+%   init_bus_param - Initial bus parameters for the trajectory
+% Outputs:
+%   x_d         - Structure containing the desired trajectory
     start_index = param_traj.start_index(traj_select);
     stop_index  = param_traj.stop_index(traj_select);
     t_val       = param_traj.time(start_index:stop_index);

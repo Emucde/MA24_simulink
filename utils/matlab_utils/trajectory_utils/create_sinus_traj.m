@@ -1,4 +1,12 @@
 function [x_d] = create_sinus_traj(traj_select, t, param_traj, init_bus_param)
+    % create_sinus_traj - Generates a sinusoidal trajectory based on the provided parameters.
+    % Inputs:
+    %   traj_select: Index of the trajectory to select.
+    %   t: Current time.
+    %   param_traj: Structure containing trajectory parameters.
+    %   init_bus_param: Initial bus parameters.
+    % Outputs:
+    %   x_d: Structure containing the desired trajectory
     param_sin_poly = param_traj.sin_poly(traj_select).sin_poly;
     start_index = param_traj.start_index(traj_select);
 

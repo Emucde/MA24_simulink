@@ -1,4 +1,4 @@
-%% Calculate target positions
+%% This file initializes the parameters for a trajectory in a 6-DOF manipulator simulation.
 cnt = 1;
 
 Q_pos = 1e0 * eye(m);  % Weight for the position error in the cost function.

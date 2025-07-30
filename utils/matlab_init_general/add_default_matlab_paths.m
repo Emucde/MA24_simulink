@@ -1,4 +1,6 @@
-% add default paths
+% This script adds the default paths to the MATLAB path.
+% It is intended to be run at the start of a MATLAB session to ensure
+% that all necessary directories are included in the MATLAB path.
 %restoredefaultpath
 
 % Default robot independent paths

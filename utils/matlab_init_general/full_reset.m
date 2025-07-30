@@ -1,3 +1,6 @@
+% Full reset of all files and folders in ./s_functions/robot_name/
+% This script is used to reset the environment for the MPC project.
+% it is used if the software should be reinstalled or if the casadi functions should be regenerated.
 if(full_reset_flag)
     % get name of starting script
     S = dbstack('-completenames');

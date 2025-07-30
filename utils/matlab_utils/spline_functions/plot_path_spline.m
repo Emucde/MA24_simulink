@@ -1,4 +1,8 @@
 function plot_path_spline(param_path, points, mode)
+%PLOT_PATH_SPLINE Plots a path spline and optionally points.
+%   param_path: function handle for the path spline, e.g., @path_spline
+%   points: optional 3D points to plot, given as a 3xN matrix
+%   mode: optional mode for plotting (1 for detailed, 0 for simple)
     
     % calculate points
     N_points = 1000;

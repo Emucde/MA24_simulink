@@ -1,3 +1,6 @@
+% This script renames the S-Function parameters of the MPC blocks in the Simulink model
+% to match the current MPC name selected in the controller combo box.
+% It also ensures that the S-Function modules are reloaded if necessary.
     mpc_list = get_param('sim_discrete_7dof/controller combo box', 'States');
     selected_mpc_index = str2double(get_param('sim_discrete_7dof/controller combo box', 'Value'));
     selected_mpc_label_name = mpc_list(selected_mpc_index).Label;

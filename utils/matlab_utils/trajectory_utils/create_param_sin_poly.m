@@ -1,4 +1,9 @@
 function traj_struct_out = create_param_sin_poly(traj_struct, param_global, text1, T, text2, phi)
+%CREATE_PARAM_SIN_POLY Create a sinusoidal polynomial trajectory.
+%   traj_struct_out = CREATE_PARAM_SIN_POLY(traj_struct, param_global, text1, T, text2, phi)
+%   creates a sinusoidal polynomial trajectory with the specified parameters.
+%   The trajectory is defined by the period T, angular frequency omega,
+%   and phase phi.
     arguments
         traj_struct struct {mustBeNonempty}
         param_global struct {mustBeNonempty}

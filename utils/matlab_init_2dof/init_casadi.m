@@ -1,3 +1,6 @@
+% This file initializes the CasADi library for use in MATLAB.
+% It sets up the necessary paths and imports the CasADi functions.
+
 % addpath('/media/daten/Anwendungen/casadi-3.6.4-linux64-matlab2018b/')
 casadi_path=getenv('casadi_path');
 if isempty(casadi_path)

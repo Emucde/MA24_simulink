@@ -1,3 +1,4 @@
+% This file creates a random trajectory for the 6-DOF manipulator without hand.
 %% Trajectory X: random sing, Workspace, Polynomial
 q_0 = param_robot.q_0_ref';
 q_0(n_indices) = rand(6,1);

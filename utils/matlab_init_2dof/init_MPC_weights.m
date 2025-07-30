@@ -1,3 +1,6 @@
+% This file initializes the weights for the Model Predictive Control (MPC) of a 2-DOF manipulator.
+% It sets the weights for different MPC configurations and defines the constraints for the state and control inputs
+
 %%%%%%%%%%%%%%%%%%%%%%%%%% (MPC 1) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MPC='MPC1';
 param_weight.(MPC).Q_y      = 1e5*diag([1 1]);  % d_kpn

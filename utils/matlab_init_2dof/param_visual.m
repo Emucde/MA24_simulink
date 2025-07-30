@@ -1,3 +1,7 @@
+% This file creates the parameters for the visualization of the 2DOF manipulator
+% in Simulink. It is used in the Simulink model and the Simscape model.
+% The parameters are used to visualize the robot and its components.
+
 param_vis.T = T_sim;
 
 Rx = @(al) [1 0 0; 0 cos(al) -sin(al); 0 sin(al) cos(al)];

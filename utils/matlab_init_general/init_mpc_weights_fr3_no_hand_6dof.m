@@ -1,3 +1,6 @@
+% init_mpc_weights_fr3_no_hand_6dof.m
+% This function initializes the MPC weights for the FR3 robot without hand in 6 DOF
+% configuration by reading from a JSON file.
 function [param_weight_init, param_weight] = init_mpc_weights_fr3_no_hand_6dof(configFile)
     if nargin < 1
         configFile = './config_settings/casadi_mpc_weights_fr3_no_hand_simulink.json';

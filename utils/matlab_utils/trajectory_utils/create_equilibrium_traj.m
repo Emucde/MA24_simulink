@@ -1,4 +1,12 @@
 function [x_d] = create_equilibrium_traj(traj_select, t, param_traj, init_bus_param)
+% create_equilibrium_traj - Creates an equilibrium trajectory based on the selected trajectory and time.
+% Inputs:
+%   traj_select - Index of the trajectory to select.
+%   t           - Time vector.
+%   param_traj  - Structure containing trajectory parameters.
+%   init_bus_param - Initial bus parameters.
+% Outputs:
+%   x_d         - Structure containing the desired state of the system. 
     start_index = param_traj.start_index(traj_select);
     stop_index  = param_traj.stop_index(traj_select);
     t_val       = param_traj.time(start_index:stop_index);

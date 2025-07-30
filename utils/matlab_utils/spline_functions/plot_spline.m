@@ -1,4 +1,5 @@
 function plot_spline(bspline, QQ, TT, alpha, Ind_deriv, theta_arr, tangscale)
+    % plot_spline - Plots the spline defined by control points and tangents.
     % Input:
     %   PP: Control points
     %   DD: Tangents

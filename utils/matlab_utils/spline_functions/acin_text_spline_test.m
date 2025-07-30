@@ -1,4 +1,5 @@
 function [bsplines] = acin_text_spline_test(pos, xscale, yscale)
+    % acin_text_spline_test - Test function for spline functions in the acin text
 
     %Rx = @(al) [1 0 0; 0 cos(al) -sin(al); 0 sin(al) cos(al)];
     %Ry = @(al) [cos(al) 0 sin(al); 0 1 0; -sin(al) 0 cos(al)];

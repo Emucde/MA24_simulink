@@ -1,3 +1,8 @@
+% get_robot_name.m
+% This function retrieves the name of the robot from a Simulink model.
+% It checks if the Simulink model is loaded and retrieves the robot name
+% from a combo box block. If the model is not loaded, it uses a default
+% robot name defined in an external file.
 if(bdIsLoaded(simulink_main_model_name))
     robot_blk_name = [simulink_main_model_name, '/robot name combo box'];
     % get all possible robot names e. g. fr3_7dof, fr3_6dof, ur5e_6dof from Labels of combo box,:

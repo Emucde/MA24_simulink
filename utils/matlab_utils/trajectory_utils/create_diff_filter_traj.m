@@ -1,4 +1,17 @@
 function [x_d, x_kp1] = create_diff_filter_traj(traj_select, t, x_k, param_traj, init_bus_param)
+% create_diff_filter_traj - Creates the differential filter trajectory
+%   [x_d, x_kp1] = create_diff_filter_traj(traj_select, t, x_k, param_traj, init_bus_param)
+%   This function computes the differential filter trajectory based on the
+%   selected trajectory and the current time `t`. It uses the parameters from `param_traj` and initializes the bus parameters from `init_bus_param`.
+% Inputs:
+%       traj_select: Index of the trajectory to select.
+%       t: Current time at which the trajectory is evaluated.
+%       x_k: Current state vector.
+%       param_traj: Structure containing trajectory parameters.
+%       init_bus_param: Structure containing initial bus parameters.
+% Outputs:
+%       x_d: Structure containing the desired state vector.
+%       x_kp1: State vector for the next time step.
     param_diff_filter = param_traj.diff_filter(traj_select).diff_filter;
 
     start_index = param_traj.start_index(traj_select);

@@ -1,4 +1,20 @@
-function [x_d] = create_poly_traj(traj_select, t, param_traj, init_bus_param)  
+function [x_d] = create_poly_traj(traj_select, t, param_traj, init_bus_param) 
+% create_poly_traj - Creates a polynomial trajectory based on the selected trajectory parameters.
+% Syntax:
+%   [x_d] = create_poly_traj(traj_select, t, param_traj, init_bus_param)
+%% Inputs:
+%   traj_select - Index of the trajectory to select from param_traj.
+%   t           - Current time at which the trajectory is evaluated.
+%   param_traj  - Structure containing trajectory parameters including:
+%                 - pose: 3D positions and orientations.
+%                 - alpha: orientation angles.
+%                 - rotation: rotation matrices.
+%                 - rot_ax: rotation axes.
+%                 - start_index: starting indices for each trajectory segment.
+%                 - stop_index: stopping indices for each trajectory segment.
+%   init_bus_param - Initial bus parameters containing initial state information.
+%% Outputs:
+%   x_d         - Structure containing the desired trajectory
     start_index = param_traj.start_index(traj_select);
     stop_index  = param_traj.stop_index(traj_select);
     t_val       = param_traj.time(start_index:stop_index);

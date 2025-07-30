@@ -1,4 +1,7 @@
-% Simulink: convert plots to figure:
+% Convert a figure to a data structure
+% This script reads the data from a figure and saves it in a structured format.
+% The data structure contains the signals from each subplot, including their
+% names, X and Y data, line styles, and colors.
 
 fig = gcf;
 %dataObjs = findobj(fig,'-property','YData'); % unsorted reading

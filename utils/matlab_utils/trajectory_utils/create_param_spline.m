@@ -1,4 +1,20 @@
 function traj_struct_out = create_param_spline(traj_struct, param_global, text1, Ind_deriv, text2, alpha, text3, p)
+%CREATE_PARAM_SPLINE Create a parametric spline trajectory from a given trajectory structure.
+%   traj_struct_out = CREATE_PARAM_SPLINE(traj_struct, param_global, text1, Ind_deriv, text2, alpha, text3, p)
+%   creates a parametric spline trajectory based on the input trajectory structure.
+%   The function allows for customization of the spline parameters such as
+%   the indices of derivatives, the scaling factors (alpha), and the polynomial order (p).
+%%   Inputs:
+%       traj_struct - Structure containing the trajectory data.
+%       param_global - Global parameters for the trajectory.
+%       text1 - Description for the derivative indices (default: 'Ind_deriv').
+%       Ind_deriv - Indices of the derivatives to be used in the spline (default: [1 1]).
+%       text2 - Description for the scaling factors (default: 'alpha').
+%       alpha - Scaling factors for the derivatives (default: [1 1]).
+%       text3 - Description for the polynomial order (default: 'order').
+%       p - Polynomial order for the spline (default: 3).
+%%   Outputs:
+%       traj_struct_out - Structure containing the updated trajectory with the spline.
     arguments
         traj_struct struct {mustBeNonempty}
         param_global struct {mustBeNonempty}

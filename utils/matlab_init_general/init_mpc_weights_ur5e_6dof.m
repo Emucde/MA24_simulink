@@ -1,3 +1,5 @@
+% This file initializes the MPC weights for the UR5e 6-DOF robot manipulator.
+% It sets up the parameters for different MPC configurations.
 x_min = [param_robot.q_limit_lower; param_robot.q_p_limit_lower];
 x_max = [param_robot.q_limit_upper; param_robot.q_p_limit_upper];
 

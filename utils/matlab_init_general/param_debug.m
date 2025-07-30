@@ -1,4 +1,4 @@
-% Sarvitsky Golay Filter for mean of data.
+% Sarvitsky Golay Filter for mean of data in Simulink
 
 d=2;
 N_data = 301; % should be odd

@@ -1,4 +1,7 @@
 function [sigma, dsigma, ddsigma, dddsigma] = path_spline_r(theta, param_path)
+%% path_spline_r
+%   Computes the rotation matrix and its derivatives for a given path
+%   parameterized by a B-spline.
     %% 
     theta_limit=max(min(theta,1-1e-6),0);
 

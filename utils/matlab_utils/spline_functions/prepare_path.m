@@ -1,6 +1,9 @@
 function param_path = prepare_path(H_ee, time)
-%PREPARE_PATH Summary of this function goes here
-%   Detailed explanation goes here
+%PREPARE_PATH Prepare the path for spline interpolation.
+%   param_path = prepare_path(H_ee, time) takes the end-effector poses
+%   H_ee and the corresponding time vector, and prepares the path for
+%   spline interpolation by extracting control points, orientations, and
+%   velocities.
 
     degree = 3;
 

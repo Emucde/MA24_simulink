@@ -1,3 +1,8 @@
+% This file initializes the CasADi library for use in MATLAB.
+% It checks for the CasADi path in the environment variable `casadi_path`
+% and adds it to the MATLAB path. If the variable is not set, it attempts
+% to read it from the `~/.bashrc` file. The script also sets the Gurobi
+% version environment variable to avoid singularities in Gurobi.
 % add e.g.
 %   export casadi_path=/media/daten/Anwendungen/casadi-3.6.6-linux64-matlab2018b
 % to ~/.bashrc

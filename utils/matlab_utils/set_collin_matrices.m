@@ -1,4 +1,6 @@
 function [R, K] = set_collin_matrices(R_J_d, K_J, param_robot)
+    % set_collin_matrices - Set the collins matrices R and K based on the
+    % given R_J_d and K_J structures.
     %given:
     % R_J_d = struct( ...
     % 'r21', 0, ...

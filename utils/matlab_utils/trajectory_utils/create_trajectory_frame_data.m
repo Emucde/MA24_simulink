@@ -1,3 +1,8 @@
+% Create trajectory frame data for visualization in Simulink 3D Animation
+%% This function sets up the trajectory frame data for a given trajectory
+% selection, including path coordinates
+% and frame coordinates, and prepares them for visualization in Simulink.
+
 if(bdIsLoaded(simulink_main_model_name))
 
     %% Kosmetische Einstellungen (Path Coords)

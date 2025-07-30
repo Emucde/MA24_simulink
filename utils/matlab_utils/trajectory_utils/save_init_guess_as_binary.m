@@ -1,5 +1,12 @@
 function save_init_guess_as_binary(init_guess_arr, file_name)
-    % init guess should be a 2d array!
+% save_init_guess_as_binary - Saves an initial guess trajectory as a binary file.
+% Syntax:
+%   save_init_guess_as_binary(init_guess_arr, file_name)
+% Inputs:
+%   init_guess_arr - A 2D array representing the initial guess trajectory.
+%   file_name - The name of the file where the trajectory will be saved.
+% Outputs:
+%   A binary file containing the trajectory data. Used for C++ in ROS2.
 
     data_size = size(init_guess_arr);
     if(length(data_size) > 2)

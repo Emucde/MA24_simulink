@@ -1,5 +1,13 @@
 function [sigma, dsigma, ddsigma, dddsigma] = path_spline(theta, param_path)
-    %% 
+    % path_spline evaluates a B-spline path at a given parameter theta.
+    % The path is defined by the param_path structure containing:
+    %   - position: 4xN matrix of control points
+    %   - rotation: 4xN matrix of control point orientations (quaternions)
+    %   - delta: 4xN matrix of control point velocities (quaternions)
+    %   - knots: vector of knot values
+    %   - degree: degree of the B-spline
+    % The output is a transformation matrix sigma, its first derivative dsigma,
+    % second derivative ddsigma, and third derivative dddsigma at the given theta.
     theta_limit=max(min(theta,1-1e-6),0);
 
     degree=3;
