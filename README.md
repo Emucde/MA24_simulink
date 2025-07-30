@@ -1,12 +1,50 @@
 # MA24_simulink
-<details>
-  <summary>INSTALLATION</summary>
-To install the MA24_simulink package, follow these steps:<br>
-1) Clone the repository:
+
+## Install
+To install the MA24_simulink package, follow these steps:
+1) Clone the repository
+2) Open the project in vscode. In Vscode install the following extensions:
+   - Python
+   - C/C++
+   - Cmake Tools
+   - ROS2
+   - Task Runner
+   - URDF
+3) Install anaconda with necessary packages and select it in vscode
 ```bash
-git clone https://github.com/Emucde/MA24_simulink
+wget https://repo.anaconda.com/archive/Anaconda3-2024.10-1-Linux-x86_64
+conda create -n mpc python=3.12
+conda config --add channels conda-forge
+conda config --set channel_priority strict
+conda install pinocchio crocoddyl nodejs casadi numpy
 ```
-</details>
+4) Install ROS2
+  - Follow the instructions on the [ROS2 Humble installation page](https://docs.ros.org/en/humble/Installation.html) to install ROS2 Humble.
+  - Install ros-humble-desktop ros-humble-pinocchio python3-rostopic
+5) Install libfranka
+6) Install CasAdi
+7) run parameters_7dof.m with (Line 38): `full_reset_flag = true;` and follow the instructions in the terminal.
+8) Set the flag `full_reset_flag = false;` in parameters_7dof.m
+9) Run the file mpc_casadi_main.m to generate the MPC controller.
+10) Run the task runner task "Build ALL (ROS2 Release)
+11) Install Nodejs dependencies
+```bash
+# source the ROS2 environment
+conda activate mpc
+source /opt/ros/humble/setup.bash
+source $CONDA_PREFIX/etc/profile.d/conda.sh
+conda activate mpc
+# Source the workspace
+source ./MA24_simulink/main_ros2/franka_ros2_ws/build_release/install/setup.bash
+cd ./MA24_simulink/main_ros2/nodejs_ros2_gui/
+npm install
+```
+12) Turn on the robot and enable FCI
+13) Start the task runner tasks 
+  - "Python run main_crocoddyl_7DOF.py"
+  - "NodeJS run ROS2 GUI"
+  - "Run ROS2 (Release)"
+14) Open the NodeJS GUI in your browser at `http://localhost:8080/`
 
 <details>
   <summary>Group: plugin_OSQP: opts.qpsol_options.osqp</summary>
