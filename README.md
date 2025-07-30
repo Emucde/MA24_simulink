@@ -1,5 +1,14 @@
 # MA24_simulink
 <details>
+  <summary>INSTALLATION</summary>
+To install the MA24_simulink package, follow these steps:<br>
+1) Clone the repository:
+```bash
+git clone https://github.com/Emucde/MA24_simulink
+```
+</details>
+
+<details>
   <summary>Group: plugin_OSQP: opts.qpsol_options.osqp</summary>
 <a name='options' href='https://osqp.org/docs/interfaces/solver_settings.html'>https://osqp.org/docs/interfaces/solver_settings.html</a><br>
 <a name='options' href='https://github.com/casadi/casadi/blob/main/casadi/interfaces/osqp/osqp_interface.cpp'>Supported Settings by CasADI: opts.qpsol_options.osqp</a><br><table>
