@@ -1,3 +1,5 @@
+# Function to convert MATLAB .mat files to Plotly plots
+
 import scipy.io as sio
 import numpy as np
 import plotly.graph_objects as go

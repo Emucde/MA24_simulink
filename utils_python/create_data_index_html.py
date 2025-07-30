@@ -1,3 +1,6 @@
+# This script creates an HTML index file for a directory structure containing data files.
+# It generates a structured HTML page with links to data files, settings, and videos.
+
 import os
 import re
 from bs4 import BeautifulSoup

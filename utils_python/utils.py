@@ -1,3 +1,7 @@
+# utils.py
+# This file contains utility functions for various tasks including trajectory generation,
+# data processing, and shared memory management for a robotic control system.
+
 import numpy as np
 from scipy.spatial.transform import Rotation
 import scipy as sp
@@ -133,6 +137,7 @@ def create_poly_traj(yT, y0, t, R_init, rot_ax, rot_alpha_scale, param_traj_poly
     
     return x_d
 
+# This function generates a trajectory based on the provided parameters.
 def generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_traj=False):
     T_start = param_traj_poly['T_start']
     T_poly = param_traj_poly['T_poly']
@@ -193,6 +198,7 @@ def generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_tr
 
     return traj_data
 
+# This function plots the trajectory data using Plotly.
 def create_custom_trajectory(q_k, param_target, TCP_frame_id, robot_model, robot_data, mpc_settings, param_traj_poly, plot_traj=False):
     # generate init trajectory
     xeT = param_target['p_d']
@@ -207,6 +213,7 @@ def create_custom_trajectory(q_k, param_target, TCP_frame_id, robot_model, robot
     dt = mpc_settings['Ts']
     return generate_trajectory(dt, xe0, xeT, R_init, R_target, param_traj_poly, plot_traj=plot_traj)
 
+# This function creates a transient trajectory by merging an initial trajectory with a desired trajectory.
 def create_transient_trajectory(q_k, TCP_frame_id, robot_model, robot_data, traj_data, mpc_settings, param_traj_poly, plot_traj=False):
 
     # Extract data from y_d_data
@@ -275,10 +282,12 @@ def create_transient_trajectory(q_k, TCP_frame_id, robot_model, robot_data, traj
 
     return merged_trajectory
 
+# This function formats the elapsed time and prints it in a human-readable format.
 def tic():
     global start_time
     start_time = time.time()
 
+# This function calculates the elapsed time since the last call to tic() and prints it in a formatted string.
 def toc():
     if 'start_time' in globals():
         elapsed_time = time.time() - start_time
@@ -287,6 +296,7 @@ def toc():
     else:
         print("Call tic() before calling toc()")
 
+# This class implements a simple stopwatch functionality with methods to start, stop, and reset the timer.
 class TicToc:
     def __init__(self):
         self.start_time = None
@@ -328,6 +338,7 @@ class TicToc:
         self.start_time = None
         self.elapsed_total_time = 0
 
+# This function formats the frequency in a human-readable string with specified precision.
 def format_freq(frequency, precision):
     if frequency == 0:
         return "0 Hz"
@@ -338,6 +349,7 @@ def format_freq(frequency, precision):
     else:
         return f"{frequency/1e6:.{precision}f} MHz"
 
+# This function formats the elapsed time based on its magnitude and returns a string representation.
 def format_time(elapsed_time, precision=2):
     """Formats the elapsed time based on its magnitude."""
     if elapsed_time == 0:
@@ -355,6 +367,7 @@ def format_time(elapsed_time, precision=2):
         seconds = elapsed_time % 60
         return f"{minutes} min {seconds:.{precision}f} s"
 
+# This function formats a long list of times into a string representation, limiting the number of entries displayed.
 def format_long_list(time_list, max_entries=8):
     if len(time_list) <= max_entries:
         return str(time_list).replace("'", "")
@@ -362,9 +375,11 @@ def format_long_list(time_list, max_entries=8):
         formatted_start = str(time_list[:max_entries]).replace("'", "")[:-1]  # Remove last bracket
         return f"{formatted_start}, ..., {time_list[-2]}, {time_list[-1]}]"
 
+# This function creates a block diagonal matrix from two input matrices.
 def block_diag_onlydiagmatr(a, b):
     return np.kron(a, b)
 
+# This function creates a block diagonal matrix from two input matrices, filling the off-diagonal blocks with zeros.
 def block_diag(a, b):
     an, am = a.shape
     bn, bm = b.shape
@@ -402,6 +417,7 @@ def smooth_signal_savgol(signal, window_length, poly_order):
     
     return final_smoothed_signal
 
+# This function processes trajectory data by extracting relevant information for a selected trajectory.
 def process_trajectory_data(traj_select, traj_data_all, traj_param_all):
     # Extract N_traj_true and t
     N_traj_true = traj_data_all['N'][0, 0][0, 0]
@@ -445,6 +461,7 @@ def process_trajectory_data(traj_select, traj_data_all, traj_param_all):
 
     return traj_data, traj_init_config
 
+# This function extracts trajectory data and initial configuration data for a given trajectory.
 def get_trajectory_data(traj_data, traj_init_config, n_indices):
     p_d = traj_data['p_d']
     p_d_p = traj_data['p_d_p']
@@ -455,6 +472,7 @@ def get_trajectory_data(traj_data, traj_init_config, n_indices):
     q_0_pp = traj_init_config['q_0_pp'][:]
     return p_d, p_d_p, p_d_pp, R_d, q_0_pp
 
+# This function loads the MPC configuration from a JSON file and returns the MPC settings and parameters.
 def load_mpc_config(robot_model, file_path='config_settings/mpc_weights_crocoddyl.json'):
     with open(file_path, 'r') as f:
         config = json.load(f)
@@ -477,6 +495,7 @@ def load_mpc_config(robot_model, file_path='config_settings/mpc_weights_crocoddy
     
     return mpc_settings, param_mpc_weight
 
+# This function removes shared memory from the resource tracker to avoid issues with shared memory cleanup.
 def remove_shm_from_resource_tracker():
     def fix_register(name, rtype):
         if rtype == "shared_memory":
@@ -497,6 +516,7 @@ def remove_shm_from_resource_tracker():
 # Call this function before creating shared memory
 remove_shm_from_resource_tracker()
 
+# This function initializes shared memory for communication between Python and C++ processes.
 def initialize_shared_memory():
     remove_shm_from_resource_tracker()
     n_dof = 7  # (input data from simulink are 7dof states q, qp)
@@ -563,6 +583,7 @@ def initialize_shared_memory():
 
     return shm_objects, shm_data
 
+# This function calculates the n-DOF torque with feedforward for fixed joints.
 def calculate_ndof_torque_with_feedforward(u, x_k_ndof, robot_model_full, robot_data_full, n, n_indices, kin_model):
     """
     Calculate n-DOF torque with feedforward for fixed joints:
@@ -1043,7 +1064,7 @@ def get_int_type(int_type):
     else:
         raise ValueError("int_type must be 'euler', 'RK2', 'RK3' or 'RK4'")
 
-
+# This function creates the OCP problem for the MPC.
 def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=False):
     int_type = mpc_settings['int_method']
     N_MPC = mpc_settings['N_MPC']
@@ -1205,7 +1226,7 @@ def ocp_problem_v1(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
     problem = crocoddyl.ShootingProblem(x_k, seq, terminalCostModel)
     return problem
 
-# def ocp_problem_v3(start_index, end_index, N_step, state, x0, TCP_frame_id, traj_data, param_mpc_weight, dt, int_type='euler', use_bounds=False):
+# This function creates the OCP problem for the MPC.
 def ocp_problem_v3(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weight, mpc_settings, use_bounds=False):
     ###################
     # Reihenfolge beachten:
@@ -1388,7 +1409,7 @@ def ocp_problem_v3(x_k, y_d_ref, state, TCP_frame_id, param_traj, param_mpc_weig
 
 
 #############
-
+# This function returns the functions for the MPC problem.
 def get_mpc_funs(problem_name):
     if problem_name == 'MPC_v1_soft_terminate':
         return crocoddyl.SolverDDP, first_init_guess_mpc_v1, create_ocp_problem_v1_soft, simulate_model_mpc_v1, next_init_guess_mpc_v1
@@ -1420,6 +1441,7 @@ def create_ocp_problem_v3_bounds_yN_ref(x_k, y_d_ref, state, TCP_frame_id, param
 
 ##############
 
+# This function returns the first initial guess for the MPC problem.
 def next_init_guess_mpc_v1(ddp, nq, nx, robot_model, robot_data, mpc_settings, param_traj):
     # N_MPC = mpc_settings['N_MPC']
     # int_time = param_traj['int_time']
@@ -1470,6 +1492,7 @@ def next_init_guess_mpc_v1(ddp, nq, nx, robot_model, robot_data, mpc_settings, p
 
     return xs_init_guess, us_init_guess
 
+# This function simulates the model for the MPC problem.
 def simulate_model_mpc_v1(xk, uk, dt, nq, nx, robot_model, robot_data, param_robot, traj_data):
 
     # Modell Simulation
@@ -1484,6 +1507,7 @@ def simulate_model_mpc_v1(xk, uk, dt, nq, nx, robot_model, robot_data, param_rob
 
     return xkp1
 
+# This function simulates the model for the MPC problem and returns the next state, input, and initial guesses.
 def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, param_robot, traj_data):
 
     xk = ddp.xs[0] # muss so sein, da x0 in ddp.xs[0] gespeichert ist
@@ -1512,6 +1536,7 @@ def simulate_model_mpc_v3(ddp, i, dt, nq, nx, robot_model, robot_data, param_rob
 
     return xk, xs_i, us_i, xs_init_guess, us_init_guess
 
+# This function simulates the model for the MPC problem.
 def sim_model(robot_model, robot_data, q, q_p, tau, dt):
     q_pp     = pinocchio.aba(robot_model, robot_data, q, q_p, tau)
     q_p_next = q_p + dt * q_pp # Euler method
@@ -1519,7 +1544,7 @@ def sim_model(robot_model, robot_data, q, q_p, tau, dt):
     return q_next, q_p_next
 
 ###############
-
+# This function returns the first initial guess for the MPC problem.
 def first_init_guess_mpc_v1(tau_init_robot, x_0_red, N_traj, N_MPC, param_robot, traj_data):
     nu = param_robot['n_dof']
     nx = 2*nu
@@ -1532,6 +1557,7 @@ def first_init_guess_mpc_v1(tau_init_robot, x_0_red, N_traj, N_MPC, param_robot,
     us = np.zeros((N_traj, nu))
     return xk, xs, us, xs_init_guess, us_init_guess
 
+# This function returns the first initial guess for the MPC problem.
 def first_init_guess_mpc_v3(tau_init_robot, x_0_red, N_traj, N_MPC, param_robot, traj_data):
     nu = param_robot['n_dof']
     nx = 2*nu
@@ -1547,11 +1573,13 @@ def first_init_guess_mpc_v3(tau_init_robot, x_0_red, N_traj, N_MPC, param_robot,
     return xk, xs, us, xs_init_guess, us_init_guess
 
 ###################################################################################################################
+# This function adds noise to the data.
 def add_noise(data, gain=1e-3, mean=0, std=0.01):
     arr = np.array(data)
     noisy_data = arr + gain*np.random.normal(mean, std, arr.shape)
     return [np.array(row) for row in noisy_data]
 
+# This function checks the solver status and prints warnings or errors if necessary.
 def check_solver_status(warn_cnt, hasConverged, ddp, i, dt, conv_max_limit=5):
     error = 0
     
@@ -1577,6 +1605,7 @@ def check_solver_status(warn_cnt, hasConverged, ddp, i, dt, conv_max_limit=5):
     #     error = 1
     return warn_cnt, error
 
+# This function initializes the Crocoddyl problem for the MPC.
 def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_full, traj_data, traj_init_config, param_robot, param_traj_poly, TCP_frame_id, use_custom_trajectory=False, param_target=None):
     # because later I add the initial trajectory to the true trajectory
     n_dof = param_robot['n_dof']
@@ -1718,6 +1747,7 @@ def init_crocoddyl(x_k, robot_model, robot_data, robot_model_full, robot_data_fu
 
     return ddp, xs, us, xs_init_guess, us_init_guess, TCP_frame_id, N_traj, Ts, hasConverged, warn_cnt, MPC_traj_indices, N_solver_steps, simulate_model, next_init_guess_fun, mpc_settings, param_mpc_weight, transient_traj, param_traj, title_text
 
+# This function initializes the reference lists for the MPC problem.
 def init_reference_lists(ddp, param_mpc_weight):
     # v3: update reference values
     tcp_pose_list = []
@@ -1745,7 +1775,7 @@ def init_reference_lists(ddp, param_mpc_weight):
 ###########################################################################
 ################################# PLOTTING ################################
 ###########################################################################
-
+# This function plots the trajectory data in a 3x3 grid of subplots.
 def plot_trajectory(traj_data):
     """
     Plots the x, y, z components of p_d, p_d_p, and p_d_pp in 9 subplots.
@@ -1771,6 +1801,7 @@ def plot_trajectory(traj_data):
     plt.tight_layout()
     plt.show()
 
+# This function generates a sequence of multiples of 2, starting from the smallest power of 2 greater than or equal to `start` and going up to `end`.
 def generate_multiples(start, end):
         # Start with the smallest power of 2 greater than or equal to start
         current = 2 ** np.ceil(np.log2(start))
@@ -1789,6 +1820,7 @@ def generate_multiples(start, end):
         
         return np.array(multiples)
 
+# This function calculates the 7-DOF data for the robot, including position, orientation, and control inputs.
 def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, freq_per_Ta_step, param_robot):
     # detect nan in us and xs and set them to zero
     if np.isnan(us).any():
@@ -2289,7 +2321,7 @@ def calc_7dof_data(us, xs, TCP_frame_id, robot_model, robot_data, traj_data, fre
 ###########################################################################
 ###########################################################################
 ###########################################################################
-
+# This function starts the node data logger script in the background, ensuring that only one instance runs at a time.
 def start_node_data_logger():
     LOCK_FILE = '/tmp/node_data_logger.lock'
     SCRIPT_PATH = 'main_python/node_data_logger.py'
@@ -2333,6 +2365,7 @@ def start_node_data_logger():
             print("Could not acquire lock. node_data_logger may be running.")
             return False
 
+# This function starts a WebSocket server in the background and sends a message to it.
 def start_server(broadcast_message = 'reload_plotly'):
     LOCK_FILE = '/tmp/my_server.lock'
     SCRIPT_PATH = 'main_python/websocket_fr3.py'
@@ -2377,6 +2410,7 @@ def start_server(broadcast_message = 'reload_plotly'):
             print("Could not acquire lock. Server may be running.")
             return False
 
+# This function sends a message to the WebSocket server.
 async def send_message(message, port=8765):
     try:
         async with websockets.connect(f"ws://localhost:{port}") as websocket:
@@ -2392,6 +2426,7 @@ async def send_message(message, port=8765):
     
     return False
 
+# This function returns a JavaScript script that automatically rescales the axes of a Plotly graph based on the data displayed.
 def get_autoscale_script():
     return '''
         rec_time = 100; //ms
@@ -2529,6 +2564,7 @@ def get_autoscale_script():
         setTimeout(autoscale_function, rec_time);
         '''
 
+# returns the script for a WebSocket connection that reloads the page when a specific message is received
 def get_reload_tab_script(reload_message = 'reload_plotly'):
     return '''
             function connectWebSocket() {
@@ -2687,6 +2723,7 @@ def get_custom_download_button_script():
     setTimeout(add_custom_button, rec_time_btn);
     '''
 
+# This function returns a JavaScript script that stores the camera pose in Meshcat when the user clicks on the Meshcat pane.
 def store_meshcat_camera_script():
     return '''
     var count = 0;
@@ -2767,6 +2804,7 @@ def store_meshcat_camera_script():
     save_cam_pose();
     '''
 
+# This function plots the solution of a 7-DOF robot using Plotly, with options for saving the plot and reloading the page.
 def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', plot_fig=True, matlab_import=True, reload_page=False, title_text=''):
     subplot_number = len(subplot_data)
     sig_labels = np.empty(24, dtype=object)
@@ -2873,6 +2911,7 @@ def plot_solution_7dof(subplot_data, save_plot=False, file_name='plot_saved', pl
         else: # otherwise open in browser
             webbrowser.open('file://' + file_name)
 
+# This function plots the solution of a robot model using pinocchio and Plotly, with options for saving the plot and reloading the page.
 def plot_solution(us, xs, t, TCP_frame_id, robot_model, traj_data, save_plot=False, file_name='plot_saved', plot_fig=True):
     robot_data = robot_model.createData()
 
@@ -3066,6 +3105,7 @@ def plot_solution(us, xs, t, TCP_frame_id, robot_model, traj_data, save_plot=Fal
     
     return y_opt, y_opt_p, y_opt_pp, e, e_p, e_pp, w, q, q_p, q_pp, tau
 
+# This function plots the solution of a Model Predictive Control (MPC) problem using the DDP (Differential Dynamic Programming) algorithm.
 def plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, traj_data):
     xs = np.array(ddp.xs)
     us = np.array(ddp.us)
@@ -3076,7 +3116,8 @@ def plot_mpc_solution(ddp, i, dt, N_horizon, N_step, TCP_frame_id, robot_model, 
         'p_d_pp': traj_data['p_d_pp'][:, i:i+N_step*N_horizon:N_step]
     }
     plot_solution(us, xs, t, TCP_frame_id, robot_model, param_trajectory_copy)
-    
+
+# This function plots the current solution of a Model Predictive Control (MPC) problem using the DDP (Differential Dynamic Programming) algorithm.
 def plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, traj_data):
     param_trajectory_copy = {
         'p_d':    traj_data['p_d'][:,    0:i],
@@ -3086,6 +3127,7 @@ def plot_current_solution(us, xs, i, t, TCP_frame_id, robot_model, traj_data):
     plot_solution(us[0:i], xs[0:i], t[0:i], TCP_frame_id, robot_model, param_trajectory_copy)
 
 
+# This function creates a coordinate system in Meshcat for visualization purposes.
 # https://github.com/meshcat-dev/meshcat-python/blob/master/src/meshcat/geometry.py
 def create_coordinate_system(vis, name, axis_length=0.1, line_width=1):
     kos = g.LineSegments(
@@ -3100,13 +3142,15 @@ def create_coordinate_system(vis, name, axis_length=0.1, line_width=1):
         ),
         g.LineBasicMaterial(vertexColors=True, linewidth=line_width))
     vis[name].set_object(kos)
-    
+
+# This function creates a homogeneous transformation matrix from a translation vector and a rotation matrix.
 def create_homogeneous_transform(translation, rotation):
     transform = np.eye(4)  # Create a 4x4 identity matrix
     transform[:3, :3] = rotation  # Set the top-left 3x3 submatrix to the rotation matrix
     transform[:3, 3] = translation  # Set the first three elements of the last column to the translation vector
     return transform
 ####################################################### VIS ROBOT #################################################
+# This function kills a process running on a specified port by finding the process ID (PID) using the `lsof` command and then terminating it.
 def kill_process_on_port(port):
     try:
         # Run the lsof command to find the process using the port
@@ -3131,6 +3175,7 @@ def kill_process_on_port(port):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+# This function visualizes a robot model using Meshcat, displaying the robot's trajectory, end-effector position, and coordinate systems.
 def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, traj_data, dt,
                     frame_skip = 1, create_html = False, html_name = 'robot_visualization.html',
                     style_settings = {'N_traj_KOS': 10, 'traj_KOS_len': 0.05, 'traj_KOS_linewidth': 1,
@@ -3329,7 +3374,7 @@ def visualize_robot(robot_model, robot_data, visual_model, TCP_frame_id, q_sol, 
 
 
 
-
+# This function visualizes a 2-DOF robot using Meshcat, displaying the robot's trajectory, end-effector position, and coordinate systems.
 def visualize_robot_2DOF(robot, q_sol, traj_data, dt, rep_cnt = np.inf, rep_delay_sec=1):
     # Meshcat Visualize
     robot_model = robot.model
