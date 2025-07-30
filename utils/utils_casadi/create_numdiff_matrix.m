@@ -1,4 +1,6 @@
 function D = create_numdiff_matrix(T_a, n, N, variant, T_a_MPC, MPC_traj_indices, param_golay)
+% create_numdiff_matrix creates a numerical differentiation matrix
+% for a given variant and parameters.
 arguments
     T_a (1,1)
     n (1,1) double

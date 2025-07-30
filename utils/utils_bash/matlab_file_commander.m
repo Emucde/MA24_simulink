@@ -1,3 +1,7 @@
+% This was a testing file for the MATLAB command listener.
+% It listens for commands in a file and executes them in MATLAB.
+% Make sure to set the masterdir environment variable before running.
+
 cd(getenv("masterdir"));
 run('./main_matlab/parameters_7dof');
 

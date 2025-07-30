@@ -1,3 +1,4 @@
+% nlpsol_generate_opt_problem - Generates the optimization problem for the MPC solver.
 % wird von nlpsol_opt_problem_SX_v2 aufgerufen und von paramater_7dof.m um den inital guess zu erstellen.
 
 q_0 = param_traj.q_0(:, traj_select_mpc);

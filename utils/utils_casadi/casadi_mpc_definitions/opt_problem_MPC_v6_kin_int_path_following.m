@@ -1,4 +1,6 @@
-% MPC v4: Optimization problem 
+% MPC v6: Optimization problem - Kinematic Integrator Path Following MPC
+% This file defines the optimization problem for a Model Predictive Control (MPC) system
+% using CasADi. It includes the system dynamics, constraints, and cost functions.
 
 import casadi.*
 
@@ -65,7 +67,7 @@ F2 = integrate_casadi(f_red, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 H2_int = integrate_casadi(h, DT2, M, int_method); % runs with Ts_MPC-2*Ta
 H2 = Function('H', {theta, v, lambda_theta_ew}, {H2_int(theta, v)}, opt);
 
-%% set up path function: TODO: input for path selection
+%% set up path function:
 
 traj_fun_cell = cell(1, param_traj.N_traj);
 for traj_select_index = 1:param_traj.N_traj

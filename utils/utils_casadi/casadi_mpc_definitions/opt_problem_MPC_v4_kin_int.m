@@ -1,4 +1,6 @@
-% MPC v4: Optimization problem 
+% MPC v4: Optimization problem - Kinematic Integrator MPC
+% This file defines the optimization problem for a Model Predictive Control (MPC) system
+% using CasADi. It includes the system dynamics, constraints, and cost functions.
 
 import casadi.*
 

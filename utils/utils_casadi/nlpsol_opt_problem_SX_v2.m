@@ -1,3 +1,7 @@
+% nlpsol_opt_problem_SX_v2.m
+% It is used by mpc_casadi_main.m to generate the optimization problem for the MPC solver.
+% It also compiles the CasADi s-function for the use of simulink.
+
 import casadi.*
 
 fprintf('Start execution of ''nlpsol_opt_problem_SX_v2.m''\n');

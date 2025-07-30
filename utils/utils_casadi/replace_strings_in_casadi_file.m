@@ -1,4 +1,7 @@
 function replace_strings_in_casadi_file(file_path, replacement_string)
+% replace_strings_in_casadi_file - Replaces a string in a CasADi file.
+% file_path: Path to the CasADi file.
+% replacement_string: The string to replace in the file.
     % Open the file for reading
     fileID = fopen(file_path, 'r');
 

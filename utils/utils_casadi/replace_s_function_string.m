@@ -1,4 +1,5 @@
 function replace_s_function_string(file_path, s_fun_name_old, s_fun_name_new)
+% replace_s_function_string - Replaces a specific s-function name in a file.
     % Open the file for reading
     fileID = fopen(file_path, 'r');
 

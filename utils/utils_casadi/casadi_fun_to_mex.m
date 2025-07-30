@@ -1,4 +1,5 @@
 function mex_name = casadi_fun_to_mex(casadi_fun, source_dir, output_dir, mex_name, opt_flag, solver_name, use_own_solver)
+% casadi_fun_to_mex - Compile a CasADi function to a MATLAB mex file.
     % src: https://github.com/casadi/casadi/discussions/3337
     % Optimization options for MATLAB compilation
     

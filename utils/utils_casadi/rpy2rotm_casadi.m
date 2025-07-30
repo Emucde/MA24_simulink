@@ -1,4 +1,5 @@
 function R = rpy2rotm_casadi(Phi)
+% rpy2rotm_casadi - Converts roll, pitch, and yaw angles to a rotation matrix using CasADi.
     import casadi.*;
     % Extract roll, pitch, and yaw angles
     alpha = Phi(1); % yaw

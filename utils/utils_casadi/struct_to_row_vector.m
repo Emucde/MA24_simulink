@@ -1,4 +1,10 @@
 function row_vector = struct_to_row_vector(data_struct)
+% struct_to_row_vector - Converts a structure or cell array of structures to a row vector.
+% If the input is a structure, it flattens all fields into a single row vector.
+% If the input is a cell array of structures, it concatenates the row vectors of each
+% structure into a single row vector.
+%% Usage:
+%   row_vector = struct_to_row_vector(data_struct)
   if iscell(data_struct)
     row_vector = [cellfun(@struct_to_row_vector, data_struct)];
   elseif isstruct(data_struct)

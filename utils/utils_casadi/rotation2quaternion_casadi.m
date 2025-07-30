@@ -1,5 +1,5 @@
 function quaternion = rotation2quaternion_casadi(R)
-    % vgl. rotation2quaternion.m
+    % compare rotation2quaternion.m
     eps_val = 1e-16; % Definiere den Epsilon-Wert
 
     % Fall 3: Bedingung für den dritten Fall

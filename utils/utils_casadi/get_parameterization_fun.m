@@ -1,3 +1,5 @@
+% get_parameterization_fun - Generates parameterization functions for a given type and order.
+% used in parametric MPCs
 import casadi.*;
 
 if(parametric_type == parametric_mode.polynomial)

@@ -1,4 +1,5 @@
 function generate_casadi_types(filename)
+% generate_casadi_types - Generates a C header file for CasADi types.
     % Default filename if not provided
     if nargin < 1 || isempty(filename)
         filename = 'casadi_types.h';

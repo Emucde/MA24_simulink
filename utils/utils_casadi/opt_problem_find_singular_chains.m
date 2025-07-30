@@ -1,4 +1,7 @@
-% MPC v4: Optimization problem 
+% opt_problem_find_singular_chains.m
+% This function generates an optimization problem to find singular chains
+% for a given robot configuration. It uses CasADi to define the problem and
+% compiles the necessary functions for use in Simulink.
 
 import casadi.*
 

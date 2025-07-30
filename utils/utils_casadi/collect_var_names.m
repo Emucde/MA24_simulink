@@ -1,3 +1,4 @@
+% Collect unique variable names from function inputs and outputs
 if(~exist('unique_f_opt_input_map', 'var'))
     unique_f_opt_input_map = containers.Map('KeyType', 'char', 'ValueType', 'any');
 end

@@ -1,4 +1,7 @@
 function casadi_struct = convert_doublestruct_to_casadi(data_struct, casadi_datatype_fun)
+% convert_doublestruct_to_casadi converts a structure with numeric fields
+% to a CasADi structure with symbolic variables. Used for converting the parameters
+% of a CasADi MPC problem to a CasADi structure.
   arguments
     data_struct = struct;
     casadi_datatype_fun = @casadi.SX.sym; % default SX datatype

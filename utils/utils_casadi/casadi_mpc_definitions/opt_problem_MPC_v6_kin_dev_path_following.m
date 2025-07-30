@@ -1,4 +1,6 @@
-% MPC v4: Optimization problem 
+% MPC v6: Optimization problem - Kinematic Derivative Path Following MPC
+% This file defines the optimization problem for a Model Predictive Control (MPC) system
+% using CasADi. It includes the system dynamics, constraints, and cost functions.
 
 import casadi.*
 

@@ -1,4 +1,7 @@
-% MPC v4: Optimization problem 
+% opt_problem_find_single_singular_solutions.m
+% This function generates an optimization problem to find a single singular solution
+% for a given robot configuration. It uses CasADi to define the problem and
+% compiles the necessary functions for use in Simulink. Used by singularity_main.m
 
 import casadi.*
 

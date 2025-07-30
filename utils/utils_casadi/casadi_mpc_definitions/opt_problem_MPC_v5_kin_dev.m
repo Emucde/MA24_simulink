@@ -1,4 +1,7 @@
-% MPC v4: Optimization problem 
+% MPC v4: Optimization problem Kinematic Derivative MPC
+% This file contains the definitions of the optimization problem for the kinematic MPC controller.
+% It includes the system dynamics, cost function, constraints, and initial guess for the optimization variables.
+% The problem is formulated using CasADi for efficient numerical optimization.
 
 import casadi.*
 

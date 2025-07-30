@@ -1,4 +1,5 @@
 function generate_mpc_param_realtime_udp_c_fun(param_weight, param_MPC, casadi_fun_input_cell, casadi_fun_output_cell, refval_str_cell, casadi_fun, output_dir, s_fun_path)
+% generate_mpc_param_realtime_udp_c_fun - Generates C header and source files for MPC parameters and functions.
     % Open the header file for writing
     func_name = casadi_fun.name;
 

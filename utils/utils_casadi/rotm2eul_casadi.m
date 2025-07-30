@@ -1,4 +1,7 @@
 function euler_angles = rotm2eul_casadi(R)
+% rotm2eul_casadi - Converts a rotation matrix to Euler angles using CasADi.
+% The rotation matrix R should be a 3x3 matrix.
+% The output euler_angles will be a 3x1 vector containing the angles in radians
     import casadi.*
 
     % Extract Euler angles 'ZYZ' from the rotation matrix (0 < theta < pi)

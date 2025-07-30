@@ -1,4 +1,5 @@
 #!/bin/bash
+# This script sends commands to the matlab file commander.
 
 # Send the MATLAB command to commands.txt
 echo "mpc_casadi_main;" > commands.txt

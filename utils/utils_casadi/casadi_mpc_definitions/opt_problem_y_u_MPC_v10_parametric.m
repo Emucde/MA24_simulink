@@ -1,40 +1,6 @@
-% % MPC v1: Optimization problem
-
-% States:
-% - x: predicted states for n degrees of freedom (DoF) [joint positions, velocities]
-% - y: predicted task-space outputs representing the manipulator's pose [position and orientation]
-% - q_pp: joint accelerations to be determined over the prediction horizon
-
-% Parameters:
-% - x_k: Current state of the system [joint positions, velocities] at the initial time step
-% - y_d: Desired trajectory stacked vector, which includes:
-%   - p_d: desired positions in task space
-%   - q_d: desired orientations in quaternion representation
-%   - y_p: desired velocity (derivative of y_d)
-% - x_prev: previous state for comparison to decrease oscillations
-
-% Cost function (J_d,N):
-% Minimizes the deviation between predicted task-space outputs (y_n) and the desired trajectory (y_d) over a prediction horizon (N)
-% J_d,N(k, x_k, (u_n)) = sum( ...                   % Loop over prediction steps (n=1 to N)
-%   [ ||y_n       - y_ref_n ||_2^2 * Q_y; ...       % Deviation between predicted output and desired trajectory
-%     ||u_n - g_n||_2^2 * R_u; ...                 % Control effort penalty
-%     ||q_pp_n - q_pp_ref_n||_2^2 * R_q_pp; ...    % Acceleration deviation penalty
-%     ||x_n - x_prev,n ||_2^2 * R_x] ...            % State deviation from previous state
-%     ||y_N - y_N_ref||_2^2 * Q_y_terminal];        % Soft terminal output constraint for final state
-% );
-
-% Control Law:
-% Optimal control input sequence (u_n) is derived from the solutions to minimize the cost function (J_d,N), 
-% ensuring that the manipulator follows the desired trajectory (y_d) while maintaining stability through previous state feedback.
-
-% Optimization Problem formulation (MPC)
-% min J_d,N(k, x_k, (u_n))
-% s.t.  x_(n+1) = F(x_n, u_n)                   - Non-linear system dynamics constraint
-%       x_0 = x_k                               - Initial state constraint
-%       [y_n] = h(x_n)                          - Output calculation constraint connecting state to output
-%       y_n = [p_n; q_n]                        - Position and orientation outputs from state
-%       y_n ∈ Y                                 - Output constraints
-%       u_n ∈ U                                 - Control input constraints
+% % MPC v10: Optimization problem - Parametric Dynamic Integrator MPC
+% This file defines the optimization problem for a Model Predictive Control (MPC) system
+% using CasADi. It includes the system dynamics, constraints, and cost functions.
 
 import casadi.*
 

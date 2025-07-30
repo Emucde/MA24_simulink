@@ -1,5 +1,5 @@
 function [output_names, param_mpc_source_selection] = get_mpc_param_list(param_casadi_fun_name, param_casadi_fun_struct, mpc_source_selection, iterate_all_mpc_sfunctions)
-
+% get_mpc_param_list - Retrieves the list of MPC parameters based on the source selection.
     if(mpc_source_selection == 5)
         param_casadi_fun_struct_list_temp = struct2cell(init_custom_mpc_list());
     else

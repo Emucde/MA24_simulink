@@ -1,4 +1,5 @@
 #!/bin/bash
+# This script copies configuration files to a specified directory.
 
 # Help function
 function display_help() {

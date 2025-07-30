@@ -1,5 +1,5 @@
 function generate_mpc_config_typedef(filepath, unique_f_opt_input_map, unique_f_opt_output_map, param_casadi_fun_struct_list)
-
+% generate_mpc_config_typedef - Generates a C header file for MPC configuration types.
     structName = 'mpc_config';
     typesName = [structName, '_types'];
     filename=[filepath, typesName, '.h'];

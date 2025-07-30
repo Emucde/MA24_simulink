@@ -1,3 +1,9 @@
+% nlpsol_opt_problem_SX_v2.m
+% This file is used in singularity_main.m to generate the NLP solver for the MPC problem.
+% It uses CasADi to define the optimization problem and create a solver.
+% The problem is defined in terms of symbolic variables (SX) and then converted to MX for
+% compatibility with the solver.
+% The function outputs the optimal control inputs and the full state trajectory.
 import casadi.*
 
 fprintf('Start execution of ''nlpsol_opt_problem_SX_v2.m''\n');
