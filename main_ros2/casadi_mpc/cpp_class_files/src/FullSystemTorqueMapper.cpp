@@ -135,16 +135,11 @@ Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueDynamicAlternative(
     const Eigen::VectorXd &q,
     const Eigen::VectorXd &q_p)
 {
-    Eigen::VectorXd q_mod = q;
-    Eigen::VectorXd q_p_mod = q_p;
-    q_mod(n_indices_fixed) = q_ref_fixed;
-    q_p_mod(n_indices_fixed) = Eigen::VectorXd::Zero(nq_fixed);
-
     // Calculate inertia matrix and Coriolis forces
-    pinocchio::crba(robot_model_full, robot_data_full, q_mod);
+    pinocchio::crba(robot_model_full, robot_data_full, q);
     robot_data_full.M.triangularView<Eigen::StrictlyLower>() = robot_data_full.M.transpose().triangularView<Eigen::StrictlyLower>();
     Eigen::MatrixXd M = robot_data_full.M;
-    Eigen::VectorXd C_rnea = pinocchio::rnea(robot_model_full, robot_data_full, q_mod, q_p_mod, Eigen::VectorXd::Zero(nq));
+    Eigen::VectorXd C_rnea = pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, Eigen::VectorXd::Zero(nq));
 
     // Calculate the inverse inertia Matrix (Cholesky is faster and more stable than FullPivLU from M.inverse())
     Eigen::MatrixXd M_inv = robot_data_full.M.llt().solve(Eigen::MatrixXd::Identity(nq, nq));
@@ -179,12 +174,36 @@ Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueKinematicAlternativ
     const Eigen::VectorXd &q,
     const Eigen::VectorXd &q_p)
 {
-    // inefficient:
-    // Eigen::MatrixXd tau_psi = J_psi_T * M * J_psi * u + J_psi_T * (C * J_psi * q_p + g);
+    // Calculate inertia matrix and Coriolis forces
+    pinocchio::crba(robot_model_full, robot_data_full, q);
+    robot_data_full.M.triangularView<Eigen::StrictlyLower>() = robot_data_full.M.transpose().triangularView<Eigen::StrictlyLower>();
+    Eigen::MatrixXd M = robot_data_full.M;
+    Eigen::VectorXd C_rnea = pinocchio::rnea(robot_model_full, robot_data_full, q, q_p, Eigen::VectorXd::Zero(nq));
 
-    // better: use directly reduced system and ID
-    Eigen::VectorXd tau_psi = pinocchio::rnea(robot_model_reduced, robot_data_reduced, q(n_indices), q_p(n_indices), u);
-    return calcFeedforwardTorqueDynamicAlternative(tau_psi, q, q_p);
+    // Calculate the inverse inertia Matrix (Cholesky is faster and more stable than FullPivLU from M.inverse())
+    Eigen::MatrixXd M_inv = robot_data_full.M.llt().solve(Eigen::MatrixXd::Identity(nq, nq));
+
+    Eigen::MatrixXd F_f = A*M_inv*C_rnea -config.D_d_fixed * q_p(n_indices_fixed) - config.K_d_fixed * (q(n_indices_fixed) - config.q_ref_nq_fixed);
+    Eigen::MatrixXd F_r = u + B*M_inv*C_rnea;
+
+    // solve
+    //                       ( [ A*M_inv ] ) [ F_f ]
+    // tau_c = tau_full = inv( [         ] ) [     ] = K * F
+    //                       ( [ B*M_inv ] ) [ F_r ]
+
+    // Build composite matrix K
+    Eigen::MatrixXd K(nq, nq);
+    K.topRows(nq_fixed) = A * M_inv;
+    K.bottomRows(nq_red) = B * M_inv;
+
+    // Build composite vector F
+    Eigen::VectorXd F(nq);
+    F.head(nq_fixed) = F_f;
+    F.tail(nq_red) = F_r;
+
+    // Solve using QR decomposition (most efficient for rectangular full-rank systems)
+    Eigen::VectorXd tau_c = K.colPivHouseholderQr().solve(F);
+    return tau_c; // tau_c = tau_full
 }
 
 void FullSystemTorqueMapper::setFeedforwardTorqueFunction(bool is_kinematic_mpc)
