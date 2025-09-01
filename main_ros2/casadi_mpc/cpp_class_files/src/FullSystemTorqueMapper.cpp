@@ -15,7 +15,7 @@ FullSystemTorqueMapper::FullSystemTorqueMapper(const std::string &urdf_filename,
       q_ref_nq(ConstDoubleVectorMap(robot_config.q_0_ref, nq)),
       q_ref_fixed(Eigen::Map<const Eigen::VectorXd>(robot_config.q_0_ref, nq_fixed)(n_indices_fixed)),
       J_psi(calc_reduced_mapping_matrix()), J_psi_T(J_psi.transpose()),
-      A(calc_coercive_condition_matrix()),
+      A(calc_coercive_condition_matrix()), B(J_psi_T),
       dt(robot_config.dt)
 {
     // Initialize the function pointer based on the type of MPC
@@ -149,24 +149,25 @@ Eigen::VectorXd FullSystemTorqueMapper::calcFeedforwardTorqueDynamicAlternative(
     // Calculate the inverse inertia Matrix (Cholesky is faster and more stable than FullPivLU from M.inverse())
     Eigen::MatrixXd M_inv = robot_data_full.M.llt().solve(Eigen::MatrixXd::Identity(nq, nq));
 
-    Eigen::MatrixXd F_psi = u;
-    // Eigen::MatrixXd F_phi = A*M_inv*C_rnea -config.D_d_fixed * A*q_p - config.K_d_fixed * A*(q - q_ref_nq);
-    Eigen::MatrixXd F_phi = A*M_inv*C_rnea -config.D_d_fixed * q_p(n_indices_fixed) - config.K_d_fixed * (q(n_indices_fixed) - config.q_ref_nq_fixed);
+    Eigen::MatrixXd lambda_r = (B * M_inv * B.transpose()).llt().solve(Eigen::MatrixXd::Identity(nq_red, nq_red));
+
+    Eigen::MatrixXd F_f = A*M_inv*C_rnea -config.D_d_fixed * q_p(n_indices_fixed) - config.K_d_fixed * (q(n_indices_fixed) - config.q_ref_nq_fixed);
+    Eigen::MatrixXd F_r = u + lambda_r*B*M_inv*C_rnea;
 
     // solve
-    //                       ( [ J_psi^T ] ) [ F_psi ]
-    // tau_c = tau_full = inv( [         ] ) [       ] = K * F
-    //                       ( [ A*M_inv ] ) [ F_phi ]
+    //                       ( [ A*M_inv ] ) [ F_f ]
+    // tau_c = tau_full = inv( [         ] ) [     ] = K * F
+    //                       ( [ B*M_inv ] ) [ F_r ]
 
     // Build composite matrix K
     Eigen::MatrixXd K(nq, nq);
-    K.topRows(nq_red) = J_psi.transpose();
-    K.bottomRows(nq_fixed) = A * M_inv;
+    K.topRows(nq_fixed) = A * M_inv;
+    K.bottomRows(nq_red) = lambda_r * B * M_inv;
 
     // Build composite vector F
     Eigen::VectorXd F(nq);
-    F.head(nq_red) = F_psi;
-    F.tail(nq_fixed) = F_phi;
+    F.head(nq_fixed) = F_f;
+    F.tail(nq_red) = F_r;
 
     // Solve using QR decomposition (most efficient for rectangular full-rank systems)
     Eigen::VectorXd tau_c = K.colPivHouseholderQr().solve(F);
@@ -190,13 +191,13 @@ void FullSystemTorqueMapper::setFeedforwardTorqueFunction(bool is_kinematic_mpc)
 {
     if (is_kinematic_mpc)
     {
-        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematic;
-        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematicAlternative;
+        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematic;
+        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueKinematicAlternative;
     }
     else
     {
-        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamic;
-        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamicAlternative;
+        // calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamic;
+        calcFeedforwardTorqueFunPtr = &FullSystemTorqueMapper::calcFeedforwardTorqueDynamicAlternative;
     }
 }
 
@@ -217,7 +218,7 @@ Eigen::VectorXd FullSystemTorqueMapper::calc_full_torque(const Eigen::VectorXd &
     Eigen::Map<const Eigen::VectorXd> q(x_k_ndof.head(nq).data(), nq);
     Eigen::Map<const Eigen::VectorXd> q_p(x_k_ndof.tail(nq).data(), nq);
     tau_full = (this->*calcFeedforwardTorqueFunPtr)(u, q, q_p);
-    tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed));
+    // tau_full(n_indices_fixed) += applyPDControl(q(n_indices_fixed), q_p(n_indices_fixed));
 
     // tau_full = enforceTorqueLimits(tau_full); // Apply torque limits
     return tau_full;

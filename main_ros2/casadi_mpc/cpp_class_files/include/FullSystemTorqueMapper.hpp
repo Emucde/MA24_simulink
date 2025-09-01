@@ -123,6 +123,7 @@ private:
     const Eigen::MatrixXd J_psi;
     const Eigen::MatrixXd J_psi_T;
     const Eigen::MatrixXd A;
+    const Eigen::MatrixXd B;
 
     Eigen::VectorXd tau_full;
     Eigen::VectorXd q_pp;
